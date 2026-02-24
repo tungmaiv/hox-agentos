@@ -1,0 +1,14 @@
+Cấu trúc một file **JSONL cho A2UI** (Agent-to-User Interface) dựa trên một đặc tả giao diện người dùng sinh động được phát triển bởi Google, cho phép AI Agent tạo ra các widget tương tác ngay trong thời gian thực thay vì dựa vào các giao diện tĩnh 1, 2\. Định dạng JSONL (JSON Lines) yêu cầu mỗi dòng trong file hoặc mỗi khối dữ liệu truyền phát là một đối tượng JSON hợp lệ, giúp hệ thống có thể xử lý và dựng hình các thành phần giao diện một cách tuần tự và hiệu quả 2, 3\.  
+Để cấu trúc chính xác các thông điệp A2UI cho Agent, bạn cần tập trung vào **ba loại "phong bì" thông điệp (message envelopes)** cốt lõi sau đây 3:
+
+* **surfaceUpdate**: Đây là khối dữ liệu dùng để định nghĩa các **thành phần giao diện (components)** như thẻ (cards), danh sách (lists), biểu đồ hoặc các biểu mẫu (forms) 2, 3\. Nó mô tả cấu trúc hình học và loại widget sẽ hiển thị 3\.  
+* **dataModelUpdate**: Khối này định nghĩa và cập nhật **trạng thái dữ liệu (state/data model)** cho các thành phần UI đó 3\. Nó đảm bảo rằng các widget được nạp đúng thông tin cần thiết, ví dụ như nội dung văn bản trong một form hoặc các giá trị số trong một biểu đồ 3\.  
+* **beginRendering**: Đây là một dòng lệnh đóng vai trò là **tín hiệu thực thi**, thông báo cho phía frontend rằng Agent đã gửi đủ thông tin và yêu cầu ứng dụng bắt đầu quá trình dựng hình (render) giao diện lên màn hình người dùng 3\.
+
+Để triển khai cấu trúc này vào dự án của bạn, quy trình kỹ thuật thường bao gồm:
+
+1. **Sử dụng công cụ hỗ trợ (A2UI Composer):** Thay vì viết mã JSONL thủ công phức tạp, bạn có thể sử dụng **A2UI Composer** để thiết kế widget bằng ngôn ngữ tự nhiên, sau đó sao chép đặc tả JSON được sinh ra 4, 5\.  
+2. **Tích hợp vào System Prompt:** Bạn cần đưa các mẫu cấu trúc JSONL này vào hướng dẫn hệ thống (System Prompt) của Agent 6-8. Việc cung cấp các ví dụ cụ thể (UI\_EXAMPLES) kèm theo Schema JSON của A2UI giúp Agent học cách phát đi các chuỗi JSON hợp lệ khi nhận được yêu cầu từ người dùng 6, 8\.  
+3. **Truyền tải qua giao thức AG-UI:** Phía backend (như LangGraph hoặc ADK) sẽ đóng gói các dòng JSONL này thành các đối tượng ActivityMessage 9\. Các thông điệp này sau đó được stream về frontend thông qua giao thức **AG-UI** dưới dạng các sự kiện JSON duy nhất, duy trì sự đồng bộ hóa thời gian thực giữa hành động của Agent và giao diện 10, 11\.
+
+Tại phía frontend, ứng dụng sẽ sử dụng hàm createA2UIMessageRenderer của CopilotKit để lắng nghe luồng dữ liệu JSONL này, sau đó khớp các đặc tả trong surfaceUpdate và dataModelUpdate để hiển thị các component React tương ứng 8, 12\. Cách tiếp cận theo cấu trúc phẳng (flat component lists) với các tham chiếu ID trong JSONL rất có lợi cho các mô hình ngôn ngữ lớn (LLM), vì chúng có thể tạo ra các thành phần giao diện một cách tăng dần (incrementally) trong phản hồi truyền phát 13\.  
