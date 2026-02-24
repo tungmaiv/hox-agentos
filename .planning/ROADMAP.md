@@ -33,13 +33,13 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. User with "employee" role can access agent endpoints; user with "viewer" role cannot invoke tools (RBAC enforced)
   4. Every tool call attempt is logged with user_id, tool name, allowed/denied, and duration -- no credentials appear in logs
   5. All Docker Compose services (PostgreSQL, Redis, Keycloak, LiteLLM, backend, frontend) start and pass health checks
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 01-01: Docker Compose and infrastructure services
-- [ ] 01-02: Keycloak SSO and JWT validation
-- [ ] 01-03: RBAC, Tool ACL, and audit logging
-- [ ] 01-04: FastAPI and Next.js application skeletons
+- [ ] 01-01-PLAN.md — Docker Compose stack, backend Python scaffold (core/config, core/logging, core/db), Next.js 15.5 frontend scaffold with next-auth v5
+- [ ] 01-02-PLAN.md — JWT validation Gate 1: UserContext TypedDict, security/jwt.py (JWKS cache + RS256), security/deps.py get_current_user() [TDD]
+- [ ] 01-03-PLAN.md — RBAC Gate 2 + Tool ACL Gate 3 + audit logging: security/rbac.py, security/acl.py, ToolAcl migration [TDD]
+- [ ] 01-04-PLAN.md — FastAPI routes (/health, /api/agents/chat), frontend API client, Phase 1 verification checkpoint
 
 ### Phase 2: Agent Core and Conversational Chat
 **Goal**: Users can have a natural language conversation with a streaming AI agent that remembers the conversation, routes through LiteLLM, and has isolated per-user memory
