@@ -36,8 +36,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 4 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Docker Compose stack, backend Python scaffold (core/config, core/logging, core/db), Next.js 15.5 frontend scaffold with next-auth v5
-- [ ] 01-02-PLAN.md — JWT validation Gate 1: UserContext TypedDict, security/jwt.py (JWKS cache + RS256), security/deps.py get_current_user() [TDD]
+- [x] 01-01-PLAN.md — Docker Compose stack, backend Python scaffold (core/config, core/logging, core/db), Next.js 15.5 frontend scaffold with next-auth v5
+- [x] 01-02-PLAN.md — JWT validation Gate 1: UserContext TypedDict, security/jwt.py (JWKS cache + RS256), security/deps.py get_current_user() [TDD]
 - [ ] 01-03-PLAN.md — RBAC Gate 2 + Tool ACL Gate 3 + audit logging: security/rbac.py, security/acl.py, ToolAcl migration [TDD]
 - [ ] 01-04-PLAN.md — FastAPI routes (/health, /api/agents/chat), frontend API client, Phase 1 verification checkpoint
 
@@ -171,7 +171,7 @@ Note: Phases 4 and 5 can execute in parallel as they share no mutual dependencie
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Identity and Infrastructure Skeleton | 0/4 | Not started | - |
+| 1. Identity and Infrastructure Skeleton | 2/4 | In progress | - |
 | 2. Agent Core and Conversational Chat | 0/4 | Not started | - |
 | 3. Sub-Agents, Memory, and Integrations | 0/5 | Not started | - |
 | 4. Canvas and Workflows | 0/5 | Not started | - |
