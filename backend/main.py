@@ -1,14 +1,15 @@
 """
 Blitz AgentOS — FastAPI application factory.
 
-Routes are registered in subsequent plans (02-04) after security is implemented.
+Routes are registered here after the security layer (plans 01-02, 01-03)
+provides JWT validation, RBAC, and Tool ACL.
 """
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from api.routes import agents, health
 from core.config import settings
 from core.logging import configure_logging
-from core.schemas.common import HealthResponse
 
 
 def create_app() -> FastAPI:
@@ -31,11 +32,11 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    @app.get("/health", response_model=HealthResponse)
-    async def health_check() -> HealthResponse:
-        return HealthResponse(status="ok")
+    # Health check — no auth, no /api prefix (reachable by load balancers)
+    app.include_router(health.router)
 
-    # Routes registered after security is implemented in plans 02-04
+    # Agent routes — all protected by 3-gate security chain
+    app.include_router(agents.router, prefix="/api")
 
     return app
 

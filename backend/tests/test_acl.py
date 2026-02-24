@@ -168,6 +168,7 @@ async def test_log_tool_call_does_not_raise(db_session: AsyncSession) -> None:
 async def test_audit_log_contains_required_fields(
     db_session: AsyncSession,
     capsys: pytest.CaptureFixture,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     """
     log_tool_call() must emit a structlog event with all required audit fields.
@@ -175,19 +176,25 @@ async def test_audit_log_contains_required_fields(
     Required fields: user_id (str), tool (str), allowed (bool), duration_ms (int).
     Must NOT contain: access_token, refresh_token, password.
 
-    Note: structlog with LoggerFactory() writes to stdout, not Python's logging
-    module. We use capsys to capture stdout output from the structlog call.
+    Capture strategy:
+    - When structlog uses stdlib.LoggerFactory() (after configure_logging()),
+      output goes through Python's logging module → captured by caplog.
+    - When structlog uses its default ConsoleRenderer (no configure_logging()),
+      output goes directly to stdout → captured by capsys.
+    - We check both to be robust across test ordering and config state.
     """
+    import logging
     from security.acl import log_tool_call
 
     user_id = uuid4()
     tool_name = "email.fetch"
 
-    await log_tool_call(user_id, tool_name, allowed=True, duration_ms=123)
+    with caplog.at_level(logging.INFO):
+        await log_tool_call(user_id, tool_name, allowed=True, duration_ms=123)
 
     captured = capsys.readouterr()
-    # structlog writes to stdout (combined with stderr for safety)
-    all_output = captured.out + captured.err
+    # Combine all captured output from both capture mechanisms
+    all_output = captured.out + captured.err + caplog.text
 
     # Verify required event name and fields appear in output
     assert "tool_call" in all_output, (

@@ -26,12 +26,9 @@ def test_settings_loads_required_fields() -> None:
     """Settings loads all required fields from environment variables."""
     env = _minimal_env()
     with patch.dict("os.environ", env, clear=True):
-        from importlib import reload
-        import core.config as config_module
+        from core.config import Settings
 
-        reload(config_module)
-        config_module.get_settings.cache_clear()
-        s = config_module.Settings()
+        s = Settings()
 
     assert s.database_url == env["DATABASE_URL"]
     assert s.redis_url == env["REDIS_URL"]
