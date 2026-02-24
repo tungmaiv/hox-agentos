@@ -12,7 +12,7 @@ Blitz AgentOS delivers an on-premise agentic operating system for ~100 Blitz emp
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Identity and Infrastructure Skeleton** - Keycloak SSO, JWT/RBAC security, Docker Compose services, FastAPI/Next.js skeletons
+- [x] **Phase 1: Identity and Infrastructure Skeleton** - Keycloak SSO, JWT/RBAC security, Docker Compose services, FastAPI/Next.js skeletons (completed 2026-02-24)
 - [ ] **Phase 2: Agent Core and Conversational Chat** - Master agent with LangGraph, AG-UI streaming chat, conversation memory, LiteLLM routing, credential store
 - [ ] **Phase 3: Sub-Agents, Memory, and Integrations** - Email/Calendar/Project/Channel sub-agents, 3-tier memory with embeddings, MCP framework, A2UI generative UI
 - [ ] **Phase 4: Canvas and Workflows** - React Flow visual builder, canvas-to-StateGraph compiler, workflow templates, HITL approval, cron/webhook triggers
@@ -171,7 +171,7 @@ Note: Phases 4 and 5 can execute in parallel as they share no mutual dependencie
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Identity and Infrastructure Skeleton | 3/4 | In progress | - |
+| 1. Identity and Infrastructure Skeleton | 3/4 | Complete    | 2026-02-24 |
 | 2. Agent Core and Conversational Chat | 0/4 | Not started | - |
 | 3. Sub-Agents, Memory, and Integrations | 0/5 | Not started | - |
 | 4. Canvas and Workflows | 0/5 | Not started | - |
