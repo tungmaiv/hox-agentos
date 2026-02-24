@@ -28,7 +28,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return token;
     },
     async session({ session, token }) {
-      // NEVER expose raw access_token to the client — keep in server session only
+      // NEVER expose raw access_token to the client — keep in server session only.
+      // The accessToken is set here so serverFetch() in Server Components can
+      // inject the Authorization: Bearer header when calling the backend.
+      // It is never serialized into the browser session cookie.
+      (session as unknown as Record<string, unknown>).accessToken =
+        token.accessToken;
       session.user.id = token.sub ?? "";
       return session;
     },

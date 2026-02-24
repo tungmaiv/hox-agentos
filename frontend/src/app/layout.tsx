@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { SessionProvider } from "next-auth/react";
+import { AuthErrorToasts } from "@/components/auth-error-toasts";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -16,6 +17,7 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <SessionProvider>{children}</SessionProvider>
+        <AuthErrorToasts />
       </body>
     </html>
   );
