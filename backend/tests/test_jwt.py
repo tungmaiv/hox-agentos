@@ -76,14 +76,19 @@ def make_token(private_pem: bytes):
     """
 
     def _make(payload_overrides: dict | None = None, exp_offset: int = 3600) -> str:
+        # Read iss and aud from the live settings object so tokens always match
+        # whatever issuer/client-id is currently configured — avoids fragility
+        # when test_config.py reloads core.config with different env vars.
+        import core.config as _cfg
+
         payload: dict = {
             "sub": str(uuid4()),
             "email": "test@blitz.local",
             "preferred_username": "testuser",
             "realm_access": {"roles": ["employee"]},
             "groups": ["/tech"],
-            "iss": "https://keycloak.blitz.local/realms/blitz-internal",
-            "aud": "blitz-agentos",
+            "iss": _cfg.settings.keycloak_issuer,
+            "aud": _cfg.settings.keycloak_client_id,
             "exp": int(time.time()) + exp_offset,
             "iat": int(time.time()),
         }
