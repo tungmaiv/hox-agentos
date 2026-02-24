@@ -51,13 +51,14 @@ Plans:
   3. Agent conversation turns are stored per user and per conversation -- user can resume a previous conversation with context preserved
   4. All LLM calls route through LiteLLM Proxy using model aliases (blitz/master, blitz/fast) -- no direct provider SDK calls
   5. User A cannot see User B's conversation history or memory (isolation enforced at query level)
-**Plans**: 4 plans
+**Plans**: 5 plans
 
 Plans:
 - [ ] 02-01-PLAN.md — TDD: LiteLLM config general_settings + verify get_llm() contract for all 4 aliases (Wave 1)
-- [ ] 02-02-PLAN.md — TDD: BlitzState TypedDict + LangGraph master agent + CopilotKit runtime + /api/copilotkit endpoint with 3-gate security (Wave 2)
-- [ ] 02-03-PLAN.md — Short-term memory DB migration + memory/short_term.py isolation TDD + master agent memory nodes + GET /api/conversations + full chat UI + streaming verification checkpoint (Wave 3)
+- [ ] 02-02-PLAN.md — TDD: BlitzState TypedDict + LangGraph master agent with routing conditional stub + CopilotKit runtime + /api/copilotkit endpoint with 3-gate security (Wave 2)
+- [ ] 02-03-PLAN.md — TDD: Short-term memory DB migration + core/context.py conversation_id injection + memory/short_term.py isolation + master agent memory nodes with dedup guard + GET /api/conversations (Wave 3, backend only)
 - [ ] 02-04-PLAN.md — TDD: AES-256-GCM encrypt/decrypt vault + user_credentials migration + GET /api/credentials + DELETE /api/credentials/{provider} (Wave 2, parallel with 02-02)
+- [ ] 02-05-PLAN.md — Frontend chat UI (proxy route + ChatLayout + CopilotKit streaming) + custom instructions DB/API/system-prompt injection + browser verification checkpoint (Wave 4)
 
 ### Phase 3: Sub-Agents, Memory, and Integrations
 **Goal**: The agent can perform real work -- fetch email, check calendars, query CRM, remember user preferences across sessions -- making it genuinely useful for daily routines
@@ -172,7 +173,7 @@ Note: Phases 4 and 5 can execute in parallel as they share no mutual dependencie
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Identity and Infrastructure Skeleton | 3/4 | Complete    | 2026-02-24 |
-| 2. Agent Core and Conversational Chat | 0/4 | Planned      | - |
+| 2. Agent Core and Conversational Chat | 0/5 | Planned      | - |
 | 3. Sub-Agents, Memory, and Integrations | 0/5 | Not started | - |
 | 4. Canvas and Workflows | 0/5 | Not started | - |
 | 5. Scheduler and Channels | 0/5 | Not started | - |
