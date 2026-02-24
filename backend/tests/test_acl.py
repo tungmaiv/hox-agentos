@@ -165,29 +165,42 @@ async def test_log_tool_call_does_not_raise(db_session: AsyncSession) -> None:
 
 
 @pytest.mark.asyncio
-async def test_audit_log_contains_required_fields(db_session: AsyncSession, caplog: pytest.LogCaptureFixture) -> None:
+async def test_audit_log_contains_required_fields(
+    db_session: AsyncSession,
+    capsys: pytest.CaptureFixture,
+) -> None:
     """
     log_tool_call() must emit a structlog event with all required audit fields.
 
     Required fields: user_id (str), tool (str), allowed (bool), duration_ms (int).
     Must NOT contain: access_token, refresh_token, password.
+
+    Note: structlog with LoggerFactory() writes to stdout, not Python's logging
+    module. We use capsys to capture stdout output from the structlog call.
     """
-    import logging
     from security.acl import log_tool_call
 
     user_id = uuid4()
     tool_name = "email.fetch"
 
-    with caplog.at_level(logging.INFO):
-        await log_tool_call(user_id, tool_name, allowed=True, duration_ms=123)
+    await log_tool_call(user_id, tool_name, allowed=True, duration_ms=123)
 
-    # Check that at least one log record was emitted
-    # (structlog with JSONRenderer may appear in caplog as the rendered string)
-    all_output = " ".join(caplog.messages) + " ".join(str(r) for r in caplog.records)
+    captured = capsys.readouterr()
+    # structlog writes to stdout (combined with stderr for safety)
+    all_output = captured.out + captured.err
 
-    # Verify required fields appear in output
-    assert str(user_id) in all_output or "tool_call" in all_output, (
-        "Expected audit log event to contain user_id or tool_call event name"
+    # Verify required event name and fields appear in output
+    assert "tool_call" in all_output, (
+        f"Expected 'tool_call' event in structlog output. Got: {all_output!r}"
+    )
+    assert str(user_id) in all_output, (
+        f"Expected user_id {user_id} in structlog output. Got: {all_output!r}"
+    )
+    assert tool_name in all_output, (
+        f"Expected tool name '{tool_name}' in structlog output. Got: {all_output!r}"
+    )
+    assert "duration_ms" in all_output, (
+        f"Expected 'duration_ms' in structlog output. Got: {all_output!r}"
     )
     # Verify no credentials leaked
     assert "access_token" not in all_output
