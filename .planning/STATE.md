@@ -5,32 +5,32 @@
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates daily work routines and lets them build custom automations without writing code -- all within an enterprise-secure, on-premise environment.
-**Current focus:** Phase 1: Identity and Infrastructure Skeleton — Checkpoint awaiting browser SSO verification
+**Current focus:** Phase 2: Agent Core — begin LangGraph master agent, tool registration, and memory foundation
 
 ## Current Position
 
-Phase: 1 of 8 (Identity and Infrastructure Skeleton)
-Plan: 4 of 4 in current phase (CHECKPOINT — awaiting human verification)
-Status: In progress — Tasks 1+2 complete; checkpoint task awaiting human SSO verification
-Last activity: 2026-02-24 -- Completed 01-04 Tasks 1+2 (FastAPI routes + frontend API client), 58 backend tests passing, Alembic migration run
+Phase: 1 of 8 COMPLETE (Identity and Infrastructure Skeleton)
+Plan: 4 of 4 — COMPLETE
+Status: Phase 1 complete — ready to begin Phase 2
+Last activity: 2026-02-24 -- Completed 01-04-PLAN.md (FastAPI routes + frontend API client + browser SSO verified)
 
-Progress: [████░░░░░░] 18% (3.5/20 plans estimated — checkpoint not yet approved)
+Progress: [██░░░░░░░░] 20% (4/20 plans estimated)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3.5 (01-04 at checkpoint, not yet approved)
-- Average duration: 5.7 min
-- Total execution time: 0.40 hours
+- Total plans completed: 4
+- Average duration: 6.5 min
+- Total execution time: 0.43 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01 | 3.5 | ~23 min | 5.7 min |
+| 01 (complete) | 4 | ~26 min | 6.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 7 min, 4 min, 3 min, 9 min
+- Last 5 plans: 7 min, 4 min, 3 min, 9 min, 20 min (includes checkpoint wait)
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -67,7 +67,8 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-- [ ] Trigger human verification of browser SSO flow for 01-04 checkpoint approval
+- [ ] Start WhatsApp Business API verification process (takes 1-4 weeks, needed for Phase 5)
+- [ ] Plan Phase 2 (Agent Core): LangGraph master agent, tool registration, memory foundation
 
 ### Blockers/Concerns
 
@@ -77,10 +78,9 @@ Recent decisions affecting current work:
 - uv run subcommands time out on this machine; use .venv/bin/ paths directly for CLI tools
 - python-jose uses datetime.utcnow() internally (deprecated in Python 3.12) -- harmless warning in tests, not actionable
 - Alembic migration 001 requires pgvector-enabled PostgreSQL to run; test only possible when Docker stack is up
-- 01-04 checkpoint: browser SSO verification requires running Keycloak + real OIDC client credentials
 
 ## Session Continuity
 
-Last session: 2026-02-24T14:28:19Z
-Stopped at: 01-04 CHECKPOINT — Tasks 1+2 complete (backend routes + frontend API client). Awaiting human verification of browser SSO flow.
+Last session: 2026-02-24T14:39:25Z
+Stopped at: Completed 01-04-PLAN.md — Phase 1 COMPLETE
 Resume file: None

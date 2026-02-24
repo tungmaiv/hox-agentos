@@ -35,7 +35,7 @@ tech-stack:
     - 3-gate security chain in route handlers: Depends(get_current_user) → has_permission() → check_tool_acl() → log_tool_call()
     - SQLite dependency override pattern for integration tests that reach Gate 3 (check_tool_acl needs DB)
     - serverFetch<T>() server-side fetch wrapper: access token from server session, never exposed to browser
-    - AuthHeader as Server Component: auth() read server-side, no client-side useSession() needed
+    - AuthHeader as Server Component: auth() read server-side, no useSession() Client Component needed for displaying user email
 
 key-files:
   created:
@@ -80,32 +80,33 @@ requirements-completed:
   - AUTH-05
 
 # Metrics
-duration: 9min
+duration: 20min
 completed: "2026-02-24"
 ---
 
 # Phase 1 Plan 04: FastAPI Routes + Frontend API Client Summary
 
-**FastAPI /health + /api/agents/chat with 3-gate security (JWT→RBAC→ACL→audit), 58 backend tests all passing, frontend serverFetch() Bearer injection, AuthHeader Server Component — checkpoint awaiting browser SSO verification**
+**FastAPI /health + /api/agents/chat with 3-gate security (JWT->RBAC->ACL->audit), 58 backend tests all passing, frontend serverFetch() Bearer injection, AuthHeader Server Component — Phase 1 complete with browser SSO verified**
 
 ## Performance
 
-- **Duration:** ~9 min (Tasks 1+2 complete; checkpoint awaiting human verification)
+- **Duration:** ~20 min (Tasks 1+2+3 complete, checkpoint approved)
 - **Started:** 2026-02-24T14:19:39Z
-- **Completed (Tasks 1+2):** 2026-02-24T14:28:19Z
-- **Tasks:** 2/3 complete (checkpoint reached after Task 2)
+- **Completed:** 2026-02-24T14:39:25Z
+- **Tasks:** 3/3 complete
 - **Files modified:** 18
 
 ## Accomplishments
 
-- `api/routes/health.py` GET /health → 200 HealthResponse (no auth, no /api prefix)
-- `api/routes/agents.py` POST /api/agents/chat enforcing full 3-gate chain: JWT (Gate 1 via Depends) → RBAC "chat" permission (Gate 2) → Tool ACL (Gate 3) → audit log → 501 stub
+- `api/routes/health.py` GET /health -> 200 HealthResponse (no auth, no /api prefix)
+- `api/routes/agents.py` POST /api/agents/chat enforcing full 3-gate chain: JWT (Gate 1 via Depends) -> RBAC "chat" permission (Gate 2) -> Tool ACL (Gate 3) -> audit log -> 501 stub
 - `main.py` updated: `app.include_router(health.router)` + `app.include_router(agents.router, prefix="/api")`
-- 6 health tests + 6 agents auth tests — 58 total backend tests, all passing
+- 6 health tests + 6 agents auth tests — 58 total backend tests, all passing (verified final run: 58 passed, 7 warnings, 1.20s)
 - Alembic migration 001 ran against real PostgreSQL: tool_acl, alembic_version tables confirmed
 - `frontend/src/lib/api-client.ts`: serverFetch<T>() with server-side Bearer token injection
 - AuthHeader, SignOutButton, AuthErrorToasts frontend components
 - TypeScript strict: true compiles cleanly
+- Browser SSO flow verified: / -> Keycloak login -> /chat with user email in header -> sign out working
 
 ## Task Commits
 
@@ -113,9 +114,9 @@ Each task was committed atomically:
 
 1. **Task 1: FastAPI routes and complete security integration** - `583c843` (feat)
 2. **Task 2: Frontend API client with Authorization header injection** - `03c34b9` (feat)
-3. **Task 3 (Checkpoint):** awaiting human verification of browser SSO
+3. **Task 3: Verify Phase 1 SSO and security chain end-to-end** - (see plan metadata commit)
 
-**Plan metadata:** (to be committed after checkpoint approval)
+**Plan metadata:** (see final docs commit)
 
 ## Files Created/Modified
 
@@ -154,7 +155,7 @@ Each task was committed atomically:
 
 **1. [Rule 3 - Blocking] Tests reaching Gate 3 need DB session override**
 
-- **Found during:** Task 1 (running test_agents_auth.py tests for employee/executive → 501)
+- **Found during:** Task 1 (running test_agents_auth.py tests for employee/executive -> 501)
 - **Issue:** Employee and executive users pass RBAC Gate 2 and reach Gate 3 (check_tool_acl), which calls `session.execute()`. The TestClient raises `ConnectionRefusedError` because no PostgreSQL is running in CI/test environment.
 - **Fix:** Added `sqlite_session_override` pytest fixture in `test_agents_auth.py` that creates an in-memory SQLite engine, runs `Base.metadata.create_all`, and overrides `get_db` dependency for tests that need it.
 - **Files modified:** `backend/tests/test_agents_auth.py`
@@ -164,7 +165,7 @@ Each task was committed atomically:
 **2. [Rule 1 - Bug] conftest.py configure_logging() call prevents test-order structlog failures**
 
 - **Found during:** Task 1 (running full test suite — test_acl.py::test_audit_log_contains_required_fields failed when test_health.py ran first)
-- **Issue:** `test_health.py` imports `main.py` → triggers `create_app()` → `configure_logging()`, switching structlog to `stdlib.LoggerFactory()`. The module-level `audit_logger` in `acl.py` was initialized before this config change. After `configure_logging()`, output goes through Python logging, but `capsys` in the ACL test only captures direct stdout.
+- **Issue:** `test_health.py` imports `main.py` -> triggers `create_app()` -> `configure_logging()`, switching structlog to `stdlib.LoggerFactory()`. The module-level `audit_logger` in `acl.py` was initialized before this config change. After `configure_logging()`, output goes through Python logging, but `capsys` in the ACL test only captures direct stdout.
 - **Fix:** Added `from core.logging import configure_logging; configure_logging(...)` to `conftest.py` so structlog config is established consistently before all tests, regardless of import order.
 - **Files modified:** `backend/tests/conftest.py`
 - **Verification:** 58/58 tests pass in all orderings
@@ -202,26 +203,26 @@ Each task was committed atomically:
 **Total deviations:** 5 auto-fixed (3 test bugs, 1 blocking test infra, 1 TypeScript type error)
 **Impact on plan:** All fixes necessary for correct test isolation and type safety. No scope creep.
 
-## Checkpoint Status
+## Issues Encountered
 
-Task 3 is a `checkpoint:human-verify` gate. The automated portion (Tasks 1 and 2) is complete. Human verification of the browser SSO flow is pending.
+None beyond the auto-fixed deviations above.
 
-**What needs to be verified:**
-1. `docker compose up -d postgres redis litellm` → all healthy
-2. Backend running: `GET http://localhost:8000/health` → 200
-3. Backend running: `POST http://localhost:8000/api/agents/chat` → 401 (no JWT)
-4. Frontend running: `http://localhost:3000` → redirects to Keycloak login
-5. After login: `/chat` page shows user email in AuthHeader + Sign out button
-6. Sign out clears session and redirects to login
+## Phase 1 Success Criteria — All Met
+
+1. User can log in via Keycloak SSO and receive a valid session in the browser — verified (human approval)
+2. Backend rejects requests with missing, expired, or invalid JWT tokens with 401 — verified (test_agents_auth.py: test_chat_no_jwt_returns_401)
+3. User with "employee" role can access agent endpoints; unknown role cannot invoke tools (RBAC enforced) — verified (test_rbac.py + test_agents_auth.py)
+4. Every tool call attempt is logged with user_id, tool name, allowed/denied, and duration — no credentials in logs — verified (test_acl.py)
+5. All Docker Compose services start and pass health checks — verified (human approval during checkpoint)
 
 ## Next Phase Readiness
 
-After checkpoint approval:
-- Phase 1 is complete — all success criteria met
-- Phase 2 can implement actual agent logic in the `/api/agents/chat` stub (change 501 to real LangGraph invocation)
+- Phase 1 is complete — all 5 success criteria met, all 58 backend tests passing
+- Phase 2 can implement actual agent logic in the `/api/agents/chat` stub (replace 501 with real LangGraph invocation)
 - `serverFetch()` in frontend is ready for Phase 2 chat UI components
 - All 58 backend tests provide regression coverage for Phase 2 development
+- `get_llm("blitz/master")` pattern ready to use; LiteLLM proxy service in docker-compose
 
 ---
 *Phase: 01-identity-and-infrastructure-skeleton*
-*Completed: 2026-02-24 (checkpoint pending)*
+*Completed: 2026-02-24*
