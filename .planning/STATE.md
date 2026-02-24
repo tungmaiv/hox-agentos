@@ -5,33 +5,33 @@
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates daily work routines and lets them build custom automations without writing code -- all within an enterprise-secure, on-premise environment.
-**Current focus:** Phase 1: Identity and Infrastructure Skeleton
+**Current focus:** Phase 1: Identity and Infrastructure Skeleton — Checkpoint awaiting browser SSO verification
 
 ## Current Position
 
 Phase: 1 of 8 (Identity and Infrastructure Skeleton)
-Plan: 3 of 4 in current phase
-Status: In progress
-Last activity: 2026-02-24 -- Completed 01-03-PLAN.md (RBAC + Tool ACL + Audit Logging)
+Plan: 4 of 4 in current phase (CHECKPOINT — awaiting human verification)
+Status: In progress — Tasks 1+2 complete; checkpoint task awaiting human SSO verification
+Last activity: 2026-02-24 -- Completed 01-04 Tasks 1+2 (FastAPI routes + frontend API client), 58 backend tests passing, Alembic migration run
 
-Progress: [███░░░░░░░] 15% (3/20 plans estimated)
+Progress: [████░░░░░░] 18% (3.5/20 plans estimated — checkpoint not yet approved)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: 4.7 min
-- Total execution time: 0.23 hours
+- Total plans completed: 3.5 (01-04 at checkpoint, not yet approved)
+- Average duration: 5.7 min
+- Total execution time: 0.40 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01 | 3 | 14 min | 4.7 min |
+| 01 | 3.5 | ~23 min | 5.7 min |
 
 **Recent Trend:**
-- Last 5 plans: 7 min, 4 min, 3 min
-- Trend: Accelerating
+- Last 5 plans: 7 min, 4 min, 3 min, 9 min
+- Trend: Stable
 
 *Updated after each plan completion*
 
@@ -58,10 +58,16 @@ Recent decisions affecting current work:
 - [01-03]: Tool ACL default policy is ALLOW (no row = True); deny requires explicit row with allowed=False
 - [01-03]: structlog with LoggerFactory() writes to stdout; use capsys in tests (not caplog) to capture audit log output
 - [01-03]: aiosqlite for ACL unit tests -- no real PostgreSQL needed; all ACL queries are standard SQL
+- [01-04]: GET /health has no /api prefix so Docker/load balancer health checks can reach it without credentials
+- [01-04]: Integration tests that reach Gate 3 (check_tool_acl) need SQLite session override; employee/executive pass RBAC and hit DB
+- [01-04]: conftest.py calls configure_logging() at session start -- prevents structlog config ordering failures in full test suite
+- [01-04]: test_config.py must not call reload() inside patch.dict -- reload persists module state after patch exits, contaminating JWT issuer in subsequent tests
+- [01-04]: test_acl.py audit log test now uses caplog+capsys combined -- stdlib.LoggerFactory routes to caplog, not capsys
+- [01-04]: auth.ts uses double cast (session as unknown as Record) to satisfy TypeScript strict TS2352
 
 ### Pending Todos
 
-None.
+- [ ] Trigger human verification of browser SSO flow for 01-04 checkpoint approval
 
 ### Blockers/Concerns
 
@@ -71,9 +77,10 @@ None.
 - uv run subcommands time out on this machine; use .venv/bin/ paths directly for CLI tools
 - python-jose uses datetime.utcnow() internally (deprecated in Python 3.12) -- harmless warning in tests, not actionable
 - Alembic migration 001 requires pgvector-enabled PostgreSQL to run; test only possible when Docker stack is up
+- 01-04 checkpoint: browser SSO verification requires running Keycloak + real OIDC client credentials
 
 ## Session Continuity
 
-Last session: 2026-02-24T14:15:28Z
-Stopped at: Completed 01-03-PLAN.md -- RBAC Gate 2 + Tool ACL Gate 3 + audit logging, 36 security tests passing (49 total)
+Last session: 2026-02-24T14:28:19Z
+Stopped at: 01-04 CHECKPOINT — Tasks 1+2 complete (backend routes + frontend API client). Awaiting human verification of browser SSO flow.
 Resume file: None
