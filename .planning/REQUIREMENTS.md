@@ -143,55 +143,55 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AUTH-06 | Phase 1 | Pending |
 | AGNT-01 | Phase 2 | Pending |
 | AGNT-02 | Phase 2 | Pending |
-| AGNT-03 | Phase 2 | Pending |
-| AGNT-04 | Phase 2 | Pending |
-| AGNT-05 | Phase 2 | Pending |
-| AGNT-06 | Phase 2 | Pending |
 | AGNT-07 | Phase 2 | Pending |
-| AGNT-08 | Phase 2 | Pending |
 | MEMO-01 | Phase 2 | Pending |
-| MEMO-02 | Phase 2 | Pending |
-| MEMO-03 | Phase 2 | Pending |
-| MEMO-04 | Phase 2 | Pending |
 | MEMO-05 | Phase 2 | Pending |
-| INTG-01 | Phase 2 | Pending |
-| INTG-02 | Phase 2 | Pending |
-| INTG-03 | Phase 2 | Pending |
 | INTG-04 | Phase 2 | Pending |
-| INTG-05 | Phase 2 | Pending |
-| WKFL-01 | Phase 3 | Pending |
-| WKFL-02 | Phase 3 | Pending |
-| WKFL-03 | Phase 3 | Pending |
-| WKFL-04 | Phase 3 | Pending |
-| WKFL-05 | Phase 3 | Pending |
-| WKFL-06 | Phase 3 | Pending |
-| WKFL-07 | Phase 3 | Pending |
-| WKFL-08 | Phase 3 | Pending |
-| WKFL-09 | Phase 3 | Pending |
-| CHAN-01 | Phase 4 | Pending |
-| CHAN-02 | Phase 4 | Pending |
-| CHAN-03 | Phase 4 | Pending |
-| CHAN-04 | Phase 4 | Pending |
-| CHAN-05 | Phase 4 | Pending |
-| CHAN-06 | Phase 4 | Pending |
-| EXTD-01 | Phase 5 | Pending |
-| EXTD-02 | Phase 5 | Pending |
-| EXTD-03 | Phase 5 | Pending |
-| EXTD-04 | Phase 5 | Pending |
-| EXTD-05 | Phase 5 | Pending |
-| EXTD-06 | Phase 5 | Pending |
-| SBOX-01 | Phase 5 | Pending |
-| SBOX-02 | Phase 5 | Pending |
-| SBOX-03 | Phase 5 | Pending |
-| OBSV-01 | Phase 6 | Pending |
-| OBSV-02 | Phase 6 | Pending |
-| OBSV-03 | Phase 6 | Pending |
+| AGNT-03 | Phase 3 | Pending |
+| AGNT-04 | Phase 3 | Pending |
+| AGNT-05 | Phase 3 | Pending |
+| AGNT-06 | Phase 3 | Pending |
+| AGNT-08 | Phase 3 | Pending |
+| MEMO-02 | Phase 3 | Pending |
+| MEMO-03 | Phase 3 | Pending |
+| MEMO-04 | Phase 3 | Pending |
+| INTG-01 | Phase 3 | Pending |
+| INTG-02 | Phase 3 | Pending |
+| INTG-03 | Phase 3 | Pending |
+| INTG-05 | Phase 3 | Pending |
+| WKFL-01 | Phase 4 | Pending |
+| WKFL-02 | Phase 4 | Pending |
+| WKFL-03 | Phase 4 | Pending |
+| WKFL-04 | Phase 4 | Pending |
+| WKFL-05 | Phase 4 | Pending |
+| WKFL-06 | Phase 4 | Pending |
+| WKFL-07 | Phase 4 | Pending |
+| WKFL-08 | Phase 4 | Pending |
+| WKFL-09 | Phase 4 | Pending |
+| CHAN-01 | Phase 5 | Pending |
+| CHAN-02 | Phase 5 | Pending |
+| CHAN-03 | Phase 5 | Pending |
+| CHAN-04 | Phase 5 | Pending |
+| CHAN-05 | Phase 5 | Pending |
+| CHAN-06 | Phase 5 | Pending |
+| EXTD-01 | Phase 6 | Pending |
+| EXTD-02 | Phase 6 | Pending |
+| EXTD-03 | Phase 6 | Pending |
+| EXTD-04 | Phase 6 | Pending |
+| EXTD-05 | Phase 6 | Pending |
+| EXTD-06 | Phase 6 | Pending |
+| SBOX-01 | Phase 7 | Pending |
+| SBOX-02 | Phase 7 | Pending |
+| SBOX-03 | Phase 7 | Pending |
+| OBSV-01 | Phase 8 | Pending |
+| OBSV-02 | Phase 8 | Pending |
+| OBSV-03 | Phase 8 | Pending |
 
 **Coverage:**
-- v1 requirements: 48 total
-- Mapped to phases: 48
-- Unmapped: 0 ✓
+- v1 requirements: 51 total
+- Mapped to phases: 51
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-24*
-*Last updated: 2026-02-24 after initial definition*
+*Last updated: 2026-02-24 after roadmap creation (8-phase mapping)*
