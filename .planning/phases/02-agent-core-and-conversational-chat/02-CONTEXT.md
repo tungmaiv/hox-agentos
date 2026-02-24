@@ -85,6 +85,7 @@ Users can have a natural language conversation with a streaming AI agent (Blitz)
 </decisions>
 
 <specifics>
+
 ## Specific Ideas
 
 - The chat should feel like a polished internal tool — not a demo. Reference: Claude.ai layout but with the Blitz brand
@@ -96,6 +97,7 @@ Users can have a natural language conversation with a streaming AI agent (Blitz)
 </specifics>
 
 <deferred>
+
 ## Deferred Ideas
 
 - @ mention support to route to sub-agents — Phase 3 (when sub-agents exist)
