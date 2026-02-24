@@ -10,27 +10,27 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 ## Current Position
 
 Phase: 1 of 8 (Identity and Infrastructure Skeleton)
-Plan: 2 of 4 in current phase
+Plan: 3 of 4 in current phase
 Status: In progress
-Last activity: 2026-02-24 -- Completed 01-02-PLAN.md (JWT Validation Gate)
+Last activity: 2026-02-24 -- Completed 01-03-PLAN.md (RBAC + Tool ACL + Audit Logging)
 
-Progress: [██░░░░░░░░] 10% (2/20 plans estimated)
+Progress: [███░░░░░░░] 15% (3/20 plans estimated)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 2
-- Average duration: 5.5 min
-- Total execution time: 0.18 hours
+- Total plans completed: 3
+- Average duration: 4.7 min
+- Total execution time: 0.23 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01 | 2 | 11 min | 5.5 min |
+| 01 | 3 | 14 min | 4.7 min |
 
 **Recent Trend:**
-- Last 5 plans: 7 min, 4 min
+- Last 5 plans: 7 min, 4 min, 3 min
 - Trend: Accelerating
 
 *Updated after each plan completion*
@@ -54,6 +54,10 @@ Recent decisions affecting current work:
 - [01-02]: _fetch_jwks_from_remote() separated from _get_jwks() cache manager so cache-hit test can mock only HTTP, not cache logic
 - [01-02]: conftest.py uses os.environ.setdefault() so unit tests run without .env but real .env values are not overridden
 - [01-02]: make_token fixture reads iss/aud from live core.config.settings at call time (not hardcoded) to survive module reload side effects from test_config.py
+- [01-03]: ROLE_PERMISSIONS uses explicit enumeration per role (no inheritance chain) -- readable, auditable, testable
+- [01-03]: Tool ACL default policy is ALLOW (no row = True); deny requires explicit row with allowed=False
+- [01-03]: structlog with LoggerFactory() writes to stdout; use capsys in tests (not caplog) to capture audit log output
+- [01-03]: aiosqlite for ACL unit tests -- no real PostgreSQL needed; all ACL queries are standard SQL
 
 ### Pending Todos
 
@@ -66,9 +70,10 @@ None.
 - CopilotKit + LangGraph HITL has known ZodError -- use graph interrupt nodes instead (affects Phase 4)
 - uv run subcommands time out on this machine; use .venv/bin/ paths directly for CLI tools
 - python-jose uses datetime.utcnow() internally (deprecated in Python 3.12) -- harmless warning in tests, not actionable
+- Alembic migration 001 requires pgvector-enabled PostgreSQL to run; test only possible when Docker stack is up
 
 ## Session Continuity
 
-Last session: 2026-02-24T14:08:39Z
-Stopped at: Completed 01-02-PLAN.md -- JWT validation Gate 1, 2 TDD tasks, 20 tests passing
+Last session: 2026-02-24T14:15:28Z
+Stopped at: Completed 01-03-PLAN.md -- RBAC Gate 2 + Tool ACL Gate 3 + audit logging, 36 security tests passing (49 total)
 Resume file: None
