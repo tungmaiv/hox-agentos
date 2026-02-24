@@ -1,0 +1,32 @@
+model_list:
+  - model_name: blitz-master
+    litellm_params:
+      model: ollama/qwen2.5:72b
+      api_base: http://host.docker.internal:11434
+
+  - model_name: blitz-fast
+    litellm_params:
+      model: ollama/llama3.2:3b
+      api_base: http://host.docker.internal:11434
+
+  - model_name: blitz-coder
+    litellm_params:
+      model: openrouter/kimi-k1.5
+      api_key: os.environ/OPENROUTER_API_KEY
+
+  - model_name: blitz-summarizer
+    litellm_params:
+      model: ollama/llama3.2:3b
+      api_base: http://host.docker.internal:11434
+
+litellm_settings:
+  drop_params: true
+  fallbacks:
+    - blitz-master:
+        - anthropic/claude-sonnet-4-6
+    - blitz-fast:
+        - openai/gpt-4o-mini
+    - blitz-coder:
+        - anthropic/claude-sonnet-4-6
+    - blitz-summarizer:
+        - openai/gpt-4o-mini
