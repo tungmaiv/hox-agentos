@@ -7,9 +7,10 @@ provides JWT validation, RBAC, and Tool ACL.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.routes import agents, health
+from api.routes import agents, credentials, health
 from core.config import settings
 from core.logging import configure_logging
+from gateway import runtime
 
 
 def create_app() -> FastAPI:
@@ -37,6 +38,12 @@ def create_app() -> FastAPI:
 
     # Agent routes — all protected by 3-gate security chain
     app.include_router(agents.router, prefix="/api")
+
+    # Credential vault routes — GET/DELETE only (Phase 2 stubs)
+    app.include_router(credentials.router, prefix="/api")
+
+    # CopilotKit AG-UI streaming endpoint — 3-gate security + LangGraph master agent
+    app.include_router(runtime.router)
 
     return app
 
