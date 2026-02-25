@@ -222,6 +222,9 @@ Tools are called via the backend MCPClient — never directly from frontend.
 | Instantiating RunAgentInput from JSON | `RunAgentInput(**body)` | `RunAgentInput.model_validate(body)` — uses camelCase aliases |
 | Importing copilotkit in Python | `from copilotkit import LangGraphAGUIAgent` | `from copilotkit.langgraph_agui_agent import LangGraphAGUIAgent` — `__init__` imports broken middleware |
 | Backend JWT validation with self-signed Keycloak cert | Default httpx (fails SSL) | Set `KEYCLOAK_CA_CERT=/path/to/keycloak-ca.crt` in `.env`; used in `security/jwt.py` |
+| JWT audience validation | `audience="blitz-backend"` (fails — token has no `aud`) | `options={"verify_aud": False}` — blitz-portal tokens carry no `aud` claim; issuer + RS256 sig still enforced |
+| Extracting Keycloak realm roles | `payload.get("realm_access", {}).get("roles", [])` → `[]` | `payload.get("realm_roles")` — realm uses a custom scope mapper emitting flat `realm_roles` list, not nested `realm_access.roles` |
+| Backend DB tables missing on fresh install | Queries fail with 500 | Run `just migrate` (or `cd backend && .venv/bin/alembic upgrade head`) before first use |
 | `justfile` + JSON list env var (e.g. `CORS_ORIGINS`) | `set dotenv-load := true` (mangles `["url"]` → `[`) | Removed — each service reads its own `.env` directly; do not add it back |
 | `just *-kill` recipe self-terminates on signal 9 | Bare `pkill -9 -f "pattern"` (pattern in `sh -c '...'` cmdline) | Use `#!/usr/bin/env bash` shebang + `fuser -k <port>/tcp` fallback |
 
@@ -241,3 +244,5 @@ Tools are called via the backend MCPClient — never directly from frontend.
 | 2026-02-25 | Keycloak SSL: backend/security/jwt.py uses KEYCLOAK_CA_CERT env var for self-signed cert trust; set in backend/.env | claude |
 | 2026-02-25 | justfile created at project root — use `just <recipe>` to manage Docker/backend/frontend; `set dotenv-load` removed to prevent env var mangling | claude |
 | 2026-02-25 | justfile kill recipes: must use `#!/usr/bin/env bash` shebang; bare `sh -c 'pkill -f "pattern"'` self-kills because pattern appears in shell cmdline | claude |
+| 2026-02-26 | JWT: blitz-portal tokens carry no aud claim → verify_aud=False in jwt.py; realm roles emitted as flat realm_roles not realm_access.roles | claude |
+| 2026-02-26 | DB tables: must run `just migrate` on fresh install before backend can serve requests; tool_acl table missing → 500 on every authenticated call | claude |
