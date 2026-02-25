@@ -5,34 +5,34 @@
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates daily work routines and lets them build custom automations without writing code -- all within an enterprise-secure, on-premise environment.
-**Current focus:** Phase 2: Agent Core — LangGraph master agent wired, tool registration and memory foundation next
+**Current focus:** Phase 2: Agent Core — credential vault done, memory foundation (02-03) and agent tools/chat (02-05) remaining
 
 ## Current Position
 
 Phase: 2 of 8 IN PROGRESS (Agent Core and Conversational Chat)
-Plan: 2 of 5 — COMPLETE (02-02 done)
-Status: In progress — 02-01 and 02-02 complete, 02-03 through 02-05 remaining
-Last activity: 2026-02-25 -- Completed 02-02-PLAN.md (BlitzState, master agent graph, CopilotKit runtime)
+Plan: 4 of 5 — COMPLETE (02-04 done)
+Status: In progress — 02-01, 02-02, 02-04 complete; 02-03 and 02-05 remaining
+Last activity: 2026-02-25 -- Completed 02-04-PLAN.md (AES-256-GCM credential vault, GET/DELETE /api/credentials)
 
-Progress: [███░░░░░░░] 30% (6/20 plans estimated)
+Progress: [████░░░░░░] 35% (7/20 plans estimated)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6
-- Average duration: 8.5 min
-- Total execution time: 0.59 hours
+- Total plans completed: 7
+- Average duration: 8.7 min
+- Total execution time: 0.60 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01 (complete) | 4 | ~26 min | 6.5 min |
-| 02 (in progress) | 2 | ~28 min | 14 min |
+| 02 (in progress) | 3 | ~43 min | 14.3 min |
 
 **Recent Trend:**
-- Last 5 plans: 4 min, 3 min, 9 min, 20 min, 23 min
-- Trend: 02-02 was longer due to CopilotKit API discovery and LangGraph version differences
+- Last 5 plans: 3 min, 9 min, 20 min, 23 min, 15 min
+- Trend: 02-04 was fast (pre-written files verified + committed)
 
 *Updated after each plan completion*
 
@@ -73,10 +73,15 @@ Recent decisions affecting current work:
 - [02-02]: Never use importlib.reload() inside patch() for mocking module-level names -- reload rebinds from real source, bypassing patch; patch the module-level name directly
 - [02-02]: copilotkit.integrations.fastapi.handler() used as delegate inside secured FastAPI route -- avoids add_fastapi_endpoint() which would bypass security
 - [02-02]: CopilotKit agent name is 'blitz_master' -- frontend useCopilotAgent/useCoAgent must reference this exact string
+- [02-04]: Credential vault upsert uses select-then-insert/update (not ON CONFLICT DO UPDATE) -- needed for SQLite compatibility in TDD tests; works on both SQLite and PostgreSQL
+- [02-04]: Migration 003 branches from 001 (down_revision="001") -- parallel with 002 (memory_conversations); merge migration required when both exist
+- [02-04]: Alembic upgrade from host fails without .env; applied migration via docker exec psql trust auth -- same constraint as 001
+- [02-04]: _get_key() checks CREDENTIAL_ENCRYPTION_KEY env var before settings -- allows os.environ.setdefault() injection in TDD tests
 
 ### Pending Todos
 
 - [ ] Start WhatsApp Business API verification process (takes 1-4 weeks, needed for Phase 5)
+- [ ] Add CREDENTIAL_ENCRYPTION_KEY to production .env before Phase 3 OAuth flows (generate: python -c "import secrets; print(secrets.token_hex(32))")
 
 ### Blockers/Concerns
 
@@ -85,10 +90,11 @@ Recent decisions affecting current work:
 - CopilotKit + LangGraph HITL has known ZodError -- use graph interrupt nodes instead (affects Phase 4)
 - uv run subcommands time out on this machine; use .venv/bin/ paths directly for CLI tools
 - python-jose uses datetime.utcnow() internally (deprecated in Python 3.12) -- harmless warning in tests, not actionable
-- Alembic migration 001 requires pgvector-enabled PostgreSQL to run; test only possible when Docker stack is up
+- Alembic migration from host requires .env (not present); migrations applied via docker exec psql trust auth inside container
+- Merge migration needed when 02-03 (migration 002) completes -- alembic merge 002 003 before upgrade head
 
 ## Session Continuity
 
-Last session: 2026-02-25T04:06:56Z
-Stopped at: Completed 02-02-PLAN.md — BlitzState, master agent graph, CopilotKit runtime (83 tests pass)
+Last session: 2026-02-25T11:20:00Z
+Stopped at: Completed 02-04-PLAN.md — AES-256-GCM credential vault, GET/DELETE /api/credentials (83+14=83 tests pass)
 Resume file: None
