@@ -222,6 +222,8 @@ Tools are called via the backend MCPClient — never directly from frontend.
 | Instantiating RunAgentInput from JSON | `RunAgentInput(**body)` | `RunAgentInput.model_validate(body)` — uses camelCase aliases |
 | Importing copilotkit in Python | `from copilotkit import LangGraphAGUIAgent` | `from copilotkit.langgraph_agui_agent import LangGraphAGUIAgent` — `__init__` imports broken middleware |
 | Backend JWT validation with self-signed Keycloak cert | Default httpx (fails SSL) | Set `KEYCLOAK_CA_CERT=/path/to/keycloak-ca.crt` in `.env`; used in `security/jwt.py` |
+| `justfile` + JSON list env var (e.g. `CORS_ORIGINS`) | `set dotenv-load := true` (mangles `["url"]` → `[`) | Removed — each service reads its own `.env` directly; do not add it back |
+| `just *-kill` recipe self-terminates on signal 9 | Bare `pkill -9 -f "pattern"` (pattern in `sh -c '...'` cmdline) | Use `#!/usr/bin/env bash` shebang + `fuser -k <port>/tcp` fallback |
 
 ---
 
@@ -237,3 +239,5 @@ Tools are called via the backend MCPClient — never directly from frontend.
 | 2026-02-25 | CopilotKit protocol: @copilotkitnext v1.51.4 uses single-route JSON envelope (method: info / agent/run), not GraphQL or REST sub-paths | claude |
 | 2026-02-25 | Python deps: copilotkit 0.1.78, ag-ui-langgraph 0.0.25, ag-ui-protocol 0.1.13 — use LangGraphAGUIAgent from submodule, not __init__ | claude |
 | 2026-02-25 | Keycloak SSL: backend/security/jwt.py uses KEYCLOAK_CA_CERT env var for self-signed cert trust; set in backend/.env | claude |
+| 2026-02-25 | justfile created at project root — use `just <recipe>` to manage Docker/backend/frontend; `set dotenv-load` removed to prevent env var mangling | claude |
+| 2026-02-25 | justfile kill recipes: must use `#!/usr/bin/env bash` shebang; bare `sh -c 'pkill -f "pattern"'` self-kills because pattern appears in shell cmdline | claude |

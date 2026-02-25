@@ -209,28 +209,51 @@ gh repo clone                   # clone repo
 
 ### Common Commands
 
+Use `just` (project-root `justfile`) as the primary task runner. Run `just` with no args to list all recipes.
+
 ```bash
-# Start all services
-docker compose up -d
+# ── Docker services ───────────────────────────────────────────
+just up                    # start all Docker services (detached)
+just up-svc postgres redis # start specific service(s)
+just down                  # stop services (keep volumes)
+just down-v                # stop + wipe volumes (destructive)
+just logs postgres         # tail logs for one service
+just ps                    # service status
 
-# Start specific service
-docker compose up -d backend
+# ── Backend (FastAPI / uvicorn) ───────────────────────────────
+just backend               # start backend dev server (port 8000, hot reload)
+just backend-bg            # start in background (writes .backend.pid)
+just backend-stop          # graceful stop
+just backend-kill          # force kill + free port 8000
 
-# Tail backend logs
-docker compose logs -f backend
+# ── Frontend (Next.js / pnpm) ─────────────────────────────────
+just frontend              # start frontend dev server (port 3000)
+just frontend-bg           # start in background (writes .frontend.pid)
+just frontend-stop         # graceful stop
+just frontend-kill         # force kill + free port 3000
 
-# Run Celery worker manually
+# ── Shortcuts ─────────────────────────────────────────────────
+just stop                  # stop both backend and frontend
+just kill                  # force kill both
+just dev                   # tmux: infra + backend + frontend in split panes
+just migrate               # run Alembic migrations
+just db                    # open psql shell
+
+# ── One-off docker/uv/pnpm commands ──────────────────────────
 docker compose run --rm backend celery -A scheduler.celery_app worker --concurrency=4
-
-# Apply DB migrations
-docker compose run --rm backend alembic upgrade head
-
-# Frontend dev
-cd frontend && pnpm run dev
-
-# Backend dev (with hot reload)
-cd backend && uvicorn main:app --reload --port 8000
+uv add <pkg>               # add Python dep (run from backend/)
+pnpm add <pkg>             # add JS dep (run from frontend/)
 ```
+
+> **Gotcha — `justfile` and `.env` files:** `set dotenv-load` was intentionally removed.
+> Each service manages its own `.env`: backend via pydantic-settings (`backend/.env`),
+> frontend via Next.js (`frontend/.env.local`). Do NOT add `set dotenv-load := true`
+> back — it causes `just`'s dotenv parser to mangle JSON list values like
+> `CORS_ORIGINS=["http://..."]` → `[` → pydantic-settings `JSONDecodeError`.
+>
+> **Gotcha — kill recipes:** `*-kill` recipes use `#!/usr/bin/env bash` shebang.
+> Without it, `sh -c 'pkill -9 -f "next dev"...'` has the pattern in its own cmdline
+> and pkill kills the shell (and `just`) before the target process dies.
 
 ### Environment Variables
 
