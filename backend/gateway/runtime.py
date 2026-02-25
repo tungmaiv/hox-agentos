@@ -8,8 +8,10 @@ Architecture note (@copilotkitnext v1.51.4 / ag-ui-langgraph 0.0.25):
   POST /api/copilotkit as a JSON envelope: {"method": "<name>", "params": {...}, "body": {...}}.
 
   Supported methods:
-    "info"       — return available agents (discovery / runtime sync)
-    "agent/run"  — run an agent with RunAgentInput body, stream AG-UI events
+    "info"          — return available agents (discovery / runtime sync)
+    "agent/run"     — run an agent with RunAgentInput body, stream AG-UI events
+    "agent/connect" — reconnect to an existing thread on component mount; same
+                      protocol as agent/run (state snapshot + events)
 
 Security architecture:
   Gate 1 (JWT): Depends(get_current_user) on the endpoint.
@@ -121,6 +123,8 @@ async def copilotkit_endpoint(
         → Returns available agent registry (runtime sync / discovery).
       { "method": "agent/run", "params": {"agentId": "blitz_master"}, "body": <RunAgentInput> }
         → Streams AG-UI events (text, tool calls, state snapshots).
+      { "method": "agent/connect", "params": {"agentId": "blitz_master"}, "body": <RunAgentInput> }
+        → Same stream protocol; called on component mount to restore thread state.
 
     Security: 3-gate chain (JWT → RBAC → Tool ACL).
     The JWT Authorization header is injected by the Next.js proxy route from
@@ -144,8 +148,13 @@ async def copilotkit_endpoint(
     if method == "info":
         return JSONResponse(content=_RUNTIME_INFO)
 
-    # ── agent/run ─────────────────────────────────────────────────────────
-    if method == "agent/run":
+    # ── agent/run + agent/connect ─────────────────────────────────────────
+    # agent/connect is called on component mount to reconnect to an existing
+    # thread and restore state. It sends the same RunAgentInput body and
+    # expects the same AG-UI SSE stream. Route both through _agent.run() —
+    # LangGraphAGUIAgent handles state restoration via the graph checkpointer
+    # when thread_id matches a previous run.
+    if method in ("agent/run", "agent/connect"):
         params = envelope.get("params") or {}
         agent_id = params.get("agentId")
         if agent_id != _agent.name:
@@ -195,5 +204,5 @@ async def copilotkit_endpoint(
     # ── unknown method ─────────────────────────────────────────────────────
     raise HTTPException(
         status_code=400,
-        detail=f"Unsupported method '{method}'. Supported: info, agent/run",
+        detail=f"Unsupported method '{method}'. Supported: info, agent/run, agent/connect",
     )
