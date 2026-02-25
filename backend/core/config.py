@@ -36,6 +36,7 @@ class Settings(BaseSettings):
 
     # Security
     secret_key: str
+    credential_encryption_key: str = ""  # Hex-encoded 32-byte key for AES-256-GCM
 
     # Application
     cors_origins: list[str] = ["http://localhost:3000"]
