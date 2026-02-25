@@ -218,7 +218,7 @@ Tools are called via the backend MCPClient — never directly from frontend.
 | LiteLLM calling backend | `http://localhost:8000` | `http://backend:8000` |
 | Test via curl from host | use `localhost` URLs | — |
 | Test via exec inside container | use Docker service name URLs | — |
-| CopilotKit agent discovery | GET `/info`, POST `/agent/name/run` (sub-paths) | POST `/api/copilotkit` with `{"method":"info"}` or `{"method":"agent/run",...}` |
+| CopilotKit agent discovery | GET `/info`, POST `/agent/name/run` (sub-paths) | POST `/api/copilotkit` with `{"method":"info"}` or `{"method":"agent/run",...}` or `{"method":"agent/connect",...}` |
 | Instantiating RunAgentInput from JSON | `RunAgentInput(**body)` | `RunAgentInput.model_validate(body)` — uses camelCase aliases |
 | Importing copilotkit in Python | `from copilotkit import LangGraphAGUIAgent` | `from copilotkit.langgraph_agui_agent import LangGraphAGUIAgent` — `__init__` imports broken middleware |
 | Backend JWT validation with self-signed Keycloak cert | Default httpx (fails SSL) | Set `KEYCLOAK_CA_CERT=/path/to/keycloak-ca.crt` in `.env`; used in `security/jwt.py` |
@@ -246,3 +246,4 @@ Tools are called via the backend MCPClient — never directly from frontend.
 | 2026-02-25 | justfile kill recipes: must use `#!/usr/bin/env bash` shebang; bare `sh -c 'pkill -f "pattern"'` self-kills because pattern appears in shell cmdline | claude |
 | 2026-02-26 | JWT: blitz-portal tokens carry no aud claim → verify_aud=False in jwt.py; realm roles emitted as flat realm_roles not realm_access.roles | claude |
 | 2026-02-26 | DB tables: must run `just migrate` on fresh install before backend can serve requests; tool_acl table missing → 500 on every authenticated call | claude |
+| 2026-02-26 | CopilotKit protocol: 3 methods — info, agent/run, agent/connect; connect is called on component mount to restore thread state, same RunAgentInput body/SSE response as run | claude |
