@@ -105,7 +105,7 @@ async def validate_token(token: str) -> UserContext:
       - Signature (RS256, against JWKS public key)
       - Expiry (exp claim)
       - Issuer (iss must equal settings.keycloak_issuer)
-      - Audience (aud must include settings.keycloak_client_id)
+      - Audience: skipped — blitz-portal tokens carry no aud claim (issuer is sufficient)
 
     Returns:
         UserContext populated from JWT claims.
@@ -121,7 +121,10 @@ async def validate_token(token: str) -> UserContext:
             token,
             jwks,
             algorithms=["RS256"],
-            audience=settings.keycloak_client_id,
+            # Skip audience validation — the blitz-portal access token carries no
+            # aud claim (Keycloak default for this realm config).  Signature (RS256)
+            # and issuer are still validated so tokens from other issuers are rejected.
+            options={"verify_aud": False},
             issuer=settings.keycloak_issuer,
         )
     except ExpiredSignatureError:
@@ -131,7 +134,10 @@ async def validate_token(token: str) -> UserContext:
         logger.warning("jwt_validation_failed", error_type=type(exc).__name__, error=str(exc))
         raise HTTPException(status_code=401, detail="Invalid token")
 
-    roles: list[str] = payload.get("realm_access", {}).get("roles", [])
+    # Keycloak realm has a custom "roles" scope mapper that emits a flat
+    # realm_roles claim instead of the standard realm_access.roles nesting.
+    # Try the flat key first; fall back to standard path for forward-compat.
+    roles: list[str] = payload.get("realm_roles") or payload.get("realm_access", {}).get("roles", [])
     return UserContext(
         user_id=UUID(payload["sub"]),
         email=payload.get("email", ""),
