@@ -5,34 +5,34 @@
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates daily work routines and lets them build custom automations without writing code -- all within an enterprise-secure, on-premise environment.
-**Current focus:** Phase 2: Agent Core — credential vault done, memory foundation (02-03) and agent tools/chat (02-05) remaining
+**Current focus:** Phase 2: Agent Core — 02-03 (memory) complete; only 02-05 (chat UI + slash commands) remaining
 
 ## Current Position
 
 Phase: 2 of 8 IN PROGRESS (Agent Core and Conversational Chat)
-Plan: 4 of 5 — COMPLETE (02-04 done)
-Status: In progress — 02-01, 02-02, 02-04 complete; 02-03 and 02-05 remaining
-Last activity: 2026-02-25 -- Completed 02-04-PLAN.md (AES-256-GCM credential vault, GET/DELETE /api/credentials)
+Plan: 5 of 5 — IN PROGRESS (02-05 remaining)
+Status: In progress — 02-01, 02-02, 02-03, 02-04 complete; 02-05 remaining
+Last activity: 2026-02-25 -- Completed 02-03-PLAN.md (memory_conversations migration, short-term memory, load/save nodes, GET /api/conversations)
 
-Progress: [████░░░░░░] 35% (7/20 plans estimated)
+Progress: [█████░░░░░] 40% (8/20 plans estimated)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 7
-- Average duration: 8.7 min
-- Total execution time: 0.60 hours
+- Total plans completed: 8
+- Average duration: 9.9 min
+- Total execution time: 0.79 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01 (complete) | 4 | ~26 min | 6.5 min |
-| 02 (in progress) | 3 | ~43 min | 14.3 min |
+| 02 (in progress) | 4 | ~73 min | 18.3 min |
 
 **Recent Trend:**
-- Last 5 plans: 3 min, 9 min, 20 min, 23 min, 15 min
-- Trend: 02-04 was fast (pre-written files verified + committed)
+- Last 5 plans: 9 min, 20 min, 23 min, 15 min, 19 min
+- Trend: consistent 15-23 min for TDD plans in Phase 2
 
 *Updated after each plan completion*
 
@@ -73,6 +73,11 @@ Recent decisions affecting current work:
 - [02-02]: Never use importlib.reload() inside patch() for mocking module-level names -- reload rebinds from real source, bypassing patch; patch the module-level name directly
 - [02-02]: copilotkit.integrations.fastapi.handler() used as delegate inside secured FastAPI route -- avoids add_fastapi_endpoint() which would bypass security
 - [02-02]: CopilotKit agent name is 'blitz_master' -- frontend useCopilotAgent/useCoAgent must reference this exact string
+- [02-03]: current_user_ctx moved from gateway/runtime.py to core/context.py -- breaks circular import between runtime.py and master_agent.py; both import from core/context.py
+- [02-03]: Alembic merge migration 9754fd080ee2 required when both 002 and 003 branch from 001 -- created via .venv/bin/alembic merge 002 003; alembic_version single head is now 9754fd080ee2
+- [02-03]: SQLite timestamp ordering non-deterministic in in-memory tests -- test load_recent_turns by checking len()==n not specific content at turns[0]
+- [02-03]: load_recent_turns uses ORDER BY created_at DESC LIMIT n then list(reversed()) -- gets newest n turns in chronological order
+- [02-03]: CopilotKit sends threadId (not thread_id) as conversation UUID in AG-UI request body; fallback check added for both field names
 - [02-04]: Credential vault upsert uses select-then-insert/update (not ON CONFLICT DO UPDATE) -- needed for SQLite compatibility in TDD tests; works on both SQLite and PostgreSQL
 - [02-04]: Migration 003 branches from 001 (down_revision="001") -- parallel with 002 (memory_conversations); merge migration required when both exist
 - [02-04]: Alembic upgrade from host fails without .env; applied migration via docker exec psql trust auth -- same constraint as 001
@@ -91,10 +96,9 @@ Recent decisions affecting current work:
 - uv run subcommands time out on this machine; use .venv/bin/ paths directly for CLI tools
 - python-jose uses datetime.utcnow() internally (deprecated in Python 3.12) -- harmless warning in tests, not actionable
 - Alembic migration from host requires .env (not present); migrations applied via docker exec psql trust auth inside container
-- Merge migration needed when 02-03 (migration 002) completes -- alembic merge 002 003 before upgrade head
 
 ## Session Continuity
 
-Last session: 2026-02-25T11:20:00Z
-Stopped at: Completed 02-04-PLAN.md — AES-256-GCM credential vault, GET/DELETE /api/credentials (83+14=83 tests pass)
+Last session: 2026-02-25T04:41:01Z
+Stopped at: Completed 02-03-PLAN.md — memory_conversations migration, short-term memory, load/save graph nodes, GET /api/conversations (90 tests pass)
 Resume file: None
