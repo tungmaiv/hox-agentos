@@ -68,8 +68,10 @@ backend-stop:
 
 # Kill any uvicorn process on port 8000 (force)
 backend-kill:
+    #!/usr/bin/env bash
     pkill -9 -f "uvicorn main:app" 2>/dev/null || true
-    @echo "Backend killed"
+    fuser -k 8000/tcp 2>/dev/null || true
+    echo "Backend killed"
 
 # Show backend logs (tail -f on last run, only works with background mode)
 backend-log:
@@ -96,8 +98,10 @@ frontend-stop:
 
 # Kill any Next.js dev process (force)
 frontend-kill:
+    #!/usr/bin/env bash
     pkill -9 -f "next dev" 2>/dev/null || true
-    @echo "Frontend killed"
+    fuser -k 3000/tcp 2>/dev/null || true
+    echo "Frontend killed"
 
 # ── Shortcuts ─────────────────────────────────────────────────────────────────
 # Stop both backend and frontend
