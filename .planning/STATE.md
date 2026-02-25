@@ -9,25 +9,26 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 
 ## Current Position
 
-Phase: 1 of 8 COMPLETE (Identity and Infrastructure Skeleton)
-Plan: 4 of 4 — COMPLETE
-Status: Phase 1 complete — ready to begin Phase 2
-Last activity: 2026-02-24 -- Completed 01-04-PLAN.md (FastAPI routes + frontend API client + browser SSO verified)
+Phase: 2 of 8 IN PROGRESS (Agent Core and Conversational Chat)
+Plan: 1 of 5 — COMPLETE (02-01 done)
+Status: In progress — 02-01 complete, 02-02 through 02-05 remaining
+Last activity: 2026-02-25 -- Completed 02-01-PLAN.md (LiteLLM config + get_llm() TDD tests)
 
-Progress: [██░░░░░░░░] 20% (4/20 plans estimated)
+Progress: [██░░░░░░░░] 25% (5/20 plans estimated)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
-- Average duration: 6.5 min
-- Total execution time: 0.43 hours
+- Total plans completed: 5
+- Average duration: 6.3 min
+- Total execution time: 0.51 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01 (complete) | 4 | ~26 min | 6.5 min |
+| 02 (in progress) | 1 | ~5 min | 5 min |
 
 **Recent Trend:**
 - Last 5 plans: 7 min, 4 min, 3 min, 9 min, 20 min (includes checkpoint wait)
@@ -64,6 +65,9 @@ Recent decisions affecting current work:
 - [01-04]: test_config.py must not call reload() inside patch.dict -- reload persists module state after patch exits, contaminating JWT issuer in subsequent tests
 - [01-04]: test_acl.py audit log test now uses caplog+capsys combined -- stdlib.LoggerFactory routes to caplog, not capsys
 - [01-04]: auth.ts uses double cast (session as unknown as Record) to satisfy TypeScript strict TS2352
+- [02-01]: ChatOpenAI stores base_url as openai_api_base and model as model_name (langchain-openai internal attr names); constructor uses aliases base_url/model
+- [02-01]: LiteLLM general_settings.master_key uses os.environ/VAR_NAME interpolation syntax (not ${VAR} shell syntax)
+- [02-01]: get_llm() tests can call the function directly without settings override -- module settings already has litellm_url from conftest/env
 
 ### Pending Todos
 
@@ -81,6 +85,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-24T14:39:25Z
-Stopped at: Completed 01-04-PLAN.md — Phase 1 COMPLETE
+Last session: 2026-02-25T03:31:36Z
+Stopped at: Completed 02-01-PLAN.md — LiteLLM config + get_llm() TDD (61 tests pass)
 Resume file: None
