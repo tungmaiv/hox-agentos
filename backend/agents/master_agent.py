@@ -1,30 +1,79 @@
 # backend/agents/master_agent.py
 """
-Master agent — Phase 2 conversational ReAct graph.
+Master agent — Phase 2 conversational ReAct graph with short-term memory.
 
-Single master_agent node in Phase 2: receives messages, calls blitz/master LLM,
-returns response. The routing conditional stub is included now so Phase 3 can
-add sub-agent edges without restructuring the graph.
+Graph topology (Phase 2):
+    START → load_memory → master_agent → [_route_after_master] → save_memory → END
 
-Evolution path (no rewrite required between phases):
-  Phase 2: master_agent → [_route_after_master returns END]
-  Phase 3: add load_memory + save_memory nodes wrapping master_agent;
-           update _route_after_master to return sub-agent node names
-  Phase 4: canvas workflows compile to separate StateGraphs (independent module)
+Memory nodes read/write conversation turns using user_id and conversation_id from
+BlitzState, which is set by gateway/runtime.py from the validated JWT and threadId
+before invocation. If not present in state, nodes fall back to core/context.py
+contextvars, then skip gracefully (safe for direct test invocation).
 
-Security: This module never reads user_id from args — it is set via contextvars
-by gateway/runtime.py after all 3 security gates pass.
+Deduplication: BlitzState.initial_message_count tracks message count before graph
+invocation. save_memory only saves messages at index >= initial_message_count,
+preventing re-saving of history loaded by load_memory.
 """
-from langchain_core.messages import BaseMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langgraph.graph import END, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
 from agents.state.types import BlitzState
 from core.config import get_llm
+from core.context import current_conversation_id_ctx, current_user_ctx
+from core.db import async_session
 
 import structlog
 
 logger = structlog.get_logger(__name__)
+
+
+async def _load_memory_node(state: BlitzState) -> dict:
+    """
+    Load last 20 turns from memory_conversations and prepend to messages.
+
+    Reads user_id and conversation_id from BlitzState. Falls back to
+    core/context.py contextvars (set by gateway/runtime.py) if not in state.
+    Returns empty dict (no change) if neither source provides the IDs —
+    safe fallback for direct invocation in tests.
+    """
+    from memory.short_term import load_recent_turns
+
+    user_id = state.get("user_id")
+    conversation_id = state.get("conversation_id")
+
+    # Contextvar fallback: gateway/runtime.py sets these before graph invocation
+    if not user_id:
+        try:
+            ctx_user = current_user_ctx.get()
+            user_id = ctx_user["user_id"]
+        except LookupError:
+            pass
+
+    if not conversation_id:
+        try:
+            conversation_id = current_conversation_id_ctx.get()
+        except LookupError:
+            pass
+
+    if not user_id or not conversation_id:
+        logger.debug("load_memory_skipped", reason="no user_id or conversation_id available")
+        return {}
+
+    async with async_session() as session:
+        turns = await load_recent_turns(session, user_id=user_id, conversation_id=conversation_id, n=20)
+
+    history: list[BaseMessage] = []
+    for turn in turns:
+        if turn.role == "user":
+            history.append(HumanMessage(content=turn.content))
+        elif turn.role == "assistant":
+            history.append(AIMessage(content=turn.content))
+
+    if history:
+        logger.debug("memory_loaded", turns=len(history), conversation_id=str(conversation_id))
+        return {"messages": history}
+    return {}
 
 
 async def _master_node(state: BlitzState) -> dict[str, list[BaseMessage]]:
@@ -40,46 +89,93 @@ async def _master_node(state: BlitzState) -> dict[str, list[BaseMessage]]:
     return {"messages": [response]}
 
 
+async def _save_memory_node(state: BlitzState) -> dict:
+    """
+    Persist only the newly-added turns from this graph invocation.
+
+    DEDUP GUARD: load_memory_node prepends historical turns into state['messages'].
+    Without a guard, save_memory would re-save all of those loaded turns, creating
+    duplicate rows in memory_conversations.
+
+    Solution: BlitzState includes 'initial_message_count' — the number of messages
+    present BEFORE the graph was invoked (set in gateway/runtime.py before ainvoke).
+    save_memory only saves messages at index >= initial_message_count.
+
+    Skips gracefully if user_id or conversation_id not set (direct invocation in tests).
+    """
+    from memory.short_term import save_turn
+
+    user_id = state.get("user_id")
+    conversation_id = state.get("conversation_id")
+
+    if not user_id or not conversation_id:
+        return {}
+
+    messages = state["messages"]
+    # initial_message_count is the length of state['messages'] before the graph ran.
+    # Messages at index < initial_message_count were loaded from history — don't re-save.
+    initial_count = state.get("initial_message_count", 0)  # type: ignore[attr-defined]
+    new_messages = messages[initial_count:]
+
+    if not new_messages:
+        return {}
+
+    async with async_session() as session:
+        for msg in new_messages:
+            if isinstance(msg, HumanMessage):
+                await save_turn(
+                    session,
+                    user_id=user_id,
+                    conversation_id=conversation_id,
+                    role="user",
+                    content=str(msg.content),
+                )
+            elif isinstance(msg, AIMessage):
+                await save_turn(
+                    session,
+                    user_id=user_id,
+                    conversation_id=conversation_id,
+                    role="assistant",
+                    content=str(msg.content),
+                )
+
+    logger.debug("memory_saved", new_turns=len(new_messages), conversation_id=str(conversation_id))
+    return {}
+
+
 def _route_after_master(state: BlitzState) -> str:
     """
-    Routing conditional after master_agent node.
-
-    Phase 2: always routes to END (no sub-agents yet).
-    Phase 3: inspect state['route_to'] field to delegate to sub-agent nodes
-             (e.g., 'email_agent', 'calendar_agent'). Add those edges to the
-             graph in create_master_graph() when sub-agents are implemented.
-
-    Returns the name of the next node (or END).
+    Routing conditional after master_agent node (Phase 2 stub → always save_memory).
+    Phase 3 will extend this to route to sub-agent nodes before saving memory.
     """
-    # Phase 2 stub — always terminate. Phase 3 replaces this logic.
-    route_to = state.get("route_to")  # type: ignore[attr-defined]
-    if route_to:
-        logger.debug("master_agent_routing", route_to=route_to)
-        # Phase 3 sub-agent edges will be wired here; return route_to once added.
-        # For now, fall through to END even if route_to is set.
-    return END
+    return "save_memory"
 
 
 def create_master_graph() -> CompiledStateGraph:
     """
-    Build and compile the master agent StateGraph.
+    Build and compile the master agent StateGraph with memory.
 
     Returns a compiled graph ready for CopilotKit streaming or direct invocation.
     Call once at startup and reuse — LangGraph compilation is expensive.
 
     Phase 2 graph topology:
-        START → master_agent → [_route_after_master] → END
+        START → load_memory → master_agent → [_route_after_master] → save_memory → END
 
-    The routing conditional is a stub in Phase 2 (always → END).
+    The routing conditional is a stub in Phase 2 (always → save_memory).
     Phase 3 adds sub-agent edges from master_agent without restructuring this graph.
     """
     graph = StateGraph(BlitzState)
+    graph.add_node("load_memory", _load_memory_node)
     graph.add_node("master_agent", _master_node)
-    graph.set_entry_point("master_agent")
-    # Routing conditional: always END in Phase 2; Phase 3 adds sub-agent branches
+    graph.add_node("save_memory", _save_memory_node)
+    graph.set_entry_point("load_memory")
+    graph.add_edge("load_memory", "master_agent")
+    # Routing conditional: Phase 2 always goes to save_memory.
+    # Phase 3 extends _route_after_master to return sub-agent node names.
     graph.add_conditional_edges(
         "master_agent",
         _route_after_master,
-        {END: END},  # Phase 3: extend this dict with sub-agent node names
+        {"save_memory": "save_memory"},  # Phase 3: add sub-agent entries here
     )
+    graph.add_edge("save_memory", END)
     return graph.compile()

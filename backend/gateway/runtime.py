@@ -21,9 +21,10 @@ Frontend integration (02-03):
   Sub-paths (e.g. /api/copilotkit/agent/blitz_master) are handled by the
   catch-all route registered via add_fastapi_endpoint() on the secured sub-router.
 """
-import contextvars
+import json
 import time
 from typing import Any
+from uuid import UUID
 
 import structlog
 from copilotkit import CopilotKitRemoteEndpoint, LangGraphAgent
@@ -31,6 +32,7 @@ from copilotkit.integrations.fastapi import handler as copilotkit_handler
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from agents.master_agent import create_master_graph
+from core.context import current_conversation_id_ctx, current_user_ctx
 from core.db import async_session
 from core.models.user import UserContext
 from security.acl import check_tool_acl, log_tool_call
@@ -38,12 +40,6 @@ from security.deps import get_current_user
 from security.rbac import has_permission
 
 logger = structlog.get_logger(__name__)
-
-# Context variable — graph nodes access the current user without threading user
-# through every function signature. Set before graph invocation, reset after.
-current_user_ctx: contextvars.ContextVar[UserContext] = contextvars.ContextVar(
-    "current_user_ctx"
-)
 
 # Build graph once at module load — LangGraph compilation is expensive.
 # CopilotKit holds a reference; the same compiled graph handles all requests.
@@ -107,16 +103,42 @@ async def copilotkit_endpoint(
     The JWT Authorization header is injected by the Next.js proxy route
     (frontend/src/app/api/copilotkit/route.ts) from the server-side session.
     Credentials never touch the browser.
+
+    Extracts threadId from the CopilotKit request body and sets
+    current_conversation_id_ctx so that memory nodes can scope DB operations
+    to the correct conversation without arg threading.
     """
     start_ms = int(time.monotonic() * 1000)
     await _check_gates(user, start_ms)
 
-    # Set user context for graph nodes to access without arg threading
-    token = current_user_ctx.set(user)
+    # Read body once — body stream can only be consumed once per request.
+    body_bytes = await request.body()
+    body: dict = {}
+    if body_bytes:
+        try:
+            body = json.loads(body_bytes)
+        except (json.JSONDecodeError, ValueError):
+            body = {}
+
+    # Extract threadId (conversation UUID) from CopilotKit AG-UI request body.
+    # CopilotKit sends threadId as the conversation identifier for memory isolation.
+    thread_id_raw = body.get("threadId") or body.get("thread_id")
+    conversation_id: UUID | None = None
+    if thread_id_raw:
+        try:
+            conversation_id = UUID(str(thread_id_raw))
+        except (ValueError, AttributeError):
+            logger.warning("invalid_thread_id", thread_id=thread_id_raw)
+
+    # Set both contextvars before graph invocation; reset in finally block.
+    user_token = current_user_ctx.set(user)
+    conv_token = current_conversation_id_ctx.set(conversation_id) if conversation_id else None
     try:
         return await copilotkit_handler(request, _sdk)
     finally:
-        current_user_ctx.reset(token)
+        current_user_ctx.reset(user_token)
+        if conv_token is not None:
+            current_conversation_id_ctx.reset(conv_token)
 
 
 @router.api_route(
@@ -143,12 +165,33 @@ async def copilotkit_subpath_endpoint(
       POST /api/copilotkit/agents/execute       — execute agent (v1 compat)
 
     All sub-paths enforce the same 3-gate security as the root endpoint.
+    Also extracts threadId for conversation_id contextvar injection.
     """
     start_ms = int(time.monotonic() * 1000)
     await _check_gates(user, start_ms)
 
-    token = current_user_ctx.set(user)
+    # Read body once for threadId extraction.
+    body_bytes = await request.body()
+    body: dict = {}
+    if body_bytes:
+        try:
+            body = json.loads(body_bytes)
+        except (json.JSONDecodeError, ValueError):
+            body = {}
+
+    thread_id_raw = body.get("threadId") or body.get("thread_id")
+    conversation_id: UUID | None = None
+    if thread_id_raw:
+        try:
+            conversation_id = UUID(str(thread_id_raw))
+        except (ValueError, AttributeError):
+            logger.warning("invalid_thread_id", thread_id=thread_id_raw)
+
+    user_token = current_user_ctx.set(user)
+    conv_token = current_conversation_id_ctx.set(conversation_id) if conversation_id else None
     try:
         return await copilotkit_handler(request, _sdk)
     finally:
-        current_user_ctx.reset(token)
+        current_user_ctx.reset(user_token)
+        if conv_token is not None:
+            current_conversation_id_ctx.reset(conv_token)
