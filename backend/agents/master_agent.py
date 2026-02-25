@@ -14,7 +14,7 @@ Deduplication: BlitzState.initial_message_count tracks message count before grap
 invocation. save_memory only saves messages at index >= initial_message_count,
 preventing re-saving of history loaded by load_memory.
 """
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langgraph.graph import END, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
@@ -82,9 +82,37 @@ async def _master_node(state: BlitzState) -> dict[str, list[BaseMessage]]:
 
     Uses get_llm() — never a direct provider SDK. The LiteLLM proxy routes
     'blitz/master' to the configured primary (Ollama/Qwen2.5) or fallback (Claude Sonnet).
+
+    Loads custom user instructions from DB (via current_user_ctx contextvar) and
+    prepends them as a SystemMessage so every conversation respects the user's
+    preferences (e.g. "Always respond in Vietnamese").
     """
+    from api.routes.user_instructions import get_user_instructions
+
     llm = get_llm("blitz/master")
-    response = await llm.ainvoke(state["messages"])
+
+    # Load custom instructions (empty string if not set or no user context)
+    custom_instructions = ""
+    try:
+        user = current_user_ctx.get()
+        async with async_session() as session:
+            custom_instructions = await get_user_instructions(user["user_id"], session)
+    except LookupError:
+        pass  # No user context in tests — skip custom instructions
+
+    messages = list(state["messages"])
+
+    # Prepend system message with custom instructions if set
+    if custom_instructions:
+        system_msg = SystemMessage(
+            content=(
+                f"Additional user instructions (follow these for all responses):\n\n"
+                f"{custom_instructions}"
+            )
+        )
+        messages = [system_msg] + messages
+
+    response = await llm.ainvoke(messages)
     logger.info("master_agent_response", content_length=len(str(response.content)))
     return {"messages": [response]}
 
