@@ -5,34 +5,34 @@
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates daily work routines and lets them build custom automations without writing code -- all within an enterprise-secure, on-premise environment.
-**Current focus:** Phase 2: Agent Core — 02-03 (memory) complete; only 02-05 (chat UI + slash commands) remaining
+**Current focus:** Phase 3: Sub-Agents + Memory Expansion + OAuth Integrations (Phase 2 complete)
 
 ## Current Position
 
-Phase: 2 of 8 IN PROGRESS (Agent Core and Conversational Chat)
-Plan: 5 of 5 — IN PROGRESS (02-05 remaining)
-Status: In progress — 02-01, 02-02, 02-03, 02-04 complete; 02-05 remaining
-Last activity: 2026-02-25 -- Completed 02-03-PLAN.md (memory_conversations migration, short-term memory, load/save nodes, GET /api/conversations)
+Phase: 2 of 8 COMPLETE (Agent Core and Conversational Chat)
+Plan: 5 of 5 — COMPLETE (all plans done)
+Status: Phase 2 complete — 02-01, 02-02, 02-03, 02-04, 02-05 all complete
+Last activity: 2026-02-25 -- Completed 02-05-PLAN.md (chat UI, slash commands, custom instructions, 94 tests pass)
 
-Progress: [█████░░░░░] 40% (8/20 plans estimated)
+Progress: [██████░░░░] 50% (10/20 plans estimated)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 8
-- Average duration: 9.9 min
-- Total execution time: 0.79 hours
+- Total plans completed: 10
+- Average duration: 12.8 min
+- Total execution time: ~2.13 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01 (complete) | 4 | ~26 min | 6.5 min |
-| 02 (in progress) | 4 | ~73 min | 18.3 min |
+| 02 (complete) | 5 | ~98 min | 19.6 min |
 
 **Recent Trend:**
-- Last 5 plans: 9 min, 20 min, 23 min, 15 min, 19 min
-- Trend: consistent 15-23 min for TDD plans in Phase 2
+- Last 5 plans: 20 min, 23 min, 15 min, 19 min, 25 min
+- Trend: consistent 15-25 min for mixed auto/TDD plans in Phase 2
 
 *Updated after each plan completion*
 
@@ -82,6 +82,11 @@ Recent decisions affecting current work:
 - [02-04]: Migration 003 branches from 001 (down_revision="001") -- parallel with 002 (memory_conversations); merge migration required when both exist
 - [02-04]: Alembic upgrade from host fails without .env; applied migration via docker exec psql trust auth -- same constraint as 001
 - [02-04]: _get_key() checks CREDENTIAL_ENCRYPTION_KEY env var before settings -- allows os.environ.setdefault() injection in TDD tests
+- [02-05]: useCopilotChatInternal (not useCopilotChat) exposes messages and reset -- public hook omits messages via Omit<...>
+- [02-05]: Custom Input component (not onSubmitMessage) for slash command interception -- onSubmitMessage is void|Promise<void>, cannot cancel; Input.onSend is the correct interception point
+- [02-05]: pendingInputRef pattern for edit message re-populate -- CopilotChat has no setInput API; MutableRefObject shared between custom Input and custom UserMessage
+- [02-05]: @copilotkit/shared not importable as direct dep in pnpm virtual store -- define local ChatMessage interface instead
+- [02-05]: Migration 004 down_revision = '9754fd080ee2' (the merge head); applied via docker exec psql (no .env on host)
 
 ### Pending Todos
 
@@ -99,6 +104,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-25T04:41:01Z
-Stopped at: Completed 02-03-PLAN.md — memory_conversations migration, short-term memory, load/save graph nodes, GET /api/conversations (90 tests pass)
+Last session: 2026-02-25T09:04:01Z
+Stopped at: Completed 02-05-PLAN.md — chat UI (CopilotKit streaming, sidebar, slash commands, export, edit), custom instructions (user_instructions table, GET/PUT API, master agent injection), 94 tests pass, checkpoint approved
 Resume file: None

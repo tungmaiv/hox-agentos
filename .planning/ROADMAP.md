@@ -13,7 +13,7 @@ Blitz AgentOS delivers an on-premise agentic operating system for ~100 Blitz emp
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Identity and Infrastructure Skeleton** - Keycloak SSO, JWT/RBAC security, Docker Compose services, FastAPI/Next.js skeletons (completed 2026-02-24)
-- [ ] **Phase 2: Agent Core and Conversational Chat** - Master agent with LangGraph, AG-UI streaming chat, conversation memory, LiteLLM routing, credential store
+- [x] **Phase 2: Agent Core and Conversational Chat** - Master agent with LangGraph, AG-UI streaming chat, conversation memory, LiteLLM routing, credential store, custom instructions (completed 2026-02-25)
 - [ ] **Phase 3: Sub-Agents, Memory, and Integrations** - Email/Calendar/Project/Channel sub-agents, 3-tier memory with embeddings, MCP framework, A2UI generative UI
 - [ ] **Phase 4: Canvas and Workflows** - React Flow visual builder, canvas-to-StateGraph compiler, workflow templates, HITL approval, cron/webhook triggers
 - [ ] **Phase 5: Scheduler and Channels** - Web chat enhancement, Telegram/WhatsApp/Teams adapters, channel identity resolution, ChannelAdapter protocol
@@ -54,11 +54,11 @@ Plans:
 **Plans**: 5 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — TDD: LiteLLM config general_settings + verify get_llm() contract for all 4 aliases (Wave 1)
-- [ ] 02-02-PLAN.md — TDD: BlitzState TypedDict + LangGraph master agent with routing conditional stub + CopilotKit runtime + /api/copilotkit endpoint with 3-gate security (Wave 2)
-- [ ] 02-03-PLAN.md — TDD: Short-term memory DB migration + core/context.py conversation_id injection + memory/short_term.py isolation + master agent memory nodes with dedup guard + GET /api/conversations (Wave 3, backend only)
-- [ ] 02-04-PLAN.md — TDD: AES-256-GCM encrypt/decrypt vault + user_credentials migration + GET /api/credentials + DELETE /api/credentials/{provider} (Wave 2, parallel with 02-02)
-- [ ] 02-05-PLAN.md — Frontend chat UI (proxy route + ChatLayout + CopilotKit streaming) + custom instructions DB/API/system-prompt injection + browser verification checkpoint (Wave 4)
+- [x] 02-01-PLAN.md — TDD: LiteLLM config general_settings + verify get_llm() contract for all 4 aliases (Wave 1)
+- [x] 02-02-PLAN.md — TDD: BlitzState TypedDict + LangGraph master agent with routing conditional stub + CopilotKit runtime + /api/copilotkit endpoint with 3-gate security (Wave 2)
+- [x] 02-03-PLAN.md — TDD: Short-term memory DB migration + core/context.py conversation_id injection + memory/short_term.py isolation + master agent memory nodes with dedup guard + GET /api/conversations (Wave 3, backend only)
+- [x] 02-04-PLAN.md — TDD: AES-256-GCM encrypt/decrypt vault + user_credentials migration + GET /api/credentials + DELETE /api/credentials/{provider} (Wave 2, parallel with 02-02)
+- [x] 02-05-PLAN.md — Frontend chat UI (proxy route + ChatLayout + CopilotKit streaming) + custom instructions DB/API/system-prompt injection + browser verification checkpoint (Wave 4)
 
 ### Phase 3: Sub-Agents, Memory, and Integrations
 **Goal**: The agent can perform real work -- fetch email, check calendars, query CRM, remember user preferences across sessions -- making it genuinely useful for daily routines
@@ -172,8 +172,8 @@ Note: Phases 4 and 5 can execute in parallel as they share no mutual dependencie
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Identity and Infrastructure Skeleton | 3/4 | Complete    | 2026-02-24 |
-| 2. Agent Core and Conversational Chat | 0/5 | Planned      | - |
+| 1. Identity and Infrastructure Skeleton | 4/4 | Complete    | 2026-02-24 |
+| 2. Agent Core and Conversational Chat | 5/5 | Complete     | 2026-02-25 |
 | 3. Sub-Agents, Memory, and Integrations | 0/5 | Not started | - |
 | 4. Canvas and Workflows | 0/5 | Not started | - |
 | 5. Scheduler and Channels | 0/5 | Not started | - |
