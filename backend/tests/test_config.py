@@ -136,3 +136,42 @@ def test_get_llm_maps_all_aliases() -> None:
                 assert llm.model_name == expected_model, f"{alias} should map to {expected_model}"
         finally:
             config_module.settings = original_settings
+
+
+def test_get_llm_returns_chatopenai_pointing_at_litellm() -> None:
+    """get_llm() must return a ChatOpenAI client pointed at LiteLLM proxy, not a provider."""
+    from core.config import get_llm
+
+    llm = get_llm("blitz/master")
+    # openai_api_base is the internal attribute name for base_url in langchain-openai
+    base_url_str = str(llm.openai_api_base or "")
+    assert "4000" in base_url_str or "litellm" in base_url_str, (
+        f"Expected LiteLLM URL (port 4000 or 'litellm'), got: {base_url_str}"
+    )
+
+
+def test_get_llm_uses_correct_model_alias() -> None:
+    """Each alias maps to the correct sanitized model name sent to LiteLLM."""
+    from core.config import get_llm
+
+    cases: dict[str, str] = {
+        "blitz/master": "blitz-master",
+        "blitz/fast": "blitz-fast",
+        "blitz/coder": "blitz-coder",
+        "blitz/summarizer": "blitz-summarizer",
+    }
+    for alias, expected_model in cases.items():
+        llm = get_llm(alias)
+        assert llm.model_name == expected_model, (
+            f"alias='{alias}': expected model='{expected_model}', got='{llm.model_name}'"
+        )
+
+
+def test_get_llm_unknown_alias_passes_through() -> None:
+    """An unknown alias is passed through unchanged — LiteLLM handles the error, not backend code."""
+    from core.config import get_llm
+
+    llm = get_llm("custom/my-model")
+    assert llm.model_name == "custom/my-model", (
+        f"Expected model to pass through unchanged, got: '{llm.model_name}'"
+    )

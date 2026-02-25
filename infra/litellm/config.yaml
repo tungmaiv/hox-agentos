@@ -30,3 +30,6 @@ litellm_settings:
         - anthropic/claude-sonnet-4-6
     - blitz-summarizer:
         - openai/gpt-4o-mini
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
