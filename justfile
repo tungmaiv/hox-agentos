@@ -1,8 +1,6 @@
 # Blitz AgentOS — task runner
 # Usage: just <recipe>   (run `just` to list all recipes)
 
-set dotenv-load := true
-
 BACKEND_DIR := "backend"
 FRONTEND_DIR := "frontend"
 
