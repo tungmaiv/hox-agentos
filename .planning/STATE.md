@@ -5,34 +5,34 @@
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates daily work routines and lets them build custom automations without writing code -- all within an enterprise-secure, on-premise environment.
-**Current focus:** Phase 2: Agent Core — begin LangGraph master agent, tool registration, and memory foundation
+**Current focus:** Phase 2: Agent Core — LangGraph master agent wired, tool registration and memory foundation next
 
 ## Current Position
 
 Phase: 2 of 8 IN PROGRESS (Agent Core and Conversational Chat)
-Plan: 1 of 5 — COMPLETE (02-01 done)
-Status: In progress — 02-01 complete, 02-02 through 02-05 remaining
-Last activity: 2026-02-25 -- Completed 02-01-PLAN.md (LiteLLM config + get_llm() TDD tests)
+Plan: 2 of 5 — COMPLETE (02-02 done)
+Status: In progress — 02-01 and 02-02 complete, 02-03 through 02-05 remaining
+Last activity: 2026-02-25 -- Completed 02-02-PLAN.md (BlitzState, master agent graph, CopilotKit runtime)
 
-Progress: [██░░░░░░░░] 25% (5/20 plans estimated)
+Progress: [███░░░░░░░] 30% (6/20 plans estimated)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5
-- Average duration: 6.3 min
-- Total execution time: 0.51 hours
+- Total plans completed: 6
+- Average duration: 8.5 min
+- Total execution time: 0.59 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01 (complete) | 4 | ~26 min | 6.5 min |
-| 02 (in progress) | 1 | ~5 min | 5 min |
+| 02 (in progress) | 2 | ~28 min | 14 min |
 
 **Recent Trend:**
-- Last 5 plans: 7 min, 4 min, 3 min, 9 min, 20 min (includes checkpoint wait)
-- Trend: Stable
+- Last 5 plans: 4 min, 3 min, 9 min, 20 min, 23 min
+- Trend: 02-02 was longer due to CopilotKit API discovery and LangGraph version differences
 
 *Updated after each plan completion*
 
@@ -68,11 +68,15 @@ Recent decisions affecting current work:
 - [02-01]: ChatOpenAI stores base_url as openai_api_base and model as model_name (langchain-openai internal attr names); constructor uses aliases base_url/model
 - [02-01]: LiteLLM general_settings.master_key uses os.environ/VAR_NAME interpolation syntax (not ${VAR} shell syntax)
 - [02-01]: get_llm() tests can call the function directly without settings override -- module settings already has litellm_url from conftest/env
+- [02-02]: CopilotKitSDK is deprecated since 0.1.31 -- use CopilotKitRemoteEndpoint instead (identical API)
+- [02-02]: LangGraph 0.4.10 uses compiled.builder.branches (not compiled.graph.branches) to inspect conditional edges; compiled.graph attribute does not exist
+- [02-02]: Never use importlib.reload() inside patch() for mocking module-level names -- reload rebinds from real source, bypassing patch; patch the module-level name directly
+- [02-02]: copilotkit.integrations.fastapi.handler() used as delegate inside secured FastAPI route -- avoids add_fastapi_endpoint() which would bypass security
+- [02-02]: CopilotKit agent name is 'blitz_master' -- frontend useCopilotAgent/useCoAgent must reference this exact string
 
 ### Pending Todos
 
 - [ ] Start WhatsApp Business API verification process (takes 1-4 weeks, needed for Phase 5)
-- [ ] Plan Phase 2 (Agent Core): LangGraph master agent, tool registration, memory foundation
 
 ### Blockers/Concerns
 
@@ -85,6 +89,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-25T03:31:36Z
-Stopped at: Completed 02-01-PLAN.md — LiteLLM config + get_llm() TDD (61 tests pass)
+Last session: 2026-02-25T04:06:56Z
+Stopped at: Completed 02-02-PLAN.md — BlitzState, master agent graph, CopilotKit runtime (83 tests pass)
 Resume file: None
