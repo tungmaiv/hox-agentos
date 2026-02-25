@@ -53,15 +53,21 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     body,
   });
 
-  // Stream the response back (SSE / streaming text)
+  // Stream the response back (SSE / streaming text).
+  // Only forward Transfer-Encoding when the backend sets it — an empty
+  // Transfer-Encoding header is invalid HTTP and can cause fetch failures.
+  const responseHeaders: Record<string, string> = {
+    "Content-Type":
+      backendResponse.headers.get("Content-Type") ?? "text/event-stream",
+    "Cache-Control": "no-cache",
+  };
+  const transferEncoding = backendResponse.headers.get("Transfer-Encoding");
+  if (transferEncoding) {
+    responseHeaders["Transfer-Encoding"] = transferEncoding;
+  }
+
   return new NextResponse(backendResponse.body, {
     status: backendResponse.status,
-    headers: {
-      "Content-Type":
-        backendResponse.headers.get("Content-Type") ?? "text/event-stream",
-      "Cache-Control": "no-cache",
-      "Transfer-Encoding":
-        backendResponse.headers.get("Transfer-Encoding") ?? "",
-    },
+    headers: responseHeaders,
   });
 }

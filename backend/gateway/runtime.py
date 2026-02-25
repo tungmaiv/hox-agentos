@@ -10,8 +10,9 @@ Architecture note (@copilotkitnext v1.51.4 / ag-ui-langgraph 0.0.25):
   Supported methods:
     "info"          — return available agents (discovery / runtime sync)
     "agent/run"     — run an agent with RunAgentInput body, stream AG-UI events
-    "agent/connect" — reconnect to an existing thread on component mount; same
-                      protocol as agent/run (state snapshot + events)
+    "agent/connect" — reconnect to an existing thread on component mount; emits
+                      RunStarted + StateSnapshot({}) + RunFinished without calling
+                      the LLM (state restore only, not inference)
 
 Security architecture:
   Gate 1 (JWT): Depends(get_current_user) on the endpoint.
@@ -28,11 +29,17 @@ Frontend integration (02-03):
   Credentials never touch the browser.
 """
 import time
+import uuid as _uuid_mod
 from typing import Any
 from uuid import UUID
 
 import structlog
-from ag_ui.core import RunAgentInput
+from ag_ui.core import (
+    RunAgentInput,
+    RunFinishedEvent,
+    RunStartedEvent,
+    StateSnapshotEvent,
+)
 from ag_ui.encoder import EventEncoder
 
 # Import directly from submodule — copilotkit.__init__ imports CopilotKitMiddleware
@@ -148,13 +155,39 @@ async def copilotkit_endpoint(
     if method == "info":
         return JSONResponse(content=_RUNTIME_INFO)
 
-    # ── agent/run + agent/connect ─────────────────────────────────────────
-    # agent/connect is called on component mount to reconnect to an existing
-    # thread and restore state. It sends the same RunAgentInput body and
-    # expects the same AG-UI SSE stream. Route both through _agent.run() —
-    # LangGraphAGUIAgent handles state restoration via the graph checkpointer
-    # when thread_id matches a previous run.
-    if method in ("agent/run", "agent/connect"):
+    # ── agent/connect ─────────────────────────────────────────────────────
+    # Called on component mount to reconnect the frontend to a thread and
+    # restore agent state. Must NOT call the LLM — it is a lifecycle signal,
+    # not an inference request. Emits RunStarted → StateSnapshot({}) →
+    # RunFinished so CopilotKit knows the thread is active.
+    if method == "agent/connect":
+        params = envelope.get("params") or {}
+        agent_id = params.get("agentId")
+        if agent_id != _agent.name:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Agent '{agent_id}' not found. Available: ['{_agent.name}']",
+            )
+        body = envelope.get("body") or {}
+        try:
+            input_data = RunAgentInput.model_validate(body)
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail=f"Invalid RunAgentInput: {exc}") from exc
+
+        thread_id = str(input_data.thread_id) if input_data.thread_id else ""
+        run_id = str(input_data.run_id) if input_data.run_id else str(_uuid_mod.uuid4())
+        accept_header = request.headers.get("accept")
+        encoder = EventEncoder(accept=accept_header)
+
+        async def connect_generator():
+            yield encoder.encode(RunStartedEvent(thread_id=thread_id, run_id=run_id))
+            yield encoder.encode(StateSnapshotEvent(snapshot={}))
+            yield encoder.encode(RunFinishedEvent(thread_id=thread_id, run_id=run_id))
+
+        return StreamingResponse(connect_generator(), media_type=encoder.get_content_type())
+
+    # ── agent/run ─────────────────────────────────────────────────────────
+    if method == "agent/run":
         params = envelope.get("params") or {}
         agent_id = params.get("agentId")
         if agent_id != _agent.name:
