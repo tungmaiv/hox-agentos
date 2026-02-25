@@ -1,0 +1,226 @@
+# Blitz Shared Infrastructure Docker Compose
+# Keycloak + Observability Stack
+# Realm: blitz-internal (8 teams, 40 employees)
+# See: docs/blitz-keycloak-setup.md
+
+name: shared-infra
+
+services:
+  # ============================================================================
+  # KEYCLOAK (Identity and Access Management)
+  # ============================================================================
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    container_name: hox-aa-keycloak
+    hostname: keycloak
+    networks:
+      - shared-infra
+    ports:
+      - "8180:8080"
+      - "7443:8443"
+    extra_hosts:
+      - "keycloak.blitz.local:127.0.0.1"
+    environment:
+      - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN}
+      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
+      - KC_DB=postgres
+      - KC_DB_URL=${KEYCLOAK_DB_URL}
+      - KC_DB_USERNAME=${KEYCLOAK_DB_USER}
+      - KC_DB_PASSWORD=${KEYCLOAK_DB_PASSWORD}
+      - KC_METRICS_ENABLED=true
+      - KC_HEALTH_ENABLED=true
+      # HTTPS Configuration
+      - KC_HTTPS_CERTIFICATE_FILE=/opt/keycloak/certs/keycloak.crt
+      - KC_HTTPS_CERTIFICATE_KEY_FILE=/opt/keycloak/certs/keycloak.key
+      - KC_HTTPS_PORT=8443
+      # Hostname Configuration
+      - KC_HOSTNAME_STRICT=false
+      - KC_HOSTNAME_STRICT_HTTPS=true
+      - KC_HTTP_ENABLED=true
+    command:
+      - "start-dev"
+      - "--import-realm"
+      - "--hostname-url=https://keycloak.blitz.local:7443"
+      - "--https-certificate-file=/opt/keycloak/certs/keycloak.crt"
+      - "--https-certificate-key-file=/opt/keycloak/certs/keycloak.key"
+    volumes:
+      - ./keycloak/realms:/opt/keycloak/data/import:ro
+      - ./keycloak/certs:/opt/keycloak/certs:ro
+      - keycloak-data:/opt/keycloak/data
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8080 && echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && cat <&3 | grep -q UP"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
+  keycloak-db:
+    image: postgres:16-alpine
+    container_name: hox-aa-keycloak-db
+    hostname: keycloak-db
+    networks:
+      - shared-infra
+    environment:
+      - POSTGRES_DB=keycloak
+      - POSTGRES_USER=${KEYCLOAK_DB_USER}
+      - POSTGRES_PASSWORD=${KEYCLOAK_DB_PASSWORD}
+    volumes:
+      - keycloak-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${KEYCLOAK_DB_USER} -d keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  # ============================================================================
+  # OBSERVABILITY STACK
+  # ============================================================================
+  prometheus:
+    image: prom/prometheus:v2.53.5
+    container_name: hox-aa-prometheus
+    hostname: prometheus
+    networks:
+      - shared-infra
+    ports:
+      - "9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--web.enable-remote-write-receiver'
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observability/prometheus/alerts:/etc/prometheus/alerts:ro
+      - prometheus-data:/prometheus
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.5.2
+    container_name: hox-aa-grafana
+    hostname: grafana
+    networks:
+      - shared-infra
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+      - GF_SERVER_ROOT_URL=http://localhost:3001
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      prometheus:
+        condition: service_healthy
+      loki:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:3.6.0
+    container_name: hox-aa-loki
+    hostname: loki
+    user: "0"
+    networks:
+      - shared-infra
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./observability/loki/loki-config.yaml:/etc/loki/local-config.yaml:ro
+      - loki-data:/loki
+    restart: unless-stopped
+
+  promtail:
+    image: grafana/promtail:3.6.0
+    container_name: hox-aa-promtail
+    hostname: promtail
+    networks:
+      - shared-infra
+    volumes:
+      - ./observability/loki/promtail-config.yaml:/etc/promtail/config.yml:ro
+      - /var/log:/var/log:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      loki:
+        condition: service_started
+    restart: unless-stopped
+
+  tempo:
+    image: grafana/tempo:2.7.2
+    container_name: hox-aa-tempo
+    hostname: tempo
+    networks:
+      - shared-infra
+    command: ["-config.file=/etc/tempo/tempo-config.yaml"]
+    volumes:
+      - ./observability/tempo/tempo-config.yaml:/etc/tempo/tempo-config.yaml:ro
+      - tempo-data:/var/tempo
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:3200/ready || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.120.0
+    container_name: hox-aa-otel-collector
+    hostname: otel-collector
+    networks:
+      - shared-infra
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./observability/otel-collector/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    depends_on:
+      tempo:
+        condition: service_healthy
+      loki:
+        condition: service_started
+    restart: unless-stopped
+
+# ============================================================================
+# NETWORKS
+# ============================================================================
+networks:
+  shared-infra:
+    name: shared-infra
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.0.0/16
+
+# ============================================================================
+# VOLUMES
+# ============================================================================
+volumes:
+  keycloak-data:
+  keycloak-db-data:
+  prometheus-data:
+  grafana-data:
+  loki-data:
+  tempo-data:

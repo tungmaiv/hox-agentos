@@ -1,0 +1,1184 @@
+{
+  "realm": "blitz-internal",
+  "enabled": true,
+  "displayName": "Blitz Internal",
+  "displayNameHtml": "<div class=\"kc-logo-text\"><span>Blitz</span></div>",
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "permanentLockout": false,
+  "maxFailureWaitSeconds": 900,
+  "minimumQuickLoginWaitSeconds": 60,
+  "waitIncrementSeconds": 60,
+  "quickLoginCheckMilliSeconds": 1000,
+  "maxDeltaTimeSeconds": 43200,
+  "failureFactor": 30,
+  "roles": {
+    "realm": [
+      {
+        "name": "employee",
+        "description": "Base employee access - all staff members"
+      },
+      {
+        "name": "manager",
+        "description": "Team manager - can view team data and reports"
+      },
+      {
+        "name": "team-lead",
+        "description": "Technical team lead - can approve requests and manage team resources"
+      },
+      {
+        "name": "it-admin",
+        "description": "IT/System administrator - full system access"
+      },
+      {
+        "name": "executive",
+        "description": "C-level executive - cross-team visibility and strategic access"
+      }
+    ]
+  },
+  "groups": [
+    {
+      "name": "admin",
+      "path": "/admin"
+    },
+    {
+      "name": "hr",
+      "path": "/hr"
+    },
+    {
+      "name": "financial",
+      "path": "/financial"
+    },
+    {
+      "name": "tech",
+      "path": "/tech"
+    },
+    {
+      "name": "swift",
+      "path": "/swift"
+    },
+    {
+      "name": "psc",
+      "path": "/psc"
+    },
+    {
+      "name": "pcc",
+      "path": "/pcc"
+    },
+    {
+      "name": "pmo",
+      "path": "/pmo"
+    },
+    {
+      "name": "dev",
+      "path": "/dev"
+    },
+    {
+      "name": "executive",
+      "path": "/executive"
+    },
+    {
+      "name": "rpo",
+      "path": "/rpo"
+    },
+    {
+      "name": "support",
+      "path": "/support"
+    },
+    {
+      "name": "it",
+      "path": "/it"
+    },
+    {
+      "name": "sales",
+      "path": "/sales"
+    },
+    {
+      "name": "pre-sales",
+      "path": "/pre-sales"
+    }
+  ],
+  "defaultRoles": [
+    "employee"
+  ],
+  "requiredCredentials": [
+    "password"
+  ],
+  "passwordPolicy": "length(8) and notUsername and notEmail",
+  "otpPolicyType": "totp",
+  "otpPolicyAlgorithm": "HmacSHA1",
+  "otpPolicyInitialCounter": 0,
+  "otpPolicyDigits": 6,
+  "otpPolicyLookAheadWindow": 1,
+  "otpPolicyPeriod": 30,
+  "clientScopes": [
+    {
+      "name": "groups",
+      "description": "User groups claim",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "true"
+      },
+      "protocolMappers": [
+        {
+          "name": "groups",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-group-membership-mapper",
+          "consentRequired": false,
+          "config": {
+            "full.path": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "groups",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "roles",
+      "description": "User roles claim",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "true"
+      },
+      "protocolMappers": [
+        {
+          "name": "realm_roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "realm_roles",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "name": "client_roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-client-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "resource_access",
+            "jsonType.label": "String"
+          }
+        }
+      ]
+    },
+    {
+      "name": "web-origins",
+      "description": "OpenID Connect scope for add allowed web origins to the access token",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "false",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "allowed web origins",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-allowed-origins-mapper",
+          "consentRequired": false,
+          "config": {}
+        }
+      ]
+    },
+    {
+      "name": "acr",
+      "description": "OpenID Connect scope for add acr (authentication context class reference) to the token",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "false",
+        "display.on.consent.screen": "false"
+      }
+    },
+    {
+      "name": "profile",
+      "description": "OpenID Connect built-in scope: profile",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "true",
+        "consent.screen.text": "${profileScopeConsentText}"
+      },
+      "protocolMappers": [
+        {
+          "name": "family name",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "userinfo.token.claim": "true",
+            "user.attribute": "lastName",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "family_name",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "name": "given name",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "userinfo.token.claim": "true",
+            "user.attribute": "firstName",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "given_name",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "name": "full name",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-full-name-mapper",
+          "consentRequired": false,
+          "config": {
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "username",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "userinfo.token.claim": "true",
+            "user.attribute": "username",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "preferred_username",
+            "jsonType.label": "String"
+          }
+        }
+      ]
+    },
+    {
+      "name": "email",
+      "description": "OpenID Connect built-in scope: email",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "true",
+        "consent.screen.text": "${emailScopeConsentText}"
+      },
+      "protocolMappers": [
+        {
+          "name": "email",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "userinfo.token.claim": "true",
+            "user.attribute": "email",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "email",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "name": "email verified",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "userinfo.token.claim": "true",
+            "user.attribute": "emailVerified",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "email_verified",
+            "jsonType.label": "boolean"
+          }
+        }
+      ]
+    },
+    {
+      "name": "address",
+      "description": "OpenID Connect built-in scope: address",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "true",
+        "consent.screen.text": "${addressScopeConsentText}"
+      },
+      "protocolMappers": [
+        {
+          "name": "address",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-address-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute.formatted": "formatted",
+            "user.attribute.country": "country",
+            "user.attribute.postal_code": "postal_code",
+            "user.attribute.street": "street",
+            "user.attribute.region": "region",
+            "user.attribute.locality": "locality"
+          }
+        }
+      ]
+    },
+    {
+      "name": "phone",
+      "description": "OpenID Connect built-in scope: phone",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "true",
+        "consent.screen.text": "${phoneScopeConsentText}"
+      },
+      "protocolMappers": [
+        {
+          "name": "phone number",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "userinfo.token.claim": "true",
+            "user.attribute": "phoneNumber",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "phone_number",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "name": "phone number verified",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "userinfo.token.claim": "true",
+            "user.attribute": "phoneNumberVerified",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "phone_number_verified",
+            "jsonType.label": "boolean"
+          }
+        }
+      ]
+    },
+    {
+      "name": "microprofile-jwt",
+      "description": "Microprofile - JWT built-in scope",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "true"
+      },
+      "protocolMappers": [
+        {
+          "name": "groups",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "groups",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "name": "upn",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "userinfo.token.claim": "true",
+            "user.attribute": "username",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "upn",
+            "jsonType.label": "String"
+          }
+        }
+      ]
+    },
+    {
+      "name": "offline_access",
+      "description": "OpenID Connect built-in scope: offline_access",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "true",
+        "consent.screen.text": "${offlineAccessScopeConsentText}"
+      }
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "blitz-portal",
+      "name": "Blitz Portal",
+      "description": "Main Blitz portal application",
+      "rootUrl": "https://portal.lumiaitech.com",
+      "adminUrl": "https://portal.lumiaitech.com",
+      "baseUrl": "/",
+      "surrogateAuthRequired": false,
+      "enabled": true,
+      "alwaysDisplayInConsole": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "blitz-portal-secret-dev",
+      "redirectUris": [
+        "https://portal.lumiaitech.com/*",
+        "http://localhost:3000/*"
+      ],
+      "webOrigins": [
+        "https://portal.lumiaitech.com",
+        "http://localhost:3000"
+      ],
+      "notBefore": 0,
+      "bearerOnly": false,
+      "consentRequired": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "publicClient": false,
+      "frontchannelLogout": false,
+      "protocol": "openid-connect",
+      "attributes": {
+        "post.logout.redirect.uris": "https://portal.lumiaitech.com",
+        "oidc.ciba.grant.enabled": "false",
+        "backchannel.logout.session.required": "true"
+      },
+      "authenticationFlowBindingOverrides": {},
+      "fullScopeAllowed": true,
+      "protocolMappers": [
+        {
+          "name": "groups",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-group-membership-mapper",
+          "consentRequired": false,
+          "config": {
+            "full.path": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "groups",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ],
+      "defaultClientScopes": [
+        "web-origins",
+        "acr",
+        "roles",
+        "profile",
+        "email",
+        "groups"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "phone",
+        "offline_access",
+        "microprofile-jwt"
+      ]
+    },
+    {
+      "clientId": "blitz-odoo",
+      "name": "Odoo ERP",
+      "description": "Odoo 18 CE OIDC SSO integration",
+      "rootUrl": "https://odoo.lumiaitech.com",
+      "adminUrl": "https://odoo.lumiaitech.com",
+      "baseUrl": "/",
+      "surrogateAuthRequired": false,
+      "enabled": true,
+      "alwaysDisplayInConsole": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "blitz-odoo-secret-dev",
+      "redirectUris": [
+        "https://odoo.lumiaitech.com/auth_oauth/signin",
+        "http://odoo.lumiaitech.com/auth_oauth/signin",
+        "http://localhost:8069/auth_oauth/signin"
+      ],
+      "webOrigins": [
+        "https://odoo.lumiaitech.com",
+        "http://odoo.lumiaitech.com",
+        "http://localhost:8069"
+      ],
+      "notBefore": 0,
+      "bearerOnly": false,
+      "consentRequired": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "publicClient": false,
+      "frontchannelLogout": false,
+      "protocol": "openid-connect",
+      "attributes": {
+        "post.logout.redirect.uris": "https://odoo.lumiaitech.com",
+        "oidc.ciba.grant.enabled": "false",
+        "backchannel.logout.session.required": "true"
+      },
+      "authenticationFlowBindingOverrides": {},
+      "fullScopeAllowed": true,
+      "nodeReRegistrationTimeout": -1,
+      "defaultClientScopes": [
+        "web-origins",
+        "acr",
+        "roles",
+        "profile",
+        "email"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "phone",
+        "offline_access",
+        "microprofile-jwt"
+      ]
+    },
+    {
+      "clientId": "blitz-kimai-saml",
+      "name": "Kimai SAML",
+      "description": "Kimai SAML 2.0 SSO integration",
+      "protocol": "saml",
+      "enabled": true,
+      "attributes": {
+        "saml.assertion.signature": "true",
+        "saml.force.post.binding": "true",
+        "saml.multivalued.roles": "false",
+        "saml.encrypt": "false",
+        "saml.server.signature": "true",
+        "saml.server.signature.keyinfo.ext": "false",
+        "saml_name_id_format": "email",
+        "saml.force.name.id.format": "true",
+        "saml.client.signature": "false",
+        "saml.signing.certificate": "MIIDUzCCAjugAwIBAgIUJcNVaziPsoJKdMZ44qmMJqbpaeUwDQYJKoZIhvcNAQELBQAwOTEaMBgGA1UEAwwRa2ltYWkuYmxpdHoubG9jYWwxDjAMBgNVBAoMBUJsaXR6MQswCQYDVQQGEwJWTjAeFw0yNjAyMTUwMjIyMDlaFw0yNzAyMTUwMjIyMDlaMDkxGjAYBgNVBAMMEWtpbWFpLmJsaXR6LmxvY2FsMQ4wDAYDVQQKDAVCbGl0ejELMAkGA1UEBhMCVk4wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDREWjUdu2EyS/EQ4erIQCDR14RKgLp5gPXOIFk4zRNIF4HmQadqZkrOUuwxYNE6VY1DanQ3k5K7Fa0O0KMO9pZ0N4jIiZ3vh53/ZQ/LL6fdagQH7cDY1AtpLUrFDfTofzELHHS841K4xtXtHPlDwvI/D4BjMwXNC/FQt7TiQZHnI6BrA13zN8W/V7we7Ga6RG3gKawMS0Jpm7OeCqoGCKmudzmlu+iLfdhJEgFPR7Of1ItYOjdEej+HPA3NoNB4voOfFasEaBrPLR/9TECuMcvjjINGMJzlGYA7/05Pwrm8Gj6CLzM2vgmfYIVSeQHQ+cih3q6JMbhTCbtRWKfkfnjAgMBAAGjUzBRMB0GA1UdDgQWBBSTWmjrDXXV3tq/ntuyTKk1If9kNjAfBgNVHSMEGDAWgBSTWmjrDXXV3tq/ntuyTKk1If9kNjAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3DQEBCwUAA4IBAQB/vAe2f/9kd9OusUTTb/T9w/AAlsNYPTFyGcCxGQSfCm9/yD7zTczmH7nAyRiHormYmc0HiHEHNxOW6cPTUOJ10Fdt3/iFcRiiLOxsx3Z46fgHBTTWbYs5bixGMqDrDrX+AY313yxMnHD+zLjtrshSWeDeh/NxAQvMfR3U8IBvQrkueggwwXIArcMqASLCER3RzKRdFMvm02J4tk4L50erTXeKsmTMUselUOH8VTOfr7XFsFeu8yjFrrnO5LbZ91MUV2k0wOzM9/tdRagQMv4RxFILgjlnfAYfM4eJtivR87WhZoq7Umh0lU3jqxjO22+r6bFrY7MfOtnsk3Xf89KY"
+      },
+      "redirectUris": [
+        "https://kimai.lumiaitech.com/auth/saml/acs"
+      ],
+      "baseUrl": "https://kimai.lumiaitech.com",
+      "adminUrl": "https://kimai.lumiaitech.com/auth/saml/sls",
+      "frontchannelLogout": true,
+      "protocolMappers": [
+        {
+          "name": "email",
+          "protocol": "saml",
+          "protocolMapper": "saml-user-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "attribute.nameformat": "Basic",
+            "user.attribute": "email",
+            "attribute.name": "email"
+          }
+        },
+        {
+          "name": "firstName",
+          "protocol": "saml",
+          "protocolMapper": "saml-user-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "attribute.nameformat": "Basic",
+            "user.attribute": "firstName",
+            "attribute.name": "firstName"
+          }
+        },
+        {
+          "name": "lastName",
+          "protocol": "saml",
+          "protocolMapper": "saml-user-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "attribute.nameformat": "Basic",
+            "user.attribute": "lastName",
+            "attribute.name": "lastName"
+          }
+        },
+        {
+          "name": "Role",
+          "protocol": "saml",
+          "protocolMapper": "saml-role-list-mapper",
+          "consentRequired": false,
+          "config": {
+            "attribute.nameformat": "Basic",
+            "single": "false",
+            "attribute.name": "Role"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "account",
+      "name": "${client_account}",
+      "rootUrl": "${authBaseUrl}",
+      "baseUrl": "/realms/blitz-internal/account/",
+      "surrogateAuthRequired": false,
+      "enabled": true,
+      "alwaysDisplayInConsole": false,
+      "clientAuthenticatorType": "client-secret",
+      "redirectUris": [
+        "/realms/blitz-internal/account/*"
+      ],
+      "webOrigins": [],
+      "notBefore": 0,
+      "bearerOnly": false,
+      "consentRequired": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "publicClient": true,
+      "frontchannelLogout": false,
+      "protocol": "openid-connect",
+      "attributes": {},
+      "authenticationFlowBindingOverrides": {},
+      "fullScopeAllowed": false,
+      "nodeReRegistrationTimeout": 0,
+      "defaultClientScopes": [
+        "web-origins",
+        "acr",
+        "roles",
+        "profile",
+        "email"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "phone",
+        "offline_access",
+        "microprofile-jwt"
+      ]
+    },
+    {
+      "clientId": "account-console",
+      "name": "${client_account-console}",
+      "rootUrl": "${authBaseUrl}",
+      "baseUrl": "/realms/blitz-internal/account/",
+      "surrogateAuthRequired": false,
+      "enabled": true,
+      "alwaysDisplayInConsole": false,
+      "clientAuthenticatorType": "client-secret",
+      "redirectUris": [
+        "/realms/blitz-internal/account/*"
+      ],
+      "webOrigins": [],
+      "notBefore": 0,
+      "bearerOnly": false,
+      "consentRequired": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "publicClient": true,
+      "frontchannelLogout": false,
+      "protocol": "openid-connect",
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "+"
+      },
+      "authenticationFlowBindingOverrides": {},
+      "fullScopeAllowed": false,
+      "nodeReRegistrationTimeout": 0,
+      "protocolMappers": [
+        {
+          "name": "audience resolve",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-resolve-mapper",
+          "consentRequired": false,
+          "config": {}
+        }
+      ],
+      "defaultClientScopes": [
+        "web-origins",
+        "acr",
+        "roles",
+        "profile",
+        "email"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "phone",
+        "offline_access",
+        "microprofile-jwt"
+      ]
+    },
+    {
+      "clientId": "realm-management",
+      "name": "${client_realm-management}",
+      "rootUrl": "",
+      "baseUrl": "",
+      "surrogateAuthRequired": false,
+      "enabled": true,
+      "alwaysDisplayInConsole": false,
+      "clientAuthenticatorType": "client-secret",
+      "redirectUris": [],
+      "webOrigins": [],
+      "notBefore": 0,
+      "bearerOnly": true,
+      "consentRequired": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "publicClient": false,
+      "frontchannelLogout": false,
+      "protocol": "openid-connect",
+      "attributes": {},
+      "fullScopeAllowed": false
+    },
+    {
+      "clientId": "blitz-mail",
+      "name": "Stalwart Mail Server",
+      "description": "Stalwart Mail Server OIDC SSO integration",
+      "rootUrl": "https://mail.lumiaitech.com",
+      "adminUrl": "https://mail.lumiaitech.com",
+      "baseUrl": "/",
+      "surrogateAuthRequired": false,
+      "enabled": true,
+      "alwaysDisplayInConsole": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "blitz-mail-secret-dev",
+      "redirectUris": [
+        "https://mail.lumiaitech.com/*",
+        "https://mail.blitz.local/*"
+      ],
+      "webOrigins": [
+        "https://mail.lumiaitech.com",
+        "https://mail.blitz.local"
+      ],
+      "notBefore": 0,
+      "bearerOnly": false,
+      "consentRequired": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "publicClient": false,
+      "frontchannelLogout": false,
+      "protocol": "openid-connect",
+      "attributes": {
+        "post.logout.redirect.uris": "https://mail.lumiaitech.com",
+        "oidc.ciba.grant.enabled": "false",
+        "backchannel.logout.session.required": "true"
+      },
+      "authenticationFlowBindingOverrides": {},
+      "fullScopeAllowed": true,
+      "protocolMappers": [
+        {
+          "name": "email",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "userinfo.token.claim": "true",
+            "user.attribute": "email",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "email",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "name": "full name",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-full-name-mapper",
+          "consentRequired": false,
+          "config": {
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "groups",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-group-membership-mapper",
+          "consentRequired": false,
+          "config": {
+            "full.path": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "groups",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ],
+      "defaultClientScopes": [
+        "web-origins",
+        "acr",
+        "roles",
+        "profile",
+        "email"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "phone",
+        "offline_access",
+        "microprofile-jwt"
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "admin",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "System",
+      "lastName": "Administrator",
+      "email": "admin@blitz.local",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Admin123!",
+          "temporary": true
+        }
+      ],
+      "realmRoles": [
+        "it-admin",
+        "employee"
+      ],
+      "groups": [
+        "/admin"
+      ]
+    },
+    {
+      "username": "sales-lead",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Sales",
+      "lastName": "Lead",
+      "email": "sales-lead@blitz.local",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Sales123!",
+          "temporary": true
+        }
+      ],
+      "realmRoles": [
+        "manager",
+        "employee"
+      ],
+      "groups": [
+        "/sales"
+      ]
+    },
+    {
+      "username": "sales-rep",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Sales",
+      "lastName": "Representative",
+      "email": "sales-rep@blitz.local",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Sales123!",
+          "temporary": true
+        }
+      ],
+      "realmRoles": [
+        "employee"
+      ],
+      "groups": [
+        "/sales"
+      ]
+    },
+    {
+      "username": "pre-sales-lead",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Pre-Sales",
+      "lastName": "Lead",
+      "email": "pre-sales-lead@blitz.local",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "PreSales123!",
+          "temporary": true
+        }
+      ],
+      "realmRoles": [
+        "manager",
+        "employee"
+      ],
+      "groups": [
+        "/pre-sales"
+      ]
+    },
+    {
+      "username": "pre-sales-eng",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Pre-Sales",
+      "lastName": "Engineer",
+      "email": "pre-sales-eng@blitz.local",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "PreSales123!",
+          "temporary": true
+        }
+      ],
+      "realmRoles": [
+        "employee"
+      ],
+      "groups": [
+        "/pre-sales"
+      ]
+    },
+    {
+      "username": "tech-lead",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Technical",
+      "lastName": "Lead",
+      "email": "tech-lead@blitz.local",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Tech123!",
+          "temporary": true
+        }
+      ],
+      "realmRoles": [
+        "team-lead",
+        "employee"
+      ],
+      "groups": [
+        "/tech"
+      ]
+    },
+    {
+      "username": "tech-dev",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Tech",
+      "lastName": "Developer",
+      "email": "tech-dev@blitz.local",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Tech123!",
+          "temporary": true
+        }
+      ],
+      "realmRoles": [
+        "employee"
+      ],
+      "groups": [
+        "/tech"
+      ]
+    },
+    {
+      "username": "swift-lead",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Swift",
+      "lastName": "Lead",
+      "email": "swift-lead@blitz.local",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Swift123!",
+          "temporary": true
+        }
+      ],
+      "realmRoles": [
+        "team-lead",
+        "employee"
+      ],
+      "groups": [
+        "/swift"
+      ]
+    },
+    {
+      "username": "swift-dev",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Swift",
+      "lastName": "Developer",
+      "email": "swift-dev@blitz.local",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Swift123!",
+          "temporary": true
+        }
+      ],
+      "realmRoles": [
+        "employee"
+      ],
+      "groups": [
+        "/swift"
+      ]
+    },
+    {
+      "username": "support-lead",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Support",
+      "lastName": "Lead",
+      "email": "support-lead@blitz.local",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Support123!",
+          "temporary": true
+        }
+      ],
+      "realmRoles": [
+        "manager",
+        "employee"
+      ],
+      "groups": [
+        "/support"
+      ]
+    },
+    {
+      "username": "support-agent",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Support",
+      "lastName": "Agent",
+      "email": "support-agent@blitz.local",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Support123!",
+          "temporary": true
+        }
+      ],
+      "realmRoles": [
+        "employee"
+      ],
+      "groups": [
+        "/support"
+      ]
+    },
+    {
+      "username": "hr-lead",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "HR",
+      "lastName": "Lead",
+      "email": "hr-lead@blitz.local",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "HR123456!",
+          "temporary": true
+        }
+      ],
+      "realmRoles": [
+        "manager",
+        "employee"
+      ],
+      "groups": [
+        "/hr"
+      ],
+      "requiredActions": [
+        "CONFIGURE_TOTP"
+      ]
+    },
+    {
+      "username": "hr-specialist",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "HR",
+      "lastName": "Specialist",
+      "email": "hr-specialist@blitz.local",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "HR123456!",
+          "temporary": true
+        }
+      ],
+      "realmRoles": [
+        "employee"
+      ],
+      "groups": [
+        "/hr"
+      ],
+      "requiredActions": [
+        "CONFIGURE_TOTP"
+      ]
+    },
+    {
+      "username": "financial-lead",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Financial",
+      "lastName": "Lead",
+      "email": "financial-lead@blitz.local",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Finance123!",
+          "temporary": true
+        }
+      ],
+      "realmRoles": [
+        "manager",
+        "employee"
+      ],
+      "groups": [
+        "/financial"
+      ],
+      "requiredActions": [
+        "CONFIGURE_TOTP"
+      ]
+    },
+    {
+      "username": "financial-analyst",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Financial",
+      "lastName": "Analyst",
+      "email": "financial-analyst@blitz.local",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Finance123!",
+          "temporary": true
+        }
+      ],
+      "realmRoles": [
+        "employee"
+      ],
+      "groups": [
+        "/financial"
+      ],
+      "requiredActions": [
+        "CONFIGURE_TOTP"
+      ]
+    }
+  ],
+  "defaultDefaultClientScopes": [
+    "web-origins",
+    "acr",
+    "roles",
+    "profile",
+    "email"
+  ],
+  "defaultOptionalClientScopes": [
+    "address",
+    "phone",
+    "offline_access",
+    "microprofile-jwt"
+  ]
+}

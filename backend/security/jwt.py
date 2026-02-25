@@ -56,8 +56,11 @@ async def _fetch_jwks_from_remote() -> dict[str, Any]:
     Raises:
         HTTPException(503) if the Keycloak endpoint is unreachable.
     """
+    # Use the project CA cert for self-signed Keycloak TLS (local dev).
+    # Falls back to system default trust store when keycloak_ca_cert is not set.
+    ssl_verify: str | bool = settings.keycloak_ca_cert or True
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(verify=ssl_verify) as client:
             resp = await client.get(settings.keycloak_jwks_url, timeout=10.0)
             resp.raise_for_status()
             return resp.json()

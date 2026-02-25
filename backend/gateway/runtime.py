@@ -1,35 +1,43 @@
 # backend/gateway/runtime.py
 """
-CopilotKit runtime — wraps the LangGraph master agent for AG-UI streaming.
+AG-UI runtime — wraps the LangGraph master agent for AG-UI streaming.
 
-Architecture note (CopilotKit 0.1.54+):
-  CopilotKitSDK is deprecated in favor of CopilotKitRemoteEndpoint.
-  The integration uses add_fastapi_endpoint() from copilotkit.integrations.fastapi,
-  but we need to enforce 3-gate security BEFORE CopilotKit handles the request.
+Architecture note (@copilotkitnext v1.51.4 / ag-ui-langgraph 0.0.25):
+  @copilotkit/react-core v1.51.4 uses @copilotkitnext internally with
+  runtimeTransport="single" (useSingleEndpoint=true). All requests go to
+  POST /api/copilotkit as a JSON envelope: {"method": "<name>", "params": {...}, "body": {...}}.
+
+  Supported methods:
+    "info"       — return available agents (discovery / runtime sync)
+    "agent/run"  — run an agent with RunAgentInput body, stream AG-UI events
 
 Security architecture:
-  The /api/copilotkit router enforces Gate 1 (JWT) via Depends(get_current_user).
-  Gate 2 (RBAC 'chat') and Gate 3 (Tool ACL 'agents.chat') are checked inline.
-  Only after all 3 gates pass does the request reach the CopilotKit handler.
+  Gate 1 (JWT): Depends(get_current_user) on the endpoint.
+  Gate 2 (RBAC 'chat'): checked inline via has_permission().
+  Gate 3 (Tool ACL 'agents.chat'): checked inline via check_tool_acl().
+  Only after all 3 gates pass does the request reach the LangGraph agent.
 
 Security invariant: user_id is NEVER accepted from the request body.
 It is extracted from the validated JWT by get_current_user() dependency.
 
 Frontend integration (02-03):
-  The Next.js proxy route (frontend/src/app/api/copilotkit/route.ts) forwards
-  requests to POST /api/copilotkit with the server-side Bearer token injected.
-  Sub-paths (e.g. /api/copilotkit/agent/blitz_master) are handled by the
-  catch-all route registered via add_fastapi_endpoint() on the secured sub-router.
+  The Next.js proxy (frontend/src/app/api/copilotkit/route.ts) forwards
+  POST /api/copilotkit with the server-side Bearer token injected.
+  Credentials never touch the browser.
 """
-import json
 import time
 from typing import Any
 from uuid import UUID
 
 import structlog
-from copilotkit import CopilotKitRemoteEndpoint, LangGraphAgent
-from copilotkit.integrations.fastapi import handler as copilotkit_handler
+from ag_ui.core import RunAgentInput
+from ag_ui.encoder import EventEncoder
+
+# Import directly from submodule — copilotkit.__init__ imports CopilotKitMiddleware
+# which requires langchain.agents.middleware (not available in our langchain version).
+from copilotkit.langgraph_agui_agent import LangGraphAGUIAgent
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import JSONResponse, StreamingResponse
 
 from agents.master_agent import create_master_graph
 from core.context import current_conversation_id_ctx, current_user_ctx
@@ -42,18 +50,26 @@ from security.rbac import has_permission
 logger = structlog.get_logger(__name__)
 
 # Build graph once at module load — LangGraph compilation is expensive.
-# CopilotKit holds a reference; the same compiled graph handles all requests.
 _master_graph = create_master_graph()
 
-_sdk = CopilotKitRemoteEndpoint(
-    agents=[
-        LangGraphAgent(
-            name="blitz_master",
-            description="Blitz AgentOS master conversational agent",
-            graph=_master_graph,
-        )
-    ]
+_agent = LangGraphAGUIAgent(
+    name="blitz_master",
+    description="Blitz AgentOS master conversational agent",
+    graph=_master_graph,
 )
+
+# Runtime info response for the "info" method.
+# Format expected by @copilotkitnext/core fetchRuntimeInfo():
+#   { version, agents: { <agentId>: { description } }, audioFileTranscriptionEnabled }
+_RUNTIME_INFO = {
+    "version": "0.1.0",
+    "agents": {
+        "blitz_master": {
+            "description": _agent.description,
+        }
+    },
+    "audioFileTranscriptionEnabled": False,
+}
 
 router = APIRouter(prefix="/api", tags=["copilotkit"])
 
@@ -90,6 +106,7 @@ async def _check_gates(user: UserContext, start_ms: int) -> None:
     responses={
         401: {"description": "Missing or invalid JWT"},
         403: {"description": "Insufficient permissions"},
+        400: {"description": "Invalid or missing method in request envelope"},
     },
 )
 async def copilotkit_endpoint(
@@ -97,101 +114,86 @@ async def copilotkit_endpoint(
     user: UserContext = Depends(get_current_user),
 ) -> Any:
     """
-    AG-UI entry point for CopilotKit (root endpoint).
+    AG-UI single-route endpoint for @copilotkitnext v1.51.4.
 
-    Security: identical 3-gate chain as /api/agents/chat.
-    The JWT Authorization header is injected by the Next.js proxy route
-    (frontend/src/app/api/copilotkit/route.ts) from the server-side session.
-    Credentials never touch the browser.
+    Request body format (JSON envelope):
+      { "method": "info" }
+        → Returns available agent registry (runtime sync / discovery).
+      { "method": "agent/run", "params": {"agentId": "blitz_master"}, "body": <RunAgentInput> }
+        → Streams AG-UI events (text, tool calls, state snapshots).
 
-    Extracts threadId from the CopilotKit request body and sets
-    current_conversation_id_ctx so that memory nodes can scope DB operations
-    to the correct conversation without arg threading.
+    Security: 3-gate chain (JWT → RBAC → Tool ACL).
+    The JWT Authorization header is injected by the Next.js proxy route from
+    the server-side session; credentials never touch the browser.
+
+    Memory isolation: thread_id from RunAgentInput is mapped to conversation_id
+    and injected via current_conversation_id_ctx so memory nodes scope all
+    DB queries to the correct conversation without threading args through the graph.
     """
     start_ms = int(time.monotonic() * 1000)
     await _check_gates(user, start_ms)
 
-    # Read body once — body stream can only be consumed once per request.
-    body_bytes = await request.body()
-    body: dict = {}
-    if body_bytes:
-        try:
-            body = json.loads(body_bytes)
-        except (json.JSONDecodeError, ValueError):
-            body = {}
-
-    # Extract threadId (conversation UUID) from CopilotKit AG-UI request body.
-    # CopilotKit sends threadId as the conversation identifier for memory isolation.
-    thread_id_raw = body.get("threadId") or body.get("thread_id")
-    conversation_id: UUID | None = None
-    if thread_id_raw:
-        try:
-            conversation_id = UUID(str(thread_id_raw))
-        except (ValueError, AttributeError):
-            logger.warning("invalid_thread_id", thread_id=thread_id_raw)
-
-    # Set both contextvars before graph invocation; reset in finally block.
-    user_token = current_user_ctx.set(user)
-    conv_token = current_conversation_id_ctx.set(conversation_id) if conversation_id else None
     try:
-        return await copilotkit_handler(request, _sdk)
-    finally:
-        current_user_ctx.reset(user_token)
-        if conv_token is not None:
-            current_conversation_id_ctx.reset(conv_token)
+        envelope = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON body")
 
+    method = envelope.get("method")
 
-@router.api_route(
-    "/copilotkit/{path:path}",
-    methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    responses={
-        401: {"description": "Missing or invalid JWT"},
-        403: {"description": "Insufficient permissions"},
-    },
-)
-async def copilotkit_subpath_endpoint(
-    request: Request,
-    path: str,  # noqa: ARG001 — path is captured by FastAPI, used internally
-    user: UserContext = Depends(get_current_user),
-) -> Any:
-    """
-    AG-UI sub-path endpoints for CopilotKit (agent execution, state, etc.).
+    # ── info ──────────────────────────────────────────────────────────────
+    if method == "info":
+        return JSONResponse(content=_RUNTIME_INFO)
 
-    CopilotKit routes:
-      POST /api/copilotkit/agent/{name}         — execute agent (streaming)
-      POST /api/copilotkit/agent/{name}/state   — get agent state
-      POST /api/copilotkit/info                 — list available agents/actions
-      POST /api/copilotkit/actions/execute      — execute action
-      POST /api/copilotkit/agents/execute       — execute agent (v1 compat)
+    # ── agent/run ─────────────────────────────────────────────────────────
+    if method == "agent/run":
+        params = envelope.get("params") or {}
+        agent_id = params.get("agentId")
+        if agent_id != _agent.name:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Agent '{agent_id}' not found. Available: ['{_agent.name}']",
+            )
 
-    All sub-paths enforce the same 3-gate security as the root endpoint.
-    Also extracts threadId for conversation_id contextvar injection.
-    """
-    start_ms = int(time.monotonic() * 1000)
-    await _check_gates(user, start_ms)
-
-    # Read body once for threadId extraction.
-    body_bytes = await request.body()
-    body: dict = {}
-    if body_bytes:
+        body = envelope.get("body") or {}
         try:
-            body = json.loads(body_bytes)
-        except (json.JSONDecodeError, ValueError):
-            body = {}
+            # Use model_validate (not **body) because the JS client sends camelCase
+            # field names (threadId, runId, forwardedProps) and RunAgentInput uses
+            # validate_by_alias=True with a camelCase alias generator.
+            input_data = RunAgentInput.model_validate(body)
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail=f"Invalid RunAgentInput: {exc}") from exc
 
-    thread_id_raw = body.get("threadId") or body.get("thread_id")
-    conversation_id: UUID | None = None
-    if thread_id_raw:
-        try:
-            conversation_id = UUID(str(thread_id_raw))
-        except (ValueError, AttributeError):
-            logger.warning("invalid_thread_id", thread_id=thread_id_raw)
+        # Map thread_id → UUID for conversation-scoped memory isolation.
+        conversation_id: UUID | None = None
+        if input_data.thread_id:
+            try:
+                conversation_id = UUID(str(input_data.thread_id))
+            except (ValueError, AttributeError):
+                logger.warning("invalid_thread_id", thread_id=input_data.thread_id)
 
-    user_token = current_user_ctx.set(user)
-    conv_token = current_conversation_id_ctx.set(conversation_id) if conversation_id else None
-    try:
-        return await copilotkit_handler(request, _sdk)
-    finally:
-        current_user_ctx.reset(user_token)
-        if conv_token is not None:
-            current_conversation_id_ctx.reset(conv_token)
+        accept_header = request.headers.get("accept")
+        encoder = EventEncoder(accept=accept_header)
+
+        async def event_generator():
+            # Set contextvars inside the generator so they're active when the
+            # LangGraph nodes run (during streaming iteration by Starlette).
+            user_token = current_user_ctx.set(user)
+            conv_token = current_conversation_id_ctx.set(conversation_id) if conversation_id else None
+            try:
+                async for event in _agent.run(input_data):
+                    yield encoder.encode(event)
+            finally:
+                current_user_ctx.reset(user_token)
+                if conv_token is not None:
+                    current_conversation_id_ctx.reset(conv_token)
+
+        return StreamingResponse(
+            event_generator(),
+            media_type=encoder.get_content_type(),
+        )
+
+    # ── unknown method ─────────────────────────────────────────────────────
+    raise HTTPException(
+        status_code=400,
+        detail=f"Unsupported method '{method}'. Supported: info, agent/run",
+    )

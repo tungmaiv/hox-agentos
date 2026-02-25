@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     keycloak_client_secret: str
     keycloak_jwks_url: str = ""
     keycloak_issuer: str = ""
+    # Path to CA cert for self-signed Keycloak TLS (local dev only).
+    # Set this when Keycloak uses a self-signed cert not in the system trust store.
+    keycloak_ca_cert: str = ""
 
     # LiteLLM
     litellm_url: str
