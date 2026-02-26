@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Agent Core and Conversational Chat** - Master agent with LangGraph, AG-UI streaming chat, conversation memory, LiteLLM routing, credential store, custom instructions (completed 2026-02-25)
 - [x] **Phase 2.1: Tech Debt Cleanup** (INSERTED) - Fix BACKEND_URL env inconsistency, user_instructions.updated_at onupdate, REQUIREMENTS.md traceability checkboxes, ROADMAP.md plan checkbox
 - [ ] **Phase 3: Sub-Agents, Memory, and Integrations** - Email/Calendar/Project/Channel sub-agents, 3-tier memory with embeddings, MCP framework, A2UI generative UI
-- [ ] **Phase 3.1: Memory Read Path & MCP Hot-Registration** (INSERTED) - Wire load_recent_episodes() into agent context (MEMO-02), add MCPToolRegistry.refresh() after runtime server registration (INTG-01), fix stale test
+- [x] **Phase 3.1: Memory Read Path & MCP Hot-Registration** (INSERTED) - Wire load_recent_episodes() into agent context (MEMO-02), add MCPToolRegistry.refresh() after runtime server registration (INTG-01), fix stale test (completed 2026-02-26)
 - [ ] **Phase 4: Canvas and Workflows** - React Flow visual builder, canvas-to-StateGraph compiler, workflow templates, HITL approval, cron/webhook triggers
 - [ ] **Phase 5: Scheduler and Channels** - Web chat enhancement, Telegram/WhatsApp/Teams adapters, channel identity resolution, ChannelAdapter protocol
 - [ ] **Phase 6: Extensibility Registries** - Database-backed registries for agents/tools/skills/MCP servers, CRUD APIs, per-artifact permissions
@@ -109,7 +109,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 03.1-01-PLAN.md — TDD: 3 failing tests (RED), episode injection in _load_memory_node (MEMO-02), MCPToolRegistry.refresh() in create_mcp_server() (INTG-01), full suite green
+- [x] 03.1-01-PLAN.md — TDD: 3 failing tests (RED), episode injection in _load_memory_node (MEMO-02), MCPToolRegistry.refresh() in create_mcp_server() (INTG-01), full suite green (180 passed)
 
 ### Phase 4: Canvas and Workflows
 **Goal**: Users can visually build multi-step automations on a drag-and-drop canvas that compile to executable agent workflows with human approval gates
@@ -208,7 +208,7 @@ Note: Phases 4 and 5 can execute in parallel as they share no mutual dependencie
 | 2. Agent Core and Conversational Chat | 5/5 | Complete     | 2026-02-25 |
 | 2.1. Tech Debt Cleanup (INSERTED) | 1/1 | Complete     | 2026-02-26 |
 | 3. Sub-Agents, Memory, and Integrations | 6/7 | In Progress|  |
-| 3.1. Memory Read Path & MCP Hot-Registration (INSERTED) | 0/1 | Not started | - |
+| 3.1. Memory Read Path & MCP Hot-Registration (INSERTED) | 1/1 | Complete | 2026-02-26 |
 | 4. Canvas and Workflows | 0/5 | Not started | - |
 | 5. Scheduler and Channels | 0/5 | Not started | - |
 | 6. Extensibility Registries | 0/3 | Not started | - |

@@ -9,10 +9,10 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 
 ## Current Position
 
-Phase: 3 of 9 IN PROGRESS (Sub-Agents + Memory Expansion + OAuth Integrations)
-Plan: 6 of 6 complete (03-05: A2UI rendering pipeline — CalendarCard/EmailSummaryCard/ProjectStatusWidget + useMcpTool hook + POST /api/tools/call + Settings Memory + Chat Preferences; all 6 visual scenarios verified by user)
-Status: Phase 3 plans 01-05 complete; plan 06 (OAuth integrations + phase gate) is next
-Last activity: 2026-02-26 -- Completed 03-05-PLAN.md — all tasks done including human visual verification (6/6 scenarios PASSED)
+Phase: 3.1 of 9 COMPLETE (Memory Read Path + MCP Hot-Registration gap-closure)
+Plan: 1 of 1 complete (03.1-01: MEMO-02 episode injection + INTG-01 MCP hot-registration; TDD — 3 new tests, 180 suite green)
+Status: Phase 3.1 complete (MEMO-02 + INTG-01 closed); Phase 3 plan 06 (OAuth integrations + phase gate) is next
+Last activity: 2026-02-26 -- Completed 03.1-01-PLAN.md — all 3 tasks done; 180 tests passing
 
 Progress: [█████████░] 70% (16/22 plans estimated)
 
@@ -110,6 +110,8 @@ Recent decisions affecting current work:
 - [Phase 03-sub-agents-memory-and-integrations]: useMcpTool generic signature requires TParams in return type UseMcpToolResult<TParams,TResult> — TypeScript strict mode requires both type params
 - [Phase 03-sub-agents-memory-and-integrations]: react-markdown v10 removed className prop — wrap in div with className instead of passing to ReactMarkdown component
 - [Phase 03-05]: core.db exports get_db (not get_async_session) as the FastAPI dependency — same pattern used in all existing route files (credentials.py, acl.py)
+- [03.1-01]: load_recent_episodes imported at top level in master_agent.py (not lazy) — lazy imports not patchable with patch('agents.master_agent.load_recent_episodes'); same pattern as call_mcp_tool in project_agent.py
+- [03.1-01]: MCPToolRegistry imported lazily inside create_mcp_server() to avoid circular import; test patches 'mcp.registry.MCPToolRegistry' (class definition module) — intercepts lazy import correctly
 
 ### Pending Todos
 
@@ -133,6 +135,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-26T13:30:00Z
-Stopped at: Completed 03-05-PLAN.md — A2UI components (CalendarCard/EmailSummaryCard/ProjectStatusWidget) + useMcpTool hook + POST /api/tools/call + Settings Memory + Chat Preferences; 6/6 visual scenarios verified by user; Phase 3 plan 06 is next
+Last session: 2026-02-26T16:37:29Z
+Stopped at: Completed 03.1-01-PLAN.md — MEMO-02 (episode injection in _load_memory_node) + INTG-01 (MCPToolRegistry.refresh() in create_mcp_server); 180 tests passing; Phase 3 plan 06 (OAuth integrations) is next
 Resume file: None
