@@ -30,7 +30,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Memory
 
 - [x] **MEMO-01**: System stores conversation turns per user and conversation (short-term memory)
-- [x] **MEMO-02**: System summarizes old conversations into episode summaries (medium-term memory)
+- [ ] **MEMO-02**: System summarizes old conversations into episode summaries (medium-term memory)
 - [x] **MEMO-03**: System accumulates user preferences and facts with pgvector embeddings (long-term memory)
 - [x] **MEMO-04**: Semantic search retrieves relevant facts for agent context via bge-m3 embeddings (1024-dim)
 - [x] **MEMO-05**: All memory queries are parameterized on user_id from JWT — no cross-user reads
@@ -49,7 +49,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Integration
 
-- [x] **INTG-01**: MCP servers connect via HTTP+SSE transport and are registered in the tool registry
+- [ ] **INTG-01**: MCP servers connect via HTTP+SSE transport and are registered in the tool registry
 - [x] **INTG-02**: CRM mock MCP server provides sample tools (search leads, get contact) to validate the pattern
 - [x] **INTG-03**: MCP tools go through the same 3-gate security as backend tools
 - [x] **INTG-04**: User OAuth tokens are stored AES-256 encrypted in PostgreSQL, resolved internally by user_id
@@ -152,10 +152,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AGNT-05 | Phase 3 | Complete |
 | AGNT-06 | Phase 3 | Complete |
 | AGNT-08 | Phase 3 | Complete |
-| MEMO-02 | Phase 3 | Complete |
+| MEMO-02 | Phase 3.1 | Pending |
 | MEMO-03 | Phase 3 | Complete |
 | MEMO-04 | Phase 3 | Complete |
-| INTG-01 | Phase 3 | Complete |
+| INTG-01 | Phase 3.1 | Pending |
 | INTG-02 | Phase 3 | Complete |
 | INTG-03 | Phase 3 | Complete |
 | INTG-05 | Phase 3 | Complete |
@@ -191,7 +191,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 - v1 requirements: 51 total
 - Mapped to phases: 51
 - Unmapped: 0
-- Completed (v1.0): 12 (AUTH-01–06, AGNT-01, AGNT-02, AGNT-07, MEMO-01, MEMO-05, INTG-04)
+- Completed (v1.0, phases 1–3): 22 (AUTH-01–06, AGNT-01–08, MEMO-01, MEMO-03, MEMO-04, MEMO-05, INTG-02, INTG-03, INTG-04, INTG-05)
+- Pending gap closure (phase 3.1): 2 (MEMO-02, INTG-01)
 - Pending: 39
 
 ---

@@ -16,6 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Agent Core and Conversational Chat** - Master agent with LangGraph, AG-UI streaming chat, conversation memory, LiteLLM routing, credential store, custom instructions (completed 2026-02-25)
 - [x] **Phase 2.1: Tech Debt Cleanup** (INSERTED) - Fix BACKEND_URL env inconsistency, user_instructions.updated_at onupdate, REQUIREMENTS.md traceability checkboxes, ROADMAP.md plan checkbox
 - [ ] **Phase 3: Sub-Agents, Memory, and Integrations** - Email/Calendar/Project/Channel sub-agents, 3-tier memory with embeddings, MCP framework, A2UI generative UI
+- [ ] **Phase 3.1: Memory Read Path & MCP Hot-Registration** (INSERTED) - Wire load_recent_episodes() into agent context (MEMO-02), add MCPToolRegistry.refresh() after runtime server registration (INTG-01), fix stale test
 - [ ] **Phase 4: Canvas and Workflows** - React Flow visual builder, canvas-to-StateGraph compiler, workflow templates, HITL approval, cron/webhook triggers
 - [ ] **Phase 5: Scheduler and Channels** - Web chat enhancement, Telegram/WhatsApp/Teams adapters, channel identity resolution, ChannelAdapter protocol
 - [ ] **Phase 6: Extensibility Registries** - Database-backed registries for agents/tools/skills/MCP servers, CRUD APIs, per-artifact permissions
@@ -95,6 +96,20 @@ Plans:
 - [ ] 03-03-PLAN.md — MCP framework + CRM mock: MCPClient, MCPToolRegistry, 3-gate gated call, Settings → Integrations live CRUD, mcp-crm Docker service (Wave 2, depends on 03-00)
 - [ ] 03-04-PLAN.md — Sub-agents + DeliveryRouterNode: email/calendar/project agents, intent router, DeliveryTarget enum, master agent routing update (Wave 3, depends on 03-02 + 03-03)
 - [ ] 03-05-PLAN.md — A2UI components + useMcpTool + Settings pages: CalendarCard, EmailSummaryCard, ProjectStatusWidget, A2UIMessageRenderer, useMcpTool hook, POST /api/tools/call, Settings → Memory + Chat Preferences (Wave 4, depends on 03-04)
+
+### Phase 3.1: Memory Read Path & MCP Hot-Registration (INSERTED)
+**Goal**: Close the two integration gaps found in the v1.0 milestone audit — wire medium-term episode summaries into agent context, and make newly registered MCP servers immediately available without a backend restart
+**Depends on**: Phase 3
+**Requirements**: MEMO-02, INTG-01
+**Gap Closure:** Closes gaps from v1.0-MILESTONE-AUDIT.md
+**Success Criteria** (what must be TRUE):
+  1. After a conversation is summarized by Celery, the episode summary is injected into the agent's context at the start of the next session
+  2. After `POST /api/admin/mcp-servers` registers a new server, its tools are immediately callable via `POST /api/tools/call` without restarting the backend
+  3. `pytest backend/tests/` passes with 0 failures (stale test_create_master_graph_has_routing_conditional fixed)
+**Plans**: 1 plan
+
+Plans:
+- [ ] 03.1-01-PLAN.md — Wire load_recent_episodes() into _load_memory_node, add MCPToolRegistry.refresh() to create_mcp_server(), fix stale routing test
 
 ### Phase 4: Canvas and Workflows
 **Goal**: Users can visually build multi-step automations on a drag-and-drop canvas that compile to executable agent workflows with human approval gates
@@ -193,6 +208,7 @@ Note: Phases 4 and 5 can execute in parallel as they share no mutual dependencie
 | 2. Agent Core and Conversational Chat | 5/5 | Complete     | 2026-02-25 |
 | 2.1. Tech Debt Cleanup (INSERTED) | 1/1 | Complete     | 2026-02-26 |
 | 3. Sub-Agents, Memory, and Integrations | 6/7 | In Progress|  |
+| 3.1. Memory Read Path & MCP Hot-Registration (INSERTED) | 0/1 | Not started | - |
 | 4. Canvas and Workflows | 0/5 | Not started | - |
 | 5. Scheduler and Channels | 0/5 | Not started | - |
 | 6. Extensibility Registries | 0/3 | Not started | - |
