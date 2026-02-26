@@ -52,6 +52,36 @@ export default function SettingsPage() {
 
       <nav className="mb-8">
         <h2 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">
+          Personal
+        </h2>
+        <div className="grid grid-cols-2 gap-3 mb-6">
+          <Link
+            href="/settings/memory"
+            className="flex items-center p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors"
+          >
+            <div>
+              <p className="text-sm font-medium text-gray-900">Memory</p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                View and delete stored facts
+              </p>
+            </div>
+          </Link>
+          <Link
+            href="/settings/chat-preferences"
+            className="flex items-center p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors"
+          >
+            <div>
+              <p className="text-sm font-medium text-gray-900">
+                Chat Preferences
+              </p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Rendering mode selection
+              </p>
+            </div>
+          </Link>
+        </div>
+
+        <h2 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">
           Admin
         </h2>
         <div className="grid grid-cols-2 gap-3">
