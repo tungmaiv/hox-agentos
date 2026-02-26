@@ -1,9 +1,13 @@
 # backend/agents/master_agent.py
 """
-Master agent — Phase 3 conversational ReAct graph with short-term + long-term memory.
+Master agent — Phase 3 conversational graph with sub-agent routing, short-term + long-term memory.
 
 Graph topology (Phase 3):
-    START → load_memory → master_agent → [_route_after_master] → save_memory → END
+    START → load_memory → master_agent → [_route_after_master]
+                                              ├── email_agent    → delivery_router → save_memory → END
+                                              ├── calendar_agent → delivery_router → save_memory → END
+                                              ├── project_agent  → delivery_router → save_memory → END
+                                              └── delivery_router → save_memory → END (general)
 
 Memory nodes read/write conversation turns using user_id and conversation_id from
 BlitzState, which is set by gateway/runtime.py from the validated JWT and threadId
@@ -339,39 +343,101 @@ async def _save_memory_node(state: BlitzState) -> dict:
     return {}
 
 
-def _route_after_master(state: BlitzState) -> str:
+async def _route_after_master(state: BlitzState) -> str:
     """
-    Routing conditional after master_agent node (Phase 2 stub → always save_memory).
-    Phase 3 will extend this to route to sub-agent nodes before saving memory.
+    Routing conditional after master_agent node.
+    Classifies user intent with blitz/fast LLM and routes to the appropriate
+    sub-agent node, checking feature flags in system_config before routing.
+
+    Returns node names:
+      "email_agent"    — user asked about email
+      "calendar_agent" — user asked about calendar/schedule
+      "project_agent"  — user asked about project/CRM status
+      "delivery_router" — general intent; skip sub-agents, go to delivery
     """
-    return "save_memory"
+    from agents.subagents.router import classify_intent
+    from core.models.system_config import SystemConfig
+
+    last_user_msg = next(
+        (m.content for m in reversed(state["messages"]) if isinstance(m, HumanMessage)), ""
+    )
+    intent = await classify_intent(str(last_user_msg))
+
+    async def _agent_enabled(key: str) -> bool:
+        try:
+            async with async_session() as s:
+                result = await s.execute(select(SystemConfig).where(SystemConfig.key == key))
+                row = result.scalar_one_or_none()
+                if row is None:
+                    return True  # default enabled when not configured
+                return bool(row.value)
+        except Exception:
+            return True  # fail open — agent enabled on DB error
+
+    if intent == "email":
+        if await _agent_enabled("agent.email.enabled"):
+            return "email_agent"
+        # Disabled: master agent response is already in state; route to delivery
+        return "delivery_router"
+    if intent == "calendar":
+        if await _agent_enabled("agent.calendar.enabled"):
+            return "calendar_agent"
+        return "delivery_router"
+    if intent == "project":
+        if await _agent_enabled("agent.project.enabled"):
+            return "project_agent"
+        return "delivery_router"
+    # General intent: no sub-agent needed
+    return "delivery_router"
 
 
 def create_master_graph() -> CompiledStateGraph:
     """
-    Build and compile the master agent StateGraph with memory.
+    Build and compile the master agent StateGraph with memory and sub-agent routing.
 
     Returns a compiled graph ready for CopilotKit streaming or direct invocation.
     Call once at startup and reuse — LangGraph compilation is expensive.
 
     Phase 3 graph topology:
-        START → load_memory → master_agent → [_route_after_master] → save_memory → END
-
-    The routing conditional is a stub (always → save_memory).
-    Phase 4+ will add sub-agent edges from master_agent without restructuring this graph.
+        START → load_memory → master_agent → [_route_after_master]
+                                                  ├── "email_agent"    → email_agent_node    → delivery_router → save_memory → END
+                                                  ├── "calendar_agent" → calendar_agent_node → delivery_router → save_memory → END
+                                                  ├── "project_agent"  → project_agent_node  → delivery_router → save_memory → END
+                                                  └── "delivery_router" → delivery_router → save_memory → END
     """
+    from agents.delivery_router import delivery_router_node
+    from agents.subagents.calendar_agent import calendar_agent_node
+    from agents.subagents.email_agent import email_agent_node
+    from agents.subagents.project_agent import project_agent_node
+
     graph = StateGraph(BlitzState)
     graph.add_node("load_memory", _load_memory_node)
     graph.add_node("master_agent", _master_node)
+    graph.add_node("email_agent", email_agent_node)
+    graph.add_node("calendar_agent", calendar_agent_node)
+    graph.add_node("project_agent", project_agent_node)
+    graph.add_node("delivery_router", delivery_router_node)
     graph.add_node("save_memory", _save_memory_node)
+
     graph.set_entry_point("load_memory")
     graph.add_edge("load_memory", "master_agent")
-    # Routing conditional: Phase 2 always goes to save_memory.
-    # Phase 3 extends _route_after_master to return sub-agent node names.
+
+    # Sub-agents → delivery_router → save_memory
+    graph.add_edge("email_agent", "delivery_router")
+    graph.add_edge("calendar_agent", "delivery_router")
+    graph.add_edge("project_agent", "delivery_router")
+    graph.add_edge("delivery_router", "save_memory")
+    graph.add_edge("save_memory", END)
+
+    # Intent-based routing from master_agent
     graph.add_conditional_edges(
         "master_agent",
         _route_after_master,
-        {"save_memory": "save_memory"},  # Phase 3: add sub-agent entries here
+        {
+            "email_agent": "email_agent",
+            "calendar_agent": "calendar_agent",
+            "project_agent": "project_agent",
+            "delivery_router": "delivery_router",  # general intent: skip sub-agents
+        },
     )
-    graph.add_edge("save_memory", END)
     return graph.compile(checkpointer=MemorySaver())

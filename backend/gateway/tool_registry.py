@@ -58,3 +58,30 @@ def get_tool(name: str) -> dict[str, Any] | None:
 def list_tools() -> list[str]:
     """Return list of all registered tool names."""
     return list(_registry.keys())
+
+
+# CRM tools — registered at module load for static discovery.
+# Dynamic discovery via MCPToolRegistry.refresh() at startup may overwrite these
+# with the same definitions (idempotent). Pre-registering here ensures tests and
+# sub-agents can look up these tools before the MCP server connects at startup.
+register_tool(
+    name="crm.get_project_status",
+    description="Get project status from CRM",
+    required_permissions=["crm:read"],
+    mcp_server="crm",
+    mcp_tool="get_project_status",
+)
+register_tool(
+    name="crm.list_projects",
+    description="List all CRM projects",
+    required_permissions=["crm:read"],
+    mcp_server="crm",
+    mcp_tool="list_projects",
+)
+register_tool(
+    name="crm.update_task_status",
+    description="Update task status in CRM kanban",
+    required_permissions=["crm:write"],
+    mcp_server="crm",
+    mcp_tool="update_task_status",
+)
