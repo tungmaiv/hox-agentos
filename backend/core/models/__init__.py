@@ -9,6 +9,7 @@ from core.models.conversation_title import ConversationTitle  # noqa: F401
 from core.models.credentials import UserCredential  # noqa: F401
 from core.models.mcp_server import McpServer  # noqa: F401
 from core.models.memory import ConversationTurn  # noqa: F401
+from core.models.memory_long_term import MemoryEpisode, MemoryFact  # noqa: F401
 from core.models.system_config import SystemConfig  # noqa: F401
 from core.models.tool_acl import ToolAcl  # noqa: F401
 from core.models.user_instructions import UserInstructions  # noqa: F401
