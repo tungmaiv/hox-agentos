@@ -14,7 +14,7 @@
 import { auth } from "@/auth";
 import { NextRequest, NextResponse } from "next/server";
 
-const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 async function proxySubPath(
   request: NextRequest,
@@ -37,7 +37,7 @@ async function proxySubPath(
   }
 
   const subPath = pathSegments.join("/");
-  const url = `${BACKEND_URL}/api/copilotkit/${subPath}`;
+  const url = `${API_URL}/api/copilotkit/${subPath}`;
 
   const isGet = request.method === "GET";
   const body = isGet ? undefined : await request.text();

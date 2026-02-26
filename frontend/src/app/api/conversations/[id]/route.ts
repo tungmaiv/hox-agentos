@@ -6,7 +6,7 @@
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
 
-const API_URL = process.env.BACKEND_URL ?? "http://localhost:8000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export async function DELETE(
   _request: Request,

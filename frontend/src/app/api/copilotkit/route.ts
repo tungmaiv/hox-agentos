@@ -13,7 +13,7 @@
 import { auth } from "@/auth";
 import { NextRequest, NextResponse } from "next/server";
 
-const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const session = await auth();
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   const body = await request.text();
 
-  const backendResponse = await fetch(`${BACKEND_URL}/api/copilotkit`, {
+  const backendResponse = await fetch(`${API_URL}/api/copilotkit`, {
     method: "POST",
     headers: {
       "Content-Type":
