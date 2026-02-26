@@ -15,8 +15,10 @@ from api.routes import (
     conversations,
     credentials,
     health,
+    memory_settings,
     mcp_servers,
     system_config,
+    tools,
     user_instructions,
 )
 from core.config import settings
@@ -92,6 +94,15 @@ def create_app() -> FastAPI:
     # MCP server CRUD — GET/POST/DELETE /api/admin/mcp-servers (admin-only)
     # Note: router already includes /api prefix in its definition
     app.include_router(mcp_servers.router)
+
+    # Tool execution — POST /api/tools/call (all authenticated users; 3-gate security)
+    # Note: router already includes /api prefix in its definition
+    app.include_router(tools.router)
+
+    # Memory settings — GET/DELETE /api/user/memory/facts, /api/user/memory/episodes
+    # Chat preferences — GET/PUT /api/user/preferences
+    # Note: router already includes /api prefix in its definition
+    app.include_router(memory_settings.router)
 
     # CopilotKit AG-UI streaming endpoint — 3-gate security + LangGraph master agent
     app.include_router(runtime.router)
