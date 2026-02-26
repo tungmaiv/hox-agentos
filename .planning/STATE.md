@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates daily work routines and lets them build custom automations without writing code -- all within an enterprise-secure, on-premise environment.
-**Current focus:** Phase 3: Sub-Agents + Memory Expansion + OAuth Integrations (Phase 2 complete)
+**Current focus:** Phase 3: Sub-Agents + Memory Expansion + OAuth Integrations (Phases 1, 2, 2.1 complete)
 
 ## Current Position
 
-Phase: 2 of 8 COMPLETE (Agent Core and Conversational Chat)
-Plan: 5 of 5 — COMPLETE (all plans done)
-Status: Phase 2 complete — 02-01, 02-02, 02-03, 02-04, 02-05 all complete
-Last activity: 2026-02-26 -- Completed quick task 02.1-01 (BACKEND_URL standardization, updated_at trigger, docs verified)
+Phase: 2.1 of 9 COMPLETE (Tech Debt Cleanup)
+Plan: 1 of 1 — COMPLETE (quick task 02.1-01)
+Status: Phase 2.1 complete — migration 006 applied, all env vars standardized, docs verified
+Last activity: 2026-02-26 -- Completed quick task 02.1-01 (BACKEND_URL standardization, updated_at trigger, docs verified, migration 006 applied)
 
 Progress: [██████░░░░] 50% (10/20 plans estimated)
 

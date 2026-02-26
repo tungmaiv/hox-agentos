@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Identity and Infrastructure Skeleton** - Keycloak SSO, JWT/RBAC security, Docker Compose services, FastAPI/Next.js skeletons (completed 2026-02-24)
 - [x] **Phase 2: Agent Core and Conversational Chat** - Master agent with LangGraph, AG-UI streaming chat, conversation memory, LiteLLM routing, credential store, custom instructions (completed 2026-02-25)
-- [ ] **Phase 2.1: Tech Debt Cleanup** (INSERTED) - Fix BACKEND_URL env inconsistency, user_instructions.updated_at onupdate, REQUIREMENTS.md traceability checkboxes, ROADMAP.md plan checkbox
+- [x] **Phase 2.1: Tech Debt Cleanup** (INSERTED) - Fix BACKEND_URL env inconsistency, user_instructions.updated_at onupdate, REQUIREMENTS.md traceability checkboxes, ROADMAP.md plan checkbox
 - [ ] **Phase 3: Sub-Agents, Memory, and Integrations** - Email/Calendar/Project/Channel sub-agents, 3-tier memory with embeddings, MCP framework, A2UI generative UI
 - [ ] **Phase 4: Canvas and Workflows** - React Flow visual builder, canvas-to-StateGraph compiler, workflow templates, HITL approval, cron/webhook triggers
 - [ ] **Phase 5: Scheduler and Channels** - Web chat enhancement, Telegram/WhatsApp/Teams adapters, channel identity resolution, ChannelAdapter protocol
@@ -74,7 +74,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 02.1-01-PLAN.md — BACKEND_URL fix (5 routes), user_instructions.updated_at migration + onupdate, REQUIREMENTS.md + ROADMAP.md doc fixes
+- [x] 02.1-01-PLAN.md — BACKEND_URL fix (5 routes), user_instructions.updated_at migration + onupdate, REQUIREMENTS.md + ROADMAP.md doc fixes
 
 ### Phase 3: Sub-Agents, Memory, and Integrations
 **Goal**: The agent can perform real work -- fetch email, check calendars, query CRM, remember user preferences across sessions -- making it genuinely useful for daily routines
@@ -190,7 +190,7 @@ Note: Phases 4 and 5 can execute in parallel as they share no mutual dependencie
 |-------|----------------|--------|-----------|
 | 1. Identity and Infrastructure Skeleton | 4/4 | Complete    | 2026-02-24 |
 | 2. Agent Core and Conversational Chat | 5/5 | Complete     | 2026-02-25 |
-| 2.1. Tech Debt Cleanup (INSERTED) | 0/1 | Not started  | - |
+| 2.1. Tech Debt Cleanup (INSERTED) | 1/1 | Complete     | 2026-02-26 |
 | 3. Sub-Agents, Memory, and Integrations | 0/5 | Not started | - |
 | 4. Canvas and Workflows | 0/5 | Not started | - |
 | 5. Scheduler and Channels | 0/5 | Not started | - |
