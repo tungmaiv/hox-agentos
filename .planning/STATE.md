@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 ## Current Position
 
 Phase: 3 of 9 IN PROGRESS (Sub-Agents + Memory Expansion + OAuth Integrations)
-Plan: 3 of 6 complete (03-02: medium_term.py + long_term.py + master agent long-term memory wiring done)
-Status: Phase 3 in progress — memory/medium_term.py + memory/long_term.py delivered; _load_memory_node injects top-5 facts via pgvector cosine search; _save_memory_node dispatches embed_and_store + summarize_episode Celery tasks; BlitzState updated with loaded_facts + delivery_targets
-Last activity: 2026-02-26 -- Completed 03-02-PLAN.md (medium_term.py, long_term.py, master agent long-term memory integration, 21 new tests)
+Plan: 4 of 6 complete (03-03: MCPClient + MCPToolRegistry + 3-gate security + CRM mock server + Settings Integrations CRUD done)
+Status: Phase 3 in progress — MCPClient HTTP+SSE JSON-RPC + MCPToolRegistry startup discovery + call_mcp_tool() 3-gate gated execution + audit logging; infra/mcp-crm Docker service (3 CRM tools); Settings Integrations live CRUD; 8 TDD tests all passing
+Last activity: 2026-02-26 -- Completed 03-03-PLAN.md (MCPClient, MCPToolRegistry, call_mcp_tool, CRM mock server, mcp_servers CRUD API, Integrations page)
 
 Progress: [███████░░░] 59% (13/22 plans estimated)
 
@@ -29,13 +29,14 @@ Progress: [███████░░░] 59% (13/22 plans estimated)
 |-------|-------|-------|----------|
 | 01 (complete) | 4 | ~26 min | 6.5 min |
 | 02 (complete) | 5 | ~98 min | 19.6 min |
-| 03 (in progress) | 3/6 | 53 min | 17.7 min |
+| 03 (in progress) | 4/6 | 58 min | 14.5 min |
 
 **Recent Trend:**
 - Last 5 plans: 15 min, 19 min, 9 min, 27 min, 17 min
 - Trend: 17 min for 03-02 (medium_term + long_term + master agent memory wiring, 3 auto-fixes)
 
 *Updated after each plan completion*
+| Phase 03-sub-agents-memory-and-integrations P03 | 5 | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -98,6 +99,9 @@ Recent decisions affecting current work:
 - [03-02]: _get_episode_threshold() as top-level async function — nested functions cannot be patched with patch("module.func"); top-level name is patchable in tests
 - [03-02]: Graceful degradation in _load_memory_node — embedding failure (GPU OOM) must not block agent; wrapped in try/except with warning log, agent continues without long-term context
 - [03-02]: BlitzState.delivery_targets pre-registered as placeholder for DeliveryRouterNode in 03-04 — avoids mid-graph state schema changes
+- [Phase 03-sub-agents-memory-and-integrations]: tool_registry.register_tool() changed to keyword-arg API to support mcp_server/mcp_tool metadata cleanly
+- [Phase 03-sub-agents-memory-and-integrations]: Auth token storage in mcp_servers: iv[:12]+ciphertext blob using encrypt_token/decrypt_token from security.credentials (not a vault.py that doesn't exist)
+- [Phase 03-sub-agents-memory-and-integrations]: crm.update_task_status registered in 03-03 for 03-05 kanban — avoids mid-graph state schema changes
 
 ### Pending Todos
 
@@ -121,6 +125,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-26T12:03:00Z
-Stopped at: Completed 03-02-PLAN.md — medium_term.py + long_term.py memory layer; master agent long-term memory wiring (_load_memory_node pgvector search + _save_memory_node Celery dispatch); BlitzState loaded_facts + delivery_targets; 21 new tests all passing
+Last session: 2026-02-26T12:11:58Z
+Stopped at: Completed 03-03-PLAN.md — MCPClient + MCPToolRegistry + call_mcp_tool 3-gate security + CRM mock server + Settings Integrations CRUD + 8 TDD tests all passing
 Resume file: None

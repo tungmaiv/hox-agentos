@@ -51,7 +51,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **INTG-01**: MCP servers connect via HTTP+SSE transport and are registered in the tool registry
 - [x] **INTG-02**: CRM mock MCP server provides sample tools (search leads, get contact) to validate the pattern
-- [ ] **INTG-03**: MCP tools go through the same 3-gate security as backend tools
+- [x] **INTG-03**: MCP tools go through the same 3-gate security as backend tools
 - [x] **INTG-04**: User OAuth tokens are stored AES-256 encrypted in PostgreSQL, resolved internally by user_id
 - [ ] **INTG-05**: Email/calendar tools use provider-agnostic abstraction layer (pluggable Google/M365)
 
@@ -157,7 +157,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MEMO-04 | Phase 3 | Complete |
 | INTG-01 | Phase 3 | Complete |
 | INTG-02 | Phase 3 | Complete |
-| INTG-03 | Phase 3 | Pending |
+| INTG-03 | Phase 3 | Complete |
 | INTG-05 | Phase 3 | Pending |
 | WKFL-01 | Phase 4 | Pending |
 | WKFL-02 | Phase 4 | Pending |
