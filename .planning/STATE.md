@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 ## Current Position
 
 Phase: 3 of 9 IN PROGRESS (Sub-Agents + Memory Expansion + OAuth Integrations)
-Plan: 1 of 6 complete (03-00: Settings infrastructure done)
-Status: Phase 3 in progress — migration 007 applied, system_config/mcp_servers tables seeded, admin API + Agents toggle UI delivered
-Last activity: 2026-02-26 -- Completed 03-00-PLAN.md (system_config + mcp_servers tables, GET/PUT /api/admin/config, /settings/agents + /settings/integrations)
+Plan: 2 of 6 complete (03-01: Celery embedding pipeline + long-term memory tables done)
+Status: Phase 3 in progress — migration 008 applied, memory_episodes + memory_facts tables with HNSW indexes, BGE_M3Provider, embed_and_store + summarize_episode Celery tasks delivered
+Last activity: 2026-02-26 -- Completed 03-01-PLAN.md (migration 008, MemoryEpisode+MemoryFact ORM, BGE_M3Provider, Celery embedding pipeline, docker-compose queue workers)
 
-Progress: [██████░░░░] 50% (11/22 plans estimated)
+Progress: [██████░░░░] 55% (12/22 plans estimated)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 10
-- Average duration: 12.8 min
-- Total execution time: ~2.13 hours
+- Total plans completed: 11
+- Average duration: 13.5 min
+- Total execution time: ~2.58 hours
 
 **By Phase:**
 
@@ -29,11 +29,11 @@ Progress: [██████░░░░] 50% (11/22 plans estimated)
 |-------|-------|-------|----------|
 | 01 (complete) | 4 | ~26 min | 6.5 min |
 | 02 (complete) | 5 | ~98 min | 19.6 min |
-| 03 (in progress) | 1/6 | 9 min | 9 min |
+| 03 (in progress) | 2/6 | 36 min | 18 min |
 
 **Recent Trend:**
-- Last 5 plans: 20 min, 23 min, 15 min, 19 min, 9 min
-- Trend: 9 min for 03-00 (no TDD, 3 auto tasks)
+- Last 5 plans: 23 min, 15 min, 19 min, 9 min, 27 min
+- Trend: 27 min for 03-01 (migration + Celery pipeline + TDD tests, 2 auto-fixes)
 
 *Updated after each plan completion*
 
@@ -90,6 +90,10 @@ Recent decisions affecting current work:
 - [02-05]: Migration 004 down_revision = '9754fd080ee2' (the merge head); applied via docker exec psql (no .env on host)
 - [Phase 03]: SystemConfig.value uses JSON().with_variant(JSONB(), 'postgresql') for SQLite test compatibility while preserving JSONB in production
 - [Phase 03]: Admin permission check uses has_permission(user, 'tool:admin') not 'admin' — it-admin role grants tool:admin per RBAC map
+- [03-01]: asyncio.run() pattern in Celery tasks — Celery workers are sync; async DB/LLM calls wrapped in asyncio.run(_run()) inside each task
+- [03-01]: No FK from memory tables to users table — Keycloak manages user identity; no PostgreSQL users table; user_id validated at Gate 1 (JWT), not DB constraint
+- [03-01]: Pin transformers<5.0 (4.57.6) — FlagEmbedding 1.3.x uses is_torch_fx_available removed in transformers 5.0; pinned to fix ImportError
+- [03-01]: Split Celery workers by queue — embedding (concurrency=2, CPU-intensive bge-m3) + default (concurrency=4, I/O-bound LLM) prevent OOM
 
 ### Pending Todos
 
@@ -113,6 +117,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-26T11:10:06Z
-Stopped at: Completed 03-00-PLAN.md — Settings infrastructure (system_config, mcp_servers tables, admin API, Agents toggle UI, Integrations stub)
+Last session: 2026-02-26T11:41:00Z
+Stopped at: Completed 03-01-PLAN.md — Celery embedding pipeline + long-term memory tables (migration 008, BGE_M3Provider, embed_and_store + summarize_episode tasks, docker-compose queue workers)
 Resume file: None

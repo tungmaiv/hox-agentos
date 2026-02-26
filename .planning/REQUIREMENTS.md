@@ -30,9 +30,9 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Memory
 
 - [x] **MEMO-01**: System stores conversation turns per user and conversation (short-term memory)
-- [ ] **MEMO-02**: System summarizes old conversations into episode summaries (medium-term memory)
-- [ ] **MEMO-03**: System accumulates user preferences and facts with pgvector embeddings (long-term memory)
-- [ ] **MEMO-04**: Semantic search retrieves relevant facts for agent context via bge-m3 embeddings (1024-dim)
+- [x] **MEMO-02**: System summarizes old conversations into episode summaries (medium-term memory)
+- [x] **MEMO-03**: System accumulates user preferences and facts with pgvector embeddings (long-term memory)
+- [x] **MEMO-04**: Semantic search retrieves relevant facts for agent context via bge-m3 embeddings (1024-dim)
 - [x] **MEMO-05**: All memory queries are parameterized on user_id from JWT — no cross-user reads
 
 ### Workflows
@@ -152,9 +152,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AGNT-05 | Phase 3 | Pending |
 | AGNT-06 | Phase 3 | Pending |
 | AGNT-08 | Phase 3 | Pending |
-| MEMO-02 | Phase 3 | Pending |
-| MEMO-03 | Phase 3 | Pending |
-| MEMO-04 | Phase 3 | Pending |
+| MEMO-02 | Phase 3 | Complete |
+| MEMO-03 | Phase 3 | Complete |
+| MEMO-04 | Phase 3 | Complete |
 | INTG-01 | Phase 3 | Complete |
 | INTG-02 | Phase 3 | Complete |
 | INTG-03 | Phase 3 | Pending |
