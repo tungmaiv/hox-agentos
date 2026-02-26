@@ -49,6 +49,11 @@ class Settings(BaseSettings):
     # Embedding
     embedding_model_path: str = "BAAI/bge-m3"  # Locked — 1024 dim; changing requires full reindex
 
+    # Memory
+    # Fallback when system_config DB key 'memory.episode_turn_threshold' is not set.
+    # If total conversation turns reaches a multiple of this threshold, summarize_episode is triggered.
+    episode_turn_threshold: int = 10
+
     @model_validator(mode="after")
     def derive_keycloak_urls(self) -> "Settings":
         """Derive JWKS and issuer URLs from keycloak_url and keycloak_realm."""

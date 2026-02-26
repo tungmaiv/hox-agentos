@@ -1,8 +1,8 @@
 # backend/agents/master_agent.py
 """
-Master agent — Phase 2 conversational ReAct graph with short-term memory.
+Master agent — Phase 3 conversational ReAct graph with short-term + long-term memory.
 
-Graph topology (Phase 2):
+Graph topology (Phase 3):
     START → load_memory → master_agent → [_route_after_master] → save_memory → END
 
 Memory nodes read/write conversation turns using user_id and conversation_id from
@@ -13,7 +13,13 @@ contextvars, then skip gracefully (safe for direct test invocation).
 Deduplication: BlitzState.initial_message_count tracks message count before graph
 invocation. save_memory only saves messages at index >= initial_message_count,
 preventing re-saving of history loaded by load_memory.
+
+Long-term memory (Phase 3):
+- _load_memory_node: embeds last user message → semantic search → injects top-5 facts
+- _save_memory_node: dispatches embed_and_store.delay for AI turns (fire-and-forget)
+  and summarize_episode.delay at configurable threshold
 """
+import structlog
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
@@ -22,20 +28,27 @@ from sqlalchemy import func, select
 
 from agents.state.types import BlitzState
 from api.routes.user_instructions import get_user_instructions
-from core.config import get_llm
+from core.config import get_llm, settings
 from core.context import current_conversation_id_ctx, current_user_ctx
 from core.db import async_session
 from core.models.memory import ConversationTurn
+from memory.embeddings import BGE_M3Provider
+from memory.long_term import search_facts
 from memory.short_term import load_recent_turns, save_turn
-
-import structlog
+from scheduler.tasks.embedding import embed_and_store, summarize_episode
 
 logger = structlog.get_logger(__name__)
 
 
 async def _load_memory_node(state: BlitzState) -> dict:
     """
-    Load last 20 turns from memory_conversations and prepend to messages.
+    Load last 20 turns from memory_conversations and inject long-term facts.
+
+    Phase 3 additions:
+    - Embeds the last user message using BGE_M3Provider (run_in_executor, non-blocking).
+    - Performs cosine semantic search over memory_facts (top 5, user-scoped).
+    - Injects matching facts as a SystemMessage prefix before the conversation history.
+    - Returns loaded_facts list for audit trail.
 
     Reads user_id and conversation_id from BlitzState. Falls back to
     core/context.py contextvars (set by gateway/runtime.py) if not in state.
@@ -68,21 +81,70 @@ async def _load_memory_node(state: BlitzState) -> dict:
     # are already present to avoid doubling context sent to the LLM.
     if state.get("messages"):
         logger.debug("load_memory_skipped", reason="messages already in state (CopilotKit provided history)")
-        return {}
+        # Still inject long-term facts even when short-term history is skipped.
+        # Fall through to long-term memory injection below.
+        history: list[BaseMessage] = list(state.get("messages", []))
+        skip_short_term = True
+    else:
+        async with async_session() as session:
+            turns = await load_recent_turns(session, user_id=user_id, conversation_id=conversation_id, n=20)
 
-    async with async_session() as session:
-        turns = await load_recent_turns(session, user_id=user_id, conversation_id=conversation_id, n=20)
+        history = []
+        for turn in turns:
+            if turn.role == "user":
+                history.append(HumanMessage(content=turn.content))
+            elif turn.role == "assistant":
+                history.append(AIMessage(content=turn.content))
 
-    history: list[BaseMessage] = []
-    for turn in turns:
-        if turn.role == "user":
-            history.append(HumanMessage(content=turn.content))
-        elif turn.role == "assistant":
-            history.append(AIMessage(content=turn.content))
+        if history:
+            logger.debug("memory_loaded", turns=len(history), conversation_id=str(conversation_id))
 
-    if history:
-        logger.debug("memory_loaded", turns=len(history), conversation_id=str(conversation_id))
-        return {"messages": history}
+        skip_short_term = False
+
+    # Long-term memory: semantic search for relevant facts about this user.
+    # Embed the last user message and search memory_facts using pgvector cosine distance.
+    # BGE_M3Provider.embed() uses run_in_executor internally — non-blocking in FastAPI.
+    last_user_message = next(
+        (m.content for m in reversed(state.get("messages", [])) if isinstance(m, HumanMessage)),
+        None,
+    )
+    loaded_facts: list[str] = []
+    if last_user_message and user_id:
+        try:
+            provider = BGE_M3Provider()
+            query_embedding = (await provider.embed([str(last_user_message)]))[0]
+            async with async_session() as session:
+                facts = await search_facts(
+                    session,
+                    user_id=user_id,
+                    query_embedding=query_embedding,
+                    k=5,
+                )
+            loaded_facts = [f.content for f in facts]
+            if loaded_facts:
+                facts_context = "\n".join(f"- {fact}" for fact in loaded_facts)
+                # Insert as first SystemMessage so it appears before conversation history
+                history.insert(
+                    0,
+                    SystemMessage(
+                        content=f"[Long-term memory — relevant facts about this user:]\n{facts_context}"
+                    ),
+                )
+                logger.debug(
+                    "long_term_memory_loaded",
+                    fact_count=len(loaded_facts),
+                    user_id=str(user_id),
+                )
+        except Exception:
+            # Graceful degradation: long-term memory failure must not block the agent
+            logger.warning("long_term_memory_load_failed", user_id=str(user_id))
+
+    if skip_short_term:
+        # Short-term was already in state; only return the newly loaded facts
+        return {"loaded_facts": loaded_facts}
+
+    if history or loaded_facts:
+        return {"messages": history, "loaded_facts": loaded_facts}
     return {}
 
 
@@ -145,17 +207,47 @@ async def _master_node(state: BlitzState) -> dict[str, list[BaseMessage]]:
     return {"messages": [response]}
 
 
+async def _get_episode_threshold() -> int:
+    """
+    Read episode summarization threshold from system_config DB.
+
+    Falls back to settings.episode_turn_threshold (default 10) if the key is not set
+    or DB read fails. This allows runtime configuration via admin API without a redeploy.
+    """
+    from core.models.system_config import SystemConfig
+
+    try:
+        async with async_session() as s:
+            result = await s.execute(
+                select(SystemConfig).where(
+                    SystemConfig.key == "memory.episode_turn_threshold"
+                )
+            )
+            row = result.scalar_one_or_none()
+            if row is not None:
+                return int(row.value)
+    except Exception:
+        pass
+    return settings.episode_turn_threshold  # fallback to 10
+
+
 async def _save_memory_node(state: BlitzState) -> dict:
     """
     Persist only the newly-added turns from this graph invocation.
+
+    Phase 3 additions:
+    - Dispatches embed_and_store.delay() for each new AI (assistant) turn.
+      Fire-and-forget: Celery embedding worker picks it up asynchronously.
+    - Triggers summarize_episode.delay() when total turn count reaches a multiple
+      of the configurable threshold (system_config key 'memory.episode_turn_threshold',
+      default 10 from settings.episode_turn_threshold).
 
     DEDUP GUARD: load_memory_node prepends historical turns into state['messages'].
     Without a guard, save_memory would re-save all of those loaded turns, creating
     duplicate rows in memory_conversations.
 
-    Solution: BlitzState includes 'initial_message_count' — the number of messages
-    present BEFORE the graph was invoked (set in gateway/runtime.py before ainvoke).
-    save_memory only saves messages at index >= initial_message_count.
+    Solution: Count existing turns in DB — anything beyond that count is new.
+    Saves only new turns, then dispatches Celery tasks for embedding and summarization.
 
     Skips gracefully if user_id or conversation_id not set (direct invocation in tests).
     """
@@ -223,6 +315,27 @@ async def _save_memory_node(state: BlitzState) -> dict:
         await session.commit()
 
     logger.debug("memory_saved", new_turns=len(new_messages), conversation_id=str(conversation_id))
+
+    # Dispatch async embedding for new AI (assistant) turns — fire-and-forget.
+    # Celery embedding worker picks these up on the 'embedding' queue.
+    # Only AI turns are embedded as facts (user messages are ephemeral context).
+    for msg in new_messages:
+        if isinstance(msg, AIMessage):
+            embed_and_store.delay(str(msg.content), str(user_id), "fact")
+
+    # Trigger episode summarization at configurable threshold.
+    # Read threshold from system_config DB first; fall back to settings default.
+    total_after = existing_count + len(new_messages)
+    threshold = await _get_episode_threshold()
+    if total_after > 0 and total_after % threshold == 0:
+        summarize_episode.delay(str(conversation_id), str(user_id))
+        logger.info(
+            "episode_summarization_triggered",
+            turn_count=total_after,
+            threshold=threshold,
+            conversation_id=str(conversation_id),
+        )
+
     return {}
 
 
@@ -241,11 +354,11 @@ def create_master_graph() -> CompiledStateGraph:
     Returns a compiled graph ready for CopilotKit streaming or direct invocation.
     Call once at startup and reuse — LangGraph compilation is expensive.
 
-    Phase 2 graph topology:
+    Phase 3 graph topology:
         START → load_memory → master_agent → [_route_after_master] → save_memory → END
 
-    The routing conditional is a stub in Phase 2 (always → save_memory).
-    Phase 3 adds sub-agent edges from master_agent without restructuring this graph.
+    The routing conditional is a stub (always → save_memory).
+    Phase 4+ will add sub-agent edges from master_agent without restructuring this graph.
     """
     graph = StateGraph(BlitzState)
     graph.add_node("load_memory", _load_memory_node)

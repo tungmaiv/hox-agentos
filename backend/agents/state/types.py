@@ -8,7 +8,7 @@ and LangGraph appends new_msg to the existing messages list automatically.
 
 Evolution:
   Phase 2: messages + user_id + conversation_id + initial_message_count (memory wired)
-  Phase 3: add loaded_memory, sub-agent routing fields
+  Phase 3: add loaded_facts (long-term memory), delivery_targets (routing placeholder)
   Phase 4: add workflow_id, workflow_step for canvas execution
 """
 from typing import Annotated
@@ -29,3 +29,10 @@ class BlitzState(TypedDict):
     # Number of messages present BEFORE the graph ran — used by save_memory to
     # avoid re-saving history loaded by load_memory (deduplication guard).
     initial_message_count: int
+    # Phase 3: long-term memory facts injected by _load_memory_node (for audit/debug).
+    # Each string is the content of a MemoryFact returned by semantic search.
+    loaded_facts: list[str]
+    # Phase 3: delivery targets for DeliveryRouterNode (03-04).
+    # Pre-registered here to avoid state schema changes mid-graph.
+    # Default: ["WEB_CHAT"]. Extended in Phase 4 (Channels) with channel identifiers.
+    delivery_targets: list[str]
