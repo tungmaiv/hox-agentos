@@ -175,6 +175,52 @@ async def rename_conversation(
     )
 
 
+@router.delete("/{conversation_id}", status_code=204)
+async def delete_conversation(
+    conversation_id: UUID,
+    user: UserContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    """
+    Delete all turns and the custom title for a conversation.
+
+    Security: user_id from JWT — users can only delete their own conversations.
+    Returns 404 if the conversation does not belong to this user.
+    """
+    from sqlalchemy import delete as sa_delete
+
+    # Verify ownership before deleting
+    exists = await session.execute(
+        select(ConversationTurn.id)
+        .where(
+            ConversationTurn.conversation_id == conversation_id,
+            ConversationTurn.user_id == user["user_id"],
+        )
+        .limit(1)
+    )
+    if not exists.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    await session.execute(
+        sa_delete(ConversationTitle).where(
+            ConversationTitle.user_id == user["user_id"],
+            ConversationTitle.conversation_id == conversation_id,
+        )
+    )
+    await session.execute(
+        sa_delete(ConversationTurn).where(
+            ConversationTurn.user_id == user["user_id"],
+            ConversationTurn.conversation_id == conversation_id,
+        )
+    )
+    await session.commit()
+    logger.info(
+        "conversation_deleted",
+        user_id=str(user["user_id"]),
+        conversation_id=str(conversation_id),
+    )
+
+
 class TurnResponse(BaseModel):
     id: UUID
     role: str

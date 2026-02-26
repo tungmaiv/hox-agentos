@@ -47,9 +47,11 @@ async def test_master_graph_calls_blitz_master_and_returns_ai_message():
 
         from agents.master_agent import create_master_graph
         graph = create_master_graph()
-        result = await graph.ainvoke({
-            "messages": [HumanMessage(content="Hello")]
-        })
+        # MemorySaver checkpointer requires a thread_id in configurable
+        result = await graph.ainvoke(
+            {"messages": [HumanMessage(content="Hello")]},
+            config={"configurable": {"thread_id": "test-thread"}},
+        )
 
     assert len(result["messages"]) >= 2, "Result must contain input message + AI response"
     last_message = result["messages"][-1]

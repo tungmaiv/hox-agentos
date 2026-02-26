@@ -11,8 +11,8 @@ Architecture note (@copilotkitnext v1.51.4 / ag-ui-langgraph 0.0.25):
     "info"          — return available agents (discovery / runtime sync)
     "agent/run"     — run an agent with RunAgentInput body, stream AG-UI events
     "agent/connect" — reconnect to an existing thread on component mount; emits
-                      RunStarted + StateSnapshot({}) + RunFinished without calling
-                      the LLM (state restore only, not inference)
+                      RunStarted + TextMessage events (one per historical turn) +
+                      StateSnapshot({}) + RunFinished without calling the LLM
 
 Security architecture:
   Gate 1 (JWT): Depends(get_current_user) on the endpoint.
@@ -39,6 +39,9 @@ from ag_ui.core import (
     RunFinishedEvent,
     RunStartedEvent,
     StateSnapshotEvent,
+    TextMessageContentEvent,
+    TextMessageEndEvent,
+    TextMessageStartEvent,
 )
 from ag_ui.encoder import EventEncoder
 
@@ -52,6 +55,7 @@ from agents.master_agent import create_master_graph
 from core.context import current_conversation_id_ctx, current_user_ctx
 from core.db import async_session
 from core.models.user import UserContext
+from memory.short_term import load_recent_turns
 from security.acl import check_tool_acl, log_tool_call
 from security.deps import get_current_user
 from security.rbac import has_permission
@@ -157,9 +161,18 @@ async def copilotkit_endpoint(
 
     # ── agent/connect ─────────────────────────────────────────────────────
     # Called on component mount to reconnect the frontend to a thread and
-    # restore agent state. Must NOT call the LLM — it is a lifecycle signal,
-    # not an inference request. Emits RunStarted → StateSnapshot({}) →
-    # RunFinished so CopilotKit knows the thread is active.
+    # restore chat history. Must NOT call the LLM — it is a lifecycle signal,
+    # not an inference request.
+    #
+    # Stream protocol:
+    #   RunStarted
+    #   TextMessageStart / TextMessageContent / TextMessageEnd  (one set per turn)
+    #   StateSnapshot({})  — signals agent is connected, no state to restore
+    #   RunFinished
+    #
+    # StateSnapshotEvent does NOT populate the CopilotChat message list — only
+    # TextMessage events do. Emitting per-turn TextMessage events is the correct
+    # way to restore displayed history on component mount or conversation switch.
     if method == "agent/connect":
         params = envelope.get("params") or {}
         agent_id = params.get("agentId")
@@ -179,8 +192,35 @@ async def copilotkit_endpoint(
         accept_header = request.headers.get("accept")
         encoder = EventEncoder(accept=accept_header)
 
+        # Load conversation history from DB for this thread so CopilotKit
+        # can restore the chat panel when switching or refreshing conversations.
+        turns = []
+        if input_data.thread_id:
+            try:
+                conv_id = UUID(str(input_data.thread_id))
+            except ValueError:
+                logger.warning("connect_invalid_thread_id", thread_id=thread_id)
+            else:
+                # DB errors propagate — only the UUID parse is expected to fail
+                async with async_session() as db:
+                    turns = await load_recent_turns(
+                        db,
+                        user_id=user["user_id"],
+                        conversation_id=conv_id,
+                        n=50,
+                    )
+                logger.debug("connect_history_loaded", thread_id=thread_id, turns=len(turns))
+
         async def connect_generator():
             yield encoder.encode(RunStartedEvent(thread_id=thread_id, run_id=run_id))
+            # Replay each DB turn as TextMessage events — the only way to
+            # populate the CopilotChat message list during connect.
+            for turn in turns:
+                msg_id = str(turn.id)
+                role: str = "user" if turn.role == "user" else "assistant"
+                yield encoder.encode(TextMessageStartEvent(messageId=msg_id, role=role))
+                yield encoder.encode(TextMessageContentEvent(messageId=msg_id, delta=turn.content))
+                yield encoder.encode(TextMessageEndEvent(messageId=msg_id))
             yield encoder.encode(StateSnapshotEvent(snapshot={}))
             yield encoder.encode(RunFinishedEvent(thread_id=thread_id, run_id=run_id))
 

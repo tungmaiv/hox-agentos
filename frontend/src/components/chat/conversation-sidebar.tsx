@@ -27,10 +27,17 @@ export function ConversationSidebar({
   const [renameValue, setRenameValue] = useState("");
 
   const handleDelete = (conversationId: string) => {
+    // Optimistic update — remove from UI immediately
     onConversationsChange(
       conversations.filter((c) => c.conversation_id !== conversationId)
     );
     setMenuOpenId(null);
+    // Persist deletion via proxy route (fire-and-forget — optimistic update already applied)
+    fetch(`/api/conversations/${conversationId}`, {
+      method: "DELETE",
+    }).catch(() => {
+      // Non-critical on failure — sidebar will revert on next refresh
+    });
   };
 
   const handleRename = (conv: Conversation) => {
@@ -40,12 +47,26 @@ export function ConversationSidebar({
   };
 
   const handleRenameSubmit = (conversationId: string) => {
+    const trimmed = renameValue.trim();
+    if (!trimmed) {
+      setRenamingId(null);
+      return;
+    }
+    // Optimistic update
     onConversationsChange(
       conversations.map((c) =>
-        c.conversation_id === conversationId ? { ...c, title: renameValue } : c
+        c.conversation_id === conversationId ? { ...c, title: trimmed } : c
       )
     );
     setRenamingId(null);
+    // Persist to DB via proxy route (fire-and-forget — optimistic update already applied)
+    fetch(`/api/conversations/${conversationId}/title`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: trimmed }),
+    }).catch(() => {
+      // Non-critical on failure — sidebar will revert on next refresh
+    });
   };
 
   return (
@@ -82,7 +103,7 @@ export function ConversationSidebar({
             {renamingId === conv.conversation_id ? (
               <input
                 autoFocus
-                className="flex-1 text-sm bg-white border border-blue-400 rounded px-2 py-1 outline-none"
+                className="flex-1 text-sm text-gray-900 bg-white border border-blue-400 rounded px-2 py-1 outline-none"
                 value={renameValue}
                 onChange={(e) => setRenameValue(e.target.value)}
                 onBlur={() => handleRenameSubmit(conv.conversation_id)}

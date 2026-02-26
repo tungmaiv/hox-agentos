@@ -1,7 +1,8 @@
 model_list:
+  # Primary models — local Ollama (fast, private, no egress cost)
   - model_name: blitz-master
     litellm_params:
-      model: ollama/qwen2.5:72b
+      model: ollama/qwen2.5:7b
       api_base: http://host.docker.internal:11434
 
   - model_name: blitz-fast
@@ -11,25 +12,38 @@ model_list:
 
   - model_name: blitz-coder
     litellm_params:
-      model: openrouter/kimi-k1.5
-      api_key: os.environ/OPENROUTER_API_KEY
+      model: ollama/qwen2.5-coder:7b
+      api_base: http://host.docker.internal:11434
 
   - model_name: blitz-summarizer
     litellm_params:
       model: ollama/llama3.2:3b
       api_base: http://host.docker.internal:11434
 
+  # Cloud fallback models — used when Ollama is unavailable or times out.
+  # Prefixed with "fb-" to avoid name collisions with primary entries.
+  - model_name: fb-claude-sonnet
+    litellm_params:
+      model: anthropic/claude-sonnet-4-6
+      api_key: os.environ/ANTHROPIC_KEY
+
+  - model_name: fb-gpt-4o-mini
+    litellm_params:
+      model: openai/gpt-4o-mini
+      api_key: os.environ/OPENAI_KEY
+
+router_settings:
+  # If the primary Ollama model fails (connection error, timeout), route to
+  # the corresponding cloud fallback. Keeps the system available during
+  # Ollama restarts or when the host GPU is busy.
+  fallbacks:
+    - {"blitz-master": ["fb-claude-sonnet"]}
+    - {"blitz-fast": ["fb-gpt-4o-mini"]}
+    - {"blitz-coder": ["fb-claude-sonnet"]}
+    - {"blitz-summarizer": ["fb-gpt-4o-mini"]}
+
 litellm_settings:
   drop_params: true
-  fallbacks:
-    - blitz-master:
-        - anthropic/claude-sonnet-4-6
-    - blitz-fast:
-        - openai/gpt-4o-mini
-    - blitz-coder:
-        - anthropic/claude-sonnet-4-6
-    - blitz-summarizer:
-        - openai/gpt-4o-mini
 
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY

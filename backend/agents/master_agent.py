@@ -18,11 +18,15 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, System
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
 from langgraph.graph.state import CompiledStateGraph
+from sqlalchemy import func, select
 
 from agents.state.types import BlitzState
+from api.routes.user_instructions import get_user_instructions
 from core.config import get_llm
 from core.context import current_conversation_id_ctx, current_user_ctx
 from core.db import async_session
+from core.models.memory import ConversationTurn
+from memory.short_term import load_recent_turns, save_turn
 
 import structlog
 
@@ -38,8 +42,6 @@ async def _load_memory_node(state: BlitzState) -> dict:
     Returns empty dict (no change) if neither source provides the IDs —
     safe fallback for direct invocation in tests.
     """
-    from memory.short_term import load_recent_turns
-
     user_id = state.get("user_id")
     conversation_id = state.get("conversation_id")
 
@@ -115,8 +117,6 @@ async def _master_node(state: BlitzState) -> dict[str, list[BaseMessage]]:
     rules (no LaTeX, markdown etc.) reach the LLM regardless of CopilotKit's
     instructions prop handling. Appends per-user custom instructions if set in DB.
     """
-    from api.routes.user_instructions import get_user_instructions
-
     llm = get_llm("blitz/master")
 
     # Load custom instructions (empty string if not set or no user context)
@@ -159,10 +159,6 @@ async def _save_memory_node(state: BlitzState) -> dict:
 
     Skips gracefully if user_id or conversation_id not set (direct invocation in tests).
     """
-    from memory.short_term import save_turn
-    from sqlalchemy import func, select as sa_select
-    from core.models.memory import ConversationTurn
-
     user_id = state.get("user_id")
     conversation_id = state.get("conversation_id")
 
@@ -194,7 +190,7 @@ async def _save_memory_node(state: BlitzState) -> dict:
     # Instead, count existing turns in DB — anything beyond that is new.
     async with async_session() as session:
         count_result = await session.execute(
-            sa_select(func.count()).where(
+            select(func.count()).where(
                 ConversationTurn.user_id == user_id,
                 ConversationTurn.conversation_id == conversation_id,
             )
