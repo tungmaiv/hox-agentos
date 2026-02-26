@@ -109,7 +109,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 03.1-01-PLAN.md — Wire load_recent_episodes() into _load_memory_node, add MCPToolRegistry.refresh() to create_mcp_server(), fix stale routing test
+- [ ] 03.1-01-PLAN.md — TDD: 3 failing tests (RED), episode injection in _load_memory_node (MEMO-02), MCPToolRegistry.refresh() in create_mcp_server() (INTG-01), full suite green
 
 ### Phase 4: Canvas and Workflows
 **Goal**: Users can visually build multi-step automations on a drag-and-drop canvas that compile to executable agent workflows with human approval gates
