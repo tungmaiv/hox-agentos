@@ -164,3 +164,49 @@ async def test_call_mcp_tool_logs_every_attempt() -> None:
         # Verify the call includes tool_call event
         call_args = mock_audit.info.call_args
         assert "tool_call" in call_args[0] or "tool" in str(call_args)
+
+
+@pytest.mark.asyncio
+async def test_create_mcp_server_calls_refresh_after_commit() -> None:
+    """
+    INTG-01: After create_mcp_server() commits to DB, MCPToolRegistry.refresh()
+    must be called exactly once so new server tools are immediately callable
+    without a backend restart.
+    """
+    import uuid as uuid_module
+
+    from api.routes.mcp_servers import McpServerCreate, create_mcp_server
+
+    admin_user = UserContext(
+        user_id=uuid_module.uuid4(),
+        email="admin@blitz.local",
+        username="admin",
+        roles=["it-admin"],
+        groups=[],
+    )
+
+    body = McpServerCreate(name="test-crm", url="http://mcp-crm:8001", auth_token=None)
+
+    # Build a mock session that simulates commit + refresh setting server attributes
+    mock_server_obj = MagicMock()
+    mock_server_obj.id = uuid_module.uuid4()
+    mock_server_obj.name = "test-crm"
+    mock_server_obj.url = "http://mcp-crm:8001"
+    mock_server_obj.is_active = True
+
+    mock_session = AsyncMock()
+    mock_session.add = MagicMock()
+    mock_session.commit = AsyncMock()
+    mock_session.refresh = AsyncMock()
+
+    with (
+        patch("mcp.registry.MCPToolRegistry") as mock_registry_cls,
+    ):
+        mock_registry_cls.refresh = AsyncMock()
+
+        await create_mcp_server(body=body, user=admin_user, session=mock_session)
+
+        assert mock_registry_cls.refresh.call_count == 1, (
+            f"MCPToolRegistry.refresh() expected to be called once, "
+            f"but was called {mock_registry_cls.refresh.call_count} time(s)"
+        )

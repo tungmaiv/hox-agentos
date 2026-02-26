@@ -379,3 +379,120 @@ async def test_get_episode_threshold_falls_back_to_settings():
 
     # Default from settings.episode_turn_threshold
     assert threshold == 10
+
+
+@pytest.mark.asyncio
+async def test_load_memory_node_injects_episodes_as_system_message():
+    """
+    When load_recent_episodes() returns episodes, _load_memory_node injects them as a
+    SystemMessage with '[Medium-term memory' prefix before the conversation history.
+
+    Uses state["messages"] = [] (skip_short_term=False path) so the full history
+    (including the injected SystemMessage) is returned in result["messages"].
+    """
+    from core.models.memory_long_term import MemoryEpisode
+
+    mock_episode = MagicMock(spec=MemoryEpisode)
+    mock_episode.summary = "User discussed backend architecture preferences."
+
+    user_id = uuid.uuid4()
+
+    with (
+        patch("agents.master_agent.search_facts", new_callable=AsyncMock) as mock_search,
+        patch("agents.master_agent.BGE_M3Provider") as mock_provider_cls,
+        patch("agents.master_agent.load_recent_turns", new_callable=AsyncMock) as mock_turns,
+        patch("agents.master_agent.load_recent_episodes", new_callable=AsyncMock) as mock_episodes,
+        patch("agents.master_agent.async_session") as mock_session_factory,
+        patch("agents.master_agent.current_user_ctx") as mock_ctx,
+        patch("agents.master_agent.current_conversation_id_ctx") as mock_conv_ctx,
+    ):
+        # No long-term facts — isolate episode behavior
+        mock_search.return_value = []
+        mock_provider = MagicMock()
+        mock_provider.embed = AsyncMock(return_value=[[0.1] * 1024])
+        mock_provider_cls.return_value = mock_provider
+        # Empty DB turns so history starts fresh — episode gets inserted at [0]
+        mock_turns.return_value = []
+        mock_episodes.return_value = [mock_episode]
+
+        # Mock async context manager for async_session
+        mock_session = AsyncMock()
+        mock_session_ctx = AsyncMock()
+        mock_session_ctx.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session_ctx.__aexit__ = AsyncMock(return_value=None)
+        mock_session_factory.return_value = mock_session_ctx
+
+        mock_ctx.get.return_value = {"user_id": user_id}
+        mock_conv_ctx.get.return_value = uuid.uuid4()
+
+        from agents.master_agent import _load_memory_node
+
+        # Empty messages → skip_short_term=False → full history returned in result["messages"]
+        state = {
+            "messages": [],
+            "loaded_facts": [],
+            "delivery_targets": ["WEB_CHAT"],
+        }
+
+        result = await _load_memory_node(state)
+
+    # result["messages"] must contain the episode SystemMessage
+    messages = result.get("messages", [])
+    assert any(
+        isinstance(m, SystemMessage) and "[Medium-term memory" in m.content
+        for m in messages
+    ), f"Expected '[Medium-term memory' SystemMessage in messages, got: {messages}"
+
+
+@pytest.mark.asyncio
+async def test_load_memory_node_gracefully_handles_episode_failure():
+    """
+    When load_recent_episodes() raises, _load_memory_node must NOT propagate the
+    exception — graceful degradation means agent still works without episode context.
+    No '[Medium-term memory' SystemMessage should appear in the result.
+    """
+    user_id = uuid.uuid4()
+
+    with (
+        patch("agents.master_agent.search_facts", new_callable=AsyncMock) as mock_search,
+        patch("agents.master_agent.BGE_M3Provider") as mock_provider_cls,
+        patch("agents.master_agent.load_recent_turns", new_callable=AsyncMock) as mock_turns,
+        patch("agents.master_agent.load_recent_episodes", new_callable=AsyncMock) as mock_episodes,
+        patch("agents.master_agent.async_session") as mock_session_factory,
+        patch("agents.master_agent.current_user_ctx") as mock_ctx,
+        patch("agents.master_agent.current_conversation_id_ctx") as mock_conv_ctx,
+    ):
+        mock_search.return_value = []
+        mock_provider = MagicMock()
+        mock_provider.embed = AsyncMock(return_value=[[0.1] * 1024])
+        mock_provider_cls.return_value = mock_provider
+        mock_turns.return_value = []
+        # Simulate episode load failure
+        mock_episodes.side_effect = RuntimeError("DB connection lost")
+
+        mock_session = AsyncMock()
+        mock_session_ctx = AsyncMock()
+        mock_session_ctx.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session_ctx.__aexit__ = AsyncMock(return_value=None)
+        mock_session_factory.return_value = mock_session_ctx
+
+        mock_ctx.get.return_value = {"user_id": user_id}
+        mock_conv_ctx.get.return_value = uuid.uuid4()
+
+        from agents.master_agent import _load_memory_node
+
+        state = {
+            "messages": [],
+            "loaded_facts": [],
+            "delivery_targets": ["WEB_CHAT"],
+        }
+
+        # Must not raise — graceful degradation
+        result = await _load_memory_node(state)
+
+    # No episode context should be present
+    messages = result.get("messages", [])
+    assert not any(
+        isinstance(m, SystemMessage) and "[Medium-term memory" in m.content
+        for m in messages
+    ), "Episode failure should not inject a '[Medium-term memory' SystemMessage"
