@@ -20,12 +20,12 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **AGNT-01**: User can send natural language messages and receive streaming responses via AG-UI chat
 - [x] **AGNT-02**: Master agent plans multi-step tasks and delegates to specialized sub-agents
-- [ ] **AGNT-03**: Email sub-agent can fetch, summarize, and draft email responses
-- [ ] **AGNT-04**: Calendar sub-agent can list events, summarize day's schedule, and detect conflicts
-- [ ] **AGNT-05**: Project sub-agent can query project status, create tasks, and update task status via MCP
-- [ ] **AGNT-06**: Channel sub-agent can route messages to appropriate delivery channel
+- [x] **AGNT-03**: Email sub-agent can fetch, summarize, and draft email responses
+- [x] **AGNT-04**: Calendar sub-agent can list events, summarize day's schedule, and detect conflicts
+- [x] **AGNT-05**: Project sub-agent can query project status, create tasks, and update task status via MCP
+- [x] **AGNT-06**: Channel sub-agent can route messages to appropriate delivery channel
 - [x] **AGNT-07**: All LLM calls route through LiteLLM Proxy using model aliases (blitz/master, blitz/fast, blitz/coder, blitz/summarizer)
-- [ ] **AGNT-08**: Agent responses include generative UI (A2UI) components: cards, tables, forms, progress indicators
+- [x] **AGNT-08**: Agent responses include generative UI (A2UI) components: cards, tables, forms, progress indicators
 
 ### Memory
 
@@ -147,11 +147,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MEMO-01 | Phase 2 | Done |
 | MEMO-05 | Phase 2 | Done |
 | INTG-04 | Phase 2 | Done |
-| AGNT-03 | Phase 3 | Pending |
-| AGNT-04 | Phase 3 | Pending |
-| AGNT-05 | Phase 3 | Pending |
-| AGNT-06 | Phase 3 | Pending |
-| AGNT-08 | Phase 3 | Pending |
+| AGNT-03 | Phase 3 | Complete |
+| AGNT-04 | Phase 3 | Complete |
+| AGNT-05 | Phase 3 | Complete |
+| AGNT-06 | Phase 3 | Complete |
+| AGNT-08 | Phase 3 | Complete |
 | MEMO-02 | Phase 3 | Complete |
 | MEMO-03 | Phase 3 | Complete |
 | MEMO-04 | Phase 3 | Complete |

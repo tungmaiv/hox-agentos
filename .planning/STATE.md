@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 ## Current Position
 
 Phase: 3 of 9 IN PROGRESS (Sub-Agents + Memory Expansion + OAuth Integrations)
-Plan: 4 of 6 complete (03-03: MCPClient + MCPToolRegistry + 3-gate security + CRM mock server + Settings Integrations CRUD done)
-Status: Phase 3 in progress — MCPClient HTTP+SSE JSON-RPC + MCPToolRegistry startup discovery + call_mcp_tool() 3-gate gated execution + audit logging; infra/mcp-crm Docker service (3 CRM tools); Settings Integrations live CRUD; 8 TDD tests all passing
-Last activity: 2026-02-26 -- Completed 03-03-PLAN.md (MCPClient, MCPToolRegistry, call_mcp_tool, CRM mock server, mcp_servers CRUD API, Integrations page)
+Plan: 5 of 6 complete (03-04: sub-agent nodes + DeliveryRouterNode + intent router + master_agent.py routing + 38 agent tests done)
+Status: Phase 3 in progress — email/calendar/project sub-agent nodes (mock data); classify_intent() blitz/fast router; DeliveryRouterNode WEB_CHAT active; CRM tools registered; 38 agent tests passing
+Last activity: 2026-02-26 -- Completed 03-04-PLAN.md (sub-agent routing, DeliveryRouterNode, Pydantic output schemas, TDD tests)
 
-Progress: [███████░░░] 59% (13/22 plans estimated)
+Progress: [████████░░] 64% (14/22 plans estimated)
 
 ## Performance Metrics
 
@@ -37,6 +37,7 @@ Progress: [███████░░░] 59% (13/22 plans estimated)
 
 *Updated after each plan completion*
 | Phase 03-sub-agents-memory-and-integrations P03 | 5 | 3 tasks | 12 files |
+| Phase 03-sub-agents-memory-and-integrations P04 | 6 | 3 tasks | 15 files |
 
 ## Accumulated Context
 
@@ -102,6 +103,9 @@ Recent decisions affecting current work:
 - [Phase 03-sub-agents-memory-and-integrations]: tool_registry.register_tool() changed to keyword-arg API to support mcp_server/mcp_tool metadata cleanly
 - [Phase 03-sub-agents-memory-and-integrations]: Auth token storage in mcp_servers: iv[:12]+ciphertext blob using encrypt_token/decrypt_token from security.credentials (not a vault.py that doesn't exist)
 - [Phase 03-sub-agents-memory-and-integrations]: crm.update_task_status registered in 03-03 for 03-05 kanban — avoids mid-graph state schema changes
+- [Phase 03-04]: call_mcp_tool imported at top level in project_agent.py (not lazily) — lazy import not patchable in tests
+- [Phase 03-04]: Disabled agent routing: when system_config disables an agent, _route_after_master returns 'delivery_router' — master agent's existing response is delivered unchanged
+- [Phase 03-04]: CRM tools pre-registered statically in tool_registry.py at module load; MCPToolRegistry.refresh() overwrites idempotently
 
 ### Pending Todos
 
@@ -125,6 +129,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-26T12:11:58Z
-Stopped at: Completed 03-03-PLAN.md — MCPClient + MCPToolRegistry + call_mcp_tool 3-gate security + CRM mock server + Settings Integrations CRUD + 8 TDD tests all passing
+Last session: 2026-02-26T12:21:37Z
+Stopped at: Completed 03-04-PLAN.md — sub-agent nodes (email/calendar/project) + DeliveryRouterNode + intent router + master_agent.py routing extended + 38 agent tests passing
 Resume file: None
