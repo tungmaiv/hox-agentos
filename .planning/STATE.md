@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 
 ## Current Position
 
-Phase: 2.1 of 9 COMPLETE (Tech Debt Cleanup)
-Plan: 1 of 1 — COMPLETE (quick task 02.1-01)
-Status: Phase 2.1 complete — migration 006 applied, all env vars standardized, docs verified
-Last activity: 2026-02-26 -- Completed quick task 02.1-01 (BACKEND_URL standardization, updated_at trigger, docs verified, migration 006 applied)
+Phase: 3 of 9 IN PROGRESS (Sub-Agents + Memory Expansion + OAuth Integrations)
+Plan: 1 of 6 complete (03-00: Settings infrastructure done)
+Status: Phase 3 in progress — migration 007 applied, system_config/mcp_servers tables seeded, admin API + Agents toggle UI delivered
+Last activity: 2026-02-26 -- Completed 03-00-PLAN.md (system_config + mcp_servers tables, GET/PUT /api/admin/config, /settings/agents + /settings/integrations)
 
-Progress: [██████░░░░] 50% (10/20 plans estimated)
+Progress: [██████░░░░] 50% (11/22 plans estimated)
 
 ## Performance Metrics
 
@@ -29,10 +29,11 @@ Progress: [██████░░░░] 50% (10/20 plans estimated)
 |-------|-------|-------|----------|
 | 01 (complete) | 4 | ~26 min | 6.5 min |
 | 02 (complete) | 5 | ~98 min | 19.6 min |
+| 03 (in progress) | 1/6 | 9 min | 9 min |
 
 **Recent Trend:**
-- Last 5 plans: 20 min, 23 min, 15 min, 19 min, 25 min
-- Trend: consistent 15-25 min for mixed auto/TDD plans in Phase 2
+- Last 5 plans: 20 min, 23 min, 15 min, 19 min, 9 min
+- Trend: 9 min for 03-00 (no TDD, 3 auto tasks)
 
 *Updated after each plan completion*
 
@@ -87,6 +88,8 @@ Recent decisions affecting current work:
 - [02-05]: pendingInputRef pattern for edit message re-populate -- CopilotChat has no setInput API; MutableRefObject shared between custom Input and custom UserMessage
 - [02-05]: @copilotkit/shared not importable as direct dep in pnpm virtual store -- define local ChatMessage interface instead
 - [02-05]: Migration 004 down_revision = '9754fd080ee2' (the merge head); applied via docker exec psql (no .env on host)
+- [Phase 03]: SystemConfig.value uses JSON().with_variant(JSONB(), 'postgresql') for SQLite test compatibility while preserving JSONB in production
+- [Phase 03]: Admin permission check uses has_permission(user, 'tool:admin') not 'admin' — it-admin role grants tool:admin per RBAC map
 
 ### Pending Todos
 
@@ -110,6 +113,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-26T08:33:03Z
-Stopped at: Completed quick/02.1-01 — BACKEND_URL->NEXT_PUBLIC_API_URL in 6 routes, updated_at trigger migration 006, docs verified accurate
+Last session: 2026-02-26T11:10:06Z
+Stopped at: Completed 03-00-PLAN.md — Settings infrastructure (system_config, mcp_servers tables, admin API, Agents toggle UI, Integrations stub)
 Resume file: None
