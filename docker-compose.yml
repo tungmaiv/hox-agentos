@@ -93,6 +93,14 @@ services:
     networks:
       - blitz-net
 
+  mcp-crm:
+    build: ./infra/mcp-crm
+    ports:
+      - "8001:8001"
+    restart: unless-stopped
+    networks:
+      - blitz-net
+
   celery-worker:
     build: ./backend
     depends_on:
