@@ -156,10 +156,6 @@ _DEFAULT_SYSTEM_PROMPT = (
     "You are Blitz, an intelligent AI assistant for Blitz employees. "
     "You are professional but warm — like a smart, helpful colleague. "
     "You are clear, direct, and occasionally light in tone.\n\n"
-    "When asked about capabilities: Be honest. In this phase you can reason, "
-    "answer questions, read uploaded documents, and help with writing and coding. "
-    "You cannot yet fetch emails, check calendars, or query projects — those "
-    "capabilities are coming soon.\n\n"
     "When you don't know something: Say so directly. Don't make up information.\n\n"
     "Format your responses with markdown when it improves clarity (headers, bold, "
     "code blocks). Keep responses focused and appropriately concise.\n\n"
@@ -343,17 +339,22 @@ async def _save_memory_node(state: BlitzState) -> dict:
     return {}
 
 
-async def _route_after_master(state: BlitzState) -> str:
+async def _pre_route(state: BlitzState) -> str:
     """
-    Routing conditional after master_agent node.
-    Classifies user intent with blitz/fast LLM and routes to the appropriate
-    sub-agent node, checking feature flags in system_config before routing.
+    Routing conditional after load_memory, BEFORE master_agent runs.
+
+    Classifies user intent with blitz/fast LLM. Sub-agent intents (email,
+    calendar, project) skip the master LLM entirely — the sub-agent provides
+    the full structured response. General intent falls through to master_agent.
+
+    This prevents the master LLM from generating "I can't help" apologies for
+    intents that are handled by specialized sub-agents.
 
     Returns node names:
-      "email_agent"    — user asked about email
-      "calendar_agent" — user asked about calendar/schedule
-      "project_agent"  — user asked about project/CRM status
-      "delivery_router" — general intent; skip sub-agents, go to delivery
+      "email_agent"    — route directly to email sub-agent
+      "calendar_agent" — route directly to calendar sub-agent
+      "project_agent"  — route directly to project sub-agent
+      "master_agent"   — general intent; run master LLM
     """
     from agents.subagents.router import classify_intent
     from core.models.system_config import SystemConfig
@@ -374,21 +375,14 @@ async def _route_after_master(state: BlitzState) -> str:
         except Exception:
             return True  # fail open — agent enabled on DB error
 
-    if intent == "email":
-        if await _agent_enabled("agent.email.enabled"):
-            return "email_agent"
-        # Disabled: master agent response is already in state; route to delivery
-        return "delivery_router"
-    if intent == "calendar":
-        if await _agent_enabled("agent.calendar.enabled"):
-            return "calendar_agent"
-        return "delivery_router"
-    if intent == "project":
-        if await _agent_enabled("agent.project.enabled"):
-            return "project_agent"
-        return "delivery_router"
-    # General intent: no sub-agent needed
-    return "delivery_router"
+    if intent == "email" and await _agent_enabled("agent.email.enabled"):
+        return "email_agent"
+    if intent == "calendar" and await _agent_enabled("agent.calendar.enabled"):
+        return "calendar_agent"
+    if intent == "project" and await _agent_enabled("agent.project.enabled"):
+        return "project_agent"
+    # General intent (or disabled sub-agent): run master LLM
+    return "master_agent"
 
 
 def create_master_graph() -> CompiledStateGraph:
@@ -399,11 +393,14 @@ def create_master_graph() -> CompiledStateGraph:
     Call once at startup and reuse — LangGraph compilation is expensive.
 
     Phase 3 graph topology:
-        START → load_memory → master_agent → [_route_after_master]
-                                                  ├── "email_agent"    → email_agent_node    → delivery_router → save_memory → END
-                                                  ├── "calendar_agent" → calendar_agent_node → delivery_router → save_memory → END
-                                                  ├── "project_agent"  → project_agent_node  → delivery_router → save_memory → END
-                                                  └── "delivery_router" → delivery_router → save_memory → END
+        START → load_memory → [_pre_route]
+                                  ├── "email_agent"    → email_agent_node    → delivery_router → save_memory → END
+                                  ├── "calendar_agent" → calendar_agent_node → delivery_router → save_memory → END
+                                  ├── "project_agent"  → project_agent_node  → delivery_router → save_memory → END
+                                  └── "master_agent"   → master_agent_node   → delivery_router → save_memory → END
+
+    Sub-agent intents skip the master LLM entirely — no apology text injected
+    before the structured card response. General intents run the master LLM.
     """
     from agents.delivery_router import delivery_router_node
     from agents.subagents.calendar_agent import calendar_agent_node
@@ -420,24 +417,25 @@ def create_master_graph() -> CompiledStateGraph:
     graph.add_node("save_memory", _save_memory_node)
 
     graph.set_entry_point("load_memory")
-    graph.add_edge("load_memory", "master_agent")
 
-    # Sub-agents → delivery_router → save_memory
+    # Intent classification before master LLM — sub-agent intents skip master entirely
+    graph.add_conditional_edges(
+        "load_memory",
+        _pre_route,
+        {
+            "email_agent": "email_agent",
+            "calendar_agent": "calendar_agent",
+            "project_agent": "project_agent",
+            "master_agent": "master_agent",
+        },
+    )
+
+    # All paths converge at delivery_router → save_memory → END
+    graph.add_edge("master_agent", "delivery_router")
     graph.add_edge("email_agent", "delivery_router")
     graph.add_edge("calendar_agent", "delivery_router")
     graph.add_edge("project_agent", "delivery_router")
     graph.add_edge("delivery_router", "save_memory")
     graph.add_edge("save_memory", END)
 
-    # Intent-based routing from master_agent
-    graph.add_conditional_edges(
-        "master_agent",
-        _route_after_master,
-        {
-            "email_agent": "email_agent",
-            "calendar_agent": "calendar_agent",
-            "project_agent": "project_agent",
-            "delivery_router": "delivery_router",  # general intent: skip sub-agents
-        },
-    )
     return graph.compile(checkpointer=MemorySaver())

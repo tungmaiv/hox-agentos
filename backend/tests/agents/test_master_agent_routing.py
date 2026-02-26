@@ -1,5 +1,6 @@
 """TDD tests for master agent intent routing."""
 import pytest
+from unittest.mock import AsyncMock, MagicMock, patch
 
 
 @pytest.mark.asyncio
@@ -13,6 +14,45 @@ async def test_graph_topology_has_sub_agent_nodes() -> None:
     assert "calendar_agent" in node_names
     assert "project_agent" in node_names
     assert "delivery_router" in node_names
+    assert "master_agent" in node_names
+
+
+@pytest.mark.asyncio
+async def test_pre_route_email_skips_master_llm() -> None:
+    """_pre_route returns 'email_agent' for email intent — master LLM never runs."""
+    from langchain_core.messages import HumanMessage
+    from agents.master_agent import _pre_route
+
+    state = {"messages": [HumanMessage(content="summarize my unread emails")]}
+    with patch("agents.subagents.router.get_llm") as mock_get_llm:
+        mock_llm = MagicMock()
+        mock_llm.ainvoke = AsyncMock(return_value=MagicMock(content="email"))
+        mock_get_llm.return_value = mock_llm
+        with patch("agents.master_agent.async_session") as mock_session:
+            # system_config returns None → agent enabled by default
+            mock_cm = AsyncMock()
+            mock_cm.__aenter__ = AsyncMock(return_value=MagicMock(
+                execute=AsyncMock(return_value=MagicMock(scalar_one_or_none=MagicMock(return_value=None)))
+            ))
+            mock_cm.__aexit__ = AsyncMock(return_value=False)
+            mock_session.return_value = mock_cm
+            result = await _pre_route(state)
+    assert result == "email_agent"
+
+
+@pytest.mark.asyncio
+async def test_pre_route_general_goes_to_master_agent() -> None:
+    """_pre_route returns 'master_agent' for general intent."""
+    from langchain_core.messages import HumanMessage
+    from agents.master_agent import _pre_route
+
+    state = {"messages": [HumanMessage(content="write me a haiku")]}
+    with patch("agents.subagents.router.get_llm") as mock_get_llm:
+        mock_llm = MagicMock()
+        mock_llm.ainvoke = AsyncMock(return_value=MagicMock(content="general"))
+        mock_get_llm.return_value = mock_llm
+        result = await _pre_route(state)
+    assert result == "master_agent"
 
 
 @pytest.mark.asyncio
