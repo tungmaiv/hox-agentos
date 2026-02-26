@@ -14,6 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Identity and Infrastructure Skeleton** - Keycloak SSO, JWT/RBAC security, Docker Compose services, FastAPI/Next.js skeletons (completed 2026-02-24)
 - [x] **Phase 2: Agent Core and Conversational Chat** - Master agent with LangGraph, AG-UI streaming chat, conversation memory, LiteLLM routing, credential store, custom instructions (completed 2026-02-25)
+- [ ] **Phase 2.1: Tech Debt Cleanup** (INSERTED) - Fix BACKEND_URL env inconsistency, user_instructions.updated_at onupdate, REQUIREMENTS.md traceability checkboxes, ROADMAP.md plan checkbox
 - [ ] **Phase 3: Sub-Agents, Memory, and Integrations** - Email/Calendar/Project/Channel sub-agents, 3-tier memory with embeddings, MCP framework, A2UI generative UI
 - [ ] **Phase 4: Canvas and Workflows** - React Flow visual builder, canvas-to-StateGraph compiler, workflow templates, HITL approval, cron/webhook triggers
 - [ ] **Phase 5: Scheduler and Channels** - Web chat enhancement, Telegram/WhatsApp/Teams adapters, channel identity resolution, ChannelAdapter protocol
@@ -39,7 +40,7 @@ Plans:
 - [x] 01-01-PLAN.md — Docker Compose stack, backend Python scaffold (core/config, core/logging, core/db), Next.js 15.5 frontend scaffold with next-auth v5
 - [x] 01-02-PLAN.md — JWT validation Gate 1: UserContext TypedDict, security/jwt.py (JWKS cache + RS256), security/deps.py get_current_user() [TDD]
 - [x] 01-03-PLAN.md — RBAC Gate 2 + Tool ACL Gate 3 + audit logging: security/rbac.py, security/acl.py, ToolAcl migration [TDD]
-- [ ] 01-04-PLAN.md — FastAPI routes (/health, /api/agents/chat), frontend API client, Phase 1 verification checkpoint
+- [x] 01-04-PLAN.md — FastAPI routes (/health, /api/agents/chat), frontend API client, Phase 1 verification checkpoint
 
 ### Phase 2: Agent Core and Conversational Chat
 **Goal**: Users can have a natural language conversation with a streaming AI agent that remembers the conversation, routes through LiteLLM, and has isolated per-user memory
@@ -59,6 +60,21 @@ Plans:
 - [x] 02-03-PLAN.md — TDD: Short-term memory DB migration + core/context.py conversation_id injection + memory/short_term.py isolation + master agent memory nodes with dedup guard + GET /api/conversations (Wave 3, backend only)
 - [x] 02-04-PLAN.md — TDD: AES-256-GCM encrypt/decrypt vault + user_credentials migration + GET /api/credentials + DELETE /api/credentials/{provider} (Wave 2, parallel with 02-02)
 - [x] 02-05-PLAN.md — Frontend chat UI (proxy route + ChatLayout + CopilotKit streaming) + custom instructions DB/API/system-prompt injection + browser verification checkpoint (Wave 4)
+
+### Phase 2.1: Tech Debt Cleanup (INSERTED)
+**Goal**: Close all fixable tech debt items from the v1.0 milestone audit before beginning sub-agent work
+**Depends on**: Phase 2
+**Requirements**: None (non-requirement cleanup)
+**Gap Closure:** Closes tech debt items from v1.0-MILESTONE-AUDIT.md
+**Success Criteria** (what must be TRUE):
+  1. All 5 affected frontend routes use a single consistent env var for the backend URL
+  2. `user_instructions.updated_at` updates correctly on PUT (migration applied, onupdate set)
+  3. REQUIREMENTS.md traceability table reflects actual completion status (12 checkboxes updated)
+  4. ROADMAP.md plan checkboxes are accurate
+**Plans**: 1 plan
+
+Plans:
+- [ ] 02.1-01-PLAN.md — BACKEND_URL fix (5 routes), user_instructions.updated_at migration + onupdate, REQUIREMENTS.md + ROADMAP.md doc fixes
 
 ### Phase 3: Sub-Agents, Memory, and Integrations
 **Goal**: The agent can perform real work -- fetch email, check calendars, query CRM, remember user preferences across sessions -- making it genuinely useful for daily routines
@@ -174,6 +190,7 @@ Note: Phases 4 and 5 can execute in parallel as they share no mutual dependencie
 |-------|----------------|--------|-----------|
 | 1. Identity and Infrastructure Skeleton | 4/4 | Complete    | 2026-02-24 |
 | 2. Agent Core and Conversational Chat | 5/5 | Complete     | 2026-02-25 |
+| 2.1. Tech Debt Cleanup (INSERTED) | 0/1 | Not started  | - |
 | 3. Sub-Agents, Memory, and Integrations | 0/5 | Not started | - |
 | 4. Canvas and Workflows | 0/5 | Not started | - |
 | 5. Scheduler and Channels | 0/5 | Not started | - |

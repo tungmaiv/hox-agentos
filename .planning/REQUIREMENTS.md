@@ -9,31 +9,31 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Authentication
 
-- [ ] **AUTH-01**: User can log in via Keycloak SSO (OIDC Authorization Code flow)
-- [ ] **AUTH-02**: Backend validates JWT signature, expiry, issuer, and audience on every request
-- [ ] **AUTH-03**: User roles from Keycloak map to platform permissions (admin, developer, employee, viewer)
-- [ ] **AUTH-04**: Every tool call passes 3-gate security: JWT → RBAC → Tool ACL
-- [ ] **AUTH-05**: Every tool invocation is audit-logged with user_id, tool name, allowed/denied, duration_ms
-- [ ] **AUTH-06**: Credentials (access_token, refresh_token, password) are never logged, returned to frontend, or passed to LLMs
+- [x] **AUTH-01**: User can log in via Keycloak SSO (OIDC Authorization Code flow)
+- [x] **AUTH-02**: Backend validates JWT signature, expiry, issuer, and audience on every request
+- [x] **AUTH-03**: User roles from Keycloak map to platform permissions (admin, developer, employee, viewer)
+- [x] **AUTH-04**: Every tool call passes 3-gate security: JWT → RBAC → Tool ACL
+- [x] **AUTH-05**: Every tool invocation is audit-logged with user_id, tool name, allowed/denied, duration_ms
+- [x] **AUTH-06**: Credentials (access_token, refresh_token, password) are never logged, returned to frontend, or passed to LLMs
 
 ### Agents
 
-- [ ] **AGNT-01**: User can send natural language messages and receive streaming responses via AG-UI chat
-- [ ] **AGNT-02**: Master agent plans multi-step tasks and delegates to specialized sub-agents
+- [x] **AGNT-01**: User can send natural language messages and receive streaming responses via AG-UI chat
+- [x] **AGNT-02**: Master agent plans multi-step tasks and delegates to specialized sub-agents
 - [ ] **AGNT-03**: Email sub-agent can fetch, summarize, and draft email responses
 - [ ] **AGNT-04**: Calendar sub-agent can list events, summarize day's schedule, and detect conflicts
 - [ ] **AGNT-05**: Project sub-agent can query project status, create tasks, and update task status via MCP
 - [ ] **AGNT-06**: Channel sub-agent can route messages to appropriate delivery channel
-- [ ] **AGNT-07**: All LLM calls route through LiteLLM Proxy using model aliases (blitz/master, blitz/fast, blitz/coder, blitz/summarizer)
+- [x] **AGNT-07**: All LLM calls route through LiteLLM Proxy using model aliases (blitz/master, blitz/fast, blitz/coder, blitz/summarizer)
 - [ ] **AGNT-08**: Agent responses include generative UI (A2UI) components: cards, tables, forms, progress indicators
 
 ### Memory
 
-- [ ] **MEMO-01**: System stores conversation turns per user and conversation (short-term memory)
+- [x] **MEMO-01**: System stores conversation turns per user and conversation (short-term memory)
 - [ ] **MEMO-02**: System summarizes old conversations into episode summaries (medium-term memory)
 - [ ] **MEMO-03**: System accumulates user preferences and facts with pgvector embeddings (long-term memory)
 - [ ] **MEMO-04**: Semantic search retrieves relevant facts for agent context via bge-m3 embeddings (1024-dim)
-- [ ] **MEMO-05**: All memory queries are parameterized on user_id from JWT — no cross-user reads
+- [x] **MEMO-05**: All memory queries are parameterized on user_id from JWT — no cross-user reads
 
 ### Workflows
 
@@ -52,7 +52,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **INTG-01**: MCP servers connect via HTTP+SSE transport and are registered in the tool registry
 - [ ] **INTG-02**: CRM mock MCP server provides sample tools (search leads, get contact) to validate the pattern
 - [ ] **INTG-03**: MCP tools go through the same 3-gate security as backend tools
-- [ ] **INTG-04**: User OAuth tokens are stored AES-256 encrypted in PostgreSQL, resolved internally by user_id
+- [x] **INTG-04**: User OAuth tokens are stored AES-256 encrypted in PostgreSQL, resolved internally by user_id
 - [ ] **INTG-05**: Email/calendar tools use provider-agnostic abstraction layer (pluggable Google/M365)
 
 ### Channels
@@ -135,18 +135,18 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 | Phase 1 | Pending |
-| AUTH-02 | Phase 1 | Pending |
-| AUTH-03 | Phase 1 | Pending |
-| AUTH-04 | Phase 1 | Pending |
-| AUTH-05 | Phase 1 | Pending |
-| AUTH-06 | Phase 1 | Pending |
-| AGNT-01 | Phase 2 | Pending |
-| AGNT-02 | Phase 2 | Pending |
-| AGNT-07 | Phase 2 | Pending |
-| MEMO-01 | Phase 2 | Pending |
-| MEMO-05 | Phase 2 | Pending |
-| INTG-04 | Phase 2 | Pending |
+| AUTH-01 | Phase 1 | Done |
+| AUTH-02 | Phase 1 | Done |
+| AUTH-03 | Phase 1 | Done |
+| AUTH-04 | Phase 1 | Done |
+| AUTH-05 | Phase 1 | Done |
+| AUTH-06 | Phase 1 | Done |
+| AGNT-01 | Phase 2 | Done |
+| AGNT-02 | Phase 2 | Done |
+| AGNT-07 | Phase 2 | Done |
+| MEMO-01 | Phase 2 | Done |
+| MEMO-05 | Phase 2 | Done |
+| INTG-04 | Phase 2 | Done |
 | AGNT-03 | Phase 3 | Pending |
 | AGNT-04 | Phase 3 | Pending |
 | AGNT-05 | Phase 3 | Pending |
@@ -191,7 +191,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 - v1 requirements: 51 total
 - Mapped to phases: 51
 - Unmapped: 0
+- Completed (v1.0): 12 (AUTH-01–06, AGNT-01, AGNT-02, AGNT-07, MEMO-01, MEMO-05, INTG-04)
+- Pending: 39
 
 ---
 *Requirements defined: 2026-02-24*
-*Last updated: 2026-02-24 after roadmap creation (8-phase mapping)*
+*Last updated: 2026-02-26 after v1.0 audit — 12 completed requirements marked Done*
