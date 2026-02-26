@@ -100,13 +100,34 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      litellm:
+        condition: service_started
     env_file:
       - .env
-    command: celery -A scheduler.celery_app worker --concurrency=4
+    command: celery -A scheduler.celery_app worker -Q embedding --concurrency=2 -l info
     volumes:
       - ./logs:/app/logs
     extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - "host.docker.internal:host-gateway"  # needed for Ollama access (blitz/summarizer)
+    networks:
+      - blitz-net
+
+  celery-worker-default:
+    build: ./backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      litellm:
+        condition: service_started
+    env_file:
+      - .env
+    command: celery -A scheduler.celery_app worker -Q default --concurrency=4 -l info
+    volumes:
+      - ./logs:/app/logs
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # needed for Ollama access (blitz/summarizer)
     networks:
       - blitz-net
 

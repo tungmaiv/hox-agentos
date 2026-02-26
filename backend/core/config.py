@@ -46,6 +46,9 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     audit_log_path: str = "logs/audit.jsonl"
 
+    # Embedding
+    embedding_model_path: str = "BAAI/bge-m3"  # Locked — 1024 dim; changing requires full reindex
+
     @model_validator(mode="after")
     def derive_keycloak_urls(self) -> "Settings":
         """Derive JWKS and issuer URLs from keycloak_url and keycloak_realm."""
