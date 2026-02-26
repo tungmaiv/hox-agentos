@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 ## Current Position
 
 Phase: 3 of 9 IN PROGRESS (Sub-Agents + Memory Expansion + OAuth Integrations)
-Plan: 5 of 6 complete (03-04: sub-agent nodes + DeliveryRouterNode + intent router + master_agent.py routing + 38 agent tests done)
-Status: Phase 3 in progress — email/calendar/project sub-agent nodes (mock data); classify_intent() blitz/fast router; DeliveryRouterNode WEB_CHAT active; CRM tools registered; 38 agent tests passing
-Last activity: 2026-02-26 -- Completed 03-04-PLAN.md (sub-agent routing, DeliveryRouterNode, Pydantic output schemas, TDD tests)
+Plan: 6 of 6 — awaiting human checkpoint (03-05: A2UI components + useMcpTool hook + POST /api/tools/call + Settings Memory + Chat Preferences built; pnpm build 0 errors; 3 backend tests passing)
+Status: Phase 3 in progress — A2UI rendering pipeline complete (CalendarCard/EmailSummaryCard/ProjectStatusWidget); useMcpTool hook; memory settings API; settings pages; awaiting visual verification checkpoint
+Last activity: 2026-02-26 -- Completed 03-05-PLAN.md automated tasks; checkpoint:human-verify awaiting user sign-off
 
-Progress: [████████░░] 64% (14/22 plans estimated)
+Progress: [█████████░] 68% (15/22 plans estimated)
 
 ## Performance Metrics
 
@@ -38,6 +38,7 @@ Progress: [████████░░] 64% (14/22 plans estimated)
 *Updated after each plan completion*
 | Phase 03-sub-agents-memory-and-integrations P03 | 5 | 3 tasks | 12 files |
 | Phase 03-sub-agents-memory-and-integrations P04 | 6 | 3 tasks | 15 files |
+| Phase 03-sub-agents-memory-and-integrations P05 | 35 | 2 tasks | 19 files |
 
 ## Accumulated Context
 
@@ -106,6 +107,8 @@ Recent decisions affecting current work:
 - [Phase 03-04]: call_mcp_tool imported at top level in project_agent.py (not lazily) — lazy import not patchable in tests
 - [Phase 03-04]: Disabled agent routing: when system_config disables an agent, _route_after_master returns 'delivery_router' — master agent's existing response is delivered unchanged
 - [Phase 03-04]: CRM tools pre-registered statically in tool_registry.py at module load; MCPToolRegistry.refresh() overwrites idempotently
+- [Phase 03-sub-agents-memory-and-integrations]: useMcpTool generic signature requires TParams in return type UseMcpToolResult<TParams,TResult> — TypeScript strict mode requires both type params
+- [Phase 03-sub-agents-memory-and-integrations]: react-markdown v10 removed className prop — wrap in div with className instead of passing to ReactMarkdown component
 
 ### Pending Todos
 
@@ -129,6 +132,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-26T12:21:37Z
-Stopped at: Completed 03-04-PLAN.md — sub-agent nodes (email/calendar/project) + DeliveryRouterNode + intent router + master_agent.py routing extended + 38 agent tests passing
+Last session: 2026-02-26T12:46:51Z
+Stopped at: 03-05 checkpoint:human-verify — A2UI components built, pnpm build passing (0 TypeScript errors), 3 backend tests passing; awaiting visual verification of 6 rendering scenarios
 Resume file: None
