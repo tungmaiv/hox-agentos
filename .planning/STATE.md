@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 ## Current Position
 
 Phase: 3 of 9 IN PROGRESS (Sub-Agents + Memory Expansion + OAuth Integrations)
-Plan: 6 of 6 — awaiting human checkpoint (03-05: A2UI components + useMcpTool hook + POST /api/tools/call + Settings Memory + Chat Preferences built; pnpm build 0 errors; 3 backend tests passing)
-Status: Phase 3 in progress — A2UI rendering pipeline complete (CalendarCard/EmailSummaryCard/ProjectStatusWidget); useMcpTool hook; memory settings API; settings pages; awaiting visual verification checkpoint
-Last activity: 2026-02-26 -- Completed 03-05-PLAN.md automated tasks; checkpoint:human-verify awaiting user sign-off
+Plan: 6 of 6 complete (03-05: A2UI rendering pipeline — CalendarCard/EmailSummaryCard/ProjectStatusWidget + useMcpTool hook + POST /api/tools/call + Settings Memory + Chat Preferences; all 6 visual scenarios verified by user)
+Status: Phase 3 plans 01-05 complete; plan 06 (OAuth integrations + phase gate) is next
+Last activity: 2026-02-26 -- Completed 03-05-PLAN.md — all tasks done including human visual verification (6/6 scenarios PASSED)
 
-Progress: [█████████░] 68% (15/22 plans estimated)
+Progress: [█████████░] 70% (16/22 plans estimated)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 12
-- Average duration: 13.9 min
-- Total execution time: ~2.76 hours
+- Total plans completed: 13
+- Average duration: 14.2 min
+- Total execution time: ~3.24 hours
 
 **By Phase:**
 
@@ -29,11 +29,11 @@ Progress: [█████████░] 68% (15/22 plans estimated)
 |-------|-------|-------|----------|
 | 01 (complete) | 4 | ~26 min | 6.5 min |
 | 02 (complete) | 5 | ~98 min | 19.6 min |
-| 03 (in progress) | 4/6 | 58 min | 14.5 min |
+| 03 (in progress) | 5/6 | 98 min | 19.6 min |
 
 **Recent Trend:**
-- Last 5 plans: 15 min, 19 min, 9 min, 27 min, 17 min
-- Trend: 17 min for 03-02 (medium_term + long_term + master agent memory wiring, 3 auto-fixes)
+- Last 5 plans: 19 min, 9 min, 27 min, 17 min, 40 min
+- Trend: 40 min for 03-05 (A2UI pipeline + useMcpTool hook + 2 settings pages + 3 auto-fixes + human verification)
 
 *Updated after each plan completion*
 | Phase 03-sub-agents-memory-and-integrations P03 | 5 | 3 tasks | 12 files |
@@ -109,6 +109,7 @@ Recent decisions affecting current work:
 - [Phase 03-04]: CRM tools pre-registered statically in tool_registry.py at module load; MCPToolRegistry.refresh() overwrites idempotently
 - [Phase 03-sub-agents-memory-and-integrations]: useMcpTool generic signature requires TParams in return type UseMcpToolResult<TParams,TResult> — TypeScript strict mode requires both type params
 - [Phase 03-sub-agents-memory-and-integrations]: react-markdown v10 removed className prop — wrap in div with className instead of passing to ReactMarkdown component
+- [Phase 03-05]: core.db exports get_db (not get_async_session) as the FastAPI dependency — same pattern used in all existing route files (credentials.py, acl.py)
 
 ### Pending Todos
 
@@ -132,6 +133,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-26T12:46:51Z
-Stopped at: 03-05 checkpoint:human-verify — A2UI components built, pnpm build passing (0 TypeScript errors), 3 backend tests passing; awaiting visual verification of 6 rendering scenarios
+Last session: 2026-02-26T13:30:00Z
+Stopped at: Completed 03-05-PLAN.md — A2UI components (CalendarCard/EmailSummaryCard/ProjectStatusWidget) + useMcpTool hook + POST /api/tools/call + Settings Memory + Chat Preferences; 6/6 visual scenarios verified by user; Phase 3 plan 06 is next
 Resume file: None
