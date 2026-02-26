@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 ## Current Position
 
 Phase: 3 of 9 IN PROGRESS (Sub-Agents + Memory Expansion + OAuth Integrations)
-Plan: 2 of 6 complete (03-01: Celery embedding pipeline + long-term memory tables done)
-Status: Phase 3 in progress — migration 008 applied, memory_episodes + memory_facts tables with HNSW indexes, BGE_M3Provider, embed_and_store + summarize_episode Celery tasks delivered
-Last activity: 2026-02-26 -- Completed 03-01-PLAN.md (migration 008, MemoryEpisode+MemoryFact ORM, BGE_M3Provider, Celery embedding pipeline, docker-compose queue workers)
+Plan: 3 of 6 complete (03-02: medium_term.py + long_term.py + master agent long-term memory wiring done)
+Status: Phase 3 in progress — memory/medium_term.py + memory/long_term.py delivered; _load_memory_node injects top-5 facts via pgvector cosine search; _save_memory_node dispatches embed_and_store + summarize_episode Celery tasks; BlitzState updated with loaded_facts + delivery_targets
+Last activity: 2026-02-26 -- Completed 03-02-PLAN.md (medium_term.py, long_term.py, master agent long-term memory integration, 21 new tests)
 
-Progress: [██████░░░░] 55% (12/22 plans estimated)
+Progress: [███████░░░] 59% (13/22 plans estimated)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 11
-- Average duration: 13.5 min
-- Total execution time: ~2.58 hours
+- Total plans completed: 12
+- Average duration: 13.9 min
+- Total execution time: ~2.76 hours
 
 **By Phase:**
 
@@ -29,11 +29,11 @@ Progress: [██████░░░░] 55% (12/22 plans estimated)
 |-------|-------|-------|----------|
 | 01 (complete) | 4 | ~26 min | 6.5 min |
 | 02 (complete) | 5 | ~98 min | 19.6 min |
-| 03 (in progress) | 2/6 | 36 min | 18 min |
+| 03 (in progress) | 3/6 | 53 min | 17.7 min |
 
 **Recent Trend:**
-- Last 5 plans: 23 min, 15 min, 19 min, 9 min, 27 min
-- Trend: 27 min for 03-01 (migration + Celery pipeline + TDD tests, 2 auto-fixes)
+- Last 5 plans: 15 min, 19 min, 9 min, 27 min, 17 min
+- Trend: 17 min for 03-02 (medium_term + long_term + master agent memory wiring, 3 auto-fixes)
 
 *Updated after each plan completion*
 
@@ -94,6 +94,10 @@ Recent decisions affecting current work:
 - [03-01]: No FK from memory tables to users table — Keycloak manages user identity; no PostgreSQL users table; user_id validated at Gate 1 (JWT), not DB constraint
 - [03-01]: Pin transformers<5.0 (4.57.6) — FlagEmbedding 1.3.x uses is_torch_fx_available removed in transformers 5.0; pinned to fix ImportError
 - [03-01]: Split Celery workers by queue — embedding (concurrency=2, CPU-intensive bge-m3) + default (concurrency=4, I/O-bound LLM) prevent OOM
+- [03-02]: Mock session approach for pgvector tests — SQLite+aiosqlite cannot create VECTOR(1024) DDL; tests verify WHERE clause security via stmt.compile() string assertion
+- [03-02]: _get_episode_threshold() as top-level async function — nested functions cannot be patched with patch("module.func"); top-level name is patchable in tests
+- [03-02]: Graceful degradation in _load_memory_node — embedding failure (GPU OOM) must not block agent; wrapped in try/except with warning log, agent continues without long-term context
+- [03-02]: BlitzState.delivery_targets pre-registered as placeholder for DeliveryRouterNode in 03-04 — avoids mid-graph state schema changes
 
 ### Pending Todos
 
@@ -117,6 +121,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-26T11:41:00Z
-Stopped at: Completed 03-01-PLAN.md — Celery embedding pipeline + long-term memory tables (migration 008, BGE_M3Provider, embed_and_store + summarize_episode tasks, docker-compose queue workers)
+Last session: 2026-02-26T12:03:00Z
+Stopped at: Completed 03-02-PLAN.md — medium_term.py + long_term.py memory layer; master agent long-term memory wiring (_load_memory_node pgvector search + _save_memory_node Celery dispatch); BlitzState loaded_facts + delivery_targets; 21 new tests all passing
 Resume file: None

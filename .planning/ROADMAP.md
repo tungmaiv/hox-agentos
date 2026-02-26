@@ -192,7 +192,7 @@ Note: Phases 4 and 5 can execute in parallel as they share no mutual dependencie
 | 1. Identity and Infrastructure Skeleton | 4/4 | Complete    | 2026-02-24 |
 | 2. Agent Core and Conversational Chat | 5/5 | Complete     | 2026-02-25 |
 | 2.1. Tech Debt Cleanup (INSERTED) | 1/1 | Complete     | 2026-02-26 |
-| 3. Sub-Agents, Memory, and Integrations | 0/6 | Not started | - |
+| 3. Sub-Agents, Memory, and Integrations | 3/7 | In Progress|  |
 | 4. Canvas and Workflows | 0/5 | Not started | - |
 | 5. Scheduler and Channels | 0/5 | Not started | - |
 | 6. Extensibility Registries | 0/3 | Not started | - |
