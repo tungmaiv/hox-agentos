@@ -52,6 +52,22 @@ The agent can perform real work — fetch email, check calendars, query CRM, rem
 - **Settings → Memory** (per-user): view facts + episodes, delete individual, clear all
 - **Settings → Chat Preferences** (per-user): response rendering style (Markdown / Card-wrapped / Inline chips)
 
+### Channel sub-agent: DeliveryRouterNode (outbound delivery)
+- The "channel sub-agent" is **not** a full LangGraph sub-agent — it is a deterministic `DeliveryRouterNode` added at the end of the master agent graph (no LLM calls).
+- Responsibility: take the agent's formatted response and route it to one or more `DeliveryTarget`s.
+- `DeliveryTarget` enum defined in Phase 3: `WEB_CHAT` (active), `EMAIL_NOTIFY` (stub), `TELEGRAM` (stub), `TEAMS` (stub).
+- Phase 3 only `WEB_CHAT` actually delivers. Other targets log a warning and no-op.
+- Stubs are registered so Phase 4 canvas workflow nodes can set `delivery_targets` in their output spec before Phase 5 adapters exist.
+- Phase 5 ChannelAdapter implementations plug into the same `deliver(target, payload)` interface without changing agent graph.
+- This is distinct from Phase 5 ChannelAdapter (inbound): DeliveryRouterNode = outbound; ChannelAdapter = inbound.
+
+### A2UI interactive tool calls: `useMcpTool` hook + `POST /api/tools/call`
+- All interactive actions from A2UI components (kanban drag-and-drop, card refresh, email archive stub, etc.) use a single `useMcpTool<TParams, TResult>(toolName)` React hook.
+- The hook calls `POST /api/tools/call` on the Next.js proxy, which forwards to `POST /api/tools/call` on the backend.
+- The backend endpoint enforces all 3 security gates (JWT → RBAC → Tool ACL) and executes the tool directly via `tool_registry.execute()` — synchronous request/response (not SSE streaming, no LangGraph overhead).
+- This is the **universal standard** for all UI-initiated tool/MCP calls. No component calls `fetch` directly.
+- `useMcpTool` returns `{ call, isLoading, error }` — consistent across all cards and widgets.
+
 ### Claude's Discretion
 - Exact visual styling of tool call panels (colors, icons, animations)
 - Kanban board column layout and card styling
@@ -77,7 +93,7 @@ The agent can perform real work — fetch email, check calendars, query CRM, rem
 ## Deferred Ideas
 
 - Real Gmail / Google Calendar OAuth flows — deferred to later phase (Phase 3 uses mock data)
-- Telegram/WhatsApp/Teams channel sub-agent — Phase 5
+- Telegram/WhatsApp/Teams ChannelAdapter (inbound) — Phase 5. The outbound DeliveryRouterNode with stubs is built in Phase 3.
 - Full agent authoring UI (beyond enable/disable) — Phase 6 (Extensibility Registries)
 - Switching embedding models via UI — post-MVP (pgvector dimension lock makes this a migration, not a toggle)
 - Auto-refresh with TTL for cards — noted for later (user opted for manual refresh icon instead)
