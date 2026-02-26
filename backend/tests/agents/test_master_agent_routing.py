@@ -19,40 +19,55 @@ async def test_graph_topology_has_sub_agent_nodes() -> None:
 
 @pytest.mark.asyncio
 async def test_pre_route_email_skips_master_llm() -> None:
-    """_pre_route returns 'email_agent' for email intent — master LLM never runs."""
+    """_pre_route returns 'email_agent' for email keyword — no LLM call needed."""
     from langchain_core.messages import HumanMessage
     from agents.master_agent import _pre_route
 
     state = {"messages": [HumanMessage(content="summarize my unread emails")]}
-    with patch("agents.subagents.router.get_llm") as mock_get_llm:
-        mock_llm = MagicMock()
-        mock_llm.ainvoke = AsyncMock(return_value=MagicMock(content="email"))
-        mock_get_llm.return_value = mock_llm
-        with patch("agents.master_agent.async_session") as mock_session:
-            # system_config returns None → agent enabled by default
-            mock_cm = AsyncMock()
-            mock_cm.__aenter__ = AsyncMock(return_value=MagicMock(
-                execute=AsyncMock(return_value=MagicMock(scalar_one_or_none=MagicMock(return_value=None)))
-            ))
-            mock_cm.__aexit__ = AsyncMock(return_value=False)
-            mock_session.return_value = mock_cm
-            result = await _pre_route(state)
+    with patch("agents.master_agent.async_session") as mock_session:
+        mock_cm = AsyncMock()
+        mock_cm.__aenter__ = AsyncMock(return_value=MagicMock(
+            execute=AsyncMock(return_value=MagicMock(scalar_one_or_none=MagicMock(return_value=None)))
+        ))
+        mock_cm.__aexit__ = AsyncMock(return_value=False)
+        mock_session.return_value = mock_cm
+        result = await _pre_route(state)
     assert result == "email_agent"
 
 
 @pytest.mark.asyncio
 async def test_pre_route_general_goes_to_master_agent() -> None:
-    """_pre_route returns 'master_agent' for general intent."""
+    """_pre_route returns 'master_agent' for general intent — no LLM call."""
     from langchain_core.messages import HumanMessage
     from agents.master_agent import _pre_route
 
     state = {"messages": [HumanMessage(content="write me a haiku")]}
-    with patch("agents.subagents.router.get_llm") as mock_get_llm:
-        mock_llm = MagicMock()
-        mock_llm.ainvoke = AsyncMock(return_value=MagicMock(content="general"))
-        mock_get_llm.return_value = mock_llm
-        result = await _pre_route(state)
+    result = await _pre_route(state)
     assert result == "master_agent"
+
+
+def test_classify_by_keywords_email() -> None:
+    from agents.master_agent import _classify_by_keywords
+    assert _classify_by_keywords("summarize my unread emails") == "email"
+    assert _classify_by_keywords("check my inbox") == "email"
+
+
+def test_classify_by_keywords_calendar() -> None:
+    from agents.master_agent import _classify_by_keywords
+    assert _classify_by_keywords("what's on my calendar today?") == "calendar"
+    assert _classify_by_keywords("do I have any meetings?") == "calendar"
+
+
+def test_classify_by_keywords_project() -> None:
+    from agents.master_agent import _classify_by_keywords
+    assert _classify_by_keywords("what's the status of Project Alpha?") == "project"
+    assert _classify_by_keywords("show me my tasks") == "project"
+
+
+def test_classify_by_keywords_general() -> None:
+    from agents.master_agent import _classify_by_keywords
+    assert _classify_by_keywords("write me a haiku") == "general"
+    assert _classify_by_keywords("hello how are you") == "general"
 
 
 @pytest.mark.asyncio

@@ -339,16 +339,47 @@ async def _save_memory_node(state: BlitzState) -> dict:
     return {}
 
 
+def _classify_by_keywords(text: str) -> str:
+    """
+    Keyword-based intent classification — no LLM call.
+
+    Returns one of: "email", "calendar", "project", "general".
+
+    Using keywords instead of an LLM here is intentional: routing functions
+    run outside graph nodes, so any LLM call they make gets streamed by
+    CopilotKit as a chat message (e.g. "general" appearing before the real
+    answer). Keywords are instant and sufficient for Phase 3's explicit intents.
+    """
+    import re
+    lowered = text.lower()
+    words = set(re.findall(r"\w+", lowered))
+
+    _EMAIL_KW = {"email", "emails", "inbox", "unread", "mail"}
+    _CAL_KW = {"calendar", "schedule", "meeting", "meetings", "event", "events", "appointment"}
+    _PROJECT_KW = {"project", "projects", "crm", "task", "tasks", "sprint", "milestone"}
+
+    if words & _EMAIL_KW:
+        return "email"
+    if words & _CAL_KW:
+        return "calendar"
+    if words & _PROJECT_KW or "status of" in lowered or "status of project" in lowered:
+        return "project"
+    return "general"
+
+
 async def _pre_route(state: BlitzState) -> str:
     """
     Routing conditional after load_memory, BEFORE master_agent runs.
 
-    Classifies user intent with blitz/fast LLM. Sub-agent intents (email,
-    calendar, project) skip the master LLM entirely — the sub-agent provides
-    the full structured response. General intent falls through to master_agent.
+    Uses keyword matching (no LLM) to classify intent. Sub-agent intents
+    bypass the master LLM entirely — the sub-agent provides the full
+    structured response. General intent falls through to master_agent.
 
-    This prevents the master LLM from generating "I can't help" apologies for
-    intents that are handled by specialized sub-agents.
+    Keyword-based classification is used here because:
+    - Routing functions run outside LangGraph nodes, so LLM calls made here
+      get streamed by CopilotKit as chat messages (spurious "general" text).
+    - Keyword matching is instant, restoring the typing indicator for the
+      master agent without any extra latency.
 
     Returns node names:
       "email_agent"    — route directly to email sub-agent
@@ -356,13 +387,12 @@ async def _pre_route(state: BlitzState) -> str:
       "project_agent"  — route directly to project sub-agent
       "master_agent"   — general intent; run master LLM
     """
-    from agents.subagents.router import classify_intent
     from core.models.system_config import SystemConfig
 
     last_user_msg = next(
         (m.content for m in reversed(state["messages"]) if isinstance(m, HumanMessage)), ""
     )
-    intent = await classify_intent(str(last_user_msg))
+    intent = _classify_by_keywords(str(last_user_msg))
 
     async def _agent_enabled(key: str) -> bool:
         try:
