@@ -2,17 +2,17 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-24)
+See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates daily work routines and lets them build custom automations without writing code -- all within an enterprise-secure, on-premise environment.
-**Current focus:** Phase 3: Sub-Agents + Memory Expansion + OAuth Integrations (Phases 1, 2, 2.1 complete)
+**Current focus:** v1.0 MVP shipped — planning v1.1 (Phase 4: Canvas & Workflows)
 
 ## Current Position
 
-Phase: 3.1 of 9 COMPLETE (Memory Read Path + MCP Hot-Registration gap-closure)
-Plan: 1 of 1 complete (03.1-01: MEMO-02 episode injection + INTG-01 MCP hot-registration; TDD — 3 new tests, 180 suite green)
-Status: Phase 3.1 complete (MEMO-02 + INTG-01 closed); Phase 3 plan 06 (OAuth integrations + phase gate) is next
-Last activity: 2026-02-26 -- Completed 03.1-01-PLAN.md — all 3 tasks done; 180 tests passing
+Milestone: v1.0 MVP COMPLETE (shipped 2026-02-26)
+Phases: 1, 2, 2.1, 3, 3.1 — all complete (17 plans, 180 tests green)
+Status: Milestone archived; ready to plan Phase 4 (Canvas and Workflows)
+Last activity: 2026-02-26 -- v1.0 milestone complete — MEMO-02 role bug fixed, audit passed (24/24 requirements), milestone archived
 
 Progress: [█████████░] 70% (16/22 plans estimated)
 
