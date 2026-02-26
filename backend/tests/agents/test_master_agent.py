@@ -101,11 +101,11 @@ def test_create_master_graph_has_routing_conditional():
         graph = create_master_graph()
 
     assert isinstance(graph, CompiledStateGraph)
-    # Verify the graph has conditional edges (not just a plain edge from master_agent → END)
-    # In LangGraph 0.4.10, compiled.builder is the original StateGraph with .branches attribute.
-    # The master_agent node must have branches (conditional edges), not plain edges.
+    # Verify the graph has conditional edges from load_memory (Phase 3 _pre_route).
+    # In LangGraph, compiled.builder is the original StateGraph with .branches attribute.
+    # load_memory uses add_conditional_edges() to route to sub-agents or master_agent.
     graph_builder = graph.builder
-    assert "master_agent" in graph_builder.branches, (
-        "master_agent must have conditional routing via add_conditional_edges(), "
-        "not a plain add_edge() to END. This allows Phase 3 to add sub-agent branches."
+    assert "load_memory" in graph_builder.branches, (
+        "load_memory must have conditional routing via add_conditional_edges() (_pre_route). "
+        "Phase 3 moved intent routing before the master LLM to prevent spurious streaming tokens."
     )
