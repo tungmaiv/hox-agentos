@@ -15,6 +15,7 @@ invocation. save_memory only saves messages at index >= initial_message_count,
 preventing re-saving of history loaded by load_memory.
 """
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
+from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
@@ -60,6 +61,13 @@ async def _load_memory_node(state: BlitzState) -> dict:
         logger.debug("load_memory_skipped", reason="no user_id or conversation_id available")
         return {}
 
+    # CopilotKit sends the full message history in each agent/run request (via
+    # setMessages on mount + accumulated turns). Skip DB loading when messages
+    # are already present to avoid doubling context sent to the LLM.
+    if state.get("messages"):
+        logger.debug("load_memory_skipped", reason="messages already in state (CopilotKit provided history)")
+        return {}
+
     async with async_session() as session:
         turns = await load_recent_turns(session, user_id=user_id, conversation_id=conversation_id, n=20)
 
@@ -76,6 +84,26 @@ async def _load_memory_node(state: BlitzState) -> dict:
     return {}
 
 
+_DEFAULT_SYSTEM_PROMPT = (
+    "You are Blitz, an intelligent AI assistant for Blitz employees. "
+    "You are professional but warm — like a smart, helpful colleague. "
+    "You are clear, direct, and occasionally light in tone.\n\n"
+    "When asked about capabilities: Be honest. In this phase you can reason, "
+    "answer questions, read uploaded documents, and help with writing and coding. "
+    "You cannot yet fetch emails, check calendars, or query projects — those "
+    "capabilities are coming soon.\n\n"
+    "When you don't know something: Say so directly. Don't make up information.\n\n"
+    "Format your responses with markdown when it improves clarity (headers, bold, "
+    "code blocks). Keep responses focused and appropriately concise.\n\n"
+    "IMPORTANT — math formatting rules you must always follow:\n"
+    "- NEVER use LaTeX notation. No backslashes, no \\frac, no \\times, no \\cdot.\n"
+    "- NEVER wrap math in ( ) or [ ] delimiters like ( x ) or [ x = 5 ].\n"
+    "- NEVER wrap math in backticks or code blocks.\n"
+    "- Write math as plain readable prose: '15 / 3 = 5', '1239 × 17 = 21063'.\n"
+    "- Use the Unicode × character for multiplication, ÷ for division."
+)
+
+
 async def _master_node(state: BlitzState) -> dict[str, list[BaseMessage]]:
     """
     Call blitz/master LLM with current conversation messages and return response.
@@ -83,9 +111,9 @@ async def _master_node(state: BlitzState) -> dict[str, list[BaseMessage]]:
     Uses get_llm() — never a direct provider SDK. The LiteLLM proxy routes
     'blitz/master' to the configured primary (Ollama/Qwen2.5) or fallback (Claude Sonnet).
 
-    Loads custom user instructions from DB (via current_user_ctx contextvar) and
-    prepends them as a SystemMessage so every conversation respects the user's
-    preferences (e.g. "Always respond in Vietnamese").
+    Always prepends _DEFAULT_SYSTEM_PROMPT as the first SystemMessage so formatting
+    rules (no LaTeX, markdown etc.) reach the LLM regardless of CopilotKit's
+    instructions prop handling. Appends per-user custom instructions if set in DB.
     """
     from api.routes.user_instructions import get_user_instructions
 
@@ -102,15 +130,15 @@ async def _master_node(state: BlitzState) -> dict[str, list[BaseMessage]]:
 
     messages = list(state["messages"])
 
-    # Prepend system message with custom instructions if set
+    # Build system content: default prompt + optional per-user instructions.
+    # Always injected so the LLM sees formatting rules on every call.
+    system_content = _DEFAULT_SYSTEM_PROMPT
     if custom_instructions:
-        system_msg = SystemMessage(
-            content=(
-                f"Additional user instructions (follow these for all responses):\n\n"
-                f"{custom_instructions}"
-            )
+        system_content += (
+            f"\n\nAdditional user instructions (follow these for all responses):\n\n"
+            f"{custom_instructions}"
         )
-        messages = [system_msg] + messages
+    messages = [SystemMessage(content=system_content)] + messages
 
     response = await llm.ainvoke(messages)
     logger.info("master_agent_response", content_length=len(str(response.content)))
@@ -132,23 +160,51 @@ async def _save_memory_node(state: BlitzState) -> dict:
     Skips gracefully if user_id or conversation_id not set (direct invocation in tests).
     """
     from memory.short_term import save_turn
+    from sqlalchemy import func, select as sa_select
+    from core.models.memory import ConversationTurn
 
     user_id = state.get("user_id")
     conversation_id = state.get("conversation_id")
+
+    # Contextvar fallback — mirrors _load_memory_node.
+    # BlitzState fields are None when graph is invoked via LangGraphAGUIAgent
+    # (the agent doesn't inject custom state fields); runtime.py sets these
+    # as contextvars so both load and save nodes can find them.
+    if not user_id:
+        try:
+            ctx_user = current_user_ctx.get()
+            user_id = ctx_user["user_id"]
+        except LookupError:
+            pass
+
+    if not conversation_id:
+        try:
+            conversation_id = current_conversation_id_ctx.get()
+        except LookupError:
+            pass
 
     if not user_id or not conversation_id:
         return {}
 
     messages = state["messages"]
-    # initial_message_count is the length of state['messages'] before the graph ran.
-    # Messages at index < initial_message_count were loaded from history — don't re-save.
-    initial_count = state.get("initial_message_count", 0)  # type: ignore[attr-defined]
-    new_messages = messages[initial_count:]
 
-    if not new_messages:
-        return {}
-
+    # Use DB turn count to determine which messages are new.
+    # CopilotKit sends the full message history on every agent/run, so
+    # initial_message_count (never set by LangGraphAGUIAgent) can't be trusted.
+    # Instead, count existing turns in DB — anything beyond that is new.
     async with async_session() as session:
+        count_result = await session.execute(
+            sa_select(func.count()).where(
+                ConversationTurn.user_id == user_id,
+                ConversationTurn.conversation_id == conversation_id,
+            )
+        )
+        existing_count = count_result.scalar_one()
+        new_messages = messages[existing_count:]
+
+        if not new_messages:
+            return {}
+
         for msg in new_messages:
             if isinstance(msg, HumanMessage):
                 await save_turn(
@@ -166,6 +222,9 @@ async def _save_memory_node(state: BlitzState) -> dict:
                     role="assistant",
                     content=str(msg.content),
                 )
+        # Single commit after the loop — all turns saved atomically.
+        # save_turn() no longer commits internally; the session owner commits.
+        await session.commit()
 
     logger.debug("memory_saved", new_turns=len(new_messages), conversation_id=str(conversation_id))
     return {}
@@ -206,4 +265,4 @@ def create_master_graph() -> CompiledStateGraph:
         {"save_memory": "save_memory"},  # Phase 3: add sub-agent entries here
     )
     graph.add_edge("save_memory", END)
-    return graph.compile()
+    return graph.compile(checkpointer=MemorySaver())

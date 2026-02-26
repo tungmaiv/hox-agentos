@@ -78,7 +78,8 @@ async def save_turn(
         content=content,
     )
     session.add(turn)
-    await session.commit()
-    await session.refresh(turn)
+    # Deliberately no commit() here — the caller owns the transaction.
+    # Batch callers (e.g. _save_memory_node) commit once after the loop for
+    # atomicity. Single callers must commit themselves after calling save_turn.
     logger.debug("turn_saved", role=role, conversation_id=str(conversation_id))
     return turn

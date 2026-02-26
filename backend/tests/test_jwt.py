@@ -155,17 +155,25 @@ async def test_wrong_issuer_raises_401(make_token, mock_jwks) -> None:
 
 
 @pytest.mark.asyncio
-async def test_wrong_audience_raises_401(make_token, mock_jwks) -> None:
-    """A JWT with an unexpected audience raises HTTPException 401."""
+async def test_no_audience_claim_succeeds(make_token, mock_jwks) -> None:
+    """
+    Tokens without aud (or with a non-matching aud) must succeed.
+
+    Keycloak's blitz-portal client issues access tokens with no aud claim.
+    Audience validation is disabled (verify_aud=False in jwt.py). Issuer and
+    RS256 signature are still enforced — this test verifies that a missing or
+    non-matching audience does NOT cause a 401.
+    """
     from security.jwt import validate_token
 
+    # Simulate a token with no aud field (blitz-portal real-world case)
     token = make_token(payload_overrides={"aud": "some-other-client"})
 
     with patch("security.jwt._get_jwks", new_callable=AsyncMock, return_value=mock_jwks):
-        with pytest.raises(HTTPException) as exc_info:
-            await validate_token(token)
+        ctx = await validate_token(token)
 
-    assert exc_info.value.status_code == 401
+    assert ctx["email"] == "test@blitz.local"
+    assert ctx["username"] == "testuser"
 
 
 @pytest.mark.asyncio
