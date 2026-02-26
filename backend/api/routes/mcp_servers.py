@@ -91,6 +91,11 @@ async def create_mcp_server(
     await session.commit()
     await session.refresh(server)
 
+    # Hot-register: make new server's tools immediately callable without restart.
+    # refresh() is idempotent — re-queries all active servers from DB.
+    from mcp.registry import MCPToolRegistry
+    await MCPToolRegistry.refresh()
+
     logger.info(
         "mcp_server_registered",
         name=body.name,

@@ -38,6 +38,7 @@ from core.db import async_session
 from core.models.memory import ConversationTurn
 from memory.embeddings import BGE_M3Provider
 from memory.long_term import search_facts
+from memory.medium_term import load_recent_episodes
 from memory.short_term import load_recent_turns, save_turn
 from scheduler.tasks.embedding import embed_and_store, summarize_episode
 
@@ -142,6 +143,32 @@ async def _load_memory_node(state: BlitzState) -> dict:
         except Exception:
             # Graceful degradation: long-term memory failure must not block the agent
             logger.warning("long_term_memory_load_failed", user_id=str(user_id))
+
+    # Medium-term memory: recent episode summaries (cross-session context).
+    # Loaded unconditionally on user_id — not query-dependent like long-term facts.
+    if user_id:
+        try:
+            async with async_session() as session:
+                episodes = await load_recent_episodes(session, user_id=user_id, n=3)
+            if episodes:
+                episode_context = "\n".join(f"- {ep.summary}" for ep in episodes)
+                history.insert(
+                    0,
+                    SystemMessage(
+                        content=(
+                            "[Medium-term memory — summaries of past conversations:]\n"
+                            + episode_context
+                        )
+                    ),
+                )
+                logger.debug(
+                    "medium_term_memory_loaded",
+                    episode_count=len(episodes),
+                    user_id=str(user_id),
+                )
+        except Exception:
+            # Graceful degradation: episode load failure must not block the agent
+            logger.warning("medium_term_memory_load_failed", user_id=str(user_id))
 
     if skip_short_term:
         # Short-term was already in state; only return the newly loaded facts
