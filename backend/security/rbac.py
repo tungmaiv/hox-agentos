@@ -36,6 +36,7 @@ ROLE_PERMISSIONS: dict[str, set[str]] = {
         "tool:email",
         "tool:calendar",
         "tool:project",
+        "crm:read",
     },
     "manager": {
         # All employee permissions
@@ -43,7 +44,9 @@ ROLE_PERMISSIONS: dict[str, set[str]] = {
         "tool:email",
         "tool:calendar",
         "tool:project",
+        "crm:read",
         # Manager additions
+        "crm:write",
         "tool:reports",
         "workflow:create",
     },
@@ -53,6 +56,8 @@ ROLE_PERMISSIONS: dict[str, set[str]] = {
         "tool:email",
         "tool:calendar",
         "tool:project",
+        "crm:read",
+        "crm:write",
         "tool:reports",
         "workflow:create",
         # Team-lead addition
@@ -64,6 +69,8 @@ ROLE_PERMISSIONS: dict[str, set[str]] = {
         "tool:email",
         "tool:calendar",
         "tool:project",
+        "crm:read",
+        "crm:write",
         "tool:reports",
         "workflow:create",
         "workflow:approve",
