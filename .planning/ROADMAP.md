@@ -86,14 +86,15 @@ Plans:
   3. User can ask "what's the status of Project X?" and the project sub-agent queries CRM via MCP to return structured results
   4. Old conversations are summarized into episode summaries; user preferences and facts accumulate as long-term memory with semantic search
   5. Agent responses include rich UI components (cards, tables, progress indicators) via A2UI when appropriate
-**Plans**: TBD
+**Plans**: 6 plans
 
 Plans:
-- [ ] 03-01: Email and calendar sub-agents with provider-agnostic abstraction
-- [ ] 03-02: Project and channel sub-agents
-- [ ] 03-03: Medium-term and long-term memory with bge-m3 embeddings
-- [ ] 03-04: MCP framework and CRM mock server
-- [ ] 03-05: A2UI generative UI components in agent responses
+- [ ] 03-00-PLAN.md — Settings infrastructure: system_config + mcp_servers DB tables, admin config API, Settings → Agents toggle + Integrations stub (Wave 1, parallel with 03-01)
+- [ ] 03-01-PLAN.md — Celery + bge-m3 embedding pipeline: celery_app, BGE_M3Provider, embed_and_store task, memory_episodes + memory_facts migration (Wave 1, parallel with 03-00)
+- [ ] 03-02-PLAN.md — Medium + long-term memory: medium_term.py, long_term.py, master agent memory injection + Celery dispatch (Wave 2, depends on 03-01)
+- [ ] 03-03-PLAN.md — MCP framework + CRM mock: MCPClient, MCPToolRegistry, 3-gate gated call, Settings → Integrations live CRUD, mcp-crm Docker service (Wave 2, depends on 03-00)
+- [ ] 03-04-PLAN.md — Sub-agents + DeliveryRouterNode: email/calendar/project agents, intent router, DeliveryTarget enum, master agent routing update (Wave 3, depends on 03-02 + 03-03)
+- [ ] 03-05-PLAN.md — A2UI components + useMcpTool + Settings pages: CalendarCard, EmailSummaryCard, ProjectStatusWidget, A2UIMessageRenderer, useMcpTool hook, POST /api/tools/call, Settings → Memory + Chat Preferences (Wave 4, depends on 03-04)
 
 ### Phase 4: Canvas and Workflows
 **Goal**: Users can visually build multi-step automations on a drag-and-drop canvas that compile to executable agent workflows with human approval gates
@@ -191,7 +192,7 @@ Note: Phases 4 and 5 can execute in parallel as they share no mutual dependencie
 | 1. Identity and Infrastructure Skeleton | 4/4 | Complete    | 2026-02-24 |
 | 2. Agent Core and Conversational Chat | 5/5 | Complete     | 2026-02-25 |
 | 2.1. Tech Debt Cleanup (INSERTED) | 1/1 | Complete     | 2026-02-26 |
-| 3. Sub-Agents, Memory, and Integrations | 0/5 | Not started | - |
+| 3. Sub-Agents, Memory, and Integrations | 0/6 | Not started | - |
 | 4. Canvas and Workflows | 0/5 | Not started | - |
 | 5. Scheduler and Channels | 0/5 | Not started | - |
 | 6. Extensibility Registries | 0/3 | Not started | - |
