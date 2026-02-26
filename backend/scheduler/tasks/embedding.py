@@ -160,7 +160,7 @@ def summarize_episode(
 
         # Format turns for LLM summarization
         transcript = "\n".join(
-            f"{'User' if t.role == 'human' else 'Assistant'}: {t.content}"
+            f"{'User' if t.role == 'user' else 'Assistant'}: {t.content}"
             for t in turns
         )
         prompt = (
