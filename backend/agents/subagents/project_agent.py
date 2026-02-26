@@ -11,6 +11,7 @@ from agents.state.types import BlitzState
 from core.context import current_user_ctx
 from core.db import async_session
 from core.schemas.agent_outputs import ProjectStatusResult
+from mcp.registry import call_mcp_tool
 
 logger = structlog.get_logger(__name__)
 
@@ -23,8 +24,6 @@ async def project_agent_node(state: BlitzState) -> dict:
     Extracts project name from user message (falls back to default).
     On MCP failure: returns friendly error message.
     """
-    from mcp.registry import call_mcp_tool
-
     # Extract project name from last user message
     last_user_msg = next(
         (m.content for m in reversed(state.get("messages", [])) if isinstance(m, HumanMessage)),
