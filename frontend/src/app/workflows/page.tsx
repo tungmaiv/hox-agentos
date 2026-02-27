@@ -10,6 +10,7 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { PendingBadge } from "./_pending-badge";
+import { TemplateCard } from "@/components/canvas/TemplateCard";
 
 const BACKEND = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -78,24 +79,14 @@ export default async function WorkflowsPage() {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {templates.map((t) => (
-              <div key={t.id} className="border rounded-lg p-4 bg-gray-50">
-                <h3 className="font-medium text-gray-900">{t.name}</h3>
-                {t.description && (
-                  <p className="text-sm text-gray-500 mt-1">{t.description}</p>
-                )}
-                <form
-                  action={`/api/workflows/templates/${t.id}/copy`}
-                  method="POST"
-                  className="mt-3"
-                >
-                  <button
-                    type="submit"
-                    className="text-sm px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
-                  >
-                    Use template &rarr;
-                  </button>
-                </form>
-              </div>
+              <TemplateCard
+                key={t.id}
+                template={{
+                  id: t.id,
+                  name: t.name,
+                  description: t.description,
+                }}
+              />
             ))}
           </div>
         </section>
