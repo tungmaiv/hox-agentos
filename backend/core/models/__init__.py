@@ -14,3 +14,4 @@ from core.models.system_config import SystemConfig  # noqa: F401
 from core.models.tool_acl import ToolAcl  # noqa: F401
 from core.models.user_instructions import UserInstructions  # noqa: F401
 from core.models.workflow import Workflow, WorkflowRun, WorkflowTrigger  # noqa: F401
+from core.models.channel import ChannelAccount, ChannelSession  # noqa: F401
