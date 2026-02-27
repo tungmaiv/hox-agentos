@@ -55,6 +55,17 @@ def execute_workflow_task(self, run_id_str: str, hitl_result: str | None = None)
 
 async def execute_workflow(run_id_str: str, hitl_result: str | None = None) -> None:
     """Main async workflow execution logic."""
+    try:
+        await _execute_workflow_inner(run_id_str, hitl_result=hitl_result)
+    finally:
+        # Dispose the shared asyncpg engine after each task so the next
+        # asyncio.run() call gets a fresh event loop with clean connections.
+        from core.db import engine  # noqa: PLC0415
+        await engine.dispose()
+
+
+async def _execute_workflow_inner(run_id_str: str, hitl_result: str | None = None) -> None:
+    """Main async workflow execution logic."""
     run_id = uuid.UUID(run_id_str)
 
     # ── 1. Load WorkflowRun ───────────────────────────────────────────────────
@@ -163,41 +174,9 @@ async def execute_workflow(run_id_str: str, hitl_result: str | None = None) -> N
                     })
 
         except Exception as exc:
-            # Check for GraphInterrupt (HITL pause)
+            # Genuine error — GraphInterrupt is suppressed by LangGraph 1.0 and
+            # never propagates here; HITL is detected via aget_state() below.
             exc_type = type(exc).__name__
-            if "Interrupt" in exc_type or "GraphInterrupt" in exc_type:
-                # Extract interrupt data — LangGraph stores it in exc.args or exc.interrupts
-                interrupt_data: dict[str, Any] = {}
-                if hasattr(exc, "interrupts") and exc.interrupts:
-                    raw = exc.interrupts[0]
-                    interrupt_data = raw.value if hasattr(raw, "value") else {}
-                elif exc.args:
-                    raw = exc.args[0]
-                    interrupt_data = raw[0].value if (isinstance(raw, (list, tuple)) and raw and hasattr(raw[0], "value")) else {}
-
-                message = interrupt_data.get("message", "Approval required to continue.")
-
-                # Store paused state in DB — checkpoint_id = thread_id for resume
-                async with async_session() as session:
-                    result = await session.execute(
-                        select(WorkflowRun).where(WorkflowRun.id == run_id)
-                    )
-                    run = result.scalar_one_or_none()
-                    if run:
-                        run.status = "paused_hitl"
-                        run.checkpoint_id = run_id_str  # thread_id for AsyncPostgresSaver resume
-                        run.result_json = {"hitl_message": message, "interrupt_data": interrupt_data}
-                        await session.commit()
-
-                publish_event(run_id_str, {
-                    "event": "hitl_paused",
-                    "message": message,
-                    "interrupt_data": interrupt_data,
-                })
-                logger.info("workflow_paused_hitl", run_id=run_id_str, message=message)
-                return
-
-            # Genuine error
             logger.error("workflow_execution_error", run_id=run_id_str, error=str(exc), exc_type=exc_type)
             async with async_session() as session:
                 result = await session.execute(select(WorkflowRun).where(WorkflowRun.id == run_id))
@@ -207,6 +186,41 @@ async def execute_workflow(run_id_str: str, hitl_result: str | None = None) -> N
                     run.result_json = {"error": str(exc)}
                     await session.commit()
             publish_event(run_id_str, {"event": "workflow_failed", "error": str(exc)})
+            return
+
+        # ── LangGraph 1.0 HITL detection ──────────────────────────────────────
+        # GraphInterrupt is suppressed internally by the graph runner and never
+        # raised to the caller. After astream_events() returns normally, check
+        # the saved checkpoint for pending interrupts via aget_state().
+        state_snapshot = await compiled.aget_state(config)
+        if state_snapshot.interrupts:
+            raw_interrupt = state_snapshot.interrupts[0]
+            interrupt_data: dict[str, Any] = (
+                raw_interrupt.value
+                if isinstance(raw_interrupt.value, dict)
+                else {"data": raw_interrupt.value}
+            )
+            message = interrupt_data.get("message", "Approval required to continue.")
+            hitl_node_id = state_snapshot.next[0] if state_snapshot.next else None
+
+            async with async_session() as session:
+                result = await session.execute(
+                    select(WorkflowRun).where(WorkflowRun.id == run_id)
+                )
+                run = result.scalar_one_or_none()
+                if run:
+                    run.status = "paused_hitl"
+                    run.checkpoint_id = run_id_str  # thread_id for AsyncPostgresSaver resume
+                    run.result_json = {"hitl_message": message, "interrupt_data": interrupt_data}
+                    await session.commit()
+
+            publish_event(run_id_str, {
+                "event": "hitl_paused",
+                "node_id": hitl_node_id,
+                "message": message,
+                "interrupt_data": interrupt_data,
+            })
+            logger.info("workflow_paused_hitl", run_id=run_id_str, message=message)
             return
 
     # ── 5. Mark completed ─────────────────────────────────────────────────────
