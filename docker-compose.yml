@@ -156,6 +156,22 @@ services:
     networks:
       - blitz-net
 
+  # Channel sidecar — MS Teams
+  teams-gateway:
+    build: ./channel-gateways/teams
+    ports:
+      - "9003:9003"
+    environment:
+      TEAMS_APP_ID: ${TEAMS_APP_ID}
+      TEAMS_APP_PASSWORD: ${TEAMS_APP_PASSWORD}
+      BACKEND_URL: http://backend:8000
+    depends_on:
+      backend:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - blitz-net
+
   celery-beat:
     build:
       context: ./backend
