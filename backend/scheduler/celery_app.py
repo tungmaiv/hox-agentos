@@ -18,7 +18,11 @@ celery_app = Celery(
     "blitz",
     broker=settings.redis_url,
     backend=settings.redis_url,
-    include=["scheduler.tasks.embedding"],
+    include=[
+        "scheduler.tasks.embedding",
+        "scheduler.tasks.workflow_execution",
+        "scheduler.tasks.cron_trigger",
+    ],
 )
 
 celery_app.conf.update(
@@ -30,5 +34,14 @@ celery_app.conf.update(
     task_routes={
         "scheduler.tasks.embedding.embed_and_store": {"queue": "embedding"},
         "scheduler.tasks.embedding.summarize_episode": {"queue": "default"},
+        "scheduler.tasks.workflow_execution.execute_workflow_task": {"queue": "default"},
+        "scheduler.tasks.cron_trigger.fire_cron_triggers_task": {"queue": "default"},
     },
 )
+
+celery_app.conf.beat_schedule = {
+    "fire-cron-triggers-every-minute": {
+        "task": "scheduler.tasks.cron_trigger.fire_cron_triggers_task",
+        "schedule": 60.0,  # seconds
+    },
+}
