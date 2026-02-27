@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-26)
 
 ## Current Position
 
-Milestone: v1.0 MVP COMPLETE (shipped 2026-02-26)
-Phases: 1, 2, 2.1, 3, 3.1 — all complete (17 plans, 180 tests green)
-Status: Milestone archived; ready to plan Phase 4 (Canvas and Workflows)
-Last activity: 2026-02-26 -- v1.0 milestone complete — MEMO-02 role bug fixed, audit passed (24/24 requirements), milestone archived
+Milestone: v1.1 Phase 4 (Canvas & Workflows) — in progress
+Phases: 1, 2, 2.1, 3, 3.1 — all complete; Phase 4 — 1/5 plans complete
+Status: Phase 4 Plan 01 complete (workflow tables + CRUD API + canvas shell); 199 tests green
+Last activity: 2026-02-27 -- Phase 4 Plan 01 complete — workflow tables, CRUD API, React Flow canvas shell, 19 new tests
 
-Progress: [█████████░] 70% (16/22 plans estimated)
+Progress: [█████████░] 73% (17/23 plans estimated)
 
 ## Performance Metrics
 
@@ -39,6 +39,7 @@ Progress: [█████████░] 70% (16/22 plans estimated)
 | Phase 03-sub-agents-memory-and-integrations P03 | 5 | 3 tasks | 12 files |
 | Phase 03-sub-agents-memory-and-integrations P04 | 6 | 3 tasks | 15 files |
 | Phase 03-sub-agents-memory-and-integrations P05 | 35 | 2 tasks | 19 files |
+| Phase 04-canvas-and-workflows P01 | 15 | 6 tasks | 27 files |
 
 ## Accumulated Context
 
@@ -112,6 +113,11 @@ Recent decisions affecting current work:
 - [Phase 03-05]: core.db exports get_db (not get_async_session) as the FastAPI dependency — same pattern used in all existing route files (credentials.py, acl.py)
 - [03.1-01]: load_recent_episodes imported at top level in master_agent.py (not lazy) — lazy imports not patchable with patch('agents.master_agent.load_recent_episodes'); same pattern as call_mcp_tool in project_agent.py
 - [03.1-01]: MCPToolRegistry imported lazily inside create_mcp_server() to avoid circular import; test patches 'mcp.registry.MCPToolRegistry' (class definition module) — intercepts lazy import correctly
+- [Phase 04-canvas-and-workflows]: Workflow.definition_json uses JSON().with_variant(JSONB(),'postgresql') for SQLite test compatibility — same pattern as SystemConfig.value
+- [Phase 04-01]: FastAPI route ordering: /templates and /runs/* declared BEFORE /{workflow_id} to prevent FastAPI matching string literals as UUID path params
+- [Phase 04-01]: Alembic migration uses 010 revision — 009 was already taken by conversation_titles_timestamps; down_revision='009'
+- [Phase 04-01]: Next.js 15 async params: params must be typed as Promise<{id: string}> and awaited — plan doc showed deprecated Next.js 14 sync pattern
+- [Phase 04-01]: owner_user_id on Workflow is NULLABLE — template rows in 04-05 will have owner_user_id=NULL; no FK constraint (users in Keycloak)
 
 ### Pending Todos
 
@@ -135,6 +141,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-26T16:37:29Z
-Stopped at: Completed 03.1-01-PLAN.md — MEMO-02 (episode injection in _load_memory_node) + INTG-01 (MCPToolRegistry.refresh() in create_mcp_server); 180 tests passing; Phase 3 plan 06 (OAuth integrations) is next
+Last session: 2026-02-27T04:05:52Z
+Stopped at: Completed 04-01-PLAN.md — workflow tables (010 migration), CRUD API (15 endpoints), React Flow canvas shell; 199 tests green; Phase 4 Plan 02 (Compiler) is next
 Resume file: None
