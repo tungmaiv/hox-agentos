@@ -79,6 +79,19 @@ export default function SettingsPage() {
               </p>
             </div>
           </Link>
+          <Link
+            href="/settings/channels"
+            className="flex items-center p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors"
+          >
+            <div>
+              <p className="text-sm font-medium text-gray-900">
+                Channel Linking
+              </p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Connect Telegram, WhatsApp, Teams
+              </p>
+            </div>
+          </Link>
         </div>
 
         <h2 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">
