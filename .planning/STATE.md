@@ -158,6 +158,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-27T15:22:39Z
-Stopped at: Completed quick task 2 — hitl_paused SSE event node_id fix; 258 tests green
-Resume file: None
+Last session: 2026-02-28
+Stopped at: Phase 5 context gathered — design doc + implementation plan + CONTEXT.md committed
+Resume file: .planning/phases/05-scheduler-and-channels/05-CONTEXT.md
