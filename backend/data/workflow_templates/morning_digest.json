@@ -1,0 +1,70 @@
+{
+  "schema_version": "1.0",
+  "nodes": [
+    {
+      "id": "n1",
+      "type": "trigger_node",
+      "position": {"x": 0, "y": 0},
+      "data": {
+        "label": "Daily Trigger",
+        "config": {
+          "trigger_type": "cron",
+          "cron_expression": "0 8 * * 1-5"
+        }
+      }
+    },
+    {
+      "id": "n2",
+      "type": "tool_node",
+      "position": {"x": 200, "y": 0},
+      "data": {
+        "label": "Fetch Email",
+        "config": {
+          "tool_name": "email.fetch",
+          "params": {"since": "last_24h"}
+        }
+      }
+    },
+    {
+      "id": "n3",
+      "type": "condition_node",
+      "position": {"x": 400, "y": 0},
+      "data": {
+        "label": "Has Emails?",
+        "config": {
+          "expression": "output.count > 0"
+        }
+      }
+    },
+    {
+      "id": "n4",
+      "type": "agent_node",
+      "position": {"x": 600, "y": -80},
+      "data": {
+        "label": "Summarize",
+        "config": {
+          "agent": "email",
+          "instruction": "Summarize these emails into a digest"
+        }
+      }
+    },
+    {
+      "id": "n5",
+      "type": "channel_output_node",
+      "position": {"x": 800, "y": -80},
+      "data": {
+        "label": "Send to Telegram",
+        "config": {
+          "channel": "telegram",
+          "template": "digest"
+        }
+      }
+    }
+  ],
+  "edges": [
+    {"id": "e1-2", "source": "n1", "target": "n2"},
+    {"id": "e2-3", "source": "n2", "target": "n3"},
+    {"id": "e3-4", "source": "n3", "target": "n4", "sourceHandle": "true"},
+    {"id": "e4-5", "source": "n4", "target": "n5"}
+  ]
+}
