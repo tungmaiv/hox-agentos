@@ -18,7 +18,6 @@ Create Date: 2026-02-27
 """
 import json
 import pathlib
-import uuid
 
 import sqlalchemy as sa
 from alembic import op
@@ -36,6 +35,12 @@ _FIXTURES_DIR = (
 )
 
 
+_TEMPLATE_IDS: dict[str, str] = {
+    "morning_digest.json": "00000000-0000-0000-0001-000000000001",
+    "alert.json": "00000000-0000-0000-0001-000000000002",
+}
+
+
 def upgrade() -> None:
     bind = op.get_bind()
     for filename in ["morning_digest.json", "alert.json"]:
@@ -48,12 +53,12 @@ def upgrade() -> None:
                 "INSERT INTO workflows "
                 "(id, owner_user_id, name, description, definition_json, is_template, "
                 " created_at, updated_at) "
-                "VALUES (:id, NULL, :name, :description, :definition_json::jsonb, true, "
+                "VALUES (:id, NULL, :name, :description, CAST(:definition_json AS jsonb), true, "
                 " now(), now()) "
                 "ON CONFLICT DO NOTHING"
             ),
             {
-                "id": str(uuid.uuid4()),
+                "id": _TEMPLATE_IDS[filename],
                 "name": base_name,
                 "description": f"Pre-built {base_name} template",
                 "definition_json": json.dumps(data),

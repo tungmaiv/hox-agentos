@@ -71,6 +71,7 @@ async def fire_cron_triggers() -> None:
                     owner_user_id=trigger.owner_user_id,
                     trigger_type="cron",
                     status="pending",
+                    owner_roles_json=trigger.owner_roles_json or [],
                 )
                 session.add(run)
                 await session.commit()

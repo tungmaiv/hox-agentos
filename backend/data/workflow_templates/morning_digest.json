@@ -59,12 +59,25 @@
           "template": "digest"
         }
       }
+    },
+    {
+      "id": "n6",
+      "type": "channel_output_node",
+      "position": {"x": 600, "y": 100},
+      "data": {
+        "label": "No Emails",
+        "config": {
+          "channel": "telegram",
+          "message": "No emails to summarize today."
+        }
+      }
     }
   ],
   "edges": [
     {"id": "e1-2", "source": "n1", "target": "n2"},
     {"id": "e2-3", "source": "n2", "target": "n3"},
     {"id": "e3-4", "source": "n3", "target": "n4", "sourceHandle": "true"},
-    {"id": "e4-5", "source": "n4", "target": "n5"}
+    {"id": "e4-5", "source": "n4", "target": "n5"},
+    {"id": "e3-6", "source": "n3", "target": "n6", "sourceHandle": "false"}
   ]
 }

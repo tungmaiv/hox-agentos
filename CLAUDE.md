@@ -22,6 +22,14 @@ If you cannot make that statement from memory, go read `docs/dev-context.md` now
 - Add it to `docs/dev-context.md` immediately (correct section + Update Log at bottom).
 - Never leave a discovery undocumented for the next session.
 
+**Step 5 — Record decisions in STATE.md.** When you make a technical decision during implementation (e.g., "owner_user_id must be nullable", "use asyncio.run() in Celery tasks"):
+- Add to `.planning/STATE.md` → Decisions section with format:
+  `- [Phase-Plan or context]: <decision> — <rationale>`
+- Commit STATE.md update with the plan's final commit.
+- This ensures decisions survive context resets and are visible to all future agents.
+
+**Step 6 — Use canonical commands only.** See Section 13 for exact test, build, and migration commands. Do NOT guess or invent variants — wrong commands either time out or produce misleading output.
+
 ---
 
 ## DO / DON'T — Quick Reference
@@ -34,6 +42,17 @@ Scan this before writing any code. Details are in the sections below.
 | `uv add <pkg>` / `uv run <cmd>` | `pip install` |
 | `pnpm add <pkg>` / `pnpm run <cmd>` | `npm install` / `yarn add` |
 | `gh pr create` / `gh issue create` | raw `git` for GitHub operations |
+
+### Commits (GSD Tracking)
+| DO | DON'T |
+|----|-------|
+| `feat(04-01): add workflow SQLAlchemy models` | `add workflow models` (no phase prefix) |
+| `fix(04-03): handle HITL interrupt correctly` | `fix bug` (too vague for GSD spot-checks) |
+| `docs(phase-04): update STATE.md position` | `update docs` |
+| `test(04-01): add workflow route tests` | `add tests` |
+| One atomic commit per task | Bundle multiple unrelated tasks in one commit |
+
+**Format:** `<type>(<phase>-<plan>): <description>` — type is feat/fix/test/docs/refactor/chore; description is imperative, ≤72 chars. GSD executor spot-checks rely on this format to verify work completed.
 
 ### URLs & Endpoints
 | DO | DON'T |
@@ -554,32 +573,276 @@ blitz-agentos/
 
 This project uses two complementary AI tool systems:
 
-| Tool | Purpose | Persistence |
-|------|---------|-------------|
-| **GSD** | Phase planning, roadmap tracking, progress | Across sessions via `.planning/` files |
-| **Superpowers** | Coding discipline: TDD, brainstorming, verification | Within session only (reads CLAUDE.md for context) |
+| Tool | Purpose | Persistence | Entry Point |
+|------|---------|-------------|-------------|
+| **GSD** | Project lifecycle: milestones → phases → plans → execution | Across sessions via `.planning/` files | `/gsd:progress` |
+| **Superpowers** | Session discipline: TDD, brainstorming, verification | Within session (reads CLAUDE.md for context) | Skill tool: `superpowers:X` |
+
+### Mandatory Invocation Rule
+
+> **If there is even a 1% chance a Superpowers skill applies to your task, invoke it via the Skill tool BEFORE doing anything — including asking clarifying questions.**
+
+This is not optional. Common rationalizations to reject:
+- "Too simple to need a skill" — simple code breaks in complex ways
+- "I need context first" — skills tell you HOW to gather context
+- "Just this once" — discipline only works when it's unconditional
+
+**Skill priority:** Process skills (brainstorming, debugging) first → Implementation skills second.
 
 ### Key GSD Commands
 
 ```
-/gsd:progress          → check current phase, get next action
-/gsd:plan-phase        → create a PLAN.md for the next phase
-/gsd:execute-phase     → execute phase plans with wave parallelization
-/gsd:new-project       → initialize PROJECT.md + ROADMAP.md from blueprint docs
-/gsd:verify-work       → validate built features against phase goals
-/gsd:debug             → systematic debugging with persistent state
+/gsd:progress          → ALWAYS start here — loads state, routes to next action
+/gsd:discuss-phase N   → Capture design decisions → NN-CONTEXT.md
+/gsd:plan-phase N      → Research + create PLAN.md files (with verification loop)
+/gsd:execute-phase N   → Parallel wave execution of all plans in phase
+/gsd:verify-work N     → Conversational UAT, creates NN-UAT.md with gap list
+/gsd:quick <desc>      → Quick fix with GSD guarantees (no research/checker agents)
+/gsd:debug <desc>      → Systematic debug with persistent state across /clear
 ```
 
 ### Key Superpowers Skills
 
-- `superpowers:brainstorming` — use BEFORE implementing any feature
-- `superpowers:test-driven-development` — use BEFORE writing implementation code
-- `superpowers:verification-before-completion` — use BEFORE claiming work is done
-- `superpowers:dispatching-parallel-agents` — use for 2+ independent tasks
-- `superpowers:systematic-debugging` — use when encountering any bug
+```
+superpowers:brainstorming                → BEFORE any feature implementation
+superpowers:writing-plans                → After brainstorming, before coding
+superpowers:test-driven-development      → BEFORE writing implementation code
+superpowers:systematic-debugging         → BEFORE proposing any fix
+superpowers:verification-before-completion → BEFORE claiming work is done
+superpowers:dispatching-parallel-agents  → For 2+ independent tasks in parallel
+superpowers:subagent-driven-development  → Execute plan in current session
+superpowers:executing-plans              → Execute plan in new parallel session
+superpowers:using-git-worktrees          → Before any implementation begins
+superpowers:finishing-a-development-branch → After all tasks complete
+```
+
+### Artifact Sharing Protocol
+
+GSD and Superpowers exchange artifacts through specific files. Produce and consume them correctly:
+
+```
+Superpowers → GSD:
+  docs/plans/YYYY-MM-DD-design.md  →  gsd-planner reads for design intent
+  docs/plans/YYYY-MM-DD-plan.md    →  gsd-executor can execute directly
+  git commits (atomic, per task)   →  GSD spot-checks for existence
+
+GSD → Superpowers:
+  .planning/PROJECT.md             →  brainstorming reads for project context
+  .planning/NN-PLAN.md             →  subagent-driven-development executes
+  .planning/NN-RESEARCH.md         →  writing-plans uses for technical context
+  .planning/NN-CONTEXT.md          →  writing-plans uses for design decisions
+
+Both read:
+  CLAUDE.md                        →  shared project conventions (this file)
+  docs/dev-context.md              →  URLs, endpoints, gotchas
+```
+
+### Context Continuity Protocol
+
+**Before every `/clear`:**
+1. `STATE.md` has current position and all decisions made this session
+2. Design docs (`docs/plans/`) are committed to git
+3. If mid-task: run `/gsd:pause-work` to create `.planning/RESUME.md`
+
+**After `/clear` (new session start):**
+1. ALWAYS run `/gsd:progress` first — reloads full state from files
+2. If RESUME.md exists: run `/gsd:resume-work` instead
 
 ### Recommended Workflow per Feature
 
 ```
-brainstorm → discuss-phase → plan-phase → execute-phase → verify-work → code-review → complete
+[Session 1 — Design]
+superpowers:brainstorming       → docs/plans/YYYY-MM-DD-design.md
+/gsd:discuss-phase N            → .planning/NN-CONTEXT.md
+/clear
+
+[Session 2 — Planning]
+/gsd:plan-phase N               → .planning/NN-0X-PLAN.md files
+/clear
+
+[Session 3 — Execution]
+superpowers:using-git-worktrees → isolated branch
+/gsd:execute-phase N            → SUMMARY.md + atomic commits per task
+/clear
+
+[Session 4 — Validation]
+superpowers:verification-before-completion  → fresh test suite evidence
+/gsd:verify-work N              → UAT.md
+superpowers:finishing-a-development-branch  → merge or PR
+/gsd:progress                   → confirm completion, get next phase routing
 ```
+
+---
+
+## 13. Canonical Verification Commands
+
+**Always use these exact commands.** `uv run pytest` and `uv run alembic` time out on this machine — use `.venv/bin/` paths directly.
+
+### Backend Tests
+
+```bash
+# Full test suite (canonical — always use this exact form)
+cd /home/tungmv/Projects/hox-agentos/backend
+PYTHONPATH=. .venv/bin/pytest tests/ -q
+
+# Specific file
+PYTHONPATH=. .venv/bin/pytest tests/api/test_workflow_routes.py -v
+
+# With stdout (debugging)
+PYTHONPATH=. .venv/bin/pytest tests/ -v -s
+
+# Current baseline: 258 tests — a commit that drops this count unexpectedly is a red flag
+```
+
+### Frontend Build + Type Check
+
+```bash
+# Full build — catches TypeScript errors (canonical)
+cd /home/tungmv/Projects/hox-agentos/frontend
+pnpm run build
+
+# TypeScript check only (no output files)
+pnpm exec tsc --noEmit
+```
+
+### Alembic Migrations
+
+```bash
+cd /home/tungmv/Projects/hox-agentos/backend
+
+# Check current state
+.venv/bin/alembic heads         # current head(s)
+.venv/bin/alembic current       # current DB revision
+.venv/bin/alembic check         # pending migrations
+
+# Create new migration (autogenerate from ORM models)
+.venv/bin/alembic revision --autogenerate -m "short_description"
+# Next migration number: 012 (current head is 011)
+
+# Migration chain (do NOT create branching without merge migration):
+# 001 → 002+003 (parallel) → merge(9754fd080ee2) → 004 → 005 → 006 → 007 → 008 → 009 → 010 → 011
+
+# Apply migrations — CANNOT run from host (.env not present outside Docker)
+# Method 1: via justfile (requires host .env)
+just migrate
+# Method 2: via docker exec (always works)
+docker exec -it blitz-postgres psql -U blitz blitz -c "<SQL statements>"
+```
+
+### Service Health
+
+```bash
+just ps                          # all Docker services status
+just logs backend                # tail backend logs
+curl http://localhost:8000/health # backend health (no JWT needed)
+curl http://localhost:4000/health # LiteLLM proxy health
+```
+
+---
+
+## 14. Critical Gotchas (Know Before Writing Code)
+
+Hard-won discoveries from prior sessions. Knowing these saves hours of debugging.
+
+### Python / Backend
+
+| Gotcha | Symptom | Fix |
+|--------|---------|-----|
+| `uv run pytest` times out | Hangs indefinitely | Use `.venv/bin/pytest` directly |
+| `uv run alembic` times out | Hangs indefinitely | Use `.venv/bin/alembic` directly |
+| Missing `PYTHONPATH` in pytest | `ModuleNotFoundError: core` | Prefix: `PYTHONPATH=. .venv/bin/pytest` |
+| Two Alembic migrations branch from same revision | `alembic heads` shows 2 | Create merge: `.venv/bin/alembic merge <rev1> <rev2> -m "merge"` |
+| `FlagEmbedding` / `transformers` import error | `is_torch_fx_available` removed | `transformers<5.0` pinned — do NOT upgrade |
+| Celery tasks must use `asyncio.run()` | `async def` task silently fails | Wrap: `asyncio.run(_async_body())` inside each task body |
+| No FK on `user_id` columns | Intentional — users live in Keycloak, not PostgreSQL | Never add FK constraint to a `users` table (doesn't exist) |
+| JSONB columns need variant for SQLite tests | `VECTOR` / `JSONB` DDL fails in aiosqlite | Use `JSON().with_variant(JSONB(), 'postgresql')` on all JSONB columns |
+| Lazy imports not patchable in tests | `patch('module.func')` silently no-ops | Import at module top level; patch at definition site |
+| `importlib.reload()` inside `patch()` | Reload rebinds from real source, bypasses patch | Patch the module-level name directly without reload |
+
+### Frontend / TypeScript
+
+| Gotcha | Symptom | Fix |
+|--------|---------|-----|
+| Next.js 15 async params | `params.id` type error in page components | Type as `Promise<{id: string}>` and `await params` before use |
+| FastAPI route ordering | String literal `/templates` matched as UUID | Declare `/templates`, `/runs/*`, etc. BEFORE `/{workflow_id}` |
+| `pnpm run build` fails on `any` | TypeScript strict mode enforced | Use `unknown` + type guard — never cast to `any` |
+| CopilotKit agent name must match exactly | Agent not found on frontend | Backend name `'blitz_master'` must match `useCoAgent` reference |
+| `react-markdown` v10 removed `className` prop | TypeScript error on `<ReactMarkdown className>` | Wrap in `<div className="..."><ReactMarkdown>` instead |
+| `@copilotkit/shared` not importable as direct dep | pnpm virtual store isolation | Define local `ChatMessage` interface instead of importing |
+
+### Security / Auth
+
+| Gotcha | Symptom | Fix |
+|--------|---------|-----|
+| Keycloak self-signed TLS cert | JWKS HTTP fetch fails with SSL error | Set `KEYCLOAK_CA_CERT=frontend/certs/keycloak-ca.crt` in `backend/.env` |
+| No `aud` claim in `blitz-portal` tokens | `JWTError` → 401 on all requests | Decode with `options={"verify_aud": False}` |
+| Roles in `realm_roles` not `realm_access.roles` | Empty roles → 403 for all users | Check both: `payload.get("realm_roles") or payload.get("realm_access", {}).get("roles", [])` |
+| CopilotKit sends camelCase body | `RunAgentInput(**body)` raises `TypeError` | Use `RunAgentInput.model_validate(body)` |
+| `BlitzState` user_id/conversation_id always `None` via LangGraph | Memory not saved | Use contextvar fallback: `user_id = user_id_ctx.get(None)` |
+
+### GSD / Agents
+
+| Gotcha | Symptom | Fix |
+|--------|---------|-----|
+| `classifyHandoffIfNeeded` error in executor return | Executor reports "failed" with runtime error | Claude Code bug — spot-check SUMMARY.md + commits; if present, treat as success |
+| `alembic.ini` script_location must be relative | Portability fails across machines | Use `script_location = alembic` (relative), not absolute path |
+| `conftest.py` must call `configure_logging()` at session start | structlog config order failures in full suite | Add to session-scoped fixture in `conftest.py` |
+| `os.environ.setdefault()` in conftest for test env vars | Real `.env` values overridden in tests | Use `setdefault()` not `os.environ[key] = value` |
+
+---
+
+## 15. Context Continuity Protocol
+
+How to ensure no context is lost across sessions when using GSD and Superpowers together.
+
+### Before Every `/clear`
+
+```
+□ STATE.md updated — current position, any new decisions added to Decisions section
+□ Design docs committed — docs/plans/YYYY-MM-DD-*.md in git
+□ Technical discoveries added — new URLs/gotchas in docs/dev-context.md
+□ Blockers noted — new blockers in STATE.md → Blockers section
+□ Mid-task? — run /gsd:pause-work to create .planning/RESUME.md
+```
+
+### After `/clear` (New Session)
+
+```bash
+# Step 1 — ALWAYS start with this:
+/gsd:progress
+# Reads STATE.md + ROADMAP.md → shows position + routes to next action
+
+# Step 2 — If RESUME.md exists:
+/gsd:resume-work
+# Restores exact stopping point
+
+# Step 3 — Confirm context before coding
+# Never start implementation without knowing the current phase and position
+```
+
+### Decision Recording Format
+
+When making a technical decision during implementation, add to `.planning/STATE.md`:
+
+```markdown
+### Decisions
+- [04-01]: owner_user_id on workflows is NULLABLE — template rows have owner_user_id=NULL
+- [04-02]: compile_workflow_to_stategraph() returns uncompiled builder — caller injects checkpointer
+- [03-01]: Pin transformers<5.0 (4.57.6) — FlagEmbedding 1.3.x breaks on transformers 5.0
+```
+
+Format: `- [phase-plan or context]: <decision> — <rationale>`
+
+### What Lives Where
+
+| Context type | Canonical location | Read by |
+|-------------|-------------------|---------|
+| Technical decisions (per plan) | `.planning/STATE.md` Decisions | All GSD agents, any new session |
+| Blockers / concerns | `.planning/STATE.md` Blockers | `/gsd:progress`, all agents |
+| Pending todos | `.planning/STATE.md` Pending Todos | `/gsd:check-todos` |
+| Phase design decisions | `.planning/phases/NN-slug/NN-CONTEXT.md` | gsd-planner, gsd-plan-checker |
+| Technical research | `.planning/phases/NN-slug/NN-RESEARCH.md` | gsd-planner |
+| URL / endpoint / port gotchas | `docs/dev-context.md` | Every agent (AGENT INSTRUCTIONS Step 1) |
+| Cross-cutting critical gotchas | `CLAUDE.md` Section 14 | Every agent, every session |
+| Design intent and architecture | `docs/plans/YYYY-MM-DD-design.md` | brainstorming, writing-plans |
+| Implementation plans | `docs/plans/YYYY-MM-DD-plan.md` | executing-plans, subagent-driven-development |

@@ -33,9 +33,10 @@ from typing import Any
 import structlog
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core.db import async_session as _async_session
 from core.db import get_db
 from core.models.user import UserContext
 from core.models.workflow import Workflow, WorkflowRun, WorkflowTrigger
@@ -46,6 +47,7 @@ from core.schemas.workflow import (
     WorkflowResponse,
     WorkflowRunResponse,
     WorkflowTriggerCreate,
+    WorkflowTriggerListResponse,
     WorkflowTriggerResponse,
     WorkflowUpdate,
 )
@@ -156,11 +158,12 @@ async def pending_hitl_count(
 ) -> PendingHitlResponse:
     """Return count of workflow runs paused waiting for human approval."""
     result = await session.execute(
-        select(WorkflowRun)
+        select(func.count())
+        .select_from(WorkflowRun)
         .where(WorkflowRun.owner_user_id == user["user_id"])
         .where(WorkflowRun.status == "paused_hitl")
     )
-    return PendingHitlResponse(count=len(result.scalars().all()))
+    return PendingHitlResponse(count=result.scalar_one())
 
 
 @router.get("/runs/{run_id}", response_model=WorkflowRunResponse)
@@ -288,6 +291,7 @@ async def run_workflow(
         owner_user_id=user["user_id"],
         trigger_type="manual",
         status="pending",
+        owner_roles_json=user.get("roles", []),
     )
     session.add(run)
     await session.commit()
@@ -302,18 +306,18 @@ async def run_workflow(
     return WorkflowRunResponse.model_validate(run)
 
 
-@router.get("/{workflow_id}/triggers", response_model=list[WorkflowTriggerResponse])
+@router.get("/{workflow_id}/triggers", response_model=list[WorkflowTriggerListResponse])
 async def list_triggers(
     workflow_id: uuid.UUID,
     user: UserContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
-) -> list[WorkflowTriggerResponse]:
+) -> list[WorkflowTriggerListResponse]:
     """List all triggers for a workflow."""
     await _get_user_workflow(workflow_id, user["user_id"], session)
     result = await session.execute(
         select(WorkflowTrigger).where(WorkflowTrigger.workflow_id == workflow_id)
     )
-    return [WorkflowTriggerResponse.model_validate(t) for t in result.scalars().all()]
+    return [WorkflowTriggerListResponse.model_validate(t) for t in result.scalars().all()]
 
 
 @router.post(
@@ -337,6 +341,7 @@ async def create_trigger(
         cron_expression=body.cron_expression,
         webhook_secret=webhook_secret,
         is_active=body.is_active,
+        owner_roles_json=user.get("roles", []),
     )
     session.add(trigger)
     await session.commit()
@@ -392,13 +397,28 @@ async def get_run_events(
 
     Stops when a terminal event (workflow_completed, workflow_failed,
     workflow_rejected) is received or after 300 seconds.
+
+    Fast-path: if the run already reached a terminal state before the SSE
+    subscriber connected (common for sub-second workflows), the terminal event
+    is emitted immediately from the DB instead of waiting for pub/sub.
     """
     # Verify run exists and belongs to caller
     await _get_user_run(run_id, user["user_id"], session)
     run_id_str = str(run_id)
 
+    async def _check_run_status() -> tuple[str, dict[str, Any] | None]:
+        """Re-fetch run status from DB (used by subscribe_events fast-path)."""
+        async with _async_session() as s:
+            result = await s.execute(
+                select(WorkflowRun).where(WorkflowRun.id == run_id)
+            )
+            fresh_run = result.scalar_one_or_none()
+            if fresh_run is None:
+                return ("failed", {"error": "Run not found"})
+            return (fresh_run.status, fresh_run.result_json)
+
     async def _event_generator():
-        async for event in subscribe_events(run_id_str):
+        async for event in subscribe_events(run_id_str, get_run_status=_check_run_status):
             if event.get("event") == "keepalive":
                 yield ": keepalive\n\n"
             else:

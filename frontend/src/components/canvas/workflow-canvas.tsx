@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   ReactFlow,
   Background,
@@ -8,6 +8,8 @@ import {
   MiniMap,
   useNodesState,
   useEdgesState,
+  useReactFlow,
+  ReactFlowProvider,
   addEdge,
   type Connection,
   type Node,
@@ -38,10 +40,11 @@ interface WorkflowCanvasProps {
   nodeStatuses: Map<string, NodeStatus>;
   onApprove: () => void;
   onReject: () => void;
-  onSave: (nodes: Node[], edges: Edge[]) => void;
+  onSave: (nodes: Node[], edges: Edge[]) => Promise<void>;
 }
 
-export function WorkflowCanvas({
+// Inner component — must be inside ReactFlowProvider to use useReactFlow()
+function WorkflowCanvasInner({
   initialNodes,
   initialEdges,
   nodeStatuses,
@@ -49,19 +52,25 @@ export function WorkflowCanvas({
   onReject,
   onSave,
 }: WorkflowCanvasProps) {
+  const { screenToFlowPosition } = useReactFlow();
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
 
-  // Sync node statuses into node data whenever they change
-  const nodesWithStatus = nodes.map((n) => ({
-    ...n,
-    data: {
-      ...n.data,
-      status: nodeStatuses.get(n.id) ?? ("idle" as NodeStatus),
-      onApprove: n.type === "hitl_approval_node" ? onApprove : undefined,
-      onReject:  n.type === "hitl_approval_node" ? onReject  : undefined,
-    },
-  }));
+  // Sync node statuses into node data — memoized to avoid unnecessary re-renders
+  const nodesWithStatus = useMemo(
+    () =>
+      nodes.map((n) => ({
+        ...n,
+        data: {
+          ...n.data,
+          status: nodeStatuses.get(n.id) ?? ("idle" as NodeStatus),
+          onApprove: n.type === "hitl_approval_node" ? onApprove : undefined,
+          onReject:  n.type === "hitl_approval_node" ? onReject  : undefined,
+        },
+      })),
+    [nodes, nodeStatuses, onApprove, onReject]
+  );
 
   const onConnect = useCallback(
     (connection: Connection) => setEdges((eds) => addEdge(connection, eds)),
@@ -80,12 +89,11 @@ export function WorkflowCanvas({
       const nodeType = event.dataTransfer.getData("application/reactflow");
       if (!nodeType) return;
 
-      // Approximate canvas position from drop coordinates
-      const rect = event.currentTarget.getBoundingClientRect();
-      const position = {
-        x: event.clientX - rect.left - 80,
-        y: event.clientY - rect.top - 40,
-      };
+      // Use screenToFlowPosition for accurate coordinates at any zoom/pan level
+      const position = screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      });
 
       const newNode: Node = {
         id: crypto.randomUUID(),
@@ -99,11 +107,18 @@ export function WorkflowCanvas({
       };
       setNodes((nds) => nds.concat(newNode));
     },
-    [setNodes]
+    [setNodes, screenToFlowPosition]
   );
 
-  const handleSave = useCallback(() => {
-    onSave(nodes, edges);
+  const handleSave = useCallback(async () => {
+    setSaveStatus("saving");
+    try {
+      await onSave(nodes, edges);
+      setSaveStatus("saved");
+      setTimeout(() => setSaveStatus("idle"), 2000);
+    } catch {
+      setSaveStatus("idle");
+    }
   }, [nodes, edges, onSave]);
 
   return (
@@ -128,11 +143,26 @@ export function WorkflowCanvas({
       {/* Save button — positioned bottom-right inside the canvas */}
       <button
         onClick={handleSave}
-        className="absolute bottom-4 right-4 px-3 py-1.5 text-sm bg-white border border-gray-300 rounded shadow hover:bg-gray-50 transition-colors z-10"
+        disabled={saveStatus === "saving"}
+        className={`absolute bottom-4 right-4 px-3 py-1.5 text-sm rounded shadow transition-colors z-10 ${
+          saveStatus === "saved"
+            ? "bg-green-50 border border-green-400 text-green-700"
+            : saveStatus === "saving"
+            ? "bg-gray-100 border border-gray-300 text-gray-400 cursor-not-allowed"
+            : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
+        }`}
       >
-        Save
+        {saveStatus === "saving" ? "Saving…" : saveStatus === "saved" ? "Saved ✓" : "Save"}
       </button>
     </div>
+  );
+}
+
+export function WorkflowCanvas(props: WorkflowCanvasProps) {
+  return (
+    <ReactFlowProvider>
+      <WorkflowCanvasInner {...props} />
+    </ReactFlowProvider>
   );
 }
 

@@ -29,8 +29,8 @@ _SAFE_PATTERN = re.compile(
     re.VERBOSE,
 )
 
-_TRUE_LITERALS = {"true", "True", "1"}
-_FALSE_LITERALS = {"false", "False", "0", "None", "null"}
+_TRUE_LITERALS = {"true", "True"}
+_FALSE_LITERALS = {"false", "False", "None", "null"}
 
 
 def evaluate_condition(expression: str, output: Any) -> bool:
@@ -79,6 +79,8 @@ def evaluate_condition(expression: str, output: Any) -> bool:
     if isinstance(output, dict):
         actual = output.get(field)
     else:
+        if field and field.startswith("__"):
+            raise ValueError(f"Access to dunder attributes is not permitted: {field!r}")
         actual = getattr(output, field, None)
 
     # Parse right-hand side
@@ -99,9 +101,9 @@ def evaluate_condition(expression: str, output: Any) -> bool:
                 raise ValueError(f"Cannot parse right-hand side value: {rhs_str!r}")
 
     if op == ">":
-        return actual > rhs
+        return actual is not None and actual > rhs
     if op == "<":
-        return actual < rhs
+        return actual is not None and actual < rhs
     if op == "==":
         return actual == rhs
     if op == "!=":

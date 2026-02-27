@@ -148,13 +148,20 @@ export function useWorkflowRun(
       pendingHitlNodeId: null,
       hitlMessage: null,
     }));
-    await fetch(`/api/workflows/runs/${state.runId}/approve`, { method: "POST" });
+    const res = await fetch(`/api/workflows/runs/${state.runId}/approve`, { method: "POST" });
+    if (!res.ok) {
+      setState((prev) => ({ ...prev, isRunning: false }));
+      throw new Error(`Approve failed: ${res.status} ${res.statusText}`);
+    }
     _subscribeToRun(state.runId);
   }, [state.runId, _subscribeToRun]);
 
   const reject = useCallback(async () => {
     if (!state.runId) return;
-    await fetch(`/api/workflows/runs/${state.runId}/reject`, { method: "POST" });
+    const res = await fetch(`/api/workflows/runs/${state.runId}/reject`, { method: "POST" });
+    if (!res.ok) {
+      throw new Error(`Reject failed: ${res.status} ${res.statusText}`);
+    }
     setState((prev) => ({
       ...prev,
       isRunning: false,

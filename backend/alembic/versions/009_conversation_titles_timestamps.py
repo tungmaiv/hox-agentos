@@ -14,26 +14,18 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column(
-        "conversation_titles",
-        sa.Column(
-            "created_at",
-            sa.DateTime(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=False,
-        ),
-    )
-    op.add_column(
-        "conversation_titles",
-        sa.Column(
-            "updated_at",
-            sa.DateTime(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=False,
-        ),
-    )
+    # Migration 005 was later updated to include these columns at table creation.
+    # Use ADD COLUMN IF NOT EXISTS so this migration is a no-op on fresh DBs.
+    op.execute(sa.text(
+        "ALTER TABLE conversation_titles "
+        "ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT now()"
+    ))
+    op.execute(sa.text(
+        "ALTER TABLE conversation_titles "
+        "ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now()"
+    ))
 
 
 def downgrade() -> None:
-    op.drop_column("conversation_titles", "updated_at")
-    op.drop_column("conversation_titles", "created_at")
+    op.execute("ALTER TABLE conversation_titles DROP COLUMN IF EXISTS updated_at")
+    op.execute("ALTER TABLE conversation_titles DROP COLUMN IF EXISTS created_at")

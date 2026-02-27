@@ -47,6 +47,47 @@ restart:
 restart-svc service:
     docker compose restart {{service}}
 
+# ── Infrastructure groups ──────────────────────────────────────────────────────
+# Start core infra only (postgres, redis, litellm, mcp-crm) — no app services
+infra:
+    docker compose up -d postgres redis litellm mcp-crm
+
+# Start Celery workers only (requires infra already running)
+workers:
+    docker compose up -d celery-worker celery-worker-default
+
+# Stop Celery workers
+workers-stop:
+    docker compose stop celery-worker celery-worker-default
+
+# Start infra + workers only (no Docker backend/frontend — run those locally)
+# Use with: just backend && just frontend
+stack:
+    docker compose up -d postgres redis litellm mcp-crm celery-worker celery-worker-default
+
+# Stop the Docker frontend container (use when running frontend locally)
+frontend-docker-stop:
+    docker compose stop frontend
+
+# Force-rebuild and restart a single service: just rebuild backend
+rebuild service:
+    docker compose build {{service}} && docker compose up -d --no-deps {{service}}
+
+# Wipe and restart infra containers + postgres volume (DESTRUCTIVE — loses all DB data)
+# Run `just migrate` afterwards to re-apply schema
+infra-reset:
+    #!/usr/bin/env bash
+    set -e
+    echo "Stopping infra containers..."
+    docker compose stop postgres redis litellm mcp-crm
+    docker compose rm -f postgres redis litellm mcp-crm
+    echo "Removing postgres data volume..."
+    docker volume rm hox-agentos_postgres_data 2>/dev/null || echo "(volume already gone)"
+    echo "Starting fresh infra..."
+    docker compose up -d postgres redis litellm mcp-crm
+    echo ""
+    echo "Done. Run 'just migrate' to re-apply the schema."
+
 # ── Backend (FastAPI / uvicorn) ───────────────────────────────────────────────
 # Start backend dev server (hot reload, port 8000)
 backend:
@@ -79,12 +120,13 @@ backend-log:
 
 # ── Frontend (Next.js / pnpm) ─────────────────────────────────────────────────
 # Start frontend dev server (port 3000)
+# NODE_EXTRA_CA_CERTS: trusts Keycloak's self-signed cert so NextAuth token refresh works
 frontend:
-    cd {{FRONTEND_DIR}} && pnpm dev
+    cd {{FRONTEND_DIR}} && NODE_EXTRA_CA_CERTS="certs/keycloak.crt" pnpm dev
 
 # Start frontend in background (writes PID to .frontend.pid)
 frontend-bg:
-    cd {{FRONTEND_DIR}} && pnpm dev & echo $! > ../.frontend.pid
+    cd {{FRONTEND_DIR}} && NODE_EXTRA_CA_CERTS="certs/keycloak.crt" pnpm dev & echo $! > ../.frontend.pid
     @echo "Frontend started (PID $(cat .frontend.pid))"
 
 # Stop background frontend process

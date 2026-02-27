@@ -90,6 +90,7 @@ async def _execute_workflow_inner(run_id_str: str, hitl_result: str | None = Non
             return
 
         owner_user_id = run.owner_user_id
+        owner_roles: list[str] = run.owner_roles_json or ["employee"]
         definition_json = workflow.definition_json
         run.status = "running"
         await session.commit()
@@ -99,7 +100,7 @@ async def _execute_workflow_inner(run_id_str: str, hitl_result: str | None = Non
         "user_id": str(owner_user_id),
         "email": "",       # Not available in worker — ACL only needs user_id + roles
         "username": "",
-        "roles": ["employee"],
+        "roles": owner_roles,
         "groups": [],
     }
 

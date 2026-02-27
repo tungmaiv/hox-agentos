@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.db import get_db
 from core.models.mcp_server import McpServer
 from core.models.user import UserContext
+from mcp.registry import MCPToolRegistry
 from security.deps import get_current_user
 from security.rbac import has_permission
 
@@ -92,9 +93,11 @@ async def create_mcp_server(
     await session.refresh(server)
 
     # Hot-register: make new server's tools immediately callable without restart.
-    # refresh() is idempotent — re-queries all active servers from DB.
-    from mcp.registry import MCPToolRegistry
-    await MCPToolRegistry.refresh()
+    # refresh() is idempotent — best-effort; server is already persisted if this fails.
+    try:
+        await MCPToolRegistry.refresh()
+    except Exception as exc:
+        logger.warning("mcp_hot_registration_failed", name=body.name, error=str(exc))
 
     logger.info(
         "mcp_server_registered",

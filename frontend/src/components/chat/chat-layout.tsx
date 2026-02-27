@@ -1,6 +1,6 @@
 // frontend/src/components/chat/chat-layout.tsx
 "use client";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { ConversationSidebar } from "./conversation-sidebar";
 import { ChatPanel } from "./chat-panel";
 
@@ -23,6 +23,7 @@ export function ChatLayout({ initialConversations, userEmail }: ChatLayoutProps)
     initialConversations[0]?.conversation_id ?? null
   );
 
+
   const handleNewConversation = () => {
     const newId = crypto.randomUUID();
     setActiveConversationId(newId);
@@ -32,6 +33,19 @@ export function ChatLayout({ initialConversations, userEmail }: ChatLayoutProps)
     setActiveConversationId(conversationId);
     if (window.innerWidth < 768) setSidebarOpen(false);
   };
+
+  // Refresh sidebar after AI finishes responding — picks up newly saved turns.
+  const refreshConversations = useCallback(async () => {
+    try {
+      const response = await fetch("/api/conversations", { cache: "no-store" });
+      if (response.ok) {
+        const data = (await response.json()) as Conversation[];
+        setConversations(data);
+      }
+    } catch {
+      // Non-critical — sidebar just won't update until next page load
+    }
+  }, []);
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
@@ -79,6 +93,7 @@ export function ChatLayout({ initialConversations, userEmail }: ChatLayoutProps)
           conversationId={activeConversationId}
           onSidebarToggle={() => setSidebarOpen(!sidebarOpen)}
           onNewConversation={handleNewConversation}
+          onConversationUpdate={refreshConversations}
         />
       </div>
     </div>

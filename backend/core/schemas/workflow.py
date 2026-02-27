@@ -105,3 +105,15 @@ class WorkflowTriggerResponse(BaseModel):
     is_active: bool
 
     model_config = {"from_attributes": True}
+
+
+class WorkflowTriggerListResponse(BaseModel):
+    """Trigger response for GET (list) endpoints — omits webhook_secret."""
+
+    id: uuid.UUID
+    workflow_id: uuid.UUID
+    trigger_type: str
+    cron_expression: str | None
+    is_active: bool
+
+    model_config = {"from_attributes": True}

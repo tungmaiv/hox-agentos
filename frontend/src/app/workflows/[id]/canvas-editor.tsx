@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import type { Node, Edge } from "@xyflow/react";
 import { WorkflowCanvas } from "@/components/canvas/workflow-canvas";
 import { NodePalette }    from "@/components/canvas/node-palette";
@@ -30,6 +30,30 @@ export function CanvasEditor({ workflow }: { workflow: Workflow }) {
     approve,
     reject,
   } = useWorkflowRun(workflow.id);
+
+  const [hitlError, setHitlError] = useState<string | null>(null);
+
+  const handleApprove = useCallback(async () => {
+    setHitlError(null);
+    try {
+      await approve();
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Approve request failed";
+      setHitlError(message);
+    }
+  }, [approve]);
+
+  const handleReject = useCallback(async () => {
+    setHitlError(null);
+    try {
+      await reject();
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Reject request failed";
+      setHitlError(message);
+    }
+  }, [reject]);
 
   const handleSave = useCallback(
     async (nodes: Node[], edges: Edge[]) => {
@@ -67,20 +91,27 @@ export function CanvasEditor({ workflow }: { workflow: Workflow }) {
 
       {/* HITL banner */}
       {hitlMessage && (
-        <div className="flex items-center gap-3 px-4 py-2 bg-yellow-50 border-b border-yellow-200 shrink-0">
-          <span className="text-yellow-600 text-sm">Paused: {hitlMessage}</span>
-          <button
-            onClick={approve}
-            className="px-3 py-1 text-xs font-medium bg-green-600 text-white rounded hover:bg-green-700"
-          >
-            Approve
-          </button>
-          <button
-            onClick={reject}
-            className="px-3 py-1 text-xs font-medium bg-red-500 text-white rounded hover:bg-red-600"
-          >
-            Reject
-          </button>
+        <div className="flex flex-col border-b border-yellow-200 shrink-0">
+          <div className="flex items-center gap-3 px-4 py-2 bg-yellow-50">
+            <span className="text-yellow-600 text-sm">Paused: {hitlMessage}</span>
+            <button
+              onClick={handleApprove}
+              className="px-3 py-1 text-xs font-medium bg-green-600 text-white rounded hover:bg-green-700"
+            >
+              Approve
+            </button>
+            <button
+              onClick={handleReject}
+              className="px-3 py-1 text-xs font-medium bg-red-500 text-white rounded hover:bg-red-600"
+            >
+              Reject
+            </button>
+          </div>
+          {hitlError && (
+            <div className="px-4 py-1.5 bg-red-50 text-red-600 text-xs">
+              {hitlError}
+            </div>
+          )}
         </div>
       )}
 
@@ -99,8 +130,8 @@ export function CanvasEditor({ workflow }: { workflow: Workflow }) {
             initialNodes={workflow.definition_json.nodes as Node[]}
             initialEdges={workflow.definition_json.edges as Edge[]}
             nodeStatuses={nodeStatuses}
-            onApprove={approve}
-            onReject={reject}
+            onApprove={handleApprove}
+            onReject={handleReject}
             onSave={handleSave}
           />
         </div>

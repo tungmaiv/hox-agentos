@@ -93,6 +93,9 @@ class WorkflowRun(Base):
         DateTime(timezone=True), nullable=True
     )
     result_json: Mapped[dict[str, Any] | None] = mapped_column(_JSONB, nullable=True)
+    owner_roles_json: Mapped[list[str]] = mapped_column(
+        _JSONB, nullable=False, default=list, server_default="[]"
+    )
 
 
 class WorkflowTrigger(Base):
@@ -118,3 +121,6 @@ class WorkflowTrigger(Base):
     cron_expression: Mapped[str | None] = mapped_column(String(100), nullable=True)
     webhook_secret: Mapped[str | None] = mapped_column(String(255), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    owner_roles_json: Mapped[list[str]] = mapped_column(
+        _JSONB, nullable=False, default=list, server_default="[]"
+    )

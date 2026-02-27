@@ -140,9 +140,9 @@ async def _load_memory_node(state: BlitzState) -> dict:
                     fact_count=len(loaded_facts),
                     user_id=str(user_id),
                 )
-        except Exception:
+        except Exception as exc:
             # Graceful degradation: long-term memory failure must not block the agent
-            logger.warning("long_term_memory_load_failed", user_id=str(user_id))
+            logger.warning("long_term_memory_load_failed", user_id=str(user_id), error=str(exc))
 
     # Medium-term memory: recent episode summaries (cross-session context).
     # Loaded unconditionally on user_id — not query-dependent like long-term facts.
@@ -166,9 +166,9 @@ async def _load_memory_node(state: BlitzState) -> dict:
                     episode_count=len(episodes),
                     user_id=str(user_id),
                 )
-        except Exception:
+        except Exception as exc:
             # Graceful degradation: episode load failure must not block the agent
-            logger.warning("medium_term_memory_load_failed", user_id=str(user_id))
+            logger.warning("medium_term_memory_load_failed", user_id=str(user_id), error=str(exc))
 
     if skip_short_term:
         # Short-term was already in state; only return the newly loaded facts

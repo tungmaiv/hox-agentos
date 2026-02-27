@@ -200,7 +200,7 @@ async def test_create_mcp_server_calls_refresh_after_commit() -> None:
     mock_session.refresh = AsyncMock()
 
     with (
-        patch("mcp.registry.MCPToolRegistry") as mock_registry_cls,
+        patch("api.routes.mcp_servers.MCPToolRegistry") as mock_registry_cls,
     ):
         mock_registry_cls.refresh = AsyncMock()
 

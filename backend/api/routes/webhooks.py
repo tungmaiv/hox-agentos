@@ -10,6 +10,7 @@ workflow_triggers.webhook_secret). Returns 401 for both "not found" and
 Execution logic is wired in plan 04-03. For now, creates a WorkflowRun row
 with status=pending and returns {run_id: ..., status: "accepted"}.
 """
+import hmac
 import uuid
 
 import structlog
@@ -47,7 +48,9 @@ async def fire_webhook(
     trigger = result.scalar_one_or_none()
 
     # Reject if not found OR secret mismatch — same 401 to avoid existence leaking
-    if trigger is None or trigger.webhook_secret != x_webhook_secret:
+    if trigger is None or not hmac.compare_digest(
+        trigger.webhook_secret or "", x_webhook_secret
+    ):
         raise HTTPException(status_code=401, detail="Invalid webhook credentials")
 
     run = WorkflowRun(
@@ -55,6 +58,7 @@ async def fire_webhook(
         owner_user_id=trigger.owner_user_id,
         trigger_type="webhook",
         status="pending",
+        owner_roles_json=trigger.owner_roles_json or [],
     )
     session.add(run)
     await session.commit()

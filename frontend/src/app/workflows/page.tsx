@@ -27,16 +27,20 @@ interface WorkflowTemplate {
   description: string | null;
 }
 
-async function fetchJson<T>(url: string, token: string): Promise<T> {
+async function fetchJson<T>(
+  url: string,
+  token: string,
+  fallback: T
+): Promise<T> {
   try {
     const res = await fetch(url, {
       headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
     });
-    if (!res.ok) return [] as unknown as T;
+    if (!res.ok) return fallback;
     return (await res.json()) as T;
   } catch {
-    return [] as unknown as T;
+    return fallback;
   }
 }
 
@@ -49,10 +53,11 @@ export default async function WorkflowsPage() {
   if (!accessToken) redirect("/login");
 
   const [workflows, templates] = await Promise.all([
-    fetchJson<WorkflowListItem[]>(`${BACKEND}/api/workflows`, accessToken),
+    fetchJson<WorkflowListItem[]>(`${BACKEND}/api/workflows`, accessToken, []),
     fetchJson<WorkflowTemplate[]>(
       `${BACKEND}/api/workflows/templates`,
-      accessToken
+      accessToken,
+      []
     ),
   ]);
 

@@ -15,6 +15,7 @@ Stubs (04-02): agent_node and tool_node return mock output.
 Full wiring (04-03): replaced with real sub-agent invocation and MCP tool calls.
 """
 import uuid
+from collections.abc import Awaitable
 from typing import Any, Callable
 
 import structlog
@@ -27,7 +28,7 @@ from mcp.registry import call_mcp_tool
 logger = structlog.get_logger(__name__)
 
 # Type alias for node handler functions
-NodeHandler = Callable[[dict[str, Any], WorkflowState], Any]
+NodeHandler = Callable[[dict[str, Any], WorkflowState], Awaitable[Any]]
 
 
 # ── Trigger node ───────────────────────────────────────────────────────────────
