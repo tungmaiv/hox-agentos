@@ -30,6 +30,15 @@ from agents.workflow_state import WorkflowState
 logger = structlog.get_logger(__name__)
 
 
+def _extract_branch(edge: dict[str, Any]) -> str | None:
+    """Return the branch label ("true"/"false") from either format:
+    - data.branch   — legacy format used in tests and direct API callers
+    - sourceHandle  — React Flow native format used by canvas and template JSON files
+    Returns None for plain (non-conditional) edges.
+    """
+    return edge.get("data", {}).get("branch") or edge.get("sourceHandle") or None
+
+
 def _topological_sort(
     nodes: list[dict[str, Any]],
     edges: list[dict[str, Any]],
@@ -144,13 +153,10 @@ def compile_workflow_to_stategraph(
             builder.add_edge(node_id, END)
             continue
 
-        # Separate edges by branch label
-        true_edges = [e for e in node_edges if e.get("data", {}).get("branch") == "true"]
-        false_edges = [e for e in node_edges if e.get("data", {}).get("branch") == "false"]
-        plain_edges = [
-            e for e in node_edges
-            if e.get("data", {}).get("branch") not in ("true", "false")
-        ]
+        # Separate edges by branch label (supports both data.branch and sourceHandle formats)
+        true_edges = [e for e in node_edges if _extract_branch(e) == "true"]
+        false_edges = [e for e in node_edges if _extract_branch(e) == "false"]
+        plain_edges = [e for e in node_edges if _extract_branch(e) not in ("true", "false")]
 
         if node_type == "condition_node" and (true_edges or false_edges):
             # Conditional routing based on current_output (bool result from condition handler)

@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.db import get_db
 from core.models.workflow import WorkflowRun, WorkflowTrigger
+from scheduler.tasks.workflow_execution import execute_workflow_task
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/api/webhooks", tags=["webhooks"])
@@ -58,6 +59,6 @@ async def fire_webhook(
     session.add(run)
     await session.commit()
     await session.refresh(run)
+    execute_workflow_task.delay(str(run.id))
     logger.info("webhook_fired", trigger_id=str(webhook_id), run_id=str(run.id))
-    # Execution is wired in plan 04-03
     return {"run_id": str(run.id), "status": "accepted"}

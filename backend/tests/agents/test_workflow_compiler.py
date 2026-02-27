@@ -76,3 +76,25 @@ def test_compile_unknown_node_type_raises():
     }
     with pytest.raises(ValueError, match="Unknown node type"):
         compile_workflow_to_stategraph(bad_node_type, USER_CTX)
+
+
+# --- sourceHandle fallback (React Flow native format used by templates) ---
+
+def test_extract_branch_reads_data_branch():
+    """_extract_branch returns branch label from data.branch (legacy format)."""
+    from agents.graphs import _extract_branch
+    assert _extract_branch({"data": {"branch": "true"}}) == "true"
+    assert _extract_branch({"data": {"branch": "false"}}) == "false"
+
+
+def test_extract_branch_reads_source_handle_fallback():
+    """_extract_branch falls back to sourceHandle (React Flow native format used by templates)."""
+    from agents.graphs import _extract_branch
+    assert _extract_branch({"sourceHandle": "true"}) == "true"
+    assert _extract_branch({"sourceHandle": "false"}) == "false"
+
+
+def test_extract_branch_returns_none_for_plain_edge():
+    """_extract_branch returns None for plain (non-conditional) edges."""
+    from agents.graphs import _extract_branch
+    assert _extract_branch({"id": "e1", "source": "n1", "target": "n2"}) is None
