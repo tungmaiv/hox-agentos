@@ -71,14 +71,15 @@ Plans:
   3. User can interact with the agent via MS Teams with the same capabilities as web chat
   4. External platform user IDs (Telegram, WhatsApp, Teams) are mapped to Blitz user IDs via channel_accounts table — unlinked users receive a pairing prompt
   5. New channel adapters can be added by implementing the ChannelAdapter protocol without modifying agent, tool, or memory code
-**Plans**: 5 plans
+**Plans**: 6 plans
 
 Plans:
 - [x] 05-01-PLAN.md — Core: DB models, InternalMessage, ChannelGateway, pairing, backend routes
-- [ ] 05-02-PLAN.md — Telegram sidecar (FastAPI service + Docker)
-- [ ] 05-03-PLAN.md — WhatsApp Cloud API sidecar (FastAPI service + Docker)
-- [ ] 05-04-PLAN.md — MS Teams Bot Framework sidecar (FastAPI service + Docker)
-- [ ] 05-05-PLAN.md — Integration wiring: agent invocation, delivery router, frontend settings
+- [x] 05-02-PLAN.md — Telegram sidecar (FastAPI service + Docker)
+- [x] 05-03-PLAN.md — WhatsApp Cloud API sidecar (FastAPI service + Docker)
+- [x] 05-04-PLAN.md — MS Teams Bot Framework sidecar (FastAPI service + Docker)
+- [x] 05-05-PLAN.md — Integration wiring: agent invocation, delivery router, frontend settings
+- [ ] 05-06-PLAN.md — Gap closure: formal ChannelAdapter(Protocol) class (CHAN-05)
 
 ### Phase 6: Extensibility Registries
 **Goal**: Admins and developers can manage the platform's agents, tools, skills, and MCP servers as runtime artifacts through database-backed registries with granular permissions
@@ -140,7 +141,7 @@ Plans:
 | 3.1. Memory Read + MCP Hot-Reg | v1.0 | 1/1 | ✅ Complete | 2026-02-26 |
 | 4. Canvas & Workflows | v1.1 | 5/5 | ✅ Complete | 2026-02-27 |
 | 4.1. Phase 4 Polish (INSERTED) | v1.1 | 1/1 | ✅ Complete | 2026-02-27 |
-| 5. Scheduler & Channels | v1.1 | 1/5 | 🚧 In Progress | — |
+| 5. Scheduler & Channels | v1.1 | 5/6 | 🚧 In Progress | — |
 | 6. Extensibility Registries | v1.1 | 0/3 | ○ Not started | — |
 | 7. Hardening & Sandboxing | v1.1 | 0/2 | ○ Not started | — |
 | 8. Observability | v1.1 | 0/2 | ○ Not started | — |
