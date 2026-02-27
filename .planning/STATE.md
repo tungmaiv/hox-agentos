@@ -5,15 +5,15 @@
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates daily work routines and lets them build custom automations without writing code -- all within an enterprise-secure, on-premise environment.
-**Current focus:** v1.1 MVP — Phase 5 (Scheduler & Channels) COMPLETE, all 5 plans done
+**Current focus:** v1.1 MVP — Phase 5 (Scheduler & Channels) COMPLETE, all 6 plans done (including gap closure)
 
 ## Current Position
 
-Milestone: v1.1 Phase 5 (Scheduler & Channels) — ALL PLANS COMPLETE
-Phases: 1, 2, 2.1, 3, 3.1, 4, 4.1 — all complete; Phase 5: Plan 05 of 5 complete
-Current Plan: 05-05 complete — Phase 5 finished
-Status: Phase 5 complete — All channel infrastructure wired end-to-end
-Last activity: 2026-02-28 -- 05-05 executed (13 min, 3 tasks, 10 new tests)
+Milestone: v1.1 Phase 5 (Scheduler & Channels) — ALL PLANS COMPLETE (including gap closures)
+Phases: 1, 2, 2.1, 3, 3.1, 4, 4.1 — all complete; Phase 5: Plan 06 of 6 complete
+Current Plan: 05-06 complete — Phase 5 fully finished (CHAN-05 gap closed)
+Status: Phase 5 complete — All channel infrastructure + ChannelAdapter Protocol
+Last activity: 2026-02-28 -- 05-06 executed (2 min, 2 tasks, 4 new tests)
 
 Progress: [████████████] 100% (26/26 plans estimated)
 
@@ -50,6 +50,7 @@ Progress: [████████████] 100% (26/26 plans estimated)
 | Phase 05-scheduler-and-channels P03 | 3 | 2 tasks | 8 files |
 | Phase 05-scheduler-and-channels P04 | 4 | 2 tasks | 8 files |
 | Phase 05-scheduler-and-channels P05 | 13 | 3 tasks | 13 files |
+| Phase 05-scheduler-and-channels P06 | 2 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -158,6 +159,7 @@ Recent decisions affecting current work:
 - [05-05]: delivery_router.deliver() changed from sync to async -- runs inside LangGraph async context, cannot use asyncio.run()
 - [05-05]: WHATSAPP added to DeliveryTarget enum alongside TELEGRAM and TEAMS
 - [05-05]: Phase 4 scheduler already satisfies CHAN-06 -- user_context in initial_state flows to all node handlers; verified with tests, no code changes needed
+- [05-06]: ChannelAdapter Protocol uses @runtime_checkable for isinstance() support at runtime, not just static type checking
 
 ### Pending Todos
 
@@ -183,5 +185,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-28
-Stopped at: Completed 05-05-PLAN.md — Phase 5 complete: channel integration wiring, frontend settings, scheduler owner context
-Resume file: .planning/phases/05-scheduler-and-channels/05-05-SUMMARY.md
+Stopped at: Completed 05-06-PLAN.md — Phase 5 gap closure complete: ChannelAdapter Protocol class (CHAN-05)
+Resume file: .planning/phases/05-scheduler-and-channels/05-06-SUMMARY.md
