@@ -142,6 +142,11 @@ Recent decisions affecting current work:
 - [05-01]: SQLite stores datetimes as offset-naive; handle_pairing normalizes pairing_expires to UTC-aware before comparing with datetime.now(timezone.utc)
 - [05-01]: send_outbound uses 3x exponential backoff (1s, 2s, 4s) per design doc locked decision
 - [05-01]: Channel routes router has /api/channels prefix built-in; registered in main.py without extra prefix
+- [05-02]: Sidecar defines its own InternalMessage Pydantic model (mirrors backend channels.models) to keep standalone with no cross-project imports
+- [05-02]: MarkdownV2 escaping via regex substitution of all 18 Telegram special characters
+- [05-02]: InlineKeyboard buttons arranged in rows of 3, capped at 100 per Telegram limit; excess silently dropped
+- [05-02]: Webhook registration on startup via FastAPI lifespan; gracefully skipped if TELEGRAM_WEBHOOK_URL not set
+- [05-02]: Group @mention detection checks entity type 'mention' matching BOT_USERNAME and 'bot_command' entities
 - [05-03]: Button capping applied at both /send endpoint and WhatsApp API wrapper for defense in depth -- test correctness requires capping at endpoint level since API is mocked
 - [05-03]: Attachment rejection sends text reply to user explaining text-only MVP limitation
 - [05-03]: Interactive button replies extract callback_data from button_reply.id into metadata dict
