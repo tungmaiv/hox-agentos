@@ -9,7 +9,7 @@
  */
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import { WorkflowCanvas } from "@/components/canvas/workflow-canvas";
+import { CanvasEditor } from "./canvas-editor";
 
 const BACKEND = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -46,5 +46,5 @@ export default async function WorkflowEditorPage({
     };
   };
 
-  return <WorkflowCanvas workflow={workflow} />;
+  return <CanvasEditor workflow={workflow} />;
 }

@@ -9,6 +9,7 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { PendingBadge } from "./_pending-badge";
 
 const BACKEND = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -57,7 +58,10 @@ export default async function WorkflowsPage() {
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Workflows</h1>
+        <div className="flex items-center">
+          <h1 className="text-2xl font-bold text-gray-900">Workflows</h1>
+          <PendingBadge />
+        </div>
         <Link
           href="/workflows/new"
           className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium transition-colors"
