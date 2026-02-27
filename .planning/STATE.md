@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates daily work routines and lets them build custom automations without writing code -- all within an enterprise-secure, on-premise environment.
-**Current focus:** v1.1 MVP — Phase 5 (Scheduler & Channels) in progress, Plans 01-04 complete
+**Current focus:** v1.1 MVP — Phase 5 (Scheduler & Channels) COMPLETE, all 5 plans done
 
 ## Current Position
 
-Milestone: v1.1 Phase 5 (Scheduler & Channels) — Plans 01-04 complete
-Phases: 1, 2, 2.1, 3, 3.1, 4, 4.1 — all complete; Phase 5: Plan 04 of 5 complete
-Current Plan: 05-04 complete, next: 05-05
-Status: Phase 5 Plan 04 complete — Teams sidecar: Bot Framework wrapper, Adaptive Cards, Docker Compose
-Last activity: 2026-02-28 -- 05-04 executed (4 min, 2 tasks, 8 tests)
+Milestone: v1.1 Phase 5 (Scheduler & Channels) — ALL PLANS COMPLETE
+Phases: 1, 2, 2.1, 3, 3.1, 4, 4.1 — all complete; Phase 5: Plan 05 of 5 complete
+Current Plan: 05-05 complete — Phase 5 finished
+Status: Phase 5 complete — All channel infrastructure wired end-to-end
+Last activity: 2026-02-28 -- 05-05 executed (13 min, 3 tasks, 10 new tests)
 
-Progress: [████████████] 96% (25/26 plans estimated)
+Progress: [████████████] 100% (26/26 plans estimated)
 
 ## Performance Metrics
 
@@ -49,6 +49,7 @@ Progress: [████████████] 96% (25/26 plans estimated)
 | Phase 05-scheduler-and-channels P02 | 5 | 2 tasks | 8 files |
 | Phase 05-scheduler-and-channels P03 | 3 | 2 tasks | 8 files |
 | Phase 05-scheduler-and-channels P04 | 4 | 2 tasks | 8 files |
+| Phase 05-scheduler-and-channels P05 | 13 | 3 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -153,6 +154,10 @@ Recent decisions affecting current work:
 - [05-04]: Direct httpx calls to Bot Framework Connector API instead of botbuilder-core SDK -- lightweight, consistent with Telegram/WhatsApp sidecar patterns
 - [05-04]: MVP token validation decodes JWT without signature verification, checks issuer and audience -- full JWKS rotation handling deferred
 - [05-04]: hatch build config packages=['.'] required for flat project layout (main.py at root, no package directory)
+- [05-05]: ChannelGateway._invoke_agent() uses create_master_graph() per invocation -- avoids shared checkpointer state between web and channel executions
+- [05-05]: delivery_router.deliver() changed from sync to async -- runs inside LangGraph async context, cannot use asyncio.run()
+- [05-05]: WHATSAPP added to DeliveryTarget enum alongside TELEGRAM and TEAMS
+- [05-05]: Phase 4 scheduler already satisfies CHAN-06 -- user_context in initial_state flows to all node handlers; verified with tests, no code changes needed
 
 ### Pending Todos
 
@@ -178,5 +183,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-28
-Stopped at: Completed 05-04-PLAN.md — Teams sidecar (Bot Framework, Adaptive Cards, Docker)
-Resume file: .planning/phases/05-scheduler-and-channels/05-04-SUMMARY.md
+Stopped at: Completed 05-05-PLAN.md — Phase 5 complete: channel integration wiring, frontend settings, scheduler owner context
+Resume file: .planning/phases/05-scheduler-and-channels/05-05-SUMMARY.md
