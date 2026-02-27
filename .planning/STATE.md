@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-26)
 
 ## Current Position
 
-Milestone: v1.1 Phase 4 (Canvas & Workflows) — in progress
-Phases: 1, 2, 2.1, 3, 3.1 — all complete; Phase 4 — 4/5 plans complete
-Status: Phase 4 Plan 04 complete (AsyncPostgresSaver HITL persistence, 6 node renderers, SSE hooks, full canvas editor); 248 tests green
-Last activity: 2026-02-27 -- Phase 4 Plan 04 complete — HITL canvas UI built end-to-end, 1 new test, 248 total passing
+Milestone: v1.1 Phase 4 (Canvas & Workflows) — COMPLETE
+Phases: 1, 2, 2.1, 3, 3.1 — all complete; Phase 4 — 5/5 plans complete
+Status: Phase 4 Plan 05 complete (morning_digest + alert templates, Alembic migration 011, TemplateCard component); 254 tests green
+Last activity: 2026-02-27 -- Phase 4 Plan 05 complete — workflow templates seeded, Use Template button wired, Phase 4 fully done
 
-Progress: [█████████░] 82% (20/23 plans estimated)
+Progress: [██████████] 87% (21/23 plans estimated)
 
 ## Performance Metrics
 
@@ -43,6 +43,7 @@ Progress: [█████████░] 82% (20/23 plans estimated)
 | Phase 04-canvas-and-workflows P02 | 4 | 6 tasks | 9 files |
 | Phase 04-canvas-and-workflows P03 | 7 | 5 tasks | 12 files |
 | Phase 04-canvas-and-workflows P04 | 8 | 6 tasks | 22 files |
+| Phase 04-canvas-and-workflows P05 | 4 | 4 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -132,6 +133,7 @@ Recent decisions affecting current work:
 - [04-03]: TestClient + dependency_overrides pattern for workflow run API tests — AsyncClient caused 503 due to Celery/Redis import at module load
 - [Phase 04-canvas-and-workflows]: AsyncPostgresSaver.from_conn_string() as async context manager; setup() idempotently creates LangGraph checkpoint tables; pg_conn_str strips postgresql+asyncpg:// to postgresql://
 - [Phase 04-canvas-and-workflows]: langgraph upgraded 0.4.10->1.0.1 for checkpoint-postgres 3.0.4 compatibility; NodeStatus type in use-workflow-run.ts (imported by nodes); WorkflowCanvas syncs nodeStatuses on render (not useEffect) to avoid loop
+- [Phase 04-05]: Fixture files as standalone JSON (not Python dicts) — readable, editable without code changes; migration 011 ON CONFLICT DO NOTHING for idempotency; TemplateCard fetch via relative URL through Next.js proxy to ensure JWT injection
 
 ### Pending Todos
 
@@ -155,6 +157,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-27T04:35:30Z
-Stopped at: Completed 04-04-PLAN.md — AsyncPostgresSaver HITL persistence, 6 node renderers, SSE useWorkflowRun hook, full canvas editor; 248 tests green; Phase 4 Plan 05 (templates) is next
+Last session: 2026-02-27T04:42:44Z
+Stopped at: Completed 04-05-PLAN.md — workflow templates (morning_digest + alert fixtures, Alembic migration 011, TemplateCard component); 254 tests green; Phase 4 fully complete; Phase 5 (Channels) is next
 Resume file: None
