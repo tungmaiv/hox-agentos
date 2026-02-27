@@ -14,12 +14,15 @@ It returns the node's output, which the compiler wraps in a state update:
 Stubs (04-02): agent_node and tool_node return mock output.
 Full wiring (04-03): replaced with real sub-agent invocation and MCP tool calls.
 """
+import uuid
 from typing import Any, Callable
 
 import structlog
 
 from agents.condition_evaluator import evaluate_condition
 from agents.workflow_state import WorkflowState
+from core.db import async_session
+from mcp.registry import call_mcp_tool
 
 logger = structlog.get_logger(__name__)
 
@@ -66,32 +69,66 @@ async def _handle_agent_node(config: dict[str, Any], state: WorkflowState) -> An
 
 async def _handle_tool_node(config: dict[str, Any], state: WorkflowState) -> Any:
     """
-    Call a registered tool through the tool registry.
+    Call a registered MCP tool through all 3 security gates.
 
     Config fields:
-      tool_name: tool identifier (must be registered in gateway/tool_registry.py)
-      params:    dict of tool parameters
+      tool_name: tool identifier registered in gateway/tool_registry.py
+      params:    dict of tool parameters passed as MCP arguments
 
-    04-02 stub: looks up the tool definition and returns mock output.
-    04-03: replaced with real MCP client invocation via mcp/registry.py.
+    Security: delegates to mcp.registry.call_mcp_tool which enforces
+    Gate 2 (RBAC) and Gate 3 (ACL). Gate 1 is satisfied because user_context
+    was already validated by the workflow's owner JWT before execution.
+
+    Returns the MCP tool result dict, or an error dict if the call fails.
     """
+    from fastapi import HTTPException
     from gateway.tool_registry import get_tool
+    from core.models.user import UserContext
 
     tool_name = config.get("tool_name", "")
     params = config.get("params", {})
-    tool_def = get_tool(tool_name)
 
-    if tool_def is None:
+    # Unknown tool: fail fast before opening a DB session
+    if get_tool(tool_name) is None:
         logger.warning("tool_node_unknown_tool", tool_name=tool_name)
         return {"error": f"Tool '{tool_name}' not registered", "success": False}
 
-    logger.info(
-        "tool_node_invoked",
-        tool=tool_name,
-        user_id=str((state.get("user_context") or {}).get("user_id")),
-    )
-    # Stub — 04-03 wires real MCP invocation
-    return {"tool": tool_name, "params": params, "result": "[stub]", "success": True, "count": 0}
+    # Build UserContext from workflow state — user_id must be UUID
+    raw_ctx = state.get("user_context") or {}
+    try:
+        user_uuid = uuid.UUID(str(raw_ctx.get("user_id", "")))
+    except ValueError:
+        return {"error": "Invalid user_id in workflow state", "success": False}
+
+    user_ctx: UserContext = {
+        "user_id": user_uuid,
+        "email": str(raw_ctx.get("email", "")),
+        "username": str(raw_ctx.get("username", "")),
+        "roles": list(raw_ctx.get("roles", [])),
+        "groups": list(raw_ctx.get("groups", [])),
+    }
+
+    try:
+        async with async_session() as session:
+            result = await call_mcp_tool(
+                tool_name=tool_name,
+                arguments=params,
+                user=user_ctx,
+                db_session=session,
+            )
+        logger.info("tool_node_success", tool=tool_name, user_id=str(user_uuid))
+        return result
+    except HTTPException as exc:
+        logger.warning(
+            "tool_node_denied",
+            tool=tool_name,
+            status_code=exc.status_code,
+            detail=exc.detail,
+        )
+        return {"error": f"{exc.status_code}: {exc.detail}", "success": False}
+    except Exception as exc:
+        logger.error("tool_node_error", tool=tool_name, error=str(exc))
+        return {"error": str(exc), "success": False}
 
 
 # ── Condition node ────────────────────────────────────────────────────────────
