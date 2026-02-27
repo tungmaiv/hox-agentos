@@ -23,7 +23,7 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 ### 🚧 v1.1 (Planned)
 
 - [x] **Phase 4: Canvas and Workflows** — React Flow visual builder, canvas-to-StateGraph compiler, workflow templates, HITL approval, cron/webhook triggers (completed 2026-02-27)
-- [ ] **Phase 4.1: Phase 4 Polish** (INSERTED) — HITL canvas node amber ring fix, Next.js webhook proxy
+- [x] **Phase 4.1: Phase 4 Polish** (INSERTED) — HITL canvas node amber ring fix, Next.js webhook proxy (completed 2026-02-27)
 - [ ] **Phase 5: Scheduler and Channels** — Web chat enhancement, Telegram/WhatsApp/Teams adapters, channel identity resolution, ChannelAdapter protocol
 - [ ] **Phase 6: Extensibility Registries** — Database-backed registries for agents/tools/skills/MCP servers, CRUD APIs, per-artifact permissions
 - [ ] **Phase 7: Hardening and Sandboxing** — Docker sandbox execution, security audit, RLS policies, credential scanning, penetration testing
@@ -59,7 +59,7 @@ Plans:
   2. Next.js proxy route exists at `/api/webhooks/[webhook_id]` matching the pattern of all other workflow proxy routes
 
 Plans:
-- [ ] 04.1-01: HITL canvas node amber ring fix + Next.js webhook proxy
+- [x] 04.1-01: HITL canvas node amber ring fix + Next.js webhook proxy
 
 ### Phase 5: Scheduler and Channels
 **Goal**: Users can interact with the agent from Telegram, WhatsApp, and MS Teams in addition to web chat, and workflows run on cron schedules as the owning user's context
@@ -139,7 +139,7 @@ Plans:
 | 3. Sub-Agents & Memory | v1.0 | 6/6 | ✅ Complete | 2026-02-26 |
 | 3.1. Memory Read + MCP Hot-Reg | v1.0 | 1/1 | ✅ Complete | 2026-02-26 |
 | 4. Canvas & Workflows | v1.1 | 5/5 | ✅ Complete | 2026-02-27 |
-| 4.1. Phase 4 Polish (INSERTED) | v1.1 | 0/1 | ○ Not started | — |
+| 4.1. Phase 4 Polish (INSERTED) | v1.1 | 1/1 | ✅ Complete | 2026-02-27 |
 | 5. Scheduler & Channels | v1.1 | 0/5 | ○ Not started | — |
 | 6. Extensibility Registries | v1.1 | 0/3 | ○ Not started | — |
 | 7. Hardening & Sandboxing | v1.1 | 0/2 | ○ Not started | — |

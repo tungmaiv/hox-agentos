@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates daily work routines and lets them build custom automations without writing code -- all within an enterprise-secure, on-premise environment.
-**Current focus:** v1.0 MVP shipped — planning v1.1 (Phase 4: Canvas & Workflows)
+**Current focus:** v1.1 MVP — Phase 4.1 complete, next: Phase 5 (Scheduler & Channels)
 
 ## Current Position
 
-Milestone: v1.1 Phase 4 (Canvas & Workflows) — COMPLETE
-Phases: 1, 2, 2.1, 3, 3.1 — all complete; Phase 4 — 5/5 plans complete
-Status: Phase 4 Plan 05 complete (morning_digest + alert templates, Alembic migration 011, TemplateCard component); 254 tests green
-Last activity: 2026-02-27 -- Phase 4 Plan 05 complete — workflow templates seeded, Use Template button wired, Phase 4 fully done
+Milestone: v1.1 Phase 4.1 (Phase 4 Polish) — COMPLETE
+Phases: 1, 2, 2.1, 3, 3.1, 4, 4.1 — all complete
+Status: Phase 4.1 complete — HITL amber ring node_id fix + Next.js webhook proxy; 14 code review issues resolved; chat typing indicator added; bge-m3 race condition fixed
+Last activity: 2026-02-27 -- Phase 4.1 complete — all v1.1 pre-Phase5 work done
 
 Progress: [██████████] 87% (21/23 plans estimated)
 
