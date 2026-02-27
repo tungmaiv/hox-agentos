@@ -197,10 +197,10 @@ function EditableUserMessage({ message, onEdit }: EditableUserMessageProps) {
 // ---------------------------------------------------------------------------
 function TypingIndicator() {
   return (
-    <div className="flex items-end gap-2 px-4 pb-3">
+    <div className="flex items-end gap-2 px-4 pb-3" aria-live="polite" aria-label="Blitz is thinking">
       <div className="bg-white border border-gray-200 rounded-2xl px-4 py-2.5 shadow-sm flex items-center gap-1.5">
         <span className="text-xs text-gray-500 mr-1">Blitz is thinking</span>
-        <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0ms]" />
+        <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" />
         <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:150ms]" />
         <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:300ms]" />
       </div>
@@ -370,7 +370,7 @@ function ChatPanelInner({ conversationId, onSidebarToggle, onNewConversation, on
         onInProgress={handleInProgress}
       />
       {isProcessing && (
-        <div className="absolute bottom-[60px] left-0 right-0 pointer-events-none">
+        <div className="absolute bottom-[76px] left-0 right-0 pointer-events-none">
           <TypingIndicator />
         </div>
       )}
