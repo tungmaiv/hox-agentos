@@ -23,6 +23,7 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 ### 🚧 v1.1 (Planned)
 
 - [x] **Phase 4: Canvas and Workflows** — React Flow visual builder, canvas-to-StateGraph compiler, workflow templates, HITL approval, cron/webhook triggers (completed 2026-02-27)
+- [ ] **Phase 4.1: Phase 4 Polish** (INSERTED) — HITL canvas node amber ring fix, Next.js webhook proxy
 - [ ] **Phase 5: Scheduler and Channels** — Web chat enhancement, Telegram/WhatsApp/Teams adapters, channel identity resolution, ChannelAdapter protocol
 - [ ] **Phase 6: Extensibility Registries** — Database-backed registries for agents/tools/skills/MCP servers, CRUD APIs, per-artifact permissions
 - [ ] **Phase 7: Hardening and Sandboxing** — Docker sandbox execution, security audit, RLS policies, credential scanning, penetration testing
@@ -48,6 +49,17 @@ Plans:
 - [ ] 04-03: Workflow triggers (cron scheduling and webhook/events)
 - [ ] 04-04: HITL approval nodes and A2UI integration
 - [ ] 04-05: Pre-built workflow templates (Morning Digest, Alert)
+
+### Phase 4.1: Phase 4 Polish
+**Goal**: Close two non-blocking tech debt items from the Phase 4 milestone audit before continuing to Phase 5
+**Depends on**: Phase 4
+**Gap Closure**: Closes tech debt items from v1.1-MILESTONE-AUDIT.md
+**Success Criteria** (what must be TRUE):
+  1. HITL approval node on canvas turns amber (`awaiting_approval` ring activates) when workflow pauses at an HITL node — `hitl_paused` SSE event includes `node_id` from `state_snapshot.next[0]`
+  2. Next.js proxy route exists at `/api/webhooks/[webhook_id]` matching the pattern of all other workflow proxy routes
+
+Plans:
+- [ ] 04.1-01: HITL canvas node amber ring fix + Next.js webhook proxy
 
 ### Phase 5: Scheduler and Channels
 **Goal**: Users can interact with the agent from Telegram, WhatsApp, and MS Teams in addition to web chat, and workflows run on cron schedules as the owning user's context
@@ -117,7 +129,7 @@ Plans:
 
 ## Progress
 
-**Execution Order:** 1 → 2 → 2.1 → 3 → 3.1 → 4 (parallel with 5) → 5 → 6 → 7 → 8
+**Execution Order:** 1 → 2 → 2.1 → 3 → 3.1 → 4 → 4.1 → 5 → 6 → 7 → 8
 
 | Phase | Milestone | Plans | Status | Completed |
 |-------|-----------|-------|--------|-----------|
@@ -126,7 +138,8 @@ Plans:
 | 2.1. Tech Debt Cleanup | v1.0 | 1/1 | ✅ Complete | 2026-02-26 |
 | 3. Sub-Agents & Memory | v1.0 | 6/6 | ✅ Complete | 2026-02-26 |
 | 3.1. Memory Read + MCP Hot-Reg | v1.0 | 1/1 | ✅ Complete | 2026-02-26 |
-| 4. Canvas & Workflows | 5/5 | Complete   | 2026-02-27 | — |
+| 4. Canvas & Workflows | v1.1 | 5/5 | ✅ Complete | 2026-02-27 |
+| 4.1. Phase 4 Polish (INSERTED) | v1.1 | 0/1 | ○ Not started | — |
 | 5. Scheduler & Channels | v1.1 | 0/5 | ○ Not started | — |
 | 6. Extensibility Registries | v1.1 | 0/3 | ○ Not started | — |
 | 7. Hardening & Sandboxing | v1.1 | 0/2 | ○ Not started | — |
