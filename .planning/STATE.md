@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-26)
 ## Current Position
 
 Milestone: v1.1 Phase 4 (Canvas & Workflows) — in progress
-Phases: 1, 2, 2.1, 3, 3.1 — all complete; Phase 4 — 2/5 plans complete
-Status: Phase 4 Plan 02 complete (WorkflowState, condition evaluator, node handlers, compiler); 233 tests green
-Last activity: 2026-02-27 -- Phase 4 Plan 02 complete — compile_workflow_to_stategraph compiler, 34 new tests, 233 total passing
+Phases: 1, 2, 2.1, 3, 3.1 — all complete; Phase 4 — 3/5 plans complete
+Status: Phase 4 Plan 03 complete (execute_workflow Celery task, Redis pub/sub SSE, real tool_node handler, cron beat); 247 tests green
+Last activity: 2026-02-27 -- Phase 4 Plan 03 complete — execution engine wired end-to-end, 14 new tests, 247 total passing
 
-Progress: [█████████░] 76% (18/23 plans estimated)
+Progress: [█████████░] 78% (19/23 plans estimated)
 
 ## Performance Metrics
 
@@ -41,6 +41,7 @@ Progress: [█████████░] 76% (18/23 plans estimated)
 | Phase 03-sub-agents-memory-and-integrations P05 | 35 | 2 tasks | 19 files |
 | Phase 04-canvas-and-workflows P01 | 15 | 6 tasks | 27 files |
 | Phase 04-canvas-and-workflows P02 | 4 | 6 tasks | 9 files |
+| Phase 04-canvas-and-workflows P03 | 7 | 5 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -123,6 +124,11 @@ Recent decisions affecting current work:
 - [04-02]: compile_workflow_to_stategraph() returns uncompiled StateGraph builder — caller injects checkpointer (MemorySaver in tests, AsyncPostgresSaver in 04-04 production)
 - [04-02]: Default-arg closure pattern _make_node_fn(nid=node_id, ntype=...) prevents loop-variable capture bugs in LangGraph node factory
 - [04-02]: condition_node router reads current_output bool directly (output of _handle_condition_node) — avoids extra state field and mutation
+- [04-03]: workflow_events.py separates sync publish_event() (Celery) from async subscribe_events() (FastAPI SSE) — both Redis pub/sub, no in-process queue
+- [04-03]: GraphInterrupt caught by type name check ("Interrupt" in type(exc).__name__) — avoids fragile import path, handles subclasses
+- [04-03]: MemorySaver used in 04-03 execute_workflow — TODO(04-04): replace with AsyncPostgresSaver for HITL cross-process persistence
+- [04-03]: approve/reject use HTTP 409 (Conflict) for wrong status — semantically correct vs 400 (Bad Request) for state machine violations
+- [04-03]: TestClient + dependency_overrides pattern for workflow run API tests — AsyncClient caused 503 due to Celery/Redis import at module load
 
 ### Pending Todos
 
@@ -146,6 +152,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-27T04:13:41Z
-Stopped at: Completed 04-02-PLAN.md — WorkflowState TypedDict, sandboxed condition evaluator, node handler registry (6 types), compile_workflow_to_stategraph() compiler; 233 tests green; Phase 4 Plan 03 (Execution engine) is next
+Last session: 2026-02-27T04:24:09Z
+Stopped at: Completed 04-03-PLAN.md — execute_workflow Celery task, Redis pub/sub SSE event bus, real tool_node handler with call_mcp_tool(), cron beat scheduler; 247 tests green; Phase 4 Plan 04 (HITL canvas) is next
 Resume file: None
