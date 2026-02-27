@@ -83,6 +83,22 @@ services:
     networks:
       - blitz-net
 
+  # Channel sidecar — Telegram
+  telegram-gateway:
+    build: ./channel-gateways/telegram
+    ports:
+      - "9001:9001"
+    environment:
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      TELEGRAM_WEBHOOK_URL: ${TELEGRAM_WEBHOOK_URL}
+      BACKEND_URL: http://backend:8000
+    depends_on:
+      backend:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - blitz-net
+
   frontend:
     build: ./frontend
     ports:
