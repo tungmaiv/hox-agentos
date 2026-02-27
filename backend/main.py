@@ -21,6 +21,7 @@ from api.routes import (
     tools,
     user_instructions,
 )
+from api.routes.channels import router as channels_router
 from api.routes.webhooks import router as webhooks_router
 from api.routes.workflows import router as workflows_router
 from core.config import settings
@@ -116,6 +117,10 @@ def create_app() -> FastAPI:
     # Webhook trigger — public endpoint (no JWT), validates X-Webhook-Secret
     # Note: router already includes /api prefix in its definition
     app.include_router(webhooks_router)
+
+    # Channel integration routes — incoming (no auth), pair/accounts (JWT)
+    # Note: router already includes /api/channels prefix in its definition
+    app.include_router(channels_router)
 
     return app
 
