@@ -17,6 +17,7 @@ USAGE:
 """
 
 import asyncio
+import threading
 from typing import Protocol, runtime_checkable
 
 import structlog
@@ -54,19 +55,27 @@ class BGE_M3Provider:
     """
 
     _model = None  # class-level model cache — shared across instances within a process
+    _lock = threading.Lock()  # guards lazy initialization against concurrent threads
     dimension: int = 1024
 
     def _get_model(self):  # type: ignore[return]
-        """Load FlagModel on first use, then return cached instance."""
-        if self.__class__._model is None:
-            from FlagEmbedding import FlagModel
+        """Load FlagModel on first use, then return cached instance.
 
-            self.__class__._model = FlagModel(
-                "BAAI/bge-m3",
-                use_fp16=True,  # halves memory; negligible accuracy loss on bge-m3
-                query_instruction_for_retrieval="",
-            )
-            logger.info("bge_m3_model_loaded")
+        Double-checked locking: outer check avoids lock acquisition on every call
+        after the model is loaded; inner check prevents duplicate loading when two
+        threads race through the outer check simultaneously.
+        """
+        if self.__class__._model is None:
+            with self.__class__._lock:
+                if self.__class__._model is None:
+                    from FlagEmbedding import FlagModel
+
+                    self.__class__._model = FlagModel(
+                        "BAAI/bge-m3",
+                        use_fp16=True,  # halves memory; negligible accuracy loss on bge-m3
+                        query_instruction_for_retrieval="",
+                    )
+                    logger.info("bge_m3_model_loaded")
         return self.__class__._model
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
@@ -76,7 +85,7 @@ class BGE_M3Provider:
         Runs model.encode() in a thread executor to avoid blocking the event loop.
         Returns list of 1024-dim float vectors, one per input text.
         """
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         model = self._get_model()
         result: list[list[float]] = await loop.run_in_executor(
             None, lambda: model.encode(texts).tolist()
