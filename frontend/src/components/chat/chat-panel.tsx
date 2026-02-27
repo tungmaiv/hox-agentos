@@ -193,6 +193,22 @@ function EditableUserMessage({ message, onEdit }: EditableUserMessageProps) {
 }
 
 // ---------------------------------------------------------------------------
+// Typing indicator — animated dots while agent is processing
+// ---------------------------------------------------------------------------
+function TypingIndicator() {
+  return (
+    <div className="flex items-end gap-2 px-4 pb-3">
+      <div className="bg-white border border-gray-200 rounded-2xl px-4 py-2.5 shadow-sm flex items-center gap-1.5">
+        <span className="text-xs text-gray-500 mr-1">Blitz is thinking</span>
+        <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0ms]" />
+        <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:150ms]" />
+        <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:300ms]" />
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Inner panel — must be inside CopilotKit context to use hooks
 // ---------------------------------------------------------------------------
 interface ChatPanelInnerProps {
@@ -204,6 +220,7 @@ interface ChatPanelInnerProps {
 
 function ChatPanelInner({ conversationId, onSidebarToggle, onNewConversation, onConversationUpdate }: ChatPanelInnerProps) {
   const { messages, reset } = useCopilotChatInternal();
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // History is restored via agent/connect StateSnapshot (runtime.py loads turns
   // from DB and returns them in the snapshot). No client-side fetch needed.
@@ -213,6 +230,7 @@ function ChatPanelInner({ conversationId, onSidebarToggle, onNewConversation, on
   const wasInProgressRef = useRef(false);
   const handleInProgress = useCallback(
     (inProgress: boolean) => {
+      setIsProcessing(inProgress);
       if (inProgress) {
         wasInProgressRef.current = true;
       } else if (wasInProgressRef.current) {
@@ -313,7 +331,7 @@ function ChatPanelInner({ conversationId, onSidebarToggle, onNewConversation, on
   };
 
   return (
-    <div className="flex flex-col h-full text-gray-900">
+    <div className="flex flex-col h-full text-gray-900 relative">
       {/* Header bar — shown on all screen sizes */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200 bg-white text-gray-900">
         <div className="flex items-center gap-3 md:hidden">
@@ -351,6 +369,11 @@ function ChatPanelInner({ conversationId, onSidebarToggle, onNewConversation, on
         AssistantMessage={CustomAssistantMessage}
         onInProgress={handleInProgress}
       />
+      {isProcessing && (
+        <div className="absolute bottom-[60px] left-0 right-0 pointer-events-none">
+          <TypingIndicator />
+        </div>
+      )}
     </div>
   );
 }
