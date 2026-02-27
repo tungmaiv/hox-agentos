@@ -9,11 +9,16 @@ Execution flow:
   2. Build UserContext from run.owner_user_id
   3. Set run.status = "running", commit
   4. compile_workflow_to_stategraph(definition_json, user_context)
-  5. Compile with MemorySaver (04-04 replaces with AsyncPostgresSaver for HITL)
+  5. Compile with AsyncPostgresSaver for HITL cross-process persistence
   6. astream_events() — publish SSE events to Redis for each node
   7. On completion: set run.status = "completed", store result_json
   8. On GraphInterrupt (HITL): set run.status = "paused_hitl", publish hitl_paused event
   9. On error: set run.status = "failed", publish workflow_failed event
+
+Resume path (hitl_result is not None):
+  - Re-compile graph with same AsyncPostgresSaver and thread_id
+  - await compiled.aupdate_state(config, {"hitl_result": decision})
+  - await compiled.astream_events(None, config)  # resumes from checkpoint
 
 Security: Celery workers run as the job owner (WorkflowRun.owner_user_id).
 Full 3-gate ACL is enforced inside node handlers (see node_handlers.py).
@@ -24,9 +29,11 @@ from datetime import datetime, timezone
 from typing import Any
 
 import structlog
+from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from sqlalchemy import select
 
 from agents.graphs import compile_workflow_to_stategraph
+from core.config import get_settings
 from core.db import async_session
 from core.models.workflow import Workflow, WorkflowRun
 from scheduler.celery_app import celery_app
@@ -101,10 +108,11 @@ async def execute_workflow(run_id_str: str, hitl_result: str | None = None) -> N
         return
 
     # ── 4. Attach checkpointer and execute ────────────────────────────────────
-    # TODO(04-04): Replace MemorySaver with AsyncPostgresSaver for HITL persistence
-    from langgraph.checkpoint.memory import MemorySaver
-    checkpointer = MemorySaver()
-    compiled = builder.compile(checkpointer=checkpointer)
+    # AsyncPostgresSaver persists graph state to PostgreSQL so a paused workflow
+    # can be resumed in a new Celery worker process (HITL cross-process persistence).
+    _settings = get_settings()
+    # AsyncPostgresSaver uses psycopg3 — strip the +asyncpg driver prefix
+    pg_conn_str = _settings.database_url.replace("postgresql+asyncpg://", "postgresql://")
 
     # Known node IDs from the definition (used to filter astream_events noise)
     known_node_ids: set[str] = {n["id"] for n in definition_json.get("nodes", [])}
@@ -120,75 +128,86 @@ async def execute_workflow(run_id_str: str, hitl_result: str | None = None) -> N
 
     final_output: Any = None
 
-    try:
-        async for event in compiled.astream_events(initial_state, config=config, version="v1"):
-            event_type: str = event.get("event", "")
-            node_name: str = event.get("name", "")
+    async with AsyncPostgresSaver.from_conn_string(pg_conn_str) as checkpointer:
+        await checkpointer.setup()  # creates LangGraph checkpoint tables if not exist
+        compiled = builder.compile(checkpointer=checkpointer)
 
-            # Only emit events for our workflow nodes (filter LangGraph internals)
-            if node_name not in known_node_ids:
-                continue
+        if hitl_result is not None:
+            # Resume path: inject hitl_result into the saved checkpoint state
+            await compiled.aupdate_state(config, {"hitl_result": hitl_result})
+            input_state = None  # graph resumes from the saved checkpoint
+        else:
+            # Fresh execution
+            input_state = initial_state
 
-            if event_type == "on_chain_start":
-                publish_event(run_id_str, {"event": "node_started", "node_id": node_name})
+        try:
+            async for event in compiled.astream_events(input_state, config=config, version="v1"):
+                event_type: str = event.get("event", "")
+                node_name: str = event.get("name", "")
 
-            elif event_type == "on_chain_end":
-                output = event.get("data", {}).get("output", {})
-                current = output.get("current_output") if isinstance(output, dict) else output
-                final_output = current
+                # Only emit events for our workflow nodes (filter LangGraph internals)
+                if node_name not in known_node_ids:
+                    continue
+
+                if event_type == "on_chain_start":
+                    publish_event(run_id_str, {"event": "node_started", "node_id": node_name})
+
+                elif event_type == "on_chain_end":
+                    output = event.get("data", {}).get("output", {})
+                    current = output.get("current_output") if isinstance(output, dict) else output
+                    final_output = current
+                    publish_event(run_id_str, {
+                        "event": "node_completed",
+                        "node_id": node_name,
+                        "output": current,
+                    })
+
+        except Exception as exc:
+            # Check for GraphInterrupt (HITL pause)
+            exc_type = type(exc).__name__
+            if "Interrupt" in exc_type or "GraphInterrupt" in exc_type:
+                # Extract interrupt data — LangGraph stores it in exc.args or exc.interrupts
+                interrupt_data: dict[str, Any] = {}
+                if hasattr(exc, "interrupts") and exc.interrupts:
+                    raw = exc.interrupts[0]
+                    interrupt_data = raw.value if hasattr(raw, "value") else {}
+                elif exc.args:
+                    raw = exc.args[0]
+                    interrupt_data = raw[0].value if (isinstance(raw, (list, tuple)) and raw and hasattr(raw[0], "value")) else {}
+
+                message = interrupt_data.get("message", "Approval required to continue.")
+
+                # Store paused state in DB — checkpoint_id = thread_id for resume
+                async with async_session() as session:
+                    result = await session.execute(
+                        select(WorkflowRun).where(WorkflowRun.id == run_id)
+                    )
+                    run = result.scalar_one_or_none()
+                    if run:
+                        run.status = "paused_hitl"
+                        run.checkpoint_id = run_id_str  # thread_id for AsyncPostgresSaver resume
+                        run.result_json = {"hitl_message": message, "interrupt_data": interrupt_data}
+                        await session.commit()
+
                 publish_event(run_id_str, {
-                    "event": "node_completed",
-                    "node_id": node_name,
-                    "output": current,
+                    "event": "hitl_paused",
+                    "message": message,
+                    "interrupt_data": interrupt_data,
                 })
+                logger.info("workflow_paused_hitl", run_id=run_id_str, message=message)
+                return
 
-    except Exception as exc:
-        # Check for GraphInterrupt (HITL pause)
-        exc_type = type(exc).__name__
-        if "Interrupt" in exc_type or "GraphInterrupt" in exc_type:
-            # Extract interrupt data — LangGraph stores it in exc.args or exc.interrupts
-            interrupt_data: dict[str, Any] = {}
-            if hasattr(exc, "interrupts") and exc.interrupts:
-                raw = exc.interrupts[0]
-                interrupt_data = raw.value if hasattr(raw, "value") else {}
-            elif exc.args:
-                raw = exc.args[0]
-                interrupt_data = raw[0].value if (isinstance(raw, (list, tuple)) and raw and hasattr(raw[0], "value")) else {}
-
-            message = interrupt_data.get("message", "Approval required to continue.")
-
-            # Find the HITL node_id — it's the last node that published node_started
-            # We store the paused node_id in result_json for resume
+            # Genuine error
+            logger.error("workflow_execution_error", run_id=run_id_str, error=str(exc), exc_type=exc_type)
             async with async_session() as session:
-                result = await session.execute(
-                    select(WorkflowRun).where(WorkflowRun.id == run_id)
-                )
+                result = await session.execute(select(WorkflowRun).where(WorkflowRun.id == run_id))
                 run = result.scalar_one_or_none()
                 if run:
-                    run.status = "paused_hitl"
-                    run.checkpoint_id = run_id_str  # thread_id for AsyncPostgresSaver resume
-                    run.result_json = {"hitl_message": message, "interrupt_data": interrupt_data}
+                    run.status = "failed"
+                    run.result_json = {"error": str(exc)}
                     await session.commit()
-
-            publish_event(run_id_str, {
-                "event": "hitl_paused",
-                "message": message,
-                "interrupt_data": interrupt_data,
-            })
-            logger.info("workflow_paused_hitl", run_id=run_id_str, message=message)
+            publish_event(run_id_str, {"event": "workflow_failed", "error": str(exc)})
             return
-
-        # Genuine error
-        logger.error("workflow_execution_error", run_id=run_id_str, error=str(exc), exc_type=exc_type)
-        async with async_session() as session:
-            result = await session.execute(select(WorkflowRun).where(WorkflowRun.id == run_id))
-            run = result.scalar_one_or_none()
-            if run:
-                run.status = "failed"
-                run.result_json = {"error": str(exc)}
-                await session.commit()
-        publish_event(run_id_str, {"event": "workflow_failed", "error": str(exc)})
-        return
 
     # ── 5. Mark completed ─────────────────────────────────────────────────────
     async with async_session() as session:
