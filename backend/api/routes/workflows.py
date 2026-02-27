@@ -25,6 +25,7 @@ Note on route ordering: specific paths (/templates, /runs/...) MUST be declared
 BEFORE parameterized paths (/{id}) to prevent FastAPI from matching "templates"
 or "runs" as {id} values.
 """
+import json
 import secrets
 import uuid
 from typing import Any
@@ -48,7 +49,9 @@ from core.schemas.workflow import (
     WorkflowTriggerResponse,
     WorkflowUpdate,
 )
+from scheduler.tasks.workflow_execution import execute_workflow_task
 from security.deps import get_current_user
+from workflow_events import publish_event, subscribe_events
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/api/workflows", tags=["workflows"])
@@ -177,14 +180,17 @@ async def approve_hitl(
     user: UserContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> WorkflowRunResponse:
-    """Approve a paused HITL workflow run, resuming execution."""
+    """Resume a paused_hitl workflow run with approval."""
     run = await _get_user_run(run_id, user["user_id"], session)
     if run.status != "paused_hitl":
-        raise HTTPException(status_code=400, detail="Run is not paused for HITL")
-    # Resume execution is wired in 04-03 — for now just set status to running
+        raise HTTPException(
+            status_code=409,
+            detail=f"Run status is '{run.status}', expected 'paused_hitl'",
+        )
     run.status = "running"
     await session.commit()
     await session.refresh(run)
+    execute_workflow_task.delay(str(run.id), hitl_result="approved")
     logger.info("hitl_approved", run_id=str(run_id), user_id=str(user["user_id"]))
     return WorkflowRunResponse.model_validate(run)
 
@@ -195,13 +201,18 @@ async def reject_hitl(
     user: UserContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> WorkflowRunResponse:
-    """Reject a paused HITL workflow run, marking it failed."""
+    """Reject a paused_hitl workflow run — marks it failed."""
     run = await _get_user_run(run_id, user["user_id"], session)
     if run.status != "paused_hitl":
-        raise HTTPException(status_code=400, detail="Run is not paused for HITL")
+        raise HTTPException(
+            status_code=409,
+            detail=f"Run status is '{run.status}', expected 'paused_hitl'",
+        )
     run.status = "failed"
+    run.result_json = {"rejected_by": str(user["user_id"])}
     await session.commit()
     await session.refresh(run)
+    publish_event(str(run_id), {"event": "workflow_rejected"})
     logger.info("hitl_rejected", run_id=str(run_id), user_id=str(user["user_id"]))
     return WorkflowRunResponse.model_validate(run)
 
@@ -256,18 +267,20 @@ async def delete_workflow(
 
 @router.post(
     "/{workflow_id}/run",
-    status_code=status.HTTP_202_ACCEPTED,
+    response_model=WorkflowRunResponse,
+    status_code=status.HTTP_201_CREATED,
 )
 async def run_workflow(
     workflow_id: uuid.UUID,
     user: UserContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
-) -> dict[str, Any]:
+) -> WorkflowRunResponse:
     """
     Trigger manual execution of a workflow.
 
-    Creates a WorkflowRun row with status=pending and returns {run_id}.
-    Actual execution logic is wired in plan 04-03.
+    Creates a WorkflowRun row with status=pending, enqueues the execution Celery
+    task, and returns the run record. The client can then subscribe to
+    GET /api/workflows/runs/{run_id}/events for real-time node-level SSE events.
     """
     workflow = await _get_user_workflow(workflow_id, user["user_id"], session)
     run = WorkflowRun(
@@ -279,13 +292,14 @@ async def run_workflow(
     session.add(run)
     await session.commit()
     await session.refresh(run)
+    execute_workflow_task.delay(str(run.id))
     logger.info(
-        "workflow_run_created",
+        "workflow_run_enqueued",
         workflow_id=str(workflow_id),
         run_id=str(run.id),
         user_id=str(user["user_id"]),
     )
-    return {"run_id": str(run.id), "status": "accepted"}
+    return WorkflowRunResponse.model_validate(run)
 
 
 @router.get("/{workflow_id}/triggers", response_model=list[WorkflowTriggerResponse])
@@ -361,9 +375,7 @@ async def delete_trigger(
     await session.commit()
 
 
-# ── SSE Events stub ───────────────────────────────────────────────────────────
-# Full SSE event streaming is wired in 04-03. This stub returns an empty stream
-# so the frontend proxy route can be established without errors.
+# ── SSE Events ────────────────────────────────────────────────────────────────
 
 @router.get("/runs/{run_id}/events")
 async def get_run_events(
@@ -371,15 +383,32 @@ async def get_run_events(
     user: UserContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> StreamingResponse:
-    """SSE stream of workflow run events. Full implementation in plan 04-03."""
-    # Verify run ownership
+    """
+    SSE stream of workflow run events.
+
+    Subscribes to the Redis pub/sub channel for this run and streams
+    node-level events (node_started, node_completed, hitl_paused,
+    workflow_completed, workflow_failed) to the browser.
+
+    Stops when a terminal event (workflow_completed, workflow_failed,
+    workflow_rejected) is received or after 300 seconds.
+    """
+    # Verify run exists and belongs to caller
     await _get_user_run(run_id, user["user_id"], session)
+    run_id_str = str(run_id)
 
-    async def empty_stream():
-        # Stub — returns a single 'connected' event then closes
-        yield "event: connected\ndata: {}\n\n"
+    async def _event_generator():
+        async for event in subscribe_events(run_id_str):
+            if event.get("event") == "keepalive":
+                yield ": keepalive\n\n"
+            else:
+                yield f"data: {json.dumps(event)}\n\n"
 
-    return StreamingResponse(empty_stream(), media_type="text/event-stream")
+    return StreamingResponse(
+        _event_generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 # ── Internal helpers ──────────────────────────────────────────────────────────
