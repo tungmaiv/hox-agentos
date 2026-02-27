@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates daily work routines and lets them build custom automations without writing code -- all within an enterprise-secure, on-premise environment.
-**Current focus:** v1.1 MVP — Phase 5 (Scheduler & Channels) in progress, Plan 01 complete
+**Current focus:** v1.1 MVP — Phase 5 (Scheduler & Channels) in progress, Plans 01-04 complete
 
 ## Current Position
 
-Milestone: v1.1 Phase 5 (Scheduler & Channels) — Plan 01 complete
-Phases: 1, 2, 2.1, 3, 3.1, 4, 4.1 — all complete; Phase 5: Plan 01 of 5 complete
-Current Plan: 05-01 complete, next: 05-02
-Status: Phase 5 Plan 01 complete — channel core: ORM models, InternalMessage, ChannelGateway, pairing flow, API routes
-Last activity: 2026-02-28 -- 05-01 executed (5 min, 3 tasks, 20 new tests)
+Milestone: v1.1 Phase 5 (Scheduler & Channels) — Plans 01-04 complete
+Phases: 1, 2, 2.1, 3, 3.1, 4, 4.1 — all complete; Phase 5: Plan 04 of 5 complete
+Current Plan: 05-04 complete, next: 05-05
+Status: Phase 5 Plan 04 complete — Teams sidecar: Bot Framework wrapper, Adaptive Cards, Docker Compose
+Last activity: 2026-02-28 -- 05-04 executed (4 min, 2 tasks, 8 tests)
 
-Progress: [██████████] 89% (22/24 plans estimated)
+Progress: [████████████] 96% (25/26 plans estimated)
 
 ## Performance Metrics
 
@@ -46,6 +46,7 @@ Progress: [██████████] 89% (22/24 plans estimated)
 | Phase 04-canvas-and-workflows P04 | 8 | 6 tasks | 22 files |
 | Phase 04-canvas-and-workflows P05 | 4 | 4 tasks | 7 files |
 | Phase 05-scheduler-and-channels P01 | 5 | 3 tasks | 13 files |
+| Phase 05-scheduler-and-channels P03 | 3 | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -139,6 +140,9 @@ Recent decisions affecting current work:
 - [05-01]: SQLite stores datetimes as offset-naive; handle_pairing normalizes pairing_expires to UTC-aware before comparing with datetime.now(timezone.utc)
 - [05-01]: send_outbound uses 3x exponential backoff (1s, 2s, 4s) per design doc locked decision
 - [05-01]: Channel routes router has /api/channels prefix built-in; registered in main.py without extra prefix
+- [05-03]: Button capping applied at both /send endpoint and WhatsApp API wrapper for defense in depth -- test correctness requires capping at endpoint level since API is mocked
+- [05-03]: Attachment rejection sends text reply to user explaining text-only MVP limitation
+- [05-03]: Interactive button replies extract callback_data from button_reply.id into metadata dict
 
 ### Pending Todos
 
@@ -164,5 +168,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-28
-Stopped at: Completed 05-01-PLAN.md — channel core foundation (ORM, Pydantic, Gateway, Routes)
-Resume file: .planning/phases/05-scheduler-and-channels/05-01-SUMMARY.md
+Stopped at: Completed 05-03-PLAN.md — WhatsApp sidecar (Cloud API, webhook, send, Docker)
+Resume file: .planning/phases/05-scheduler-and-channels/05-03-SUMMARY.md
