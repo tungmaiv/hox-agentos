@@ -181,28 +181,47 @@ async def _handle_hitl_approval_node(config: dict[str, Any], state: WorkflowStat
 
 async def _handle_channel_output_node(config: dict[str, Any], state: WorkflowState) -> Any:
     """
-    Send current_output to a delivery channel.
+    Send current_output to a delivery channel via ChannelGateway.
 
     Config fields:
-      channel:  one of "telegram", "teams", "web"
+      channel:  one of "telegram", "whatsapp", "ms_teams", "web"
       template: message template string, e.g. "Digest:\n{output}"
 
-    04-02 stub: logs the send and returns success.
-    04-03: wired to channels/gateway.py send_to_channel().
+    Web channel: returns result without sending (AG-UI handles web delivery).
+    Other channels: sends outbound via ChannelGateway.send_outbound().
     """
     channel = config.get("channel", "web")
     template = config.get("template", "{output}")
     output = state.get("current_output")
-    user_id = str((state.get("user_context") or {}).get("user_id", ""))
+    user_context = state.get("user_context", {})
 
-    # Render template — safe string format, not eval
+    # Render template -- safe string format, not eval
     try:
         message = template.format(output=output)
     except (KeyError, ValueError):
         message = str(output)
 
-    logger.info("channel_output_node_invoked", channel=channel, user_id=user_id)
-    # Stub — 04-03 wires real channel dispatch
+    logger.info(
+        "channel_output_node_invoked",
+        channel=channel,
+        user_id=str((user_context or {}).get("user_id", "")),
+    )
+
+    if channel == "web":
+        return {"channel": channel, "message": message, "sent": True}
+
+    # Real channel delivery via ChannelGateway
+    from api.routes.channels import get_channel_gateway
+    from channels.models import InternalMessage
+
+    gateway = get_channel_gateway()
+    msg = InternalMessage(
+        direction="outbound",
+        channel=channel,
+        external_user_id=(user_context or {}).get("external_user_id", ""),
+        text=message,
+    )
+    await gateway.send_outbound(msg)
     return {"channel": channel, "message": message, "sent": True}
 
 

@@ -1,7 +1,7 @@
-"""TDD tests for DeliveryRouterNode."""
+"""Tests for DeliveryRouterNode."""
 import pytest
 from langchain_core.messages import AIMessage
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 
 @pytest.mark.asyncio
@@ -19,19 +19,25 @@ async def test_delivery_router_web_chat_does_not_raise() -> None:
 
 
 @pytest.mark.asyncio
-async def test_delivery_router_telegram_stub_logs_warning() -> None:
-    """TELEGRAM stub logs warning and does not raise."""
+async def test_delivery_router_telegram_sends_outbound() -> None:
+    """TELEGRAM delivery sends outbound via ChannelGateway."""
     from agents.delivery_router import delivery_router_node
 
-    with patch("agents.delivery_router.logger") as mock_logger:
+    mock_gateway = AsyncMock()
+    mock_gateway.send_outbound = AsyncMock()
+
+    with patch("agents.delivery_router._get_gateway", return_value=mock_gateway):
         state = {
-            "messages": [AIMessage(content="Hello")],
+            "messages": [AIMessage(content="Hello from agent")],
             "delivery_targets": ["TELEGRAM"],
             "loaded_facts": [],
         }
         result = await delivery_router_node(state)
         assert result == {}
-        mock_logger.warning.assert_called_once()
+        mock_gateway.send_outbound.assert_called_once()
+        sent_msg = mock_gateway.send_outbound.call_args[0][0]
+        assert sent_msg.channel == "telegram"
+        assert sent_msg.direction == "outbound"
 
 
 @pytest.mark.asyncio
@@ -51,19 +57,47 @@ async def test_delivery_router_email_notify_stub_logs_warning() -> None:
 
 
 @pytest.mark.asyncio
-async def test_delivery_router_teams_stub_logs_warning() -> None:
-    """TEAMS stub logs warning and does not raise."""
+async def test_delivery_router_teams_sends_outbound() -> None:
+    """TEAMS delivery sends outbound via ChannelGateway."""
     from agents.delivery_router import delivery_router_node
 
-    with patch("agents.delivery_router.logger") as mock_logger:
+    mock_gateway = AsyncMock()
+    mock_gateway.send_outbound = AsyncMock()
+
+    with patch("agents.delivery_router._get_gateway", return_value=mock_gateway):
         state = {
-            "messages": [AIMessage(content="Hello")],
+            "messages": [AIMessage(content="Hello from agent")],
             "delivery_targets": ["TEAMS"],
             "loaded_facts": [],
         }
         result = await delivery_router_node(state)
         assert result == {}
-        mock_logger.warning.assert_called_once()
+        mock_gateway.send_outbound.assert_called_once()
+        sent_msg = mock_gateway.send_outbound.call_args[0][0]
+        assert sent_msg.channel == "ms_teams"
+        assert sent_msg.direction == "outbound"
+
+
+@pytest.mark.asyncio
+async def test_delivery_router_whatsapp_sends_outbound() -> None:
+    """WHATSAPP delivery sends outbound via ChannelGateway."""
+    from agents.delivery_router import delivery_router_node
+
+    mock_gateway = AsyncMock()
+    mock_gateway.send_outbound = AsyncMock()
+
+    with patch("agents.delivery_router._get_gateway", return_value=mock_gateway):
+        state = {
+            "messages": [AIMessage(content="Hello from agent")],
+            "delivery_targets": ["WHATSAPP"],
+            "loaded_facts": [],
+        }
+        result = await delivery_router_node(state)
+        assert result == {}
+        mock_gateway.send_outbound.assert_called_once()
+        sent_msg = mock_gateway.send_outbound.call_args[0][0]
+        assert sent_msg.channel == "whatsapp"
+        assert sent_msg.direction == "outbound"
 
 
 @pytest.mark.asyncio
@@ -71,7 +105,10 @@ async def test_delivery_router_multiple_targets() -> None:
     """Multiple targets: WEB_CHAT + TELEGRAM both processed."""
     from agents.delivery_router import delivery_router_node
 
-    with patch("agents.delivery_router.logger") as mock_logger:
+    mock_gateway = AsyncMock()
+    mock_gateway.send_outbound = AsyncMock()
+
+    with patch("agents.delivery_router._get_gateway", return_value=mock_gateway):
         state = {
             "messages": [AIMessage(content="Hello")],
             "delivery_targets": ["WEB_CHAT", "TELEGRAM"],
@@ -79,9 +116,8 @@ async def test_delivery_router_multiple_targets() -> None:
         }
         result = await delivery_router_node(state)
         assert result == {}
-        # TELEGRAM stub logs warning; WEB_CHAT logs debug
-        warning_calls = list(mock_logger.warning.call_args_list)
-        assert len(warning_calls) == 1  # only TELEGRAM warning
+        # TELEGRAM sends outbound, WEB_CHAT is no-op
+        assert mock_gateway.send_outbound.call_count == 1
 
 
 @pytest.mark.asyncio

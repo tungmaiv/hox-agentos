@@ -11,12 +11,14 @@ Responsibilities:
 Security: /api/channels/incoming is internal-only (Docker network isolation).
 All agent invocations pass through the same 3-gate security (user_id from channel_account).
 """
+import asyncio
 import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
 
 import httpx
 import structlog
+from langchain_core.messages import AIMessage, HumanMessage
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -247,8 +249,6 @@ class ChannelGateway:
                         attempt=attempt,
                         error=str(exc),
                     )
-                    import asyncio
-
                     await asyncio.sleep(delay)
                 else:
                     logger.error(
@@ -264,15 +264,75 @@ class ChannelGateway:
         """
         Invoke the master agent for a channel message.
 
-        Placeholder for 05-01. Wired to real agent in 05-05.
-        Returns a simple echo response for now.
+        Uses the same LangGraph master graph as web chat, but collects the
+        final AI response as text instead of streaming via SSE.  All security
+        gates (RBAC, ACL) and memory isolation apply identically — user_id
+        comes from the ChannelAccount, not from request body.
+
+        Timeout: 60 seconds per locked decision.
         """
+        from agents.master_agent import create_master_graph
+        from core.context import current_conversation_id_ctx, current_user_ctx
+
         logger.info(
-            "channel_agent_invoke_stub",
+            "channel_agent_invoke",
             channel=msg.channel,
             user_id=str(msg.user_id),
         )
-        return self._make_reply(msg, f"[Blitz] Received: {msg.text}")
+
+        # Build a minimal UserContext for contextvar injection
+        user_context = {
+            "user_id": msg.user_id,
+            "email": "",
+            "username": "",
+            "roles": ["employee"],
+            "groups": [],
+        }
+
+        # Set contextvars so graph nodes (load_memory, save_memory) can find user/conversation
+        user_token = current_user_ctx.set(user_context)
+        conv_token = (
+            current_conversation_id_ctx.set(msg.conversation_id)
+            if msg.conversation_id
+            else None
+        )
+
+        try:
+            graph = create_master_graph()
+
+            initial_state = {
+                "messages": [HumanMessage(content=msg.text or "")],
+            }
+            config = {"configurable": {"thread_id": str(msg.conversation_id or uuid.uuid4())}}
+
+            result = await asyncio.wait_for(
+                graph.ainvoke(initial_state, config=config),
+                timeout=60.0,
+            )
+
+            # Extract the last AI message from the result
+            messages = result.get("messages", [])
+            response_text = ""
+            for m in reversed(messages):
+                if isinstance(m, AIMessage):
+                    response_text = str(m.content)
+                    break
+
+            if not response_text:
+                response_text = "I processed your message but have no response to share."
+
+        except asyncio.TimeoutError:
+            logger.error("channel_agent_timeout", channel=msg.channel, user_id=str(msg.user_id))
+            response_text = "Sorry, I couldn't process your request. Please try again."
+        except Exception as exc:
+            logger.error("channel_agent_error", channel=msg.channel, error=str(exc))
+            response_text = "Sorry, I couldn't process your request. Please try again."
+        finally:
+            current_user_ctx.reset(user_token)
+            if conv_token is not None:
+                current_conversation_id_ctx.reset(conv_token)
+
+        return self._make_reply(msg, response_text)
 
     def _make_reply(self, original: InternalMessage, text: str) -> InternalMessage:
         """Create an outbound reply to an inbound message."""

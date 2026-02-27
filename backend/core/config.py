@@ -54,6 +54,11 @@ class Settings(BaseSettings):
     # If total conversation turns reaches a multiple of this threshold, summarize_episode is triggered.
     episode_turn_threshold: int = 10
 
+    # Channel sidecar URLs (Docker internal service names)
+    telegram_gateway_url: str = "http://telegram-gateway:9001"
+    whatsapp_gateway_url: str = "http://whatsapp-gateway:9002"
+    teams_gateway_url: str = "http://teams-gateway:9003"
+
     @model_validator(mode="after")
     def derive_keycloak_urls(self) -> "Settings":
         """Derive JWKS and issuer URLs from keycloak_url and keycloak_realm."""
