@@ -16,11 +16,16 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, JSON, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from core.db import Base
+
+# JSON type that works in both SQLite (tests) and PostgreSQL (production).
+# SQLite cannot compile JSONB natively — use JSON().with_variant(JSONB(), "postgresql")
+# following the same pattern as SystemConfig.value.
+_JSONB = JSON().with_variant(JSONB(), "postgresql")
 
 
 class Workflow(Base):
@@ -44,7 +49,7 @@ class Workflow(Base):
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    definition_json: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    definition_json: Mapped[dict[str, Any]] = mapped_column(_JSONB, nullable=False)
     is_template: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     template_source_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("workflows.id"), nullable=True
@@ -87,7 +92,7 @@ class WorkflowRun(Base):
     completed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    result_json: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    result_json: Mapped[dict[str, Any] | None] = mapped_column(_JSONB, nullable=True)
 
 
 class WorkflowTrigger(Base):

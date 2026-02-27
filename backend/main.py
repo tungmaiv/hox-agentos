@@ -21,6 +21,8 @@ from api.routes import (
     tools,
     user_instructions,
 )
+from api.routes.webhooks import router as webhooks_router
+from api.routes.workflows import router as workflows_router
 from core.config import settings
 from core.logging import configure_logging
 from gateway import runtime
@@ -106,6 +108,14 @@ def create_app() -> FastAPI:
 
     # CopilotKit AG-UI streaming endpoint — 3-gate security + LangGraph master agent
     app.include_router(runtime.router)
+
+    # Workflow CRUD + triggers + SSE events — JWT protected
+    # Note: router already includes /api prefix in its definition
+    app.include_router(workflows_router)
+
+    # Webhook trigger — public endpoint (no JWT), validates X-Webhook-Secret
+    # Note: router already includes /api prefix in its definition
+    app.include_router(webhooks_router)
 
     return app
 
