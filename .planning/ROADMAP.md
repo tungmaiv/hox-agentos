@@ -126,7 +126,7 @@ Plans:
 | 2.1. Tech Debt Cleanup | v1.0 | 1/1 | ✅ Complete | 2026-02-26 |
 | 3. Sub-Agents & Memory | v1.0 | 6/6 | ✅ Complete | 2026-02-26 |
 | 3.1. Memory Read + MCP Hot-Reg | v1.0 | 1/1 | ✅ Complete | 2026-02-26 |
-| 4. Canvas & Workflows | 3/5 | In Progress|  | — |
+| 4. Canvas & Workflows | 4/5 | In Progress|  | — |
 | 5. Scheduler & Channels | v1.1 | 0/5 | ○ Not started | — |
 | 6. Extensibility Registries | v1.1 | 0/3 | ○ Not started | — |
 | 7. Hardening & Sandboxing | v1.1 | 0/2 | ○ Not started | — |
