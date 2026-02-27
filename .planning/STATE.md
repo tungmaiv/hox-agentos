@@ -46,7 +46,9 @@ Progress: [████████████] 96% (25/26 plans estimated)
 | Phase 04-canvas-and-workflows P04 | 8 | 6 tasks | 22 files |
 | Phase 04-canvas-and-workflows P05 | 4 | 4 tasks | 7 files |
 | Phase 05-scheduler-and-channels P01 | 5 | 3 tasks | 13 files |
+| Phase 05-scheduler-and-channels P02 | 5 | 2 tasks | 8 files |
 | Phase 05-scheduler-and-channels P03 | 3 | 2 tasks | 8 files |
+| Phase 05-scheduler-and-channels P04 | 4 | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -143,6 +145,9 @@ Recent decisions affecting current work:
 - [05-03]: Button capping applied at both /send endpoint and WhatsApp API wrapper for defense in depth -- test correctness requires capping at endpoint level since API is mocked
 - [05-03]: Attachment rejection sends text reply to user explaining text-only MVP limitation
 - [05-03]: Interactive button replies extract callback_data from button_reply.id into metadata dict
+- [05-04]: Direct httpx calls to Bot Framework Connector API instead of botbuilder-core SDK -- lightweight, consistent with Telegram/WhatsApp sidecar patterns
+- [05-04]: MVP token validation decodes JWT without signature verification, checks issuer and audience -- full JWKS rotation handling deferred
+- [05-04]: hatch build config packages=['.'] required for flat project layout (main.py at root, no package directory)
 
 ### Pending Todos
 
@@ -168,5 +173,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-28
-Stopped at: Completed 05-03-PLAN.md — WhatsApp sidecar (Cloud API, webhook, send, Docker)
-Resume file: .planning/phases/05-scheduler-and-channels/05-03-SUMMARY.md
+Stopped at: Completed 05-04-PLAN.md — Teams sidecar (Bot Framework, Adaptive Cards, Docker)
+Resume file: .planning/phases/05-scheduler-and-channels/05-04-SUMMARY.md
