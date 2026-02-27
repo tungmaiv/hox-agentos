@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-26)
 ## Current Position
 
 Milestone: v1.1 Phase 4 (Canvas & Workflows) — in progress
-Phases: 1, 2, 2.1, 3, 3.1 — all complete; Phase 4 — 1/5 plans complete
-Status: Phase 4 Plan 01 complete (workflow tables + CRUD API + canvas shell); 199 tests green
-Last activity: 2026-02-27 -- Phase 4 Plan 01 complete — workflow tables, CRUD API, React Flow canvas shell, 19 new tests
+Phases: 1, 2, 2.1, 3, 3.1 — all complete; Phase 4 — 2/5 plans complete
+Status: Phase 4 Plan 02 complete (WorkflowState, condition evaluator, node handlers, compiler); 233 tests green
+Last activity: 2026-02-27 -- Phase 4 Plan 02 complete — compile_workflow_to_stategraph compiler, 34 new tests, 233 total passing
 
-Progress: [█████████░] 73% (17/23 plans estimated)
+Progress: [█████████░] 76% (18/23 plans estimated)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 13
-- Average duration: 14.2 min
-- Total execution time: ~3.24 hours
+- Total plans completed: 14
+- Average duration: 13.6 min
+- Total execution time: ~3.24 hours + 4 min
 
 **By Phase:**
 
@@ -40,6 +40,7 @@ Progress: [█████████░] 73% (17/23 plans estimated)
 | Phase 03-sub-agents-memory-and-integrations P04 | 6 | 3 tasks | 15 files |
 | Phase 03-sub-agents-memory-and-integrations P05 | 35 | 2 tasks | 19 files |
 | Phase 04-canvas-and-workflows P01 | 15 | 6 tasks | 27 files |
+| Phase 04-canvas-and-workflows P02 | 4 | 6 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -118,6 +119,10 @@ Recent decisions affecting current work:
 - [Phase 04-01]: Alembic migration uses 010 revision — 009 was already taken by conversation_titles_timestamps; down_revision='009'
 - [Phase 04-01]: Next.js 15 async params: params must be typed as Promise<{id: string}> and awaited — plan doc showed deprecated Next.js 14 sync pattern
 - [Phase 04-01]: owner_user_id on Workflow is NULLABLE — template rows in 04-05 will have owner_user_id=NULL; no FK constraint (users in Keycloak)
+- [04-02]: condition_evaluator.py is a standalone module (not inlined in node_handlers.py) — independently testable; node_handlers imports it via evaluate_condition()
+- [04-02]: compile_workflow_to_stategraph() returns uncompiled StateGraph builder — caller injects checkpointer (MemorySaver in tests, AsyncPostgresSaver in 04-04 production)
+- [04-02]: Default-arg closure pattern _make_node_fn(nid=node_id, ntype=...) prevents loop-variable capture bugs in LangGraph node factory
+- [04-02]: condition_node router reads current_output bool directly (output of _handle_condition_node) — avoids extra state field and mutation
 
 ### Pending Todos
 
@@ -141,6 +146,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-27T04:05:52Z
-Stopped at: Completed 04-01-PLAN.md — workflow tables (010 migration), CRUD API (15 endpoints), React Flow canvas shell; 199 tests green; Phase 4 Plan 02 (Compiler) is next
+Last session: 2026-02-27T04:13:41Z
+Stopped at: Completed 04-02-PLAN.md — WorkflowState TypedDict, sandboxed condition evaluator, node handler registry (6 types), compile_workflow_to_stategraph() compiler; 233 tests green; Phase 4 Plan 03 (Execution engine) is next
 Resume file: None
