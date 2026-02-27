@@ -5,16 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates daily work routines and lets them build custom automations without writing code -- all within an enterprise-secure, on-premise environment.
-**Current focus:** v1.1 MVP — Phase 4.1 complete, next: Phase 5 (Scheduler & Channels)
+**Current focus:** v1.1 MVP — Phase 5 (Scheduler & Channels) in progress, Plan 01 complete
 
 ## Current Position
 
-Milestone: v1.1 Phase 4.1 (Phase 4 Polish) — COMPLETE
-Phases: 1, 2, 2.1, 3, 3.1, 4, 4.1 — all complete
-Status: Phase 4.1 complete — HITL amber ring node_id fix + Next.js webhook proxy; 14 code review issues resolved; chat typing indicator added; bge-m3 race condition fixed
-Last activity: 2026-02-27 -- Phase 4.1 complete — all v1.1 pre-Phase5 work done
+Milestone: v1.1 Phase 5 (Scheduler & Channels) — Plan 01 complete
+Phases: 1, 2, 2.1, 3, 3.1, 4, 4.1 — all complete; Phase 5: Plan 01 of 5 complete
+Current Plan: 05-01 complete, next: 05-02
+Status: Phase 5 Plan 01 complete — channel core: ORM models, InternalMessage, ChannelGateway, pairing flow, API routes
+Last activity: 2026-02-28 -- 05-01 executed (5 min, 3 tasks, 20 new tests)
 
-Progress: [██████████] 87% (21/23 plans estimated)
+Progress: [██████████] 89% (22/24 plans estimated)
 
 ## Performance Metrics
 
@@ -44,6 +45,7 @@ Progress: [██████████] 87% (21/23 plans estimated)
 | Phase 04-canvas-and-workflows P03 | 7 | 5 tasks | 12 files |
 | Phase 04-canvas-and-workflows P04 | 8 | 6 tasks | 22 files |
 | Phase 04-canvas-and-workflows P05 | 4 | 4 tasks | 7 files |
+| Phase 05-scheduler-and-channels P01 | 5 | 3 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -134,6 +136,9 @@ Recent decisions affecting current work:
 - [Phase 04-canvas-and-workflows]: AsyncPostgresSaver.from_conn_string() as async context manager; setup() idempotently creates LangGraph checkpoint tables; pg_conn_str strips postgresql+asyncpg:// to postgresql://
 - [Phase 04-canvas-and-workflows]: langgraph upgraded 0.4.10->1.0.1 for checkpoint-postgres 3.0.4 compatibility; NodeStatus type in use-workflow-run.ts (imported by nodes); WorkflowCanvas syncs nodeStatuses on render (not useEffect) to avoid loop
 - [Phase 04-05]: Fixture files as standalone JSON (not Python dicts) — readable, editable without code changes; migration 011 ON CONFLICT DO NOTHING for idempotency; TemplateCard fetch via relative URL through Next.js proxy to ensure JWT injection
+- [05-01]: SQLite stores datetimes as offset-naive; handle_pairing normalizes pairing_expires to UTC-aware before comparing with datetime.now(timezone.utc)
+- [05-01]: send_outbound uses 3x exponential backoff (1s, 2s, 4s) per design doc locked decision
+- [05-01]: Channel routes router has /api/channels prefix built-in; registered in main.py without extra prefix
 
 ### Pending Todos
 
@@ -159,5 +164,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-28
-Stopped at: Phase 5 context gathered — design doc + implementation plan + CONTEXT.md committed
-Resume file: .planning/phases/05-scheduler-and-channels/05-CONTEXT.md
+Stopped at: Completed 05-01-PLAN.md — channel core foundation (ORM, Pydantic, Gateway, Routes)
+Resume file: .planning/phases/05-scheduler-and-channels/05-01-SUMMARY.md
