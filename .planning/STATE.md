@@ -154,9 +154,10 @@ Recent decisions affecting current work:
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 1 | Fix Phase 2.1 tech debt: BACKEND_URL env consistency across 5 frontend routes, user_instructions.updated_at onupdate fix + migration, REQUIREMENTS.md and ROADMAP.md checkbox accuracy | 2026-02-26 | 5e51921 | [1-fix-phase-2-1-tech-debt-backend-url-env-](./quick/1-fix-phase-2-1-tech-debt-backend-url-env-/) |
+| 2 | Fix HITL canvas amber ring: add node_id to hitl_paused SSE event (state_snapshot.next[0]) so frontend nodeStatuses.set activates on correct canvas node | 2026-02-27 | ee2d3fd | [2-phase-4-1-polish-hitl-amber-ring-node-id](./quick/2-phase-4-1-polish-hitl-amber-ring-node-id/) |
 
 ## Session Continuity
 
-Last session: 2026-02-27T04:42:44Z
-Stopped at: Completed 04-05-PLAN.md — workflow templates (morning_digest + alert fixtures, Alembic migration 011, TemplateCard component); 254 tests green; Phase 4 fully complete; Phase 5 (Channels) is next
+Last session: 2026-02-27T15:22:39Z
+Stopped at: Completed quick task 2 — hitl_paused SSE event node_id fix; 258 tests green
 Resume file: None
