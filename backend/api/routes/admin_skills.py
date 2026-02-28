@@ -1,18 +1,22 @@
 """
-Admin CRUD API for skill definitions — multi-version + bulk status + validate.
+Admin CRUD API for skill definitions — multi-version + bulk status + validate + import + review.
 
-GET    /api/admin/skills              — list all skill definitions (optional filters)
-POST   /api/admin/skills              — create a new skill definition
-GET    /api/admin/skills/pending      — list skills pending review
-GET    /api/admin/skills/{skill_id}   — get skill by UUID
-PUT    /api/admin/skills/{skill_id}   — update skill fields
-PATCH  /api/admin/skills/{skill_id}/status   — enable/disable with graceful removal
-PATCH  /api/admin/skills/{skill_id}/activate — activate version, deactivate others
-PATCH  /api/admin/skills/bulk-status  — bulk status update
-POST   /api/admin/skills/{skill_id}/validate — dry-run validate skill procedure
+GET    /api/admin/skills                      — list all skill definitions (optional filters)
+POST   /api/admin/skills                      — create a new skill definition
+GET    /api/admin/skills/pending              — list skills pending review
+POST   /api/admin/skills/import               — import skill from URL or inline content
+GET    /api/admin/skills/{skill_id}           — get skill by UUID
+PUT    /api/admin/skills/{skill_id}           — update skill fields
+PATCH  /api/admin/skills/{skill_id}/status    — enable/disable with graceful removal
+PATCH  /api/admin/skills/{skill_id}/activate  — activate version, deactivate others
+PATCH  /api/admin/skills/bulk-status          — bulk status update
+POST   /api/admin/skills/{skill_id}/validate  — dry-run validate skill procedure
+POST   /api/admin/skills/{skill_id}/review    — approve or reject quarantined skill
+GET    /api/admin/skills/{skill_id}/security-report — get security scan report
 
 Security: requires `registry:manage` permission (Gate 2 RBAC).
 """
+from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
@@ -26,13 +30,19 @@ from core.models.skill_definition import SkillDefinition
 from core.models.user import UserContext
 from core.schemas.registry import (
     BulkStatusUpdate,
+    SecurityReportResponse,
     SkillDefinitionCreate,
     SkillDefinitionResponse,
     SkillDefinitionUpdate,
+    SkillImportRequest,
+    SkillReviewRequest,
     StatusUpdate,
 )
 from security.deps import get_current_user
 from security.rbac import has_permission
+from skills.importer import SkillImportError, SkillImporter
+from skills.security_scanner import SecurityScanner
+from skills.validator import SkillValidator
 
 logger = structlog.get_logger(__name__)
 
@@ -143,6 +153,94 @@ async def bulk_status_update(
         user_id=str(user["user_id"]),
     )
     return {"updated": count, "status": body.status}
+
+
+@router.post("/import", status_code=201)
+async def import_skill(
+    body: SkillImportRequest,
+    user: UserContext = Depends(_require_registry_manager),
+    session: AsyncSession = Depends(get_db),
+) -> dict[str, Any]:
+    """Import a skill from URL or inline content.
+
+    Flow: parse -> validate -> security scan -> quarantine (status=pending_review).
+    """
+    importer = SkillImporter()
+    scanner = SecurityScanner()
+
+    # Step 1: Parse
+    try:
+        if body.source_url:
+            skill_data = await importer.import_from_url(body.source_url)
+        elif body.content:
+            skill_data = importer.parse_skill_md(body.content)
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="At least one of source_url or content required",
+            )
+    except SkillImportError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    # Step 2: Validate (if procedural)
+    if skill_data.get("skill_type") == "procedural" and skill_data.get("procedure_json"):
+        validator = SkillValidator()
+        errors = validator.validate_procedure(skill_data["procedure_json"])
+        if errors:
+            raise HTTPException(
+                status_code=400,
+                detail={"message": "Skill validation failed", "errors": errors},
+            )
+
+    # Step 3: Security scan
+    report = scanner.scan(skill_data, source_url=body.source_url)
+
+    # Step 4: Create with pending_review status (quarantine)
+    skill = SkillDefinition(
+        name=skill_data["name"],
+        display_name=skill_data.get("display_name"),
+        description=skill_data.get("description"),
+        version=skill_data.get("version", "1.0.0"),
+        skill_type=skill_data.get("skill_type", "instructional"),
+        slash_command=skill_data.get("slash_command"),
+        source_type="imported",
+        instruction_markdown=skill_data.get("instruction_markdown"),
+        procedure_json=skill_data.get("procedure_json"),
+        input_schema=skill_data.get("input_schema"),
+        output_schema=skill_data.get("output_schema"),
+        status="pending_review",
+        is_active=False,
+        security_score=report.score,
+        security_report={
+            "score": report.score,
+            "factors": report.factors,
+            "recommendation": report.recommendation,
+            "injection_matches": report.injection_matches,
+        },
+        created_by=user["user_id"],
+    )
+    session.add(skill)
+    await session.commit()
+    await session.refresh(skill)
+
+    logger.info(
+        "admin_skill_imported",
+        skill_id=str(skill.id),
+        name=skill.name,
+        security_score=report.score,
+        recommendation=report.recommendation,
+        user_id=str(user["user_id"]),
+    )
+
+    return {
+        "skill": SkillDefinitionResponse.model_validate(skill).model_dump(mode="json"),
+        "security_report": {
+            "score": report.score,
+            "factors": report.factors,
+            "recommendation": report.recommendation,
+            "injection_matches": report.injection_matches,
+        },
+    }
 
 
 @router.get("/{skill_id}")
@@ -289,12 +387,7 @@ async def validate_skill(
     user: UserContext = Depends(_require_registry_manager),
     session: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
-    """
-    Dry-run validate a skill's procedure_json.
-
-    Stub — full validation implemented in Plan 06-05 (SkillValidator).
-    Returns empty errors list (valid) for now.
-    """
+    """Dry-run validate a skill's procedure_json using SkillValidator."""
     result = await session.execute(
         select(SkillDefinition).where(SkillDefinition.id == skill_id)
     )
@@ -302,8 +395,10 @@ async def validate_skill(
     if skill is None:
         raise HTTPException(status_code=404, detail="Skill not found")
 
-    # Stub: full validation in Plan 06-05
     errors: list[str] = []
+    if skill.skill_type == "procedural" and skill.procedure_json:
+        validator = SkillValidator()
+        errors = validator.validate_procedure(skill.procedure_json)
 
     logger.info(
         "admin_skill_validated",
@@ -312,3 +407,82 @@ async def validate_skill(
         user_id=str(user["user_id"]),
     )
     return {"skill_id": str(skill_id), "valid": len(errors) == 0, "errors": errors}
+
+
+@router.post("/{skill_id}/review")
+async def review_skill(
+    skill_id: UUID,
+    body: SkillReviewRequest,
+    user: UserContext = Depends(_require_registry_manager),
+    session: AsyncSession = Depends(get_db),
+) -> dict[str, Any]:
+    """Approve or reject a quarantined skill."""
+    result = await session.execute(
+        select(SkillDefinition).where(SkillDefinition.id == skill_id)
+    )
+    skill = result.scalar_one_or_none()
+    if skill is None:
+        raise HTTPException(status_code=404, detail="Skill not found")
+
+    if skill.status != "pending_review":
+        raise HTTPException(
+            status_code=409,
+            detail=f"Skill is not pending review (current status: {skill.status})",
+        )
+
+    now = datetime.now(timezone.utc)
+
+    if body.decision == "approve":
+        skill.status = "active"
+        skill.is_active = True
+        skill.reviewed_by = user["user_id"]
+        skill.reviewed_at = now
+    elif body.decision == "reject":
+        skill.status = "rejected"
+        skill.reviewed_by = user["user_id"]
+        skill.reviewed_at = now
+        # Store rejection notes in security_report
+        if body.notes and skill.security_report:
+            skill.security_report = {
+                **skill.security_report,
+                "rejection_notes": body.notes,
+            }
+
+    await session.commit()
+    await session.refresh(skill)
+
+    logger.info(
+        "admin_skill_reviewed",
+        skill_id=str(skill_id),
+        decision=body.decision,
+        user_id=str(user["user_id"]),
+    )
+
+    return {
+        "skill_id": str(skill_id),
+        "decision": body.decision,
+        "status": skill.status,
+    }
+
+
+@router.get("/{skill_id}/security-report")
+async def get_security_report(
+    skill_id: UUID,
+    user: UserContext = Depends(_require_registry_manager),
+    session: AsyncSession = Depends(get_db),
+) -> dict[str, Any]:
+    """Get stored security scan report for a skill."""
+    result = await session.execute(
+        select(SkillDefinition).where(SkillDefinition.id == skill_id)
+    )
+    skill = result.scalar_one_or_none()
+    if skill is None:
+        raise HTTPException(status_code=404, detail="Skill not found")
+
+    if skill.security_report is None:
+        raise HTTPException(
+            status_code=404,
+            detail="No security report available for this skill",
+        )
+
+    return skill.security_report

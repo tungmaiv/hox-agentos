@@ -344,14 +344,17 @@ def test_bulk_status_update(admin_client: TestClient) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_validate_skill_stub(admin_client: TestClient) -> None:
-    """POST /api/admin/skills/{id}/validate returns valid (stub)."""
+def test_validate_skill_valid(admin_client: TestClient) -> None:
+    """POST /api/admin/skills/{id}/validate returns valid for correct procedure."""
     r = admin_client.post(
         "/api/admin/skills",
         json={
             "name": "validate_skill",
             "skill_type": "procedural",
-            "procedure_json": {"steps": [{"name": "step1", "tool": "email.send"}]},
+            "procedure_json": {
+                "schema_version": "1.0",
+                "steps": [{"id": "s1", "type": "tool", "tool": "email.send"}],
+            },
         },
     )
     skill_id = r.json()["id"]
@@ -361,6 +364,25 @@ def test_validate_skill_stub(admin_client: TestClient) -> None:
     data = resp.json()
     assert data["valid"] is True
     assert data["errors"] == []
+
+
+def test_validate_skill_invalid(admin_client: TestClient) -> None:
+    """POST /api/admin/skills/{id}/validate returns errors for invalid procedure."""
+    r = admin_client.post(
+        "/api/admin/skills",
+        json={
+            "name": "validate_invalid",
+            "skill_type": "procedural",
+            "procedure_json": {"steps": [{"name": "step1", "tool": "email.send"}]},
+        },
+    )
+    skill_id = r.json()["id"]
+
+    resp = admin_client.post(f"/api/admin/skills/{skill_id}/validate")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["valid"] is False
+    assert len(data["errors"]) > 0
 
 
 def test_validate_skill_not_found(admin_client: TestClient) -> None:
