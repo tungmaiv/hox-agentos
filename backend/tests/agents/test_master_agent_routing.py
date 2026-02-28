@@ -48,20 +48,20 @@ async def test_pre_route_general_goes_to_master_agent() -> None:
 
 def test_classify_by_keywords_email() -> None:
     from agents.master_agent import _classify_by_keywords
-    assert _classify_by_keywords("summarize my unread emails") == "email"
-    assert _classify_by_keywords("check my inbox") == "email"
+    assert _classify_by_keywords("summarize my unread emails") == "email_agent"
+    assert _classify_by_keywords("check my inbox") == "email_agent"
 
 
 def test_classify_by_keywords_calendar() -> None:
     from agents.master_agent import _classify_by_keywords
-    assert _classify_by_keywords("what's on my calendar today?") == "calendar"
-    assert _classify_by_keywords("do I have any meetings?") == "calendar"
+    assert _classify_by_keywords("what's on my calendar today?") == "calendar_agent"
+    assert _classify_by_keywords("do I have any meetings?") == "calendar_agent"
 
 
 def test_classify_by_keywords_project() -> None:
     from agents.master_agent import _classify_by_keywords
-    assert _classify_by_keywords("what's the status of Project Alpha?") == "project"
-    assert _classify_by_keywords("show me my tasks") == "project"
+    assert _classify_by_keywords("what's the status of Project Alpha?") == "project_agent"
+    assert _classify_by_keywords("show me my tasks") == "project_agent"
 
 
 def test_classify_by_keywords_general() -> None:
