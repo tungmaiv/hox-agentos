@@ -22,9 +22,11 @@ provides:
   - "ChannelGateway._invoke_agent() wired to real master agent graph with 60s timeout"
   - "delivery_router.deliver() async with real TELEGRAM/WHATSAPP/TEAMS outbound via ChannelGateway"
   - "channel_output_node wired to ChannelGateway for non-web channels"
-  - "Frontend /settings/channels page with pairing code generation, countdown timer, unlink"
-  - "Next.js API proxy routes for /api/channels/pair, accounts, accounts/[id]"
+  - "Frontend /settings/channels page with pairing code generation, countdown timer, unlink, copy button, setup guides, channel info"
+  - "Next.js API proxy routes for /api/channels/pair, accounts, accounts/[id], info"
   - "CHAN-06 verification: scheduler runs workflows as owner UserContext"
+  - "Telegram sidecar getMe API: /info endpoint with cached bot metadata"
+  - "Backend GET /api/channels/info fan-out to sidecar /info endpoints"
 affects: [phase-06-hardening]
 
 # Tech tracking
@@ -38,6 +40,7 @@ key-files:
     - frontend/src/app/api/channels/pair/route.ts
     - frontend/src/app/api/channels/accounts/route.ts
     - frontend/src/app/api/channels/accounts/[id]/route.ts
+    - frontend/src/app/api/channels/info/route.ts
     - backend/tests/channels/test_gateway_agent.py
     - backend/tests/agents/test_delivery_router_channels.py
     - backend/tests/scheduler/test_owner_context.py
@@ -46,8 +49,11 @@ key-files:
     - backend/agents/delivery_router.py
     - backend/agents/node_handlers.py
     - backend/core/config.py
+    - backend/api/routes/channels.py
     - backend/tests/agents/test_delivery_router.py
     - frontend/src/app/settings/page.tsx
+    - channel-gateways/telegram/telegram_api.py
+    - channel-gateways/telegram/main.py
 
 key-decisions:
   - "ChannelGateway._invoke_agent() uses create_master_graph() to get a fresh compiled graph per invocation -- avoids shared state between web and channel executions"
@@ -55,6 +61,9 @@ key-decisions:
   - "WHATSAPP added to DeliveryTarget enum alongside existing TELEGRAM and TEAMS"
   - "Channel Linking page uses useCountdown hook for live 10-minute countdown timer"
   - "Phase 4 scheduler already satisfies CHAN-06 via user_context in initial_state -- verified with tests, no code changes needed"
+  - "Channel toggles default to disabled (false) for new users; auto-enable for channels with existing linked accounts"
+  - "Telegram sidecar calls getMe on startup, caches bot info, auto-sets BOT_USERNAME if env var not set"
+  - "GET /api/channels/info fans out to sidecar /info endpoints with 5s timeout; graceful {available: false} per unreachable sidecar"
 
 patterns-established:
   - "Channel agent invocation: create_master_graph() + ainvoke() with HumanMessage, extract last AIMessage"
@@ -90,6 +99,16 @@ completed: 2026-02-28
 - Full test suite: 288 tests (278 baseline + 10 new, no regressions)
 - Frontend build passes (pnpm run build)
 
+### Post-verification UX Enhancements (commits 8418965..33dd7c3)
+- Channel toggles default to disabled for new users; auto-enable when linked account exists
+- Clipboard copy button on pairing codes with 2-second green checkmark feedback
+- Telegram sidecar `getMe` API: caches bot info on startup, exposes `GET /info` endpoint
+- Backend `GET /api/channels/info` fans out to all sidecar `/info` endpoints (5s timeout, graceful degradation)
+- Frontend proxy `GET /api/channels/info` with JWT injection
+- Bot username displayed on cards: "Linked as X · @BotName" or "Bot: @BotName"
+- Collapsible Setup Guide per channel (AgentOS Configuration + Platform Setup steps)
+- Telegram platform instructions dynamically insert real bot username
+
 ## Task Commits
 
 Each task was committed atomically:
@@ -103,15 +122,19 @@ Each task was committed atomically:
 - `backend/agents/delivery_router.py` - deliver() async, TELEGRAM/WHATSAPP/TEAMS send via ChannelGateway
 - `backend/agents/node_handlers.py` - channel_output_node sends to real ChannelGateway
 - `backend/core/config.py` - Added telegram/whatsapp/teams_gateway_url settings
+- `backend/api/routes/channels.py` - Added GET /api/channels/info fan-out route
 - `backend/tests/channels/test_gateway_agent.py` - 3 tests: success, timeout, error
 - `backend/tests/agents/test_delivery_router_channels.py` - 4 tests: telegram, teams, whatsapp send, enum
 - `backend/tests/agents/test_delivery_router.py` - Updated 8 tests for async deliver()
 - `backend/tests/scheduler/test_owner_context.py` - 2 tests: owner context, cron trigger
 - `frontend/src/app/settings/page.tsx` - Added Channel Linking nav card
-- `frontend/src/app/settings/channels/page.tsx` - Full Channel Linking page with pairing/unlink
+- `frontend/src/app/settings/channels/page.tsx` - Full Channel Linking page with pairing/unlink, copy button, setup guides, channel info display
 - `frontend/src/app/api/channels/pair/route.ts` - POST proxy for pairing code generation
 - `frontend/src/app/api/channels/accounts/route.ts` - GET proxy for listing linked accounts
 - `frontend/src/app/api/channels/accounts/[id]/route.ts` - DELETE proxy for unlinking
+- `frontend/src/app/api/channels/info/route.ts` - GET proxy for channel info (bot metadata)
+- `channel-gateways/telegram/telegram_api.py` - Added get_me() method
+- `channel-gateways/telegram/main.py` - Bot info cache on startup, GET /info endpoint
 
 ## Decisions Made
 - ChannelGateway._invoke_agent() creates a fresh master graph per invocation via create_master_graph(). This avoids shared checkpointer state between web chat and channel message processing.
