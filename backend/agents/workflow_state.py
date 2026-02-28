@@ -15,6 +15,8 @@ Fields:
                   evaluate expressions against this value.
   hitl_result:    Set to "approved" or "rejected" when resuming after interrupt().
                   None during normal forward execution.
+  workflow_name:  Name of the workflow, used to prefix channel output messages
+                  (e.g. '[Morning Digest] ...'). Optional, defaults to None.
 """
 import uuid
 from typing import Any
@@ -28,3 +30,4 @@ class WorkflowState(TypedDict):
     node_outputs: dict[str, Any]   # keyed by node_id
     current_output: Any            # output of the last completed node
     hitl_result: str | None        # "approved" | "rejected" | None
+    workflow_name: str | None       # workflow name for channel output prefix

@@ -12,6 +12,7 @@ Security: /api/channels/incoming is internal-only (Docker network isolation).
 All agent invocations pass through the same 3-gate security (user_id from channel_account).
 """
 import asyncio
+import json
 import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -29,6 +30,80 @@ logger = structlog.get_logger(__name__)
 
 _PAIRING_CODE_LENGTH = 6
 _PAIRING_EXPIRY_MINUTES = 10
+
+
+# ── Module-level formatters (reusable from node_handlers without a gateway instance) ──
+
+
+def format_for_channel(text: str) -> str:
+    """Convert structured JSON sub-agent output to human-readable text for channels.
+
+    Importable as a standalone function — no ChannelGateway instance required.
+    Used by both ChannelGateway._invoke_agent and agents.node_handlers._handle_agent_node.
+    """
+    try:
+        data = json.loads(text)
+    except (json.JSONDecodeError, TypeError):
+        return text  # Not JSON — already human-readable
+
+    agent = data.get("agent")
+    if agent == "calendar":
+        return _format_calendar(data)
+    if agent == "email":
+        return _format_email(data)
+    if agent == "project":
+        return _format_project(data)
+    return text  # Unknown agent JSON — send as-is
+
+
+def _format_calendar(data: dict) -> str:
+    date_str = data.get("date", "today")
+    events = data.get("events", [])
+    if not events:
+        return f"No events on your calendar for {date_str}."
+    lines = [f"Your calendar for {date_str}:\n"]
+    for e in events:
+        start = e.get("start_time", "")
+        # Extract HH:MM from ISO timestamp
+        time_str = start[11:16] if len(start) >= 16 else start
+        location = e.get("location", "")
+        conflict = " (CONFLICT)" if e.get("has_conflict") else ""
+        loc_part = f" — {location}" if location else ""
+        lines.append(f"• {time_str}  {e.get('title', 'Untitled')}{loc_part}{conflict}")
+    return "\n".join(lines)
+
+
+def _format_email(data: dict) -> str:
+    unread = data.get("unread_count", 0)
+    items = data.get("items", [])
+    if not items:
+        return "No emails to show."
+    total = len(items)
+    lines = [f"You have {total} email(s) ({unread} unread):\n"]
+    for item in items:
+        flag = "[NEW] " if item.get("is_unread") else ""
+        lines.append(f"• {flag}{item.get('from_', 'Unknown')}: {item.get('subject', '(no subject)')}")
+        snippet = item.get("snippet", "")
+        if snippet:
+            lines.append(f"  {snippet[:100]}")
+    return "\n".join(lines)
+
+
+def _format_project(data: dict) -> str:
+    name = data.get("project_name", "Unknown")
+    status = data.get("status", "unknown")
+    progress = data.get("progress_pct", 0)
+    owner = data.get("owner", "")
+    last_update = data.get("last_update", "")
+    lines = [
+        f"Project: {name}",
+        f"Status: {status} — {progress}% complete",
+    ]
+    if owner:
+        lines.append(f"Owner: {owner}")
+    if last_update:
+        lines.append(f"Last update: {last_update}")
+    return "\n".join(lines)
 
 
 class ChannelGateway:
@@ -321,6 +396,10 @@ class ChannelGateway:
             if not response_text:
                 response_text = "I processed your message but have no response to share."
 
+            # Sub-agents return JSON for A2UI rendering on web.
+            # For channels (Telegram, etc.), format as human-readable text.
+            response_text = self._format_for_channel(response_text)
+
         except asyncio.TimeoutError:
             logger.error("channel_agent_timeout", channel=msg.channel, user_id=str(msg.user_id))
             response_text = "Sorry, I couldn't process your request. Please try again."
@@ -333,6 +412,19 @@ class ChannelGateway:
                 current_conversation_id_ctx.reset(conv_token)
 
         return self._make_reply(msg, response_text)
+
+    def _format_for_channel(self, text: str) -> str:
+        """Delegate to module-level format_for_channel (backward compat)."""
+        return format_for_channel(text)
+
+    def _format_calendar(self, data: dict) -> str:
+        return _format_calendar(data)
+
+    def _format_email(self, data: dict) -> str:
+        return _format_email(data)
+
+    def _format_project(self, data: dict) -> str:
+        return _format_project(data)
 
     def _make_reply(self, original: InternalMessage, text: str) -> InternalMessage:
         """Create an outbound reply to an inbound message."""

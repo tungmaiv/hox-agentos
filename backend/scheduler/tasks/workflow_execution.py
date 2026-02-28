@@ -37,6 +37,7 @@ from core.config import get_settings
 from core.db import async_session
 from core.models.workflow import Workflow, WorkflowRun
 from scheduler.celery_app import celery_app
+from security.keycloak_client import fetch_user_realm_roles
 from workflow_events import publish_event
 
 logger = structlog.get_logger(__name__)
@@ -90,10 +91,26 @@ async def _execute_workflow_inner(run_id_str: str, hitl_result: str | None = Non
             return
 
         owner_user_id = run.owner_user_id
-        owner_roles: list[str] = run.owner_roles_json or ["employee"]
         definition_json = workflow.definition_json
+        workflow_name = workflow.name or ""
         run.status = "running"
         await session.commit()
+
+    # ── 1b. Fetch fresh Keycloak roles (security-first: no roles = no execution) ──
+    try:
+        owner_roles = await fetch_user_realm_roles(str(owner_user_id))
+        logger.info("workflow_roles_resolved", run_id=run_id_str, roles=owner_roles)
+    except Exception as exc:
+        logger.error("workflow_roles_fetch_failed", run_id=run_id_str, error=str(exc))
+        async with async_session() as session:
+            result = await session.execute(select(WorkflowRun).where(WorkflowRun.id == run_id))
+            run = result.scalar_one_or_none()
+            if run:
+                run.status = "failed"
+                run.result_json = {"error": f"Keycloak role fetch failed: {exc}"}
+                await session.commit()
+        publish_event(run_id_str, {"event": "workflow_failed", "error": f"Keycloak unreachable: {exc}"})
+        return
 
     # ── 2. Build user context (runs as job owner) ─────────────────────────────
     user_context: dict[str, Any] = {
@@ -103,6 +120,7 @@ async def _execute_workflow_inner(run_id_str: str, hitl_result: str | None = Non
         "roles": owner_roles,
         "groups": [],
     }
+    user_context["resolved_roles"] = owner_roles  # Audit: log the actual Keycloak roles used
 
     # ── 3. Compile ────────────────────────────────────────────────────────────
     try:
@@ -135,6 +153,7 @@ async def _execute_workflow_inner(run_id_str: str, hitl_result: str | None = Non
         "node_outputs": {},
         "current_output": None,
         "hitl_result": hitl_result,  # None for fresh run, "approved"/"rejected" on resume
+        "workflow_name": workflow_name,
     }
     config = {"configurable": {"thread_id": run_id_str}}
 
