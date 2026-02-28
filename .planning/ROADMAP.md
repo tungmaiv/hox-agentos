@@ -24,7 +24,7 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 
 - [x] **Phase 4: Canvas and Workflows** — React Flow visual builder, canvas-to-StateGraph compiler, workflow templates, HITL approval, cron/webhook triggers (completed 2026-02-27)
 - [x] **Phase 4.1: Phase 4 Polish** (INSERTED) — HITL canvas node amber ring fix, Next.js webhook proxy (completed 2026-02-27)
-- [ ] **Phase 5: Scheduler and Channels** — Web chat enhancement, Telegram/WhatsApp/Teams adapters, channel identity resolution, ChannelAdapter protocol
+- [x] **Phase 5: Scheduler and Channels** — Web chat enhancement, Telegram/WhatsApp/Teams adapters, channel identity resolution, ChannelAdapter protocol (completed 2026-02-28)
 - [ ] **Phase 6: Extensibility Registries** — Database-backed registries for agents/tools/skills/MCP servers, CRUD APIs, per-artifact permissions
 - [ ] **Phase 7: Hardening and Sandboxing** — Docker sandbox execution, security audit, RLS policies, credential scanning, penetration testing
 - [ ] **Phase 8: Observability** — Grafana dashboards, Loki log aggregation, LiteLLM cost tracking
@@ -79,7 +79,7 @@ Plans:
 - [x] 05-03-PLAN.md — WhatsApp Cloud API sidecar (FastAPI service + Docker)
 - [x] 05-04-PLAN.md — MS Teams Bot Framework sidecar (FastAPI service + Docker)
 - [x] 05-05-PLAN.md — Integration wiring: agent invocation, delivery router, frontend settings
-- [ ] 05-06-PLAN.md — Gap closure: formal ChannelAdapter(Protocol) class (CHAN-05)
+- [x] 05-06-PLAN.md — Gap closure: formal ChannelAdapter(Protocol) class (CHAN-05)
 
 ### Phase 6: Extensibility Registries
 **Goal**: Admins and developers can manage the platform's agents, tools, skills, and MCP servers as runtime artifacts through database-backed registries with granular permissions
