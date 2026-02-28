@@ -311,6 +311,19 @@ class PermissionApplyRequest(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# MCP server schemas
+# ---------------------------------------------------------------------------
+
+
+class McpServerCreate(BaseModel):
+    """Request body for registering a new MCP server."""
+
+    name: str  # unique display name (e.g. "crm", "docs")
+    url: str  # HTTP endpoint base URL (e.g. "http://mcp-crm:8001")
+    auth_token: str | None = None  # plaintext Bearer token; encrypted before storage
+
+
+# ---------------------------------------------------------------------------
 # Shared / utility schemas
 # ---------------------------------------------------------------------------
 

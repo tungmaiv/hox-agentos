@@ -38,7 +38,10 @@ Ask questions one at a time. Start with purpose/description, then ask about rout
 When you have enough information, set is_complete to true in your state update.
 
 Output format: After each user answer, update artifact_draft with the fields collected so far.
-Always include at least name and description in the draft."""
+Always include at least name and description in the draft.
+
+IMPORTANT: When the definition is complete and ready for validation, output the full artifact_draft \
+as a ```json code block AND include the exact marker [DRAFT_COMPLETE] in your response."""
 
 _TOOL_PROMPT = """You are helping an administrator create a Tool Definition for Blitz AgentOS.
 
@@ -64,7 +67,10 @@ For "mcp" type, ask about the MCP server and tool name.
 For "backend" type, ask about the Python handler module and function.
 Generate input_schema and output_schema based on the user's description of what the tool does.
 
-Output format: After each user answer, update artifact_draft with the fields collected so far."""
+Output format: After each user answer, update artifact_draft with the fields collected so far.
+
+IMPORTANT: When the definition is complete and ready for validation, output the full artifact_draft \
+as a ```json code block AND include the exact marker [DRAFT_COMPLETE] in your response."""
 
 _SKILL_PROMPT = """You are helping an administrator create a Skill Definition for Blitz AgentOS.
 
@@ -89,7 +95,10 @@ CRITICAL: Ask skill_type early.
 
 Always set source_type to "user_created" for manually created skills.
 
-Output format: After each user answer, update artifact_draft with the fields collected so far."""
+Output format: After each user answer, update artifact_draft with the fields collected so far.
+
+IMPORTANT: When the definition is complete and ready for validation, output the full artifact_draft \
+as a ```json code block AND include the exact marker [DRAFT_COMPLETE] in your response."""
 
 _MCP_SERVER_PROMPT = """You are helping an administrator register an MCP Server for Blitz AgentOS.
 
@@ -100,7 +109,10 @@ You must collect these fields through conversation:
 
 This is a simple form — only 3 fields. Ask for the server name, then the URL, then whether auth is needed.
 
-Output format: After each answer, update artifact_draft with the fields collected so far."""
+Output format: After each answer, update artifact_draft with the fields collected so far.
+
+IMPORTANT: When the definition is complete and ready for validation, output the full artifact_draft \
+as a ```json code block AND include the exact marker [DRAFT_COMPLETE] in your response."""
 
 _PROMPTS: dict[str, str] = {
     "agent": _AGENT_PROMPT,

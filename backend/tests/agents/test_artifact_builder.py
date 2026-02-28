@@ -264,3 +264,189 @@ async def test_validate_and_present_invalid_draft():
     assert result["is_complete"] is False
     assert len(result["validation_errors"]) > 0
     assert any("instruction_markdown" in e.lower() for e in result["validation_errors"])
+
+
+# ---------------------------------------------------------------------------
+# _extract_draft_from_response tests
+# ---------------------------------------------------------------------------
+
+
+def test_extract_draft_from_json_code_block():
+    """Extracts JSON from a ```json code block."""
+    from agents.artifact_builder import _extract_draft_from_response
+    content = 'Here is the draft:\n```json\n{"name": "test", "version": "1.0.0"}\n```\nLooks good?'
+    result = _extract_draft_from_response(content, {})
+    assert result == {"name": "test", "version": "1.0.0"}
+
+
+def test_extract_draft_from_plain_code_block():
+    """Extracts JSON from a ``` code block without json tag."""
+    from agents.artifact_builder import _extract_draft_from_response
+    content = 'Draft:\n```\n{"name": "x"}\n```'
+    result = _extract_draft_from_response(content, {})
+    assert result == {"name": "x"}
+
+
+def test_extract_draft_merges_with_existing():
+    """New fields merge with existing draft, overriding shared keys."""
+    from agents.artifact_builder import _extract_draft_from_response
+    content = '```json\n{"description": "new", "version": "2.0.0"}\n```'
+    result = _extract_draft_from_response(content, {"name": "old", "version": "1.0.0"})
+    assert result == {"name": "old", "description": "new", "version": "2.0.0"}
+
+
+def test_extract_draft_malformed_json_returns_current():
+    """Malformed JSON falls back to current draft."""
+    from agents.artifact_builder import _extract_draft_from_response
+    content = '```json\n{invalid json}\n```'
+    current = {"name": "keep"}
+    result = _extract_draft_from_response(content, current)
+    assert result == current
+
+
+def test_extract_draft_no_code_block_returns_current():
+    """No code block at all returns current draft unchanged."""
+    from agents.artifact_builder import _extract_draft_from_response
+    result = _extract_draft_from_response("Just some text", {"name": "unchanged"})
+    assert result == {"name": "unchanged"}
+
+
+# ---------------------------------------------------------------------------
+# _detect_artifact_type word-boundary tests
+# ---------------------------------------------------------------------------
+
+
+def test_detect_type_tool_word_boundary():
+    """'tool' matches as a whole word."""
+    from agents.artifact_builder import _detect_artifact_type
+    assert _detect_artifact_type("I need a tool that searches") == "tool"
+
+
+def test_detect_type_server_does_not_match():
+    """'server' alone should NOT match mcp_server (only 'mcp' or 'mcp server' do)."""
+    from agents.artifact_builder import _detect_artifact_type
+    assert _detect_artifact_type("I need a tool that connects to our server") == "tool"
+
+
+def test_detect_type_mcp_server_matches():
+    """'mcp server' matches mcp_server."""
+    from agents.artifact_builder import _detect_artifact_type
+    assert _detect_artifact_type("I want to add an mcp server") == "mcp_server"
+
+
+def test_detect_type_mcp_alone_matches():
+    """'mcp' alone matches mcp_server."""
+    from agents.artifact_builder import _detect_artifact_type
+    assert _detect_artifact_type("Register an MCP endpoint") == "mcp_server"
+
+
+# ---------------------------------------------------------------------------
+# _gather_details_node tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_gather_details_extracts_draft():
+    """gather_details node extracts draft from LLM response."""
+    from langchain_core.messages import HumanMessage, AIMessage
+
+    mock_response = AIMessage(
+        content='Here is the draft:\n```json\n{"name": "crm_search", "handler_type": "mcp"}\n```\nWhat else?'
+    )
+
+    with patch("agents.artifact_builder.get_llm") as mock_get_llm:
+        mock_llm = MagicMock()
+        mock_llm.ainvoke = AsyncMock(return_value=mock_response)
+        mock_get_llm.return_value = mock_llm
+
+        from agents.artifact_builder import _gather_details_node
+
+        state = {
+            "messages": [HumanMessage(content="It should search CRM contacts")],
+            "artifact_type": "tool",
+            "artifact_draft": {},
+            "validation_errors": [],
+            "is_complete": False,
+        }
+        result = await _gather_details_node(state)
+
+    assert result["artifact_draft"]["name"] == "crm_search"
+    assert result["is_complete"] is False
+
+
+@pytest.mark.asyncio
+async def test_gather_details_detects_draft_complete_marker():
+    """gather_details sets is_complete when LLM outputs [DRAFT_COMPLETE] marker."""
+    from langchain_core.messages import HumanMessage, AIMessage
+
+    mock_response = AIMessage(
+        content='```json\n{"name": "test_agent", "description": "A test"}\n```\n\n[DRAFT_COMPLETE]'
+    )
+
+    with patch("agents.artifact_builder.get_llm") as mock_get_llm:
+        mock_llm = MagicMock()
+        mock_llm.ainvoke = AsyncMock(return_value=mock_response)
+        mock_get_llm.return_value = mock_llm
+
+        from agents.artifact_builder import _gather_details_node
+
+        state = {
+            "messages": [HumanMessage(content="Name it test_agent, it's for testing")],
+            "artifact_type": "agent",
+            "artifact_draft": {},
+            "validation_errors": [],
+            "is_complete": False,
+        }
+        result = await _gather_details_node(state)
+
+    assert result["is_complete"] is True
+    assert result["artifact_draft"]["name"] == "test_agent"
+
+
+@pytest.mark.asyncio
+async def test_gather_details_llm_error_returns_friendly_message():
+    """gather_details handles LLM errors gracefully."""
+    from langchain_core.messages import HumanMessage
+
+    with patch("agents.artifact_builder.get_llm") as mock_get_llm:
+        mock_llm = MagicMock()
+        mock_llm.ainvoke = AsyncMock(side_effect=RuntimeError("LLM timeout"))
+        mock_get_llm.return_value = mock_llm
+
+        from agents.artifact_builder import _gather_details_node
+
+        state = {
+            "messages": [HumanMessage(content="Some input")],
+            "artifact_type": "tool",
+            "artifact_draft": {"name": "existing"},
+            "validation_errors": [],
+            "is_complete": False,
+        }
+        result = await _gather_details_node(state)
+
+    assert "issue" in result["messages"][0].content.lower() or "encountered" in result["messages"][0].content.lower()
+    assert result["artifact_draft"] == {"name": "existing"}
+
+
+@pytest.mark.asyncio
+async def test_gather_type_llm_error_returns_friendly_message():
+    """gather_type handles LLM errors gracefully when no type detected."""
+    from langchain_core.messages import HumanMessage
+
+    with patch("agents.artifact_builder.get_llm") as mock_get_llm:
+        mock_llm = MagicMock()
+        mock_llm.ainvoke = AsyncMock(side_effect=RuntimeError("Connection refused"))
+        mock_get_llm.return_value = mock_llm
+
+        from agents.artifact_builder import _gather_type_node
+
+        state = {
+            "messages": [HumanMessage(content="hello")],
+            "artifact_type": None,
+            "artifact_draft": None,
+            "validation_errors": [],
+            "is_complete": False,
+        }
+        result = await _gather_type_node(state)
+
+    assert "trouble" in result["messages"][0].content.lower() or "having" in result["messages"][0].content.lower()

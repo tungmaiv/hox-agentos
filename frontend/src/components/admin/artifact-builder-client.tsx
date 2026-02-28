@@ -14,6 +14,14 @@ import "@copilotkit/react-ui/styles.css";
 
 import { ArtifactPreview } from "./artifact-preview";
 
+/** Map artifact_type to admin API path segment */
+const TYPE_TO_PATH: Record<string, string> = {
+  agent: "agents",
+  tool: "tools",
+  skill: "skills",
+  mcp_server: "mcp-servers",
+};
+
 /** Co-agent state shape matching ArtifactBuilderState on backend */
 interface BuilderState {
   artifact_type: string | null;
@@ -68,20 +76,13 @@ function BuilderInner() {
     return () => window.removeEventListener("beforeunload", handler);
   }, [builderState.artifact_draft, saveSuccess]);
 
-  const typeToPath: Record<string, string> = {
-    agent: "agents",
-    tool: "tools",
-    skill: "skills",
-    mcp_server: "mcp-servers",
-  };
-
   const handleSave = useCallback(async () => {
     if (!builderState.artifact_type || !builderState.artifact_draft) return;
 
     setSaving(true);
     setSaveError(null);
 
-    const path = typeToPath[builderState.artifact_type];
+    const path = TYPE_TO_PATH[builderState.artifact_type];
     if (!path) {
       setSaveError(`Unknown artifact type: ${builderState.artifact_type}`);
       setSaving(false);
@@ -114,7 +115,7 @@ function BuilderInner() {
   }, [builderState.artifact_type, builderState.artifact_draft]);
 
   if (saveSuccess) {
-    const listPath = typeToPath[builderState.artifact_type ?? ""] ?? "agents";
+    const listPath = TYPE_TO_PATH[builderState.artifact_type ?? ""] ?? "agents";
 
     return (
       <div className="flex items-center justify-center h-[calc(100vh-140px)]">

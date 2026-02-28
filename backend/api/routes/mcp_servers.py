@@ -24,6 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.db import get_db
 from core.models.mcp_server import McpServer
 from core.models.user import UserContext
+from core.schemas.registry import McpServerCreate
 from mcp.registry import MCPToolRegistry
 from security.deps import get_current_user
 from security.rbac import has_permission
@@ -41,14 +42,6 @@ async def _require_admin(
     if not await has_permission(user, "tool:admin", session):
         raise HTTPException(status_code=403, detail="Admin permission required")
     return user
-
-
-class McpServerCreate(BaseModel):
-    """Request body for registering a new MCP server."""
-
-    name: str  # unique display name (e.g. "crm", "docs")
-    url: str  # HTTP endpoint base URL (e.g. "http://mcp-crm:8001")
-    auth_token: str | None = None  # plaintext Bearer token; encrypted before storage
 
 
 class StatusPatch(BaseModel):

@@ -5,7 +5,7 @@ A conversational agent that helps admins create artifact definitions
 (agents, tools, skills, MCP servers) through step-by-step Q&A.
 
 Graph topology:
-  START → route_intent (conditional)
+  START → route_intent (conditional entry point)
     |-> gather_type           (if artifact_type not set)
     |-> gather_details        (if type set but draft incomplete)
     |-> validate_and_present  (if draft looks ready)
@@ -29,20 +29,22 @@ from core.config import get_llm
 
 logger = structlog.get_logger(__name__)
 
-# Keywords to detect artifact type from user messages
-_TYPE_KEYWORDS: dict[str, str] = {
-    "agent": "agent",
-    "tool": "tool",
-    "skill": "skill",
-    "mcp": "mcp_server",
-    "mcp_server": "mcp_server",
-    "mcp server": "mcp_server",
-    "server": "mcp_server",
-}
+# Keywords to detect artifact type from user messages.
+# Uses word-boundary matching via regex to avoid false positives.
+_TYPE_KEYWORDS: list[tuple[str, str]] = [
+    (r"\bmcp[_ ]server\b", "mcp_server"),
+    (r"\bmcp\b", "mcp_server"),
+    (r"\bagent\b", "agent"),
+    (r"\btool\b", "tool"),
+    (r"\bskill\b", "skill"),
+]
+
+# Marker the LLM outputs when draft is ready for validation.
+_DRAFT_COMPLETE_MARKER = "[DRAFT_COMPLETE]"
 
 
 def _route_intent(state: ArtifactBuilderState) -> str:
-    """Conditional edge: decide which node to run next."""
+    """Conditional entry point: decide which node to run next."""
     if state.get("artifact_type") is None:
         return "gather_type"
     if state.get("is_complete"):
@@ -51,10 +53,10 @@ def _route_intent(state: ArtifactBuilderState) -> str:
 
 
 def _detect_artifact_type(text: str) -> str | None:
-    """Try to detect artifact type from user message text."""
+    """Try to detect artifact type from user message text using word boundaries."""
     lower = text.lower()
-    for keyword, atype in _TYPE_KEYWORDS.items():
-        if keyword in lower:
+    for pattern, atype in _TYPE_KEYWORDS:
+        if re.search(pattern, lower):
             return atype
     return None
 
@@ -82,6 +84,7 @@ def _extract_draft_from_response(content: str, current_draft: dict) -> dict:
 async def _gather_type_node(state: ArtifactBuilderState) -> dict:
     """Ask the user what type of artifact they want, or detect from message."""
     messages = state.get("messages", [])
+    llm = get_llm("blitz/master")
 
     # Check if the user already mentioned a type in their last message
     if messages:
@@ -89,12 +92,22 @@ async def _gather_type_node(state: ArtifactBuilderState) -> dict:
         if isinstance(last_msg, HumanMessage):
             detected = _detect_artifact_type(last_msg.content)
             if detected:
-                llm = get_llm("blitz/master")
-                sys_prompt = get_system_prompt(detected)
-                response = await llm.ainvoke([
-                    SystemMessage(content=sys_prompt),
-                    HumanMessage(content=last_msg.content),
-                ])
+                try:
+                    sys_prompt = get_system_prompt(detected)
+                    response = await llm.ainvoke([
+                        SystemMessage(content=sys_prompt),
+                        HumanMessage(content=last_msg.content),
+                    ])
+                except Exception as exc:
+                    logger.error("llm_error", node="gather_type", error=str(exc))
+                    return {
+                        "messages": [AIMessage(
+                            content="I encountered an issue processing your request. "
+                            "Could you try again?"
+                        )],
+                        "artifact_type": detected,
+                        "artifact_draft": {},
+                    }
                 return {
                     "messages": [response],
                     "artifact_type": detected,
@@ -102,11 +115,19 @@ async def _gather_type_node(state: ArtifactBuilderState) -> dict:
                 }
 
     # No type detected — ask explicitly
-    llm = get_llm("blitz/master")
-    response = await llm.ainvoke([
-        SystemMessage(content=get_gather_type_prompt()),
-        *messages,
-    ])
+    try:
+        response = await llm.ainvoke([
+            SystemMessage(content=get_gather_type_prompt()),
+            *messages,
+        ])
+    except Exception as exc:
+        logger.error("llm_error", node="gather_type", error=str(exc))
+        return {
+            "messages": [AIMessage(
+                content="I'm having trouble connecting. What type of artifact "
+                "would you like to create? (agent, tool, skill, or MCP server)"
+            )],
+        }
     return {"messages": [response]}
 
 
@@ -122,25 +143,29 @@ async def _gather_details_node(state: ArtifactBuilderState) -> dict:
         f"\n\nCurrent artifact_draft so far:\n```json\n{json.dumps(current_draft, indent=2)}\n```\n"
         f"Continue asking questions for missing fields. When you have enough information "
         f"to create a valid definition, output the complete artifact_draft as a JSON code block "
-        f"and tell the user the definition is ready for review."
+        f"and include the marker {_DRAFT_COMPLETE_MARKER} in your response."
         if current_draft
         else "\n\nNo fields collected yet. Start by asking about the artifact's purpose and name."
     )
 
-    llm = get_llm("blitz/master")
-    response = await llm.ainvoke([
-        SystemMessage(content=sys_prompt + draft_context),
-        *messages,
-    ])
+    try:
+        llm = get_llm("blitz/master")
+        response = await llm.ainvoke([
+            SystemMessage(content=sys_prompt + draft_context),
+            *messages,
+        ])
+    except Exception as exc:
+        logger.error("llm_error", node="gather_details", error=str(exc))
+        return {
+            "messages": [AIMessage(
+                content="I encountered an issue. Could you repeat your last response?"
+            )],
+            "artifact_draft": current_draft,
+        }
 
     updated_draft = _extract_draft_from_response(response.content, current_draft)
 
-    content_lower = response.content.lower()
-    looks_complete = any(phrase in content_lower for phrase in [
-        "ready for review", "definition is ready", "ready to save",
-        "here's the complete", "here is the complete",
-        "definition is complete", "looks complete",
-    ])
+    looks_complete = _DRAFT_COMPLETE_MARKER in response.content
 
     return {
         "messages": [response],
@@ -190,7 +215,15 @@ def create_artifact_builder_graph() -> CompiledStateGraph:
     graph.add_node("gather_details", _gather_details_node)
     graph.add_node("validate_and_present", _validate_and_present_node)
 
-    graph.set_entry_point("gather_type")
+    # Conditional entry point: routes to correct node based on state
+    graph.set_conditional_entry_point(
+        _route_intent,
+        {
+            "gather_type": "gather_type",
+            "gather_details": "gather_details",
+            "validate_and_present": "validate_and_present",
+        },
+    )
 
     graph.add_edge("gather_type", END)
     graph.add_edge("gather_details", END)

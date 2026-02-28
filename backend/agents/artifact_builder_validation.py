@@ -11,10 +11,10 @@ from pydantic import ValidationError
 
 from core.schemas.registry import (
     AgentDefinitionCreate,
+    McpServerCreate,
     SkillDefinitionCreate,
     ToolDefinitionCreate,
 )
-from api.routes.mcp_servers import McpServerCreate
 
 _ALLOWED_HANDLER_PREFIXES = (
     "tools.", "agents.", "skills.", "mcp.", "gateway.",
