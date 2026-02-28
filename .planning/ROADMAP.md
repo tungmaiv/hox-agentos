@@ -26,7 +26,7 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 - [x] **Phase 4.1: Phase 4 Polish** (INSERTED) — HITL canvas node amber ring fix, Next.js webhook proxy (completed 2026-02-27)
 - [x] **Phase 5: Scheduler and Channels** — Web chat enhancement, Telegram/WhatsApp/Teams adapters, channel identity resolution, ChannelAdapter protocol (completed 2026-02-28)
 - [ ] **Phase 5.1: Workflow Execution Wiring** (INSERTED) — Fix workflow→channel delivery, wire real agent_node dispatch, Celery worker role passthrough
-- [ ] **Phase 6: Extensibility Registries** — Database-backed registries for agents/tools/skills/MCP servers, CRUD APIs, per-artifact permissions, skill runtime with /command support
+- [ ] **Phase 6: Extensibility Registries** — Database-backed registries for agents/tools/skills/MCP servers, CRUD APIs, per-artifact permissions, skill runtime with /command support, admin dashboard UI
 - [ ] **Phase 7: Hardening and Sandboxing** — Docker sandbox execution, security audit, RLS policies, credential scanning, penetration testing
 - [ ] **Phase 8: Observability** — Grafana dashboards, Loki log aggregation, LiteLLM cost tracking
 
@@ -98,24 +98,26 @@ Plans:
 - [ ] 05.1-01-PLAN.md — Channel output delivery + agent_node real dispatch + Keycloak role passthrough + tests
 
 ### Phase 6: Extensibility Registries
-**Goal**: Admins and developers can manage the platform's agents, tools, skills, and MCP servers as runtime artifacts through database-backed registries with granular permissions, with a skill runtime supporting /command invocation and a secure skill import pipeline
+**Goal**: Admins and developers can manage the platform's agents, tools, skills, and MCP servers as runtime artifacts through database-backed registries with granular permissions, with a skill runtime supporting /command invocation, a secure skill import pipeline, and a frontend admin dashboard
 **Depends on**: Phases 4 and 5
 **Requirements**: EXTD-01, EXTD-02, EXTD-03, EXTD-04, EXTD-05, EXTD-06
 **Success Criteria** (what must be TRUE):
   1. Every agent, tool, skill, and MCP server has a database registry entry with name, description, version, status, and required permissions
-  2. Admin can add, edit, disable, and re-enable any artifact via API — disabled artifacts are unavailable to agents
+  2. Admin can add, edit, disable, and re-enable any artifact via API and admin UI — disabled artifacts are unavailable to agents
   3. Developer can register a new tool or MCP server and it becomes available to authorized users without restarting the backend
-  4. Permissions can be assigned per artifact per role
+  4. Permissions can be assigned per artifact per role, with per-user overrides and staged apply model
   5. Removing an artifact from the registry prevents all future invocations; existing running workflows complete gracefully
-**Plans**: 6 plans
+  6. Admin dashboard at /admin shows all artifacts with table/card views, permission matrix, and MCP connectivity indicators
+**Plans**: 7 plans
 
 Plans:
-- [ ] 06-01-PLAN.md — ORM models, Alembic migration 014 with seed data, Pydantic schemas
-- [ ] 06-02-PLAN.md — RBAC migration to DB-backed role_permissions with cache
-- [ ] 06-03-PLAN.md — Admin CRUD APIs for agents, tools, skills, and permissions
-- [ ] 06-04-PLAN.md — Runtime integration: tool registry DB, agent graph DB, MCP evolution
-- [ ] 06-05-PLAN.md — Skill system: executor, validator, import pipeline, security scanner
-- [ ] 06-06-PLAN.md — User skill APIs, slash command dispatch, frontend skill menu, integration wiring
+- [ ] 06-01-PLAN.md — ORM models (6 tables + MCP evolution), Alembic migration 014 with seed data + tool_acl migration, Pydantic schemas
+- [ ] 06-02-PLAN.md — RBAC migration to DB-backed role_permissions with cache, artifact permissions with staged model
+- [ ] 06-03-PLAN.md — Admin CRUD APIs with multi-version, bulk status, staged permissions, per-user overrides, graceful removal
+- [ ] 06-04-PLAN.md — Runtime integration: tool registry DB, agent graph DB, MCP evolution, startup seeding, last_seen_at tracking
+- [ ] 06-05-PLAN.md — Skill system: executor with AG-UI streaming, AST-based safe evaluator, validator, import pipeline, security scanner
+- [ ] 06-06-PLAN.md — User skill/tool APIs, slash command dispatch, frontend skill menu, integration wiring
+- [ ] 06-07-PLAN.md — Frontend admin dashboard: tabbed UI, table/card views, permission matrix, MCP dots
 
 ### Phase 7: Hardening and Sandboxing
 **Goal**: Untrusted code executes safely in sandboxed containers, and the full security perimeter is verified through automated testing and policy enforcement
@@ -162,6 +164,6 @@ Plans:
 | 4.1. Phase 4 Polish (INSERTED) | v1.1 | 1/1 | ✅ Complete | 2026-02-27 |
 | 5. Scheduler & Channels | v1.1 | 6/6 | ✅ Complete | 2026-02-28 |
 | 5.1. Workflow Execution Wiring (INSERTED) | v1.1 | 0/1 | ◐ Planned | — |
-| 6. Extensibility Registries | v1.1 | 0/6 | ◐ Planned | — |
+| 6. Extensibility Registries | v1.1 | 0/7 | ◐ Planned | — |
 | 7. Hardening & Sandboxing | v1.1 | 0/2 | ○ Not started | — |
 | 8. Observability | v1.1 | 0/2 | ○ Not started | — |
