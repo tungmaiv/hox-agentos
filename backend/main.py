@@ -11,6 +11,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.routes import (
+    admin_agents,
+    admin_tools,
     agents,
     conversations,
     credentials,
@@ -97,6 +99,12 @@ def create_app() -> FastAPI:
     # MCP server CRUD — GET/POST/DELETE /api/admin/mcp-servers (admin-only)
     # Note: router already includes /api prefix in its definition
     app.include_router(mcp_servers.router)
+
+    # Admin agent CRUD — /api/admin/agents (registry:manage permission)
+    app.include_router(admin_agents.router)
+
+    # Admin tool CRUD — /api/admin/tools (registry:manage permission)
+    app.include_router(admin_tools.router)
 
     # Tool execution — POST /api/tools/call (all authenticated users; 3-gate security)
     # Note: router already includes /api prefix in its definition
