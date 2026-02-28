@@ -164,6 +164,6 @@ Plans:
 | 4.1. Phase 4 Polish (INSERTED) | v1.1 | 1/1 | ✅ Complete | 2026-02-27 |
 | 5. Scheduler & Channels | v1.1 | 6/6 | ✅ Complete | 2026-02-28 |
 | 5.1. Workflow Execution Wiring (INSERTED) | v1.1 | 1/1 | ✅ Complete | 2026-02-28 |
-| 6. Extensibility Registries | v1.1 | 7/7 | ✅ Complete | 2026-02-28 |
+| 6. Extensibility Registries | v1.1 | Complete    | 2026-02-28 | 2026-02-28 |
 | 7. Hardening & Sandboxing | v1.1 | 0/2 | ○ Not started | — |
 | 8. Observability | v1.1 | 0/2 | ○ Not started | — |
