@@ -126,7 +126,8 @@ async def _handle_tool_node(config: dict[str, Any], state: WorkflowState) -> Any
     params = config.get("params", {})
 
     # Unknown tool: fail fast before opening a DB session
-    if get_tool(tool_name) is None:
+    # session=None uses stale cache (backward compat for workflow context)
+    if await get_tool(tool_name) is None:
         logger.warning("tool_node_unknown_tool", tool_name=tool_name)
         return {"error": f"Tool '{tool_name}' not registered", "success": False}
 

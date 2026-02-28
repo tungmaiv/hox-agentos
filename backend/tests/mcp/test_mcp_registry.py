@@ -1,4 +1,4 @@
-"""TDD tests for call_mcp_tool — 3-gate security enforcement."""
+"""TDD tests for call_mcp_tool -- 3-gate security enforcement."""
 import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -13,9 +13,9 @@ def make_user(
     permissions: list[str] | None = None,
 ) -> UserContext:
     """Create a test UserContext with specified roles."""
-    # Note: permissions field does not exist on UserContext — roles drive RBAC.
+    # Note: permissions field does not exist on UserContext -- roles drive RBAC.
     # The 'permissions' param here is ignored (it's checked via has_permission(user, perm)).
-    _ = permissions  # unused — kept for test readability parity with plan
+    _ = permissions  # unused -- kept for test readability parity with plan
     return UserContext(
         user_id=uuid.uuid4(),
         email="test@blitz.local",
@@ -27,11 +27,11 @@ def make_user(
 
 @pytest.mark.asyncio
 async def test_call_mcp_tool_denied_without_permission() -> None:
-    """User lacks required permission → 403."""
+    """User lacks required permission -> 403."""
     user = make_user(roles=["employee"])  # employee has no crm:read permission
 
     with (
-        patch("mcp.registry.get_tool") as mock_get_tool,
+        patch("mcp.registry.get_tool", new_callable=AsyncMock) as mock_get_tool,
         patch("mcp.registry.has_permission", new_callable=AsyncMock) as mock_has_perm,
     ):
         mock_get_tool.return_value = {
@@ -54,11 +54,11 @@ async def test_call_mcp_tool_denied_without_permission() -> None:
 
 @pytest.mark.asyncio
 async def test_call_mcp_tool_denied_by_acl() -> None:
-    """RBAC passes but ACL row denies user → 403; audit log entry created."""
+    """RBAC passes but ACL row denies user -> 403; audit log entry created."""
     user = make_user(roles=["it-admin"])
 
     with (
-        patch("mcp.registry.get_tool") as mock_get_tool,
+        patch("mcp.registry.get_tool", new_callable=AsyncMock) as mock_get_tool,
         patch("mcp.registry.has_permission", new_callable=AsyncMock) as mock_has_perm,
         patch(
             "mcp.registry.check_tool_acl", new_callable=AsyncMock
@@ -87,17 +87,18 @@ async def test_call_mcp_tool_denied_by_acl() -> None:
 
 @pytest.mark.asyncio
 async def test_call_mcp_tool_succeeds_with_all_gates() -> None:
-    """User has permission + ACL allows → MCPClient.call_tool called."""
+    """User has permission + ACL allows -> MCPClient.call_tool called."""
     user = make_user(roles=["it-admin"])
 
     with (
-        patch("mcp.registry.get_tool") as mock_get_tool,
+        patch("mcp.registry.get_tool", new_callable=AsyncMock) as mock_get_tool,
         patch("mcp.registry.has_permission", new_callable=AsyncMock) as mock_has_perm,
         patch(
             "mcp.registry.check_tool_acl", new_callable=AsyncMock
         ) as mock_acl,
         patch("mcp.registry._get_client") as mock_get_client,
         patch("mcp.registry.audit_logger"),
+        patch("gateway.tool_registry.update_tool_last_seen", new_callable=AsyncMock),
     ):
         mock_get_tool.return_value = {
             "required_permissions": ["crm:read"],
@@ -134,13 +135,14 @@ async def test_call_mcp_tool_logs_every_attempt() -> None:
     user = make_user(roles=["it-admin"])
 
     with (
-        patch("mcp.registry.get_tool") as mock_get_tool,
+        patch("mcp.registry.get_tool", new_callable=AsyncMock) as mock_get_tool,
         patch("mcp.registry.has_permission", new_callable=AsyncMock) as mock_has_perm,
         patch(
             "mcp.registry.check_tool_acl", new_callable=AsyncMock
         ) as mock_acl,
         patch("mcp.registry._get_client") as mock_get_client,
         patch("mcp.registry.audit_logger") as mock_audit,
+        patch("gateway.tool_registry.update_tool_last_seen", new_callable=AsyncMock),
     ):
         mock_get_tool.return_value = {
             "required_permissions": [],
@@ -159,7 +161,7 @@ async def test_call_mcp_tool_logs_every_attempt() -> None:
 
         await call_mcp_tool("crm.list_projects", {}, user, AsyncMock())
 
-        # Audit log must be called (at least once — for the ACL gate)
+        # Audit log must be called (at least once -- for the ACL gate)
         mock_audit.info.assert_called()
         # Verify the call includes tool_call event
         call_args = mock_audit.info.call_args
@@ -193,6 +195,7 @@ async def test_create_mcp_server_calls_refresh_after_commit() -> None:
     mock_server_obj.name = "test-crm"
     mock_server_obj.url = "http://mcp-crm:8001"
     mock_server_obj.is_active = True
+    mock_server_obj.status = "active"
 
     mock_session = AsyncMock()
     mock_session.add = MagicMock()

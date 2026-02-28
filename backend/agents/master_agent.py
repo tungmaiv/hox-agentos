@@ -23,12 +23,17 @@ Long-term memory (Phase 3):
 - _save_memory_node: dispatches embed_and_store.delay for AI turns (fire-and-forget)
   and summarize_episode.delay at configurable threshold
 """
+import importlib
+from datetime import datetime, timezone
+from typing import Any
+
 import structlog
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
 from langgraph.graph.state import CompiledStateGraph
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from agents.state.types import BlitzState
 from api.routes.user_instructions import get_user_instructions
@@ -366,31 +371,58 @@ async def _save_memory_node(state: BlitzState) -> dict:
     return {}
 
 
+# ── Module-level keyword routing cache ──────────────────────────────────
+# When DB agents are loaded, this map is populated from agent_definitions.routing_keywords.
+# Format: {"keyword": "agent_name"} — e.g. {"email": "email_agent", "inbox": "email_agent"}
+# Falls back to hardcoded _FALLBACK_KEYWORD_MAP if empty (backward compat).
+_keyword_to_agent: dict[str, str] = {}
+
+_FALLBACK_KEYWORD_MAP: dict[str, str] = {
+    # email
+    "email": "email_agent", "emails": "email_agent", "inbox": "email_agent",
+    "unread": "email_agent", "mail": "email_agent",
+    # calendar
+    "calendar": "calendar_agent", "schedule": "calendar_agent",
+    "meeting": "calendar_agent", "meetings": "calendar_agent",
+    "event": "calendar_agent", "events": "calendar_agent",
+    "appointment": "calendar_agent",
+    # project
+    "project": "project_agent", "projects": "project_agent",
+    "crm": "project_agent", "task": "project_agent",
+    "tasks": "project_agent", "sprint": "project_agent",
+    "milestone": "project_agent",
+}
+
+
 def _classify_by_keywords(text: str) -> str:
     """
-    Keyword-based intent classification — no LLM call.
+    Keyword-based intent classification -- no LLM call.
 
-    Returns one of: "email", "calendar", "project", "general".
+    Phase 6: Uses _keyword_to_agent map if populated from DB agents,
+    falls back to hardcoded keywords if empty (backward compat).
+
+    Returns the agent name (e.g. "email_agent") or "general".
 
     Using keywords instead of an LLM here is intentional: routing functions
     run outside graph nodes, so any LLM call they make gets streamed by
     CopilotKit as a chat message (e.g. "general" appearing before the real
-    answer). Keywords are instant and sufficient for Phase 3's explicit intents.
+    answer). Keywords are instant and sufficient for explicit intents.
     """
     import re
     lowered = text.lower()
     words = set(re.findall(r"\w+", lowered))
 
-    _EMAIL_KW = {"email", "emails", "inbox", "unread", "mail"}
-    _CAL_KW = {"calendar", "schedule", "meeting", "meetings", "event", "events", "appointment"}
-    _PROJECT_KW = {"project", "projects", "crm", "task", "tasks", "sprint", "milestone"}
+    kw_map = _keyword_to_agent if _keyword_to_agent else _FALLBACK_KEYWORD_MAP
 
-    if words & _EMAIL_KW:
-        return "email"
-    if words & _CAL_KW:
-        return "calendar"
-    if words & _PROJECT_KW or "status of" in lowered or "status of project" in lowered:
-        return "project"
+    for word in words:
+        if word in kw_map:
+            return kw_map[word]
+
+    # Check phrase patterns (e.g. "status of") only for project fallback
+    if not _keyword_to_agent:
+        if "status of" in lowered:
+            return "project_agent"
+
     return "general"
 
 
@@ -398,21 +430,12 @@ async def _pre_route(state: BlitzState) -> str:
     """
     Routing conditional after load_memory, BEFORE master_agent runs.
 
-    Uses keyword matching (no LLM) to classify intent. Sub-agent intents
-    bypass the master LLM entirely — the sub-agent provides the full
-    structured response. General intent falls through to master_agent.
-
-    Keyword-based classification is used here because:
-    - Routing functions run outside LangGraph nodes, so LLM calls made here
-      get streamed by CopilotKit as chat messages (spurious "general" text).
-    - Keyword matching is instant, restoring the typing indicator for the
-      master agent without any extra latency.
+    Phase 6: Uses DB-backed keyword routing from agent_definitions.routing_keywords
+    when available. Falls back to hardcoded keywords if DB routing map is empty.
 
     Returns node names:
-      "email_agent"    — route directly to email sub-agent
-      "calendar_agent" — route directly to calendar sub-agent
-      "project_agent"  — route directly to project sub-agent
-      "master_agent"   — general intent; run master LLM
+      "{agent_name}" -- route directly to matching sub-agent
+      "master_agent" -- general intent; run master LLM
     """
     from core.models.system_config import SystemConfig
 
@@ -421,7 +444,14 @@ async def _pre_route(state: BlitzState) -> str:
     )
     intent = _classify_by_keywords(str(last_user_msg))
 
-    async def _agent_enabled(key: str) -> bool:
+    if intent == "general":
+        return "master_agent"
+
+    # Check if the target agent is enabled in system_config
+    async def _agent_enabled(agent_name: str) -> bool:
+        # Map agent_name to config key (e.g. "email_agent" -> "agent.email.enabled")
+        short_name = agent_name.replace("_agent", "")
+        key = f"agent.{short_name}.enabled"
         try:
             async with async_session() as s:
                 result = await s.execute(select(SystemConfig).where(SystemConfig.key == key))
@@ -430,69 +460,167 @@ async def _pre_route(state: BlitzState) -> str:
                     return True  # default enabled when not configured
                 return bool(row.value)
         except Exception:
-            return True  # fail open — agent enabled on DB error
+            return True  # fail open -- agent enabled on DB error
 
-    if intent == "email" and await _agent_enabled("agent.email.enabled"):
-        return "email_agent"
-    if intent == "calendar" and await _agent_enabled("agent.calendar.enabled"):
-        return "calendar_agent"
-    if intent == "project" and await _agent_enabled("agent.project.enabled"):
-        return "project_agent"
-    # General intent (or disabled sub-agent): run master LLM
+    if await _agent_enabled(intent):
+        return intent
+    # Disabled agent: fall through to master LLM
     return "master_agent"
 
 
-def create_master_graph() -> CompiledStateGraph:
+async def update_agent_last_seen(agent_name: str, session: AsyncSession) -> None:
+    """
+    Update last_seen_at on an agent after successful dispatch.
+
+    Batched: only updates if last_seen_at is older than 60s or NULL,
+    to avoid excessive DB writes on high-frequency agent invocations.
+    """
+    from core.models.agent_definition import AgentDefinition
+
+    now = datetime.now(timezone.utc)
+    cutoff = datetime.fromtimestamp(now.timestamp() - 60, tz=timezone.utc)
+
+    result = await session.execute(
+        select(AgentDefinition).where(
+            AgentDefinition.name == agent_name,
+            AgentDefinition.is_active == True,  # noqa: E712
+        )
+    )
+    agent = result.scalar_one_or_none()
+    if agent is None:
+        return
+
+    # Normalize for comparison: SQLite stores offset-naive datetimes
+    last = agent.last_seen_at
+    if last is not None and last.tzinfo is None:
+        last = last.replace(tzinfo=timezone.utc)
+
+    if last is None or last < cutoff:
+        await session.execute(
+            update(AgentDefinition)
+            .where(AgentDefinition.id == agent.id)
+            .values(last_seen_at=now)
+        )
+        await session.commit()
+
+
+def create_master_graph(
+    session: AsyncSession | None = None,
+    _db_agents: list[Any] | None = None,
+) -> CompiledStateGraph:
     """
     Build and compile the master agent StateGraph with memory and sub-agent routing.
 
+    Phase 6: When _db_agents is provided (loaded from agent_definitions table),
+    dynamically wires agent nodes using importlib. When None, falls back to
+    hardcoded agent wiring (backward compat).
+
+    The session parameter is accepted for signature compat but DB loading
+    is done externally via async create_master_graph_from_db(). This function
+    is sync because LangGraph graph.compile() is sync.
+
     Returns a compiled graph ready for CopilotKit streaming or direct invocation.
-    Call once at startup and reuse — LangGraph compilation is expensive.
-
-    Phase 3 graph topology:
-        START → load_memory → [_pre_route]
-                                  ├── "email_agent"    → email_agent_node    → delivery_router → save_memory → END
-                                  ├── "calendar_agent" → calendar_agent_node → delivery_router → save_memory → END
-                                  ├── "project_agent"  → project_agent_node  → delivery_router → save_memory → END
-                                  └── "master_agent"   → master_agent_node   → delivery_router → save_memory → END
-
-    Sub-agent intents skip the master LLM entirely — no apology text injected
-    before the structured card response. General intents run the master LLM.
     """
-    from agents.delivery_router import delivery_router_node
-    from agents.subagents.calendar_agent import calendar_agent_node
-    from agents.subagents.email_agent import email_agent_node
-    from agents.subagents.project_agent import project_agent_node
+    global _keyword_to_agent
 
     graph = StateGraph(BlitzState)
     graph.add_node("load_memory", _load_memory_node)
     graph.add_node("master_agent", _master_node)
-    graph.add_node("email_agent", email_agent_node)
-    graph.add_node("calendar_agent", calendar_agent_node)
-    graph.add_node("project_agent", project_agent_node)
+
+    from agents.delivery_router import delivery_router_node
+
     graph.add_node("delivery_router", delivery_router_node)
     graph.add_node("save_memory", _save_memory_node)
 
-    graph.set_entry_point("load_memory")
+    route_map: dict[str, str] = {"master_agent": "master_agent"}
+    agent_nodes: list[str] = []
 
-    # Intent classification before master LLM — sub-agent intents skip master entirely
-    graph.add_conditional_edges(
-        "load_memory",
-        _pre_route,
-        {
+    if _db_agents is not None and len(_db_agents) > 0:
+        # Dynamic wiring from DB agent_definitions
+        new_kw_map: dict[str, str] = {}
+
+        for agent_def in _db_agents:
+            name = agent_def.name
+            if name == "master_agent":
+                continue  # master_agent is always hardcoded
+
+            try:
+                module = importlib.import_module(agent_def.handler_module)
+                handler = getattr(module, agent_def.handler_function)
+                graph.add_node(name, handler)
+                route_map[name] = name
+                agent_nodes.append(name)
+
+                # Build keyword routing map from agent's routing_keywords
+                for kw in (agent_def.routing_keywords or []):
+                    new_kw_map[kw.lower()] = name
+
+                logger.debug("agent_wired_from_db", agent=name, module=agent_def.handler_module)
+            except Exception as exc:
+                logger.warning("agent_wiring_failed", agent=name, error=str(exc))
+
+        _keyword_to_agent = new_kw_map
+    else:
+        # Fallback: hardcoded agent wiring (backward compat)
+        from agents.subagents.calendar_agent import calendar_agent_node
+        from agents.subagents.email_agent import email_agent_node
+        from agents.subagents.project_agent import project_agent_node
+
+        graph.add_node("email_agent", email_agent_node)
+        graph.add_node("calendar_agent", calendar_agent_node)
+        graph.add_node("project_agent", project_agent_node)
+
+        route_map.update({
             "email_agent": "email_agent",
             "calendar_agent": "calendar_agent",
             "project_agent": "project_agent",
-            "master_agent": "master_agent",
-        },
+        })
+        agent_nodes = ["email_agent", "calendar_agent", "project_agent"]
+
+        # Clear DB keyword map -- use fallback
+        _keyword_to_agent = {}
+
+    graph.set_entry_point("load_memory")
+
+    # Intent classification before master LLM -- sub-agent intents skip master entirely
+    graph.add_conditional_edges(
+        "load_memory",
+        _pre_route,
+        route_map,
     )
 
-    # All paths converge at delivery_router → save_memory → END
+    # All paths converge at delivery_router -> save_memory -> END
     graph.add_edge("master_agent", "delivery_router")
-    graph.add_edge("email_agent", "delivery_router")
-    graph.add_edge("calendar_agent", "delivery_router")
-    graph.add_edge("project_agent", "delivery_router")
+    for node_name in agent_nodes:
+        graph.add_edge(node_name, "delivery_router")
     graph.add_edge("delivery_router", "save_memory")
     graph.add_edge("save_memory", END)
 
     return graph.compile(checkpointer=MemorySaver())
+
+
+async def create_master_graph_from_db(session: AsyncSession) -> CompiledStateGraph:
+    """
+    Load active agents from agent_definitions DB and build graph dynamically.
+
+    This is the async entry point that queries the DB, then delegates to
+    create_master_graph() for the sync graph compilation.
+
+    Only loads agents with status='active' AND is_active=True.
+    Also updates last_seen_at on dispatch (called by wrapper nodes).
+    """
+    from core.models.agent_definition import AgentDefinition
+
+    result = await session.execute(
+        select(AgentDefinition).where(
+            AgentDefinition.status == "active",
+            AgentDefinition.is_active == True,  # noqa: E712
+        )
+    )
+    active_agents = result.scalars().all()
+
+    if not active_agents:
+        logger.info("no_db_agents_found", fallback="hardcoded")
+        return create_master_graph()
+
+    return create_master_graph(_db_agents=active_agents)

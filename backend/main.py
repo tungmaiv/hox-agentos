@@ -39,6 +39,22 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     FastAPI lifespan context manager.
     Runs startup logic before the first request, cleanup on shutdown.
     """
+    # Seed tool_definitions from legacy hardcoded registry (first boot only).
+    # Then refresh the in-process cache so tool dispatch works immediately.
+    try:
+        from core.db import async_session
+        from gateway.tool_registry import _refresh_tool_cache, seed_tool_definitions_from_registry
+
+        async with async_session() as session:
+            await seed_tool_definitions_from_registry(session)
+            await _refresh_tool_cache(session)
+    except Exception as exc:
+        import structlog
+
+        structlog.get_logger(__name__).warning(
+            "tool_seed_failed", error=str(exc)
+        )
+
     # Discover and register MCP tools from active mcp_servers DB rows.
     # Servers unreachable at startup are skipped with a warning log — they
     # can be retried later without a restart.
