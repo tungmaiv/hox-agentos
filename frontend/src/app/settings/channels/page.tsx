@@ -372,6 +372,14 @@ function ChannelCard({
             {isPaired && enabled && (
               <p className="text-xs text-green-600 mt-0.5">
                 Linked as {displayName}
+                {channelInfo?.username && (
+                  <span className="text-gray-400"> &middot; @{channelInfo.username}</span>
+                )}
+              </p>
+            )}
+            {!isPaired && enabled && channelInfo?.username && (
+              <p className="text-xs text-gray-400 mt-0.5">
+                Bot: @{channelInfo.username}
               </p>
             )}
             {!enabled && (
