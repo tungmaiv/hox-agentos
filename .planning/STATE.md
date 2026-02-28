@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates daily work routines and lets them build custom automations without writing code -- all within an enterprise-secure, on-premise environment.
-**Current focus:** Phase 6 (Extensibility Registries) — Plan 01 complete
+**Current focus:** Phase 6 (Extensibility Registries) — Plan 02 complete
 
 ## Current Position
 
 Milestone: v1.1 Phase 6 (Extensibility Registries) — IN PROGRESS
-Phases: 1, 2, 2.1, 3, 3.1, 4, 4.1, 5, 5.1 — all complete; Phase 6: Plan 01 complete
-Current Plan: Phase 6 Plan 02 (next) — 1/7 plans executed
-Status: Phase 6 in progress — registry models and migration done
-Last activity: 2026-02-28 -- Phase 6 Plan 01: registry ORM models, Alembic 014, Pydantic schemas
+Phases: 1, 2, 2.1, 3, 3.1, 4, 4.1, 5, 5.1 — all complete; Phase 6: Plans 01-02 complete
+Current Plan: Phase 6 Plan 03 (next) — 2/7 plans executed
+Status: Phase 6 in progress — DB-backed RBAC and artifact permissions done
+Last activity: 2026-02-28 -- Phase 6 Plan 02: async has_permission, check_artifact_permission, all callers migrated
 
-Progress: [█░░░░░░░░░░░] 14% (1/7 Phase 6 plans)
+Progress: [██░░░░░░░░░░] 28% (2/7 Phase 6 plans)
 
 ## Performance Metrics
 
@@ -53,6 +53,7 @@ Progress: [█░░░░░░░░░░░] 14% (1/7 Phase 6 plans)
 | Phase 05-scheduler-and-channels P06 | 2 | 2 tasks | 3 files |
 | Phase 05.1-workflow-execution-wiring P01 | 8 | 3 tasks | 10 files |
 | Phase 06-extensibility-registries P01 | 5 | 2 tasks | 11 files |
+| Phase 06-extensibility-registries P02 | 4 | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -179,6 +180,10 @@ Recent decisions affecting current work:
 - [06-01]: No FK on artifact_id columns — polymorphic references across agent/tool/skill/mcp_server tables
 - [06-01]: Skill slash_command has global unique constraint (not per-version) — prevents /command conflicts
 - [06-01]: McpServer.is_active retained for backward compat; new status column added alongside
+- [06-02]: has_permission session=None fallback preserves all existing sync test behavior without DB
+- [06-02]: runtime.py _check_gates uses shared session for Gate 2 (RBAC) + Gate 3 (ACL) -- avoids opening two sessions
+- [06-02]: _require_admin in mcp_servers.py and system_config.py takes session via Depends(get_db) for DB-backed RBAC
+- [06-02]: MCP registry test mocks updated to AsyncMock for has_permission (now async)
 
 ### Pending Todos
 
@@ -204,5 +209,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-28
-Stopped at: Phase 6 Plan 01 complete — registry ORM models, Alembic 014 migration, Pydantic schemas. All 337 tests green.
-Resume file: .planning/phases/06-extensibility-registries/06-01-SUMMARY.md
+Stopped at: Phase 6 Plan 02 complete — async DB-backed RBAC, check_artifact_permission, all callers migrated. All 348 tests green.
+Resume file: .planning/phases/06-extensibility-registries/06-02-SUMMARY.md
