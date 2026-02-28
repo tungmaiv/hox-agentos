@@ -5,24 +5,24 @@
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates daily work routines and lets them build custom automations without writing code -- all within an enterprise-secure, on-premise environment.
-**Current focus:** Phase 6 (Extensibility Registries) — Plans 01-06 complete (Wave 5)
+**Current focus:** Phase 6 (Extensibility Registries) — COMPLETE (7/7 plans)
 
 ## Current Position
 
-Milestone: v1.1 Phase 6 (Extensibility Registries) — IN PROGRESS
-Phases: 1, 2, 2.1, 3, 3.1, 4, 4.1, 5, 5.1 — all complete; Phase 6: Plans 01-06 complete
-Current Plan: Phase 6 Plan 07 (next) — 6/7 plans executed
-Status: Phase 6 in progress — User skill/tool APIs, slash command dispatch, frontend skill menu done
-Last activity: 2026-02-28 -- Phase 6 Plan 06: user skill/tool APIs, slash commands, frontend skill menu, integration tests
+Milestone: v1.1 Phase 6 (Extensibility Registries) — COMPLETE
+Phases: 1, 2, 2.1, 3, 3.1, 4, 4.1, 5, 5.1, 6 — all complete
+Current Plan: Phase 6 complete — ready for Phase 7 (Hardening and Sandboxing)
+Status: Phase 6 complete — admin dashboard with table/card views, permission matrix, MCP dots
+Last activity: 2026-02-28 -- Phase 6 Plan 07: admin dashboard UI, artifact views, permission matrix, MCP connectivity
 
-Progress: [█████████░░░] 86% (6/7 Phase 6 plans)
+Progress: [████████████] 100% (7/7 Phase 6 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 15
-- Average duration: 13.1 min
-- Total execution time: ~3.24 hours + 9 min
+- Total plans completed: 16
+- Average duration: 13.2 min
+- Total execution time: ~3.24 hours + 24 min
 
 **By Phase:**
 
@@ -33,8 +33,8 @@ Progress: [█████████░░░] 86% (6/7 Phase 6 plans)
 | 03 (in progress) | 5/6 | 98 min | 19.6 min |
 
 **Recent Trend:**
-- Last 5 plans: 19 min, 9 min, 27 min, 17 min, 40 min
-- Trend: 40 min for 03-05 (A2UI pipeline + useMcpTool hook + 2 settings pages + 3 auto-fixes + human verification)
+- Last 5 plans: 9 min, 27 min, 17 min, 40 min, 15 min
+- Trend: 15 min for 06-07 (admin dashboard with 16 files, human verification checkpoint)
 
 *Updated after each plan completion*
 | Phase 03-sub-agents-memory-and-integrations P03 | 5 | 3 tasks | 12 files |
@@ -58,6 +58,7 @@ Progress: [█████████░░░] 86% (6/7 Phase 6 plans)
 | Phase 06-extensibility-registries P04 | 11 | 2 tasks | 12 files |
 | Phase 06-extensibility-registries P05 | 10 | 2 tasks | 13 files |
 | Phase 06-extensibility-registries P06 | 9 | 2 tasks | 12 files |
+| Phase 06-extensibility-registries P07 | 15 | 3 tasks | 16 files |
 
 ## Accumulated Context
 
@@ -206,6 +207,11 @@ Recent decisions affecting current work:
 - [06-06]: skill_executor node edge to delivery_router -- consistent graph topology, all paths converge
 - [06-06]: Frontend skillsRef.current pattern for memoized CustomInput -- reads latest skills without recreation
 - [06-06]: Instructional skills in skill_executor_node inject markdown as SystemMessage then invoke LLM
+- [06-07]: KNOWN_ROLES and KNOWN_PERMISSIONS in permission-matrix.tsx must match backend seed data exactly -- mismatches cause empty matrix columns
+- [06-07]: Admin layout renders 403 inline (not redirect) for non-admin users -- simpler than redirect, no flash
+- [06-07]: Generic useAdminArtifacts<T> hook parameterized by ArtifactType -- single hook handles all 4 artifact types
+- [06-07]: View mode stored in localStorage (admin-view-mode) -- persists across sessions without backend state
+- [06-07]: Catch-all proxy at /api/admin/[...path] forwards GET/POST/PUT/PATCH/DELETE with JWT from session
 
 ### Pending Todos
 
@@ -231,5 +237,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-28
-Stopped at: Phase 6 Plan 06 complete (Wave 5) — user skill/tool APIs, slash command dispatch, frontend skill menu, integration tests.
-Resume file: .planning/phases/06-extensibility-registries/06-06-SUMMARY.md
+Stopped at: Phase 6 COMPLETE (7/7 plans) — admin dashboard with artifact views, permission matrix, MCP dots. Ready for Phase 7 (Hardening and Sandboxing).
+Resume file: .planning/phases/06-extensibility-registries/06-07-SUMMARY.md
