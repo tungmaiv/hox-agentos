@@ -5,24 +5,24 @@
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates daily work routines and lets them build custom automations without writing code -- all within an enterprise-secure, on-premise environment.
-**Current focus:** v1.1 MVP — Phase 5.1 (Workflow Execution Wiring) COMPLETE
+**Current focus:** Phase 6 (Extensibility Registries) — Plan 01 complete
 
 ## Current Position
 
-Milestone: v1.1 Phase 5.1 (Workflow Execution Wiring) — COMPLETE
-Phases: 1, 2, 2.1, 3, 3.1, 4, 4.1 — all complete; Phase 5: complete + verified; Phase 5.1: Plan 01 complete
-Current Plan: Phase 5.1 complete — all 1/1 plans executed
-Status: Phase 5.1 complete — workflow execution wiring done
-Last activity: 2026-02-28 -- Phase 5.1 Plan 01: workflow execution wiring (channel delivery, agent dispatch, Keycloak roles)
+Milestone: v1.1 Phase 6 (Extensibility Registries) — IN PROGRESS
+Phases: 1, 2, 2.1, 3, 3.1, 4, 4.1, 5, 5.1 — all complete; Phase 6: Plan 01 complete
+Current Plan: Phase 6 Plan 02 (next) — 1/7 plans executed
+Status: Phase 6 in progress — registry models and migration done
+Last activity: 2026-02-28 -- Phase 6 Plan 01: registry ORM models, Alembic 014, Pydantic schemas
 
-Progress: [████████████] 100% (27/27 plans estimated)
+Progress: [█░░░░░░░░░░░] 14% (1/7 Phase 6 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 14
-- Average duration: 13.6 min
-- Total execution time: ~3.24 hours + 4 min
+- Total plans completed: 15
+- Average duration: 13.1 min
+- Total execution time: ~3.24 hours + 9 min
 
 **By Phase:**
 
@@ -52,6 +52,7 @@ Progress: [████████████] 100% (27/27 plans estimated)
 | Phase 05-scheduler-and-channels P05 | 13 | 3 tasks | 13 files |
 | Phase 05-scheduler-and-channels P06 | 2 | 2 tasks | 3 files |
 | Phase 05.1-workflow-execution-wiring P01 | 8 | 3 tasks | 10 files |
+| Phase 06-extensibility-registries P01 | 5 | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -173,6 +174,11 @@ Recent decisions affecting current work:
 - [05.1-01]: Sub-agent imports are lazy inside _handle_agent_node body — avoids circular deps; tests patch at definition site
 - [05.1-01]: Keycloak failure immediately fails workflow run — security-first per locked decision; no fallback to stale owner_roles_json
 - [05.1-01]: resolved_roles added to user_context dict — audit trail for Keycloak roles used during workflow execution
+- [06-01]: UNIQUE(name, version) not UNIQUE(name) on all artifact tables — enables safe multi-version rollback with is_active flag
+- [06-01]: tool_acl rows migrated to user_artifact_permissions (not artifact_permissions) — tool_acl stored per-user entries (user_id), not per-role
+- [06-01]: No FK on artifact_id columns — polymorphic references across agent/tool/skill/mcp_server tables
+- [06-01]: Skill slash_command has global unique constraint (not per-version) — prevents /command conflicts
+- [06-01]: McpServer.is_active retained for backward compat; new status column added alongside
 
 ### Pending Todos
 
@@ -198,5 +204,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-28
-Stopped at: Phase 5.1 Plan 01 complete — workflow execution wiring (channel delivery, agent dispatch, Keycloak roles). All 306 tests green.
-Resume file: .planning/phases/05.1-workflow-execution-wiring/05.1-01-SUMMARY.md
+Stopped at: Phase 6 Plan 01 complete — registry ORM models, Alembic 014 migration, Pydantic schemas. All 337 tests green.
+Resume file: .planning/phases/06-extensibility-registries/06-01-SUMMARY.md
