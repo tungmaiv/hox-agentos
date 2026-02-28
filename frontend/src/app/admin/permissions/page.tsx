@@ -16,20 +16,25 @@ import {
 
 const KNOWN_ROLES = [
   "it-admin",
-  "admin",
-  "developer",
+  "team-lead",
+  "manager",
   "employee",
-  "viewer",
+  "executive",
 ];
 
 const KNOWN_PERMISSIONS = [
   "chat",
+  "tool:email",
+  "tool:calendar",
+  "tool:project",
+  "crm:read",
+  "crm:write",
+  "tool:reports",
   "tool:admin",
   "registry:manage",
   "sandbox:execute",
   "workflow:create",
-  "workflow:run",
-  "scheduler:manage",
+  "workflow:approve",
 ];
 
 export default function AdminPermissionsPage() {
