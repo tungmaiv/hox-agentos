@@ -1,6 +1,7 @@
 # backend/tests/agents/test_artifact_builder.py
 """Tests for the artifact_builder LangGraph agent."""
 import pytest
+from unittest.mock import AsyncMock, MagicMock, patch
 
 
 def test_artifact_builder_state_has_required_fields():
@@ -108,6 +109,57 @@ def test_validate_handler_module_prefix():
     draft = {"name": "bad_agent", "handler_module": "os.system", "handler_function": "run"}
     errors = validate_artifact_draft("agent", draft)
     assert any("handler_module" in e.lower() or "prefix" in e.lower() for e in errors)
+
+
+def test_create_artifact_builder_graph_returns_compiled():
+    """create_artifact_builder_graph returns a CompiledStateGraph."""
+    from langgraph.graph.state import CompiledStateGraph
+    with patch("agents.artifact_builder.get_llm") as mock_get_llm:
+        mock_get_llm.return_value = MagicMock()
+        from agents.artifact_builder import create_artifact_builder_graph
+        graph = create_artifact_builder_graph()
+    assert isinstance(graph, CompiledStateGraph)
+
+
+def test_route_intent_no_type():
+    """route_intent returns 'gather_type' when artifact_type is None."""
+    from agents.artifact_builder import _route_intent
+    state = {
+        "messages": [], "artifact_type": None, "artifact_draft": None,
+        "validation_errors": [], "is_complete": False,
+    }
+    assert _route_intent(state) == "gather_type"
+
+
+def test_route_intent_no_draft():
+    """route_intent returns 'gather_details' when type set but no draft."""
+    from agents.artifact_builder import _route_intent
+    state = {
+        "messages": [], "artifact_type": "tool", "artifact_draft": None,
+        "validation_errors": [], "is_complete": False,
+    }
+    assert _route_intent(state) == "gather_details"
+
+
+def test_route_intent_has_draft_not_complete():
+    """route_intent returns 'gather_details' when draft exists but incomplete."""
+    from agents.artifact_builder import _route_intent
+    state = {
+        "messages": [], "artifact_type": "tool", "artifact_draft": {"name": "partial"},
+        "validation_errors": [], "is_complete": False,
+    }
+    assert _route_intent(state) == "gather_details"
+
+
+def test_route_intent_complete():
+    """route_intent returns 'validate_and_present' when is_complete is True."""
+    from agents.artifact_builder import _route_intent
+    state = {
+        "messages": [], "artifact_type": "tool",
+        "artifact_draft": {"name": "done", "handler_type": "backend"},
+        "validation_errors": [], "is_complete": True,
+    }
+    assert _route_intent(state) == "validate_and_present"
 
 
 def test_get_system_prompt_returns_string_for_each_type():
