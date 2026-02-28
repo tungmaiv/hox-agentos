@@ -430,10 +430,15 @@ async def _pre_route(state: BlitzState) -> str:
     """
     Routing conditional after load_memory, BEFORE master_agent runs.
 
-    Phase 6: Uses DB-backed keyword routing from agent_definitions.routing_keywords
+    Phase 6: Detects /command prefix BEFORE keyword routing.
+    If the user message starts with '/', look up in skill_definitions.
+    If a matching skill is found, route to 'skill_executor' node.
+
+    Uses DB-backed keyword routing from agent_definitions.routing_keywords
     when available. Falls back to hardcoded keywords if DB routing map is empty.
 
     Returns node names:
+      "skill_executor" -- route to skill executor (slash command detected)
       "{agent_name}" -- route directly to matching sub-agent
       "master_agent" -- general intent; run master LLM
     """
@@ -442,7 +447,35 @@ async def _pre_route(state: BlitzState) -> str:
     last_user_msg = next(
         (m.content for m in reversed(state["messages"]) if isinstance(m, HumanMessage)), ""
     )
-    intent = _classify_by_keywords(str(last_user_msg))
+    last_msg_str = str(last_user_msg).strip()
+
+    # Phase 6: Slash command detection before keyword routing
+    if last_msg_str.startswith("/"):
+        command = last_msg_str.split()[0]  # e.g., "/morning_digest"
+        try:
+            from core.models.skill_definition import SkillDefinition as _SkillDef
+
+            async with async_session() as session:
+                result = await session.execute(
+                    select(_SkillDef).where(
+                        _SkillDef.slash_command == command,
+                        _SkillDef.status == "active",
+                        _SkillDef.is_active == True,  # noqa: E712
+                    )
+                )
+                skill = result.scalar_one_or_none()
+                if skill:
+                    logger.info(
+                        "slash_command_detected",
+                        command=command,
+                        skill_name=skill.name,
+                    )
+                    return "skill_executor"
+        except Exception as exc:
+            logger.warning("slash_command_lookup_failed", command=command, error=str(exc))
+        # Unknown /command: fall through to keyword routing / master_agent
+
+    intent = _classify_by_keywords(last_msg_str)
 
     if intent == "general":
         return "master_agent"
@@ -466,6 +499,108 @@ async def _pre_route(state: BlitzState) -> str:
         return intent
     # Disabled agent: fall through to master LLM
     return "master_agent"
+
+
+async def _skill_executor_node(state: BlitzState) -> dict[str, list[BaseMessage]]:
+    """
+    Execute a skill triggered by a /command in chat.
+
+    Loads the matching skill from DB based on the slash command in the last message,
+    then dispatches:
+    - Procedural: runs SkillExecutor.run(), formats output as assistant message
+    - Instructional: appends instruction_markdown as system message for LLM context
+
+    For instructional skills, the instruction is injected and a follow-up LLM call
+    is made so the agent can process the instructions with the user's context.
+    """
+    from core.models.skill_definition import SkillDefinition as _SkillDef
+    from skills.executor import SkillExecutor
+
+    last_user_msg = next(
+        (m.content for m in reversed(state["messages"]) if isinstance(m, HumanMessage)), ""
+    )
+    command = str(last_user_msg).strip().split()[0]  # e.g., "/morning_digest"
+
+    try:
+        async with async_session() as session:
+            result = await session.execute(
+                select(_SkillDef).where(
+                    _SkillDef.slash_command == command,
+                    _SkillDef.status == "active",
+                    _SkillDef.is_active == True,  # noqa: E712
+                )
+            )
+            skill = result.scalar_one_or_none()
+    except Exception as exc:
+        logger.error("skill_executor_db_error", command=command, error=str(exc))
+        return {"messages": [AIMessage(content=f"Error loading skill for {command}: {str(exc)}")]}
+
+    if skill is None:
+        return {"messages": [AIMessage(content=f"Skill for command {command} not found or not active.")]}
+
+    if skill.skill_type == "procedural":
+        # Build user context from contextvar
+        user_id = state.get("user_id")
+        if not user_id:
+            try:
+                ctx_user = current_user_ctx.get()
+                user_id = ctx_user["user_id"]
+            except LookupError:
+                pass
+
+        if not user_id:
+            return {"messages": [AIMessage(content="Cannot execute skill: no user context available.")]}
+
+        try:
+            user_ctx = current_user_ctx.get()
+        except LookupError:
+            user_ctx = {"user_id": user_id, "roles": [], "email": ""}
+
+        user_context = {
+            "user_id": user_ctx.get("user_id", user_id),
+            "roles": user_ctx.get("roles", []),
+            "email": user_ctx.get("email", ""),
+        }
+
+        executor = SkillExecutor()
+        async with async_session() as session:
+            skill_result = await executor.run(skill, user_context, session)
+
+        logger.info(
+            "skill_executor_completed",
+            skill_name=skill.name,
+            command=command,
+            success=skill_result.success,
+        )
+
+        return {"messages": [AIMessage(content=skill_result.output)]}
+
+    elif skill.skill_type == "instructional":
+        # Inject instruction as system message, then let master_agent LLM process
+        instruction = skill.instruction_markdown or ""
+        llm = get_llm("blitz/master")
+
+        messages = list(state["messages"])
+        messages.insert(
+            0,
+            SystemMessage(
+                content=f"[Skill: {skill.display_name or skill.name}]\n\n{instruction}"
+            ),
+        )
+        messages = [SystemMessage(content=_DEFAULT_SYSTEM_PROMPT)] + messages
+
+        response = await llm.ainvoke(messages)
+
+        logger.info(
+            "skill_executor_instructional",
+            skill_name=skill.name,
+            command=command,
+        )
+
+        return {"messages": [response]}
+
+    else:
+        return {"messages": [AIMessage(content=f"Unknown skill type: {skill.skill_type}")]}
 
 
 async def update_agent_last_seen(agent_name: str, session: AsyncSession) -> None:
@@ -526,13 +661,17 @@ def create_master_graph(
     graph = StateGraph(BlitzState)
     graph.add_node("load_memory", _load_memory_node)
     graph.add_node("master_agent", _master_node)
+    graph.add_node("skill_executor", _skill_executor_node)
 
     from agents.delivery_router import delivery_router_node
 
     graph.add_node("delivery_router", delivery_router_node)
     graph.add_node("save_memory", _save_memory_node)
 
-    route_map: dict[str, str] = {"master_agent": "master_agent"}
+    route_map: dict[str, str] = {
+        "master_agent": "master_agent",
+        "skill_executor": "skill_executor",
+    }
     agent_nodes: list[str] = []
 
     if _db_agents is not None and len(_db_agents) > 0:
@@ -591,6 +730,7 @@ def create_master_graph(
 
     # All paths converge at delivery_router -> save_memory -> END
     graph.add_edge("master_agent", "delivery_router")
+    graph.add_edge("skill_executor", "delivery_router")
     for node_name in agent_nodes:
         graph.add_edge(node_name, "delivery_router")
     graph.add_edge("delivery_router", "save_memory")

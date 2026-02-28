@@ -24,6 +24,8 @@ from api.routes import (
     system_config,
     tools,
     user_instructions,
+    user_skills,
+    user_tools,
 )
 from api.routes.channels import router as channels_router
 from api.routes.webhooks import router as webhooks_router
@@ -129,6 +131,14 @@ def create_app() -> FastAPI:
 
     # Admin permission management — /api/admin/permissions (registry:manage permission)
     app.include_router(admin_permissions.router)
+
+    # User skill listing and execution — GET /api/skills, POST /api/skills/{name}/run
+    # Note: router already includes /api prefix in its definition
+    app.include_router(user_skills.router)
+
+    # User tool listing — GET /api/tools (concrete endpoint, not conditional)
+    # Note: router already includes /api prefix in its definition
+    app.include_router(user_tools.router)
 
     # Tool execution — POST /api/tools/call (all authenticated users; 3-gate security)
     # Note: router already includes /api prefix in its definition
