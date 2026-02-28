@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates daily work routines and lets them build custom automations without writing code -- all within an enterprise-secure, on-premise environment.
-**Current focus:** Phase 6 (Extensibility Registries) — Plans 03+04 complete (Wave 3)
+**Current focus:** Phase 6 (Extensibility Registries) — Plans 01-05 complete (Wave 4)
 
 ## Current Position
 
 Milestone: v1.1 Phase 6 (Extensibility Registries) — IN PROGRESS
-Phases: 1, 2, 2.1, 3, 3.1, 4, 4.1, 5, 5.1 — all complete; Phase 6: Plans 01-04 complete
-Current Plan: Phase 6 Plan 05 (next) — 4/7 plans executed
-Status: Phase 6 in progress — Admin CRUD APIs + runtime DB integration done
-Last activity: 2026-02-28 -- Phase 6 Plans 03+04: admin CRUD APIs, DB-backed tool/agent registries
+Phases: 1, 2, 2.1, 3, 3.1, 4, 4.1, 5, 5.1 — all complete; Phase 6: Plans 01-05 complete
+Current Plan: Phase 6 Plan 06 (next) — 5/7 plans executed
+Status: Phase 6 in progress — Skill system core (validator, executor, scanner, importer) done
+Last activity: 2026-02-28 -- Phase 6 Plan 05: skill system core with AST-safe eval, security scanner, import pipeline
 
-Progress: [█████░░░░░░░] 57% (4/7 Phase 6 plans)
+Progress: [███████░░░░░] 71% (5/7 Phase 6 plans)
 
 ## Performance Metrics
 
@@ -56,6 +56,7 @@ Progress: [█████░░░░░░░] 57% (4/7 Phase 6 plans)
 | Phase 06-extensibility-registries P02 | 4 | 2 tasks | 9 files |
 | Phase 06-extensibility-registries P03 | 7 | 2 tasks | 9 files |
 | Phase 06-extensibility-registries P04 | 11 | 2 tasks | 12 files |
+| Phase 06-extensibility-registries P05 | 10 | 2 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -195,6 +196,10 @@ Recent decisions affecting current work:
 - [06-04]: _classify_by_keywords returns agent names directly (not intent labels) -- unified routing via keyword map
 - [06-04]: create_master_graph() accepts _db_agents list; sync function with async wrapper create_master_graph_from_db()
 - [06-04]: SQLite stores offset-naive datetimes; normalize with .replace(tzinfo=utc) before comparison in last_seen_at batching
+- [06-05]: AST-walk for validator safety check (not evaluator subclass) -- avoids evaluation with None variables at validate-time
+- [06-05]: Validator dry-run checks AST node types only (not values) -- unknown variables fine at validation, resolved at runtime
+- [06-05]: httpx imported at module top level in importer.py -- lazy imports not patchable in tests
+- [06-05]: /import route declared before /{skill_id} routes -- prevents FastAPI UUID matching collision on POST path
 
 ### Pending Todos
 
@@ -220,5 +225,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-28
-Stopped at: Phase 6 Plans 03+04 complete (Wave 3) — admin CRUD APIs + DB-backed tool/agent registries.
-Resume file: .planning/phases/06-extensibility-registries/06-04-SUMMARY.md
+Stopped at: Phase 6 Plan 05 complete (Wave 4) — skill system core: validator, executor, scanner, importer.
+Resume file: .planning/phases/06-extensibility-registries/06-05-SUMMARY.md
