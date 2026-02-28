@@ -51,6 +51,7 @@ from copilotkit.langgraph_agui_agent import LangGraphAGUIAgent
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
+from agents.artifact_builder import create_artifact_builder_graph
 from agents.master_agent import create_master_graph
 from core.context import current_conversation_id_ctx, current_user_ctx
 from core.db import async_session
@@ -71,6 +72,20 @@ _agent = LangGraphAGUIAgent(
     graph=_master_graph,
 )
 
+# Artifact builder agent — separate from master, for admin artifact creation.
+_builder_graph = create_artifact_builder_graph()
+_builder_agent = LangGraphAGUIAgent(
+    name="artifact_builder",
+    description="AI-assisted artifact definition builder for admins",
+    graph=_builder_graph,
+)
+
+# Agent lookup map — used by agent/connect and agent/run to route by agentId.
+_AGENTS: dict[str, LangGraphAGUIAgent] = {
+    "blitz_master": _agent,
+    "artifact_builder": _builder_agent,
+}
+
 # Runtime info response for the "info" method.
 # Format expected by @copilotkitnext/core fetchRuntimeInfo():
 #   { version, agents: { <agentId>: { description } }, audioFileTranscriptionEnabled }
@@ -79,7 +94,10 @@ _RUNTIME_INFO = {
     "agents": {
         "blitz_master": {
             "description": _agent.description,
-        }
+        },
+        "artifact_builder": {
+            "description": _builder_agent.description,
+        },
     },
     "audioFileTranscriptionEnabled": False,
 }
@@ -176,10 +194,11 @@ async def copilotkit_endpoint(
     if method == "agent/connect":
         params = envelope.get("params") or {}
         agent_id = params.get("agentId")
-        if agent_id != _agent.name:
+        agent = _AGENTS.get(agent_id)
+        if agent is None:
             raise HTTPException(
                 status_code=404,
-                detail=f"Agent '{agent_id}' not found. Available: ['{_agent.name}']",
+                detail=f"Agent '{agent_id}' not found. Available: {list(_AGENTS.keys())}",
             )
         body = envelope.get("body") or {}
         try:
@@ -192,10 +211,9 @@ async def copilotkit_endpoint(
         accept_header = request.headers.get("accept")
         encoder = EventEncoder(accept=accept_header)
 
-        # Load conversation history from DB for this thread so CopilotKit
-        # can restore the chat panel when switching or refreshing conversations.
+        # Only load history for blitz_master — artifact_builder has no persistence
         turns = []
-        if input_data.thread_id:
+        if agent_id == "blitz_master" and input_data.thread_id:
             try:
                 conv_id = UUID(str(input_data.thread_id))
             except ValueError:
@@ -230,11 +248,21 @@ async def copilotkit_endpoint(
     if method == "agent/run":
         params = envelope.get("params") or {}
         agent_id = params.get("agentId")
-        if agent_id != _agent.name:
+        agent = _AGENTS.get(agent_id)
+        if agent is None:
             raise HTTPException(
                 status_code=404,
-                detail=f"Agent '{agent_id}' not found. Available: ['{_agent.name}']",
+                detail=f"Agent '{agent_id}' not found. Available: {list(_AGENTS.keys())}",
             )
+
+        # artifact_builder requires registry:manage permission (not just chat)
+        if agent_id == "artifact_builder":
+            async with async_session() as session:
+                if not await has_permission(user, "registry:manage", session):
+                    raise HTTPException(
+                        status_code=403,
+                        detail="Registry manage permission required",
+                    )
 
         body = envelope.get("body") or {}
         try:
@@ -262,7 +290,7 @@ async def copilotkit_endpoint(
             user_token = current_user_ctx.set(user)
             conv_token = current_conversation_id_ctx.set(conversation_id) if conversation_id else None
             try:
-                async for event in _agent.run(input_data):
+                async for event in agent.run(input_data):
                     yield encoder.encode(event)
             finally:
                 current_user_ctx.reset(user_token)
