@@ -12,6 +12,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from api.routes import (
     admin_agents,
+    admin_permissions,
+    admin_skills,
     admin_tools,
     agents,
     conversations,
@@ -105,6 +107,12 @@ def create_app() -> FastAPI:
 
     # Admin tool CRUD — /api/admin/tools (registry:manage permission)
     app.include_router(admin_tools.router)
+
+    # Admin skill CRUD — /api/admin/skills (registry:manage permission)
+    app.include_router(admin_skills.router)
+
+    # Admin permission management — /api/admin/permissions (registry:manage permission)
+    app.include_router(admin_permissions.router)
 
     # Tool execution — POST /api/tools/call (all authenticated users; 3-gate security)
     # Note: router already includes /api prefix in its definition
