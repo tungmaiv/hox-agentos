@@ -1,5 +1,5 @@
 ---
-status: complete
+status: diagnosed
 phase: 06-extensibility-registries
 source: 06-01-SUMMARY.md, 06-02-SUMMARY.md, 06-03-SUMMARY.md, 06-04-SUMMARY.md, 06-05-SUMMARY.md, 06-06-SUMMARY.md, 06-07-SUMMARY.md
 started: 2026-02-28T16:10:00Z
@@ -86,11 +86,15 @@ skipped: 0
 - truth: "Skills tab shows skill-specific columns (type, slash_command, trust score) and Pending Review filter"
   status: failed
   reason: "User reported: skill is not as per describe"
-  severity: major
+  severity: minor
   test: 4
-  root_cause: ""
-  artifacts: []
-  missing: []
+  root_cause: "Code is complete and wired correctly (extraColumns, Pending Review button exist in skills/page.tsx). Likely appeared broken because skill_definitions table is empty (no data to display columns for). Also: Pending Review filter logic checks status==='active' + securityScore<70 instead of status==='pending_review'."
+  artifacts:
+    - path: "frontend/src/app/admin/skills/page.tsx"
+      issue: "Pending Review filter logic uses wrong status check (active vs pending_review)"
+  missing:
+    - "Fix Pending Review filter to check status==='pending_review' instead of status==='active'"
+    - "Seed skill_definitions with built-in skills so columns have data to display"
   debug_session: ""
 
 - truth: "Slash command menu shows skill-based commands alongside built-in commands"
@@ -98,7 +102,11 @@ skipped: 0
   reason: "User reported: only two commands no slash command for skill"
   severity: major
   test: 9
-  root_cause: ""
-  artifacts: []
-  missing: []
+  root_cause: "Migration 014 creates skill_definitions table but seeds ZERO rows. Only agent_definitions (4 built-in agents) and role_permissions are seeded. GET /api/skills returns [] because table is empty. Frontend code (useSkills hook, chat-panel slash menu) is correct but receives empty data."
+  artifacts:
+    - path: "backend/alembic/versions/014_extensibility_registries.py"
+      issue: "No INSERT statements for skill_definitions — seeds agents and role_permissions but not skills"
+  missing:
+    - "Add seed data for built-in skills in migration (or new migration) with slash_commands"
+    - "Example skills: /summarize, /debug, /export — at minimum 2-3 to demonstrate the feature"
   debug_session: ""
