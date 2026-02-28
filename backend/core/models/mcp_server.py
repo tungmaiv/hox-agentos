@@ -10,14 +10,18 @@ Design:
 - name: unique display name (e.g. "crm", "docs")
 - url: HTTP SSE endpoint URL (e.g. "http://mcp-crm:8001")
 - auth_token: AES-256-GCM encrypted blob (bytes) — decrypted only inside tool executor
-- is_active: feature flag — inactive servers are skipped during tool routing
+- is_active: legacy feature flag — kept for backward compat during migration
+- version: semver string (nullable, added in Phase 6)
+- display_name: human-readable label (nullable, added in Phase 6)
+- status: "active" | "disabled" | "deprecated" (added in Phase 6)
+- last_seen_at: updated on each successful call (stale detection, added in Phase 6)
 - created_at: immutable timestamp set on insert
 """
 
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, LargeBinary, Text, func, text
+from sqlalchemy import Boolean, DateTime, LargeBinary, String, Text, func, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -44,6 +48,15 @@ class McpServer(Base):
         Boolean,
         server_default=text("true"),
         nullable=False,
+    )
+    # --- Phase 6 additions ---
+    version: Mapped[str | None] = mapped_column(Text, nullable=True)
+    display_name: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, server_default=text("'active'")
+    )
+    last_seen_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
