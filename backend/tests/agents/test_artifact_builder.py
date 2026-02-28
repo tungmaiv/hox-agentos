@@ -108,3 +108,41 @@ def test_validate_handler_module_prefix():
     draft = {"name": "bad_agent", "handler_module": "os.system", "handler_function": "run"}
     errors = validate_artifact_draft("agent", draft)
     assert any("handler_module" in e.lower() or "prefix" in e.lower() for e in errors)
+
+
+def test_get_system_prompt_returns_string_for_each_type():
+    """get_system_prompt returns a non-empty string for each artifact type."""
+    from agents.artifact_builder_prompts import get_system_prompt
+    for artifact_type in ["agent", "tool", "skill", "mcp_server"]:
+        prompt = get_system_prompt(artifact_type)
+        assert isinstance(prompt, str)
+        assert len(prompt) > 100, f"Prompt for {artifact_type} is too short"
+
+
+def test_get_system_prompt_contains_schema_fields():
+    """System prompts must mention the key fields for their artifact type."""
+    from agents.artifact_builder_prompts import get_system_prompt
+    agent_prompt = get_system_prompt("agent")
+    assert "routing_keywords" in agent_prompt
+    assert "handler_module" in agent_prompt
+
+    tool_prompt = get_system_prompt("tool")
+    assert "handler_type" in tool_prompt
+    assert "input_schema" in tool_prompt
+
+    skill_prompt = get_system_prompt("skill")
+    assert "skill_type" in skill_prompt
+    assert "procedure_json" in skill_prompt
+
+    mcp_prompt = get_system_prompt("mcp_server")
+    assert "url" in mcp_prompt
+
+
+def test_get_gather_type_prompt():
+    """get_gather_type_prompt returns a non-empty string."""
+    from agents.artifact_builder_prompts import get_gather_type_prompt
+    prompt = get_gather_type_prompt()
+    assert isinstance(prompt, str)
+    assert "agent" in prompt.lower()
+    assert "tool" in prompt.lower()
+    assert "skill" in prompt.lower()
