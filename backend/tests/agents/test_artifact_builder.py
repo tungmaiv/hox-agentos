@@ -198,3 +198,69 @@ def test_get_gather_type_prompt():
     assert "agent" in prompt.lower()
     assert "tool" in prompt.lower()
     assert "skill" in prompt.lower()
+
+
+@pytest.mark.asyncio
+async def test_gather_type_detects_tool_from_message():
+    """gather_type node detects 'tool' from user message and sets artifact_type."""
+    from langchain_core.messages import HumanMessage, AIMessage
+
+    mock_response = AIMessage(content="Great! Let's create a tool. What will it do?")
+
+    with patch("agents.artifact_builder.get_llm") as mock_get_llm:
+        mock_llm = MagicMock()
+        mock_llm.ainvoke = AsyncMock(return_value=mock_response)
+        mock_get_llm.return_value = mock_llm
+
+        from agents.artifact_builder import _gather_type_node
+
+        state = {
+            "messages": [HumanMessage(content="I need a tool that searches CRM contacts")],
+            "artifact_type": None,
+            "artifact_draft": None,
+            "validation_errors": [],
+            "is_complete": False,
+        }
+        result = await _gather_type_node(state)
+
+    assert result["artifact_type"] == "tool"
+    assert result["artifact_draft"] == {}
+    assert len(result["messages"]) == 1
+
+
+@pytest.mark.asyncio
+async def test_validate_and_present_valid_draft():
+    """validate_and_present marks valid draft as complete."""
+    from agents.artifact_builder import _validate_and_present_node
+
+    state = {
+        "messages": [],
+        "artifact_type": "agent",
+        "artifact_draft": {"name": "test_agent", "description": "A test"},
+        "validation_errors": [],
+        "is_complete": True,
+    }
+    result = await _validate_and_present_node(state)
+
+    assert result["is_complete"] is True
+    assert result["validation_errors"] == []
+    assert "valid" in result["messages"][0].content.lower() or "ready" in result["messages"][0].content.lower()
+
+
+@pytest.mark.asyncio
+async def test_validate_and_present_invalid_draft():
+    """validate_and_present catches invalid draft and returns errors."""
+    from agents.artifact_builder import _validate_and_present_node
+
+    state = {
+        "messages": [],
+        "artifact_type": "skill",
+        "artifact_draft": {"name": "bad_skill", "skill_type": "instructional"},
+        "validation_errors": [],
+        "is_complete": True,
+    }
+    result = await _validate_and_present_node(state)
+
+    assert result["is_complete"] is False
+    assert len(result["validation_errors"]) > 0
+    assert any("instruction_markdown" in e.lower() for e in result["validation_errors"])
