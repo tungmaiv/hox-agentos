@@ -16,6 +16,7 @@ import json
 import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
+from typing import Any
 
 import httpx
 import structlog
@@ -56,7 +57,7 @@ def format_for_channel(text: str) -> str:
     return text  # Unknown agent JSON — send as-is
 
 
-def _format_calendar(data: dict) -> str:
+def _format_calendar(data: dict[str, Any]) -> str:
     date_str = data.get("date", "today")
     events = data.get("events", [])
     if not events:
@@ -73,7 +74,7 @@ def _format_calendar(data: dict) -> str:
     return "\n".join(lines)
 
 
-def _format_email(data: dict) -> str:
+def _format_email(data: dict[str, Any]) -> str:
     unread = data.get("unread_count", 0)
     items = data.get("items", [])
     if not items:
@@ -89,7 +90,7 @@ def _format_email(data: dict) -> str:
     return "\n".join(lines)
 
 
-def _format_project(data: dict) -> str:
+def _format_project(data: dict[str, Any]) -> str:
     name = data.get("project_name", "Unknown")
     status = data.get("status", "unknown")
     progress = data.get("progress_pct", 0)
@@ -348,6 +349,7 @@ class ChannelGateway:
         """
         from agents.master_agent import create_master_graph
         from core.context import current_conversation_id_ctx, current_user_ctx
+        from security.keycloak_client import fetch_user_realm_roles
 
         logger.info(
             "channel_agent_invoke",
@@ -355,12 +357,26 @@ class ChannelGateway:
             user_id=str(msg.user_id),
         )
 
+        # Fetch fresh roles from Keycloak (security-first: no stale/hardcoded roles)
+        try:
+            roles = await fetch_user_realm_roles(str(msg.user_id))
+        except Exception as exc:
+            logger.error(
+                "channel_agent_roles_failed",
+                channel=msg.channel,
+                user_id=str(msg.user_id),
+                error=str(exc),
+            )
+            return self._make_reply(
+                msg, "Sorry, I couldn't verify your permissions. Please try again later."
+            )
+
         # Build a minimal UserContext for contextvar injection
         user_context = {
             "user_id": msg.user_id,
             "email": "",
             "username": "",
-            "roles": ["employee"],
+            "roles": roles,
             "groups": [],
         }
 
@@ -417,13 +433,13 @@ class ChannelGateway:
         """Delegate to module-level format_for_channel (backward compat)."""
         return format_for_channel(text)
 
-    def _format_calendar(self, data: dict) -> str:
+    def _format_calendar(self, data: dict[str, Any]) -> str:
         return _format_calendar(data)
 
-    def _format_email(self, data: dict) -> str:
+    def _format_email(self, data: dict[str, Any]) -> str:
         return _format_email(data)
 
-    def _format_project(self, data: dict) -> str:
+    def _format_project(self, data: dict[str, Any]) -> str:
         return _format_project(data)
 
     def _make_reply(self, original: InternalMessage, text: str) -> InternalMessage:

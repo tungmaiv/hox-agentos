@@ -174,7 +174,7 @@ async def test_execute_workflow_keycloak_failure_sets_failed():
 
 @pytest.mark.asyncio
 async def test_execute_workflow_passes_workflow_name():
-    """Workflow name from DB is included in initial_state."""
+    """Workflow name from DB is included in initial_state passed to graph execution."""
     run_id = str(uuid4())
 
     mock_run = MagicMock()
@@ -191,13 +191,45 @@ async def test_execute_workflow_passes_workflow_name():
     }
     mock_workflow.name = "Morning Digest"
 
+    # Capture the initial_state passed to astream_events
+    captured_state: dict = {}
+
+    async def fake_astream_events(input_state, **kwargs):
+        captured_state["input"] = input_state
+        return
+        yield  # makes this an async generator function
+
+    # Mock compiled graph
+    mock_compiled = MagicMock()
+    mock_compiled.astream_events = fake_astream_events
+    mock_state_snapshot = MagicMock()
+    mock_state_snapshot.interrupts = []
+    mock_state_snapshot.next = []
+    mock_compiled.aget_state = AsyncMock(return_value=mock_state_snapshot)
+
+    # Mock builder returned by compile_workflow_to_stategraph
+    mock_builder = MagicMock()
+    mock_builder.compile.return_value = mock_compiled
+
+    # Mock AsyncPostgresSaver context manager
+    mock_checkpointer = AsyncMock()
+    mock_checkpointer.setup = AsyncMock()
+    mock_cp_cm = AsyncMock()
+    mock_cp_cm.__aenter__ = AsyncMock(return_value=mock_checkpointer)
+    mock_cp_cm.__aexit__ = AsyncMock(return_value=False)
+
+    # Mock settings for database URL
+    mock_settings = MagicMock()
+    mock_settings.database_url = "postgresql+asyncpg://blitz:pw@localhost/blitz"
+
     with patch("scheduler.tasks.workflow_execution.async_session") as mock_sf, \
          patch("scheduler.tasks.workflow_execution.publish_event"), \
          patch("scheduler.tasks.workflow_execution.fetch_user_realm_roles", new_callable=AsyncMock, return_value=["employee"]), \
-         patch("scheduler.tasks.workflow_execution.compile_workflow_to_stategraph") as mock_compile:
+         patch("scheduler.tasks.workflow_execution.compile_workflow_to_stategraph", return_value=mock_builder), \
+         patch("scheduler.tasks.workflow_execution.AsyncPostgresSaver") as mock_saver_cls, \
+         patch("scheduler.tasks.workflow_execution.get_settings", return_value=mock_settings):
 
-        # Stop execution at compile stage
-        mock_compile.side_effect = ValueError("stop here")
+        mock_saver_cls.from_conn_string.return_value = mock_cp_cm
 
         mock_session = AsyncMock()
         mock_sf.return_value.__aenter__ = AsyncMock(return_value=mock_session)
@@ -205,18 +237,13 @@ async def test_execute_workflow_passes_workflow_name():
         mock_session.execute = AsyncMock(side_effect=[
             MagicMock(scalar_one_or_none=MagicMock(return_value=mock_run)),
             MagicMock(scalar_one_or_none=MagicMock(return_value=mock_workflow)),
-            MagicMock(scalar_one_or_none=MagicMock(return_value=mock_run)),
+            MagicMock(scalar_one_or_none=MagicMock(return_value=mock_run)),  # final status update
         ])
         mock_session.commit = AsyncMock()
 
         from scheduler.tasks.workflow_execution import execute_workflow
         await execute_workflow(run_id)
 
-        # Cannot directly check initial_state since compile fails before it's used,
-        # but we can verify the compile was called (meaning roles resolved OK)
-        # and that workflow_name was read from the workflow model.
-        # The real test is that mock_workflow.name was accessed.
-        # Since compile stops execution, check that initial_state is built after
-        # compile. For this, let compile succeed and check state via the graph.
-        # Instead, we verify workflow.name is accessed by checking mock_workflow.name
-        assert mock_workflow.name == "Morning Digest"
+        # Verify workflow_name is in the initial_state passed to the graph
+        assert "input" in captured_state, "astream_events was never called"
+        assert captured_state["input"]["workflow_name"] == "Morning Digest"

@@ -73,7 +73,7 @@ class InternalMessage(BaseModel):
     attachments: list[Attachment] = []
     actions: list[MessageAction] = []
     is_group: bool = False
-    metadata: dict = {}
+    metadata: dict[str, Any] = {}
 
 
 # -- Lifespan (webhook registration) --------------------------------------

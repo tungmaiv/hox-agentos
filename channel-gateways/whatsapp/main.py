@@ -12,6 +12,7 @@ Text-only for MVP (attachment messages get a rejection response).
 """
 
 import os
+from typing import Any
 
 import httpx
 import structlog
@@ -59,7 +60,7 @@ class SendRequest(BaseModel):
     external_chat_id: str | None = None
     text: str | None = None
     actions: list[MessageAction] = []
-    metadata: dict = {}
+    metadata: dict[str, Any] = {}
 
 
 # --- Routes ---
@@ -132,7 +133,7 @@ async def webhook_receive(request: Request) -> dict:
 
         # Extract text content
         text = ""
-        metadata: dict = {}
+        metadata: dict[str, Any] = {}
 
         if message_type == "text":
             text = message.get("text", {}).get("body", "")

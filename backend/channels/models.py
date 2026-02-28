@@ -9,7 +9,7 @@ InternalMessage is the canonical format shared between:
 All sidecars translate platform-specific events INTO InternalMessage (inbound)
 and FROM InternalMessage (outbound). The backend never sees platform-specific payloads.
 """
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -50,4 +50,4 @@ class InternalMessage(BaseModel):
     attachments: list[Attachment] = []
     actions: list[MessageAction] = []
     is_group: bool = False
-    metadata: dict = {}
+    metadata: dict[str, Any] = {}

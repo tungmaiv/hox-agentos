@@ -5,6 +5,7 @@ Verifies:
 - Successful agent invocation returns AI response text
 - Timeout returns error message
 - Exception returns error message
+- Keycloak failure returns permission error message
 """
 import asyncio
 import uuid
@@ -44,7 +45,8 @@ async def test_invoke_agent_success() -> None:
         ],
     })
 
-    with patch("agents.master_agent.create_master_graph", return_value=mock_graph):
+    with patch("agents.master_agent.create_master_graph", return_value=mock_graph), \
+         patch("security.keycloak_client.fetch_user_realm_roles", new_callable=AsyncMock, return_value=["employee"]):
         result = await gateway._invoke_agent(msg)
 
     assert result.direction == "outbound"
@@ -75,6 +77,7 @@ async def test_invoke_agent_timeout() -> None:
         raise asyncio.TimeoutError()
 
     with patch("agents.master_agent.create_master_graph", return_value=mock_graph), \
+         patch("security.keycloak_client.fetch_user_realm_roles", new_callable=AsyncMock, return_value=["employee"]), \
          patch.object(asyncio, "wait_for", side_effect=asyncio.TimeoutError):
         result = await gateway._invoke_agent(msg)
 
@@ -91,8 +94,24 @@ async def test_invoke_agent_error() -> None:
     mock_graph = AsyncMock()
     mock_graph.ainvoke = AsyncMock(side_effect=RuntimeError("LLM unavailable"))
 
-    with patch("agents.master_agent.create_master_graph", return_value=mock_graph):
+    with patch("agents.master_agent.create_master_graph", return_value=mock_graph), \
+         patch("security.keycloak_client.fetch_user_realm_roles", new_callable=AsyncMock, return_value=["employee"]):
         result = await gateway._invoke_agent(msg)
 
     assert result.direction == "outbound"
     assert "Sorry, I couldn't process your request" in result.text
+
+
+@pytest.mark.asyncio
+async def test_invoke_agent_keycloak_failure() -> None:
+    """Keycloak unreachable returns permission error message."""
+    import httpx
+
+    gateway = ChannelGateway(sidecar_urls={"telegram": "http://telegram:9001"})
+    msg = _make_inbound_msg("Hello")
+
+    with patch("security.keycloak_client.fetch_user_realm_roles", new_callable=AsyncMock, side_effect=httpx.ConnectError("unreachable")):
+        result = await gateway._invoke_agent(msg)
+
+    assert result.direction == "outbound"
+    assert "couldn't verify your permissions" in result.text
