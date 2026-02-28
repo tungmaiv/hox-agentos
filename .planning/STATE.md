@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates daily work routines and lets them build custom automations without writing code -- all within an enterprise-secure, on-premise environment.
-**Current focus:** Phase 6 (Extensibility Registries) — COMPLETE (7/7 plans)
+**Current focus:** Phase 6 (Extensibility Registries) — COMPLETE (8/8 plans)
 
 ## Current Position
 
 Milestone: v1.1 Phase 6 (Extensibility Registries) — COMPLETE
 Phases: 1, 2, 2.1, 3, 3.1, 4, 4.1, 5, 5.1, 6 — all complete
 Current Plan: Phase 6 complete — ready for Phase 7 (Hardening and Sandboxing)
-Status: Phase 6 complete — admin dashboard with table/card views, permission matrix, MCP dots
-Last activity: 2026-02-28 -- Phase 6 Plan 07: admin dashboard UI, artifact views, permission matrix, MCP connectivity
+Status: Phase 6 complete — skill seeds, Pending Review filter fix, built-in /summarize /debug /export commands
+Last activity: 2026-03-01 -- Phase 6 Plan 08: seed 3 built-in skills, fix Pending Review filter predicate
 
-Progress: [████████████] 100% (7/7 Phase 6 plans)
+Progress: [████████████] 100% (8/8 Phase 6 plans)
 
 ## Performance Metrics
 
@@ -59,6 +59,7 @@ Progress: [████████████] 100% (7/7 Phase 6 plans)
 | Phase 06-extensibility-registries P05 | 10 | 2 tasks | 13 files |
 | Phase 06-extensibility-registries P06 | 9 | 2 tasks | 12 files |
 | Phase 06-extensibility-registries P07 | 15 | 3 tasks | 16 files |
+| Phase 06-extensibility-registries P08 | 8 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -212,6 +213,8 @@ Recent decisions affecting current work:
 - [06-07]: Generic useAdminArtifacts<T> hook parameterized by ArtifactType -- single hook handles all 4 artifact types
 - [06-07]: View mode stored in localStorage (admin-view-mode) -- persists across sessions without backend state
 - [06-07]: Catch-all proxy at /api/admin/[...path] forwards GET/POST/PUT/PATCH/DELETE with JWT from session
+- [06-08]: ArtifactStatus union extended with 'pending_review' — backend status column is VARCHAR(20) with no DB enum; frontend type must mirror all real values for TypeScript strict mode
+- [06-08]: StatusBadge color for pending_review is orange (bg-orange-100 text-orange-800) — visually distinct from yellow (deprecated) and gray (disabled)
 
 ### Pending Todos
 
@@ -236,6 +239,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-28
-Stopped at: Phase 6 COMPLETE (7/7 plans) — admin dashboard with artifact views, permission matrix, MCP dots. Ready for Phase 7 (Hardening and Sandboxing).
-Resume file: .planning/phases/06-extensibility-registries/06-07-SUMMARY.md
+Last session: 2026-03-01
+Stopped at: Phase 6 COMPLETE (8/8 plans) — skill seeds (migration 015), Pending Review filter fix, ArtifactStatus type fix. Ready for Phase 7 (Hardening and Sandboxing).
+Resume file: .planning/phases/06-extensibility-registries/06-08-SUMMARY.md

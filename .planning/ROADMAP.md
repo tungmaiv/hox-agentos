@@ -26,7 +26,7 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 - [x] **Phase 4.1: Phase 4 Polish** (INSERTED) — HITL canvas node amber ring fix, Next.js webhook proxy (completed 2026-02-27)
 - [x] **Phase 5: Scheduler and Channels** — Web chat enhancement, Telegram/WhatsApp/Teams adapters, channel identity resolution, ChannelAdapter protocol (completed 2026-02-28)
 - [ ] **Phase 5.1: Workflow Execution Wiring** (INSERTED) — Fix workflow→channel delivery, wire real agent_node dispatch, Celery worker role passthrough
-- [x] **Phase 6: Extensibility Registries** — Database-backed registries for agents/tools/skills/MCP servers, CRUD APIs, per-artifact permissions, skill runtime with /command support, admin dashboard UI (completed 2026-02-28)
+- [x] **Phase 6: Extensibility Registries** — Database-backed registries for agents/tools/skills/MCP servers, CRUD APIs, per-artifact permissions, skill runtime with /command support, admin dashboard UI, built-in skill seeds (completed 2026-03-01)
 - [ ] **Phase 7: Hardening and Sandboxing** — Docker sandbox execution, security audit, RLS policies, credential scanning, penetration testing
 - [ ] **Phase 8: Observability** — Grafana dashboards, Loki log aggregation, LiteLLM cost tracking
 
@@ -118,7 +118,7 @@ Plans:
 - [x] 06-05-PLAN.md — Skill system: executor with AG-UI streaming, AST-based safe evaluator, validator, import pipeline, security scanner
 - [x] 06-06-PLAN.md — User skill/tool APIs, slash command dispatch, frontend skill menu, integration wiring
 - [x] 06-07-PLAN.md — Frontend admin dashboard: tabbed UI, table/card views, permission matrix, MCP dots
-- [ ] 06-08-PLAN.md — Gap closure: seed built-in skills (migration 015), fix Pending Review filter predicate
+- [x] 06-08-PLAN.md — Gap closure: seed built-in skills (migration 015), fix Pending Review filter predicate
 
 ### Phase 7: Hardening and Sandboxing
 **Goal**: Untrusted code executes safely in sandboxed containers, and the full security perimeter is verified through automated testing and policy enforcement
@@ -165,6 +165,6 @@ Plans:
 | 4.1. Phase 4 Polish (INSERTED) | v1.1 | 1/1 | ✅ Complete | 2026-02-27 |
 | 5. Scheduler & Channels | v1.1 | 6/6 | ✅ Complete | 2026-02-28 |
 | 5.1. Workflow Execution Wiring (INSERTED) | v1.1 | 1/1 | ✅ Complete | 2026-02-28 |
-| 6. Extensibility Registries | v1.1 | 7/8 complete | 🔧 Gap closure | 2026-02-28 |
+| 6. Extensibility Registries | v1.1 | 8/8 | ✅ Complete | 2026-03-01 |
 | 7. Hardening & Sandboxing | v1.1 | 0/2 | ○ Not started | — |
 | 8. Observability | v1.1 | 0/2 | ○ Not started | — |
