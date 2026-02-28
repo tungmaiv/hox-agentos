@@ -18,7 +18,7 @@ Apply:
 
 Security: requires `registry:manage` permission (Gate 2 RBAC).
 """
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 import structlog
@@ -131,7 +131,7 @@ async def set_role_permissions(
 
 @router.get("/artifacts/{artifact_type}/{artifact_id}")
 async def get_artifact_permissions(
-    artifact_type: str,
+    artifact_type: Literal["agent", "tool", "skill", "mcp_server"],
     artifact_id: UUID,
     user: UserContext = Depends(_require_registry_manager),
     session: AsyncSession = Depends(get_db),
@@ -151,7 +151,7 @@ async def get_artifact_permissions(
 
 @router.put("/artifacts/{artifact_type}/{artifact_id}")
 async def set_artifact_permissions(
-    artifact_type: str,
+    artifact_type: Literal["agent", "tool", "skill", "mcp_server"],
     artifact_id: UUID,
     body: ArtifactPermissionSet,
     user: UserContext = Depends(_require_registry_manager),
@@ -207,7 +207,7 @@ async def set_artifact_permissions(
 
 @router.get("/users/{artifact_type}/{artifact_id}")
 async def get_user_permissions(
-    artifact_type: str,
+    artifact_type: Literal["agent", "tool", "skill", "mcp_server"],
     artifact_id: UUID,
     user: UserContext = Depends(_require_registry_manager),
     session: AsyncSession = Depends(get_db),
@@ -225,7 +225,7 @@ async def get_user_permissions(
 
 @router.put("/users/{artifact_type}/{artifact_id}")
 async def set_user_permissions(
-    artifact_type: str,
+    artifact_type: Literal["agent", "tool", "skill", "mcp_server"],
     artifact_id: UUID,
     body: list[UserArtifactPermissionSet],
     user: UserContext = Depends(_require_registry_manager),

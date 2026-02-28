@@ -23,7 +23,7 @@ from core.models.skill_definition import SkillDefinition
 from core.models.user import UserContext
 from core.schemas.registry import SkillListItem, SkillRunResponse
 from security.deps import get_current_user
-from security.rbac import check_artifact_permission, has_permission
+from security.rbac import batch_check_artifact_permissions, check_artifact_permission, has_permission
 from skills.executor import SkillExecutor
 
 logger = structlog.get_logger(__name__)
@@ -67,13 +67,16 @@ async def list_user_skills(
     )
     skills = result.scalars().all()
 
-    visible: list[SkillListItem] = []
-    for skill in skills:
-        allowed = await check_artifact_permission(
-            user, "skill", skill.id, session
-        )
-        if allowed:
-            visible.append(SkillListItem.model_validate(skill))
+    # Batch permission check: 2 queries instead of N per-skill queries
+    all_ids = [skill.id for skill in skills]
+    allowed_ids = await batch_check_artifact_permissions(
+        user, "skill", all_ids, session
+    )
+    visible = [
+        SkillListItem.model_validate(skill)
+        for skill in skills
+        if skill.id in allowed_ids
+    ]
 
     logger.info(
         "user_skills_listed",

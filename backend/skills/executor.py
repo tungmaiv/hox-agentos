@@ -31,6 +31,18 @@ from skills.safe_eval import safe_eval_condition
 
 logger = structlog.get_logger(__name__)
 
+# Allowed module prefixes for tool handler dispatch via importlib.
+# Prevents a compromised admin from pointing a tool_definition at arbitrary
+# Python modules (e.g., os, subprocess). Only modules under these prefixes
+# can be loaded for tool execution.
+_ALLOWED_HANDLER_PREFIXES: tuple[str, ...] = (
+    "tools.",
+    "agents.",
+    "skills.",
+    "mcp.",
+    "gateway.",
+)
+
 
 class SkillStepError(Exception):
     """Raised when a skill step fails (ACL denied, tool not found, etc.)."""
@@ -225,6 +237,14 @@ class SkillExecutor:
         if not handler_module or not handler_function:
             raise SkillStepError(
                 f"Tool '{tool_name}' has no handler configured"
+            )
+
+        # Validate handler_module against allowed prefixes to prevent
+        # arbitrary module loading (e.g., os, subprocess, shutil).
+        if not handler_module.startswith(_ALLOWED_HANDLER_PREFIXES):
+            raise SkillStepError(
+                f"Tool '{tool_name}' handler module '{handler_module}' "
+                f"is outside allowed prefixes: {_ALLOWED_HANDLER_PREFIXES}"
             )
 
         module = importlib.import_module(handler_module)

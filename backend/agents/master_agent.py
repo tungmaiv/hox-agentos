@@ -24,6 +24,7 @@ Long-term memory (Phase 3):
   and summarize_episode.delay at configurable threshold
 """
 import importlib
+import time
 from datetime import datetime, timezone
 from typing import Any
 
@@ -377,6 +378,20 @@ async def _save_memory_node(state: BlitzState) -> dict:
 # Falls back to hardcoded _FALLBACK_KEYWORD_MAP if empty (backward compat).
 _keyword_to_agent: dict[str, str] = {}
 
+# ── Slash command cache (TTL = 60s) ────────────────────────────────────
+# Maps slash_command string -> skill name for active skills.
+# Avoids a DB query on every message that starts with "/".
+_slash_cache: dict[str, str] = {}
+_slash_cache_timestamp: float = 0.0
+_SLASH_CACHE_TTL: float = 60.0
+
+# ── Agent enabled cache (TTL = 60s) ────────────────────────────────────
+# Maps "agent.{short_name}.enabled" config key -> bool.
+# Avoids a DB query on every routed message.
+_agent_enabled_cache: dict[str, bool] = {}
+_agent_enabled_cache_timestamp: float = 0.0
+_AGENT_ENABLED_CACHE_TTL: float = 60.0
+
 _FALLBACK_KEYWORD_MAP: dict[str, str] = {
     # email
     "email": "email_agent", "emails": "email_agent", "inbox": "email_agent",
@@ -412,13 +427,18 @@ def _classify_by_keywords(text: str) -> str:
     lowered = text.lower()
     words = set(re.findall(r"\w+", lowered))
 
+    # DB mode: _keyword_to_agent is populated from agent_definitions.routing_keywords
+    # by create_master_graph(). Fallback mode: uses _FALLBACK_KEYWORD_MAP when DB
+    # agents are not loaded. The fallback includes a phrase pattern ("status of" ->
+    # project_agent) that won't exist in DB mode unless explicitly added as a
+    # routing keyword on the project_agent definition.
     kw_map = _keyword_to_agent if _keyword_to_agent else _FALLBACK_KEYWORD_MAP
 
     for word in words:
         if word in kw_map:
             return kw_map[word]
 
-    # Check phrase patterns (e.g. "status of") only for project fallback
+    # Phrase patterns only in fallback mode (DB agents define their own keywords)
     if not _keyword_to_agent:
         if "status of" in lowered:
             return "project_agent"
@@ -437,42 +457,30 @@ async def _pre_route(state: BlitzState) -> str:
     Uses DB-backed keyword routing from agent_definitions.routing_keywords
     when available. Falls back to hardcoded keywords if DB routing map is empty.
 
+    Caching: Both slash command lookups and agent enabled checks use
+    60s TTL in-process caches to avoid per-message DB queries.
+
     Returns node names:
       "skill_executor" -- route to skill executor (slash command detected)
       "{agent_name}" -- route directly to matching sub-agent
       "master_agent" -- general intent; run master LLM
     """
-    from core.models.system_config import SystemConfig
-
     last_user_msg = next(
         (m.content for m in reversed(state["messages"]) if isinstance(m, HumanMessage)), ""
     )
     last_msg_str = str(last_user_msg).strip()
 
-    # Phase 6: Slash command detection before keyword routing
+    # Phase 6: Slash command detection before keyword routing (cached)
     if last_msg_str.startswith("/"):
         command = last_msg_str.split()[0]  # e.g., "/morning_digest"
-        try:
-            from core.models.skill_definition import SkillDefinition as _SkillDef
-
-            async with async_session() as session:
-                result = await session.execute(
-                    select(_SkillDef).where(
-                        _SkillDef.slash_command == command,
-                        _SkillDef.status == "active",
-                        _SkillDef.is_active == True,  # noqa: E712
-                    )
-                )
-                skill = result.scalar_one_or_none()
-                if skill:
-                    logger.info(
-                        "slash_command_detected",
-                        command=command,
-                        skill_name=skill.name,
-                    )
-                    return "skill_executor"
-        except Exception as exc:
-            logger.warning("slash_command_lookup_failed", command=command, error=str(exc))
+        skill_name = await _lookup_slash_command(command)
+        if skill_name is not None:
+            logger.info(
+                "slash_command_detected",
+                command=command,
+                skill_name=skill_name,
+            )
+            return "skill_executor"
         # Unknown /command: fall through to keyword routing / master_agent
 
     intent = _classify_by_keywords(last_msg_str)
@@ -480,25 +488,72 @@ async def _pre_route(state: BlitzState) -> str:
     if intent == "general":
         return "master_agent"
 
-    # Check if the target agent is enabled in system_config
-    async def _agent_enabled(agent_name: str) -> bool:
-        # Map agent_name to config key (e.g. "email_agent" -> "agent.email.enabled")
-        short_name = agent_name.replace("_agent", "")
-        key = f"agent.{short_name}.enabled"
-        try:
-            async with async_session() as s:
-                result = await s.execute(select(SystemConfig).where(SystemConfig.key == key))
-                row = result.scalar_one_or_none()
-                if row is None:
-                    return True  # default enabled when not configured
-                return bool(row.value)
-        except Exception:
-            return True  # fail open -- agent enabled on DB error
-
     if await _agent_enabled(intent):
         return intent
     # Disabled agent: fall through to master LLM
     return "master_agent"
+
+
+async def _refresh_slash_cache() -> None:
+    """Reload slash command cache from skill_definitions table."""
+    global _slash_cache, _slash_cache_timestamp
+    from core.models.skill_definition import SkillDefinition as _SkillDef
+
+    try:
+        async with async_session() as session:
+            result = await session.execute(
+                select(_SkillDef.slash_command, _SkillDef.name).where(
+                    _SkillDef.slash_command.isnot(None),
+                    _SkillDef.status == "active",
+                    _SkillDef.is_active == True,  # noqa: E712
+                )
+            )
+            _slash_cache = {row[0]: row[1] for row in result.all()}
+    except Exception as exc:
+        logger.warning("slash_cache_refresh_failed", error=str(exc))
+        # Keep stale cache on failure
+    _slash_cache_timestamp = time.monotonic()
+
+
+async def _lookup_slash_command(command: str) -> str | None:
+    """Look up a slash command in the cached skill map. Returns skill name or None."""
+    global _slash_cache_timestamp
+    elapsed = time.monotonic() - _slash_cache_timestamp
+    if elapsed >= _SLASH_CACHE_TTL or not _slash_cache_timestamp:
+        await _refresh_slash_cache()
+    return _slash_cache.get(command)
+
+
+async def _refresh_agent_enabled_cache() -> None:
+    """Reload agent enabled/disabled settings from system_config."""
+    global _agent_enabled_cache, _agent_enabled_cache_timestamp
+    from core.models.system_config import SystemConfig
+
+    try:
+        async with async_session() as session:
+            result = await session.execute(
+                select(SystemConfig).where(
+                    SystemConfig.key.like("agent.%.enabled")
+                )
+            )
+            rows = result.scalars().all()
+            _agent_enabled_cache = {row.key: bool(row.value) for row in rows}
+    except Exception as exc:
+        logger.warning("agent_enabled_cache_refresh_failed", error=str(exc))
+    _agent_enabled_cache_timestamp = time.monotonic()
+
+
+async def _agent_enabled(agent_name: str) -> bool:
+    """Check if an agent is enabled via cached system_config lookup."""
+    global _agent_enabled_cache_timestamp
+    elapsed = time.monotonic() - _agent_enabled_cache_timestamp
+    if elapsed >= _AGENT_ENABLED_CACHE_TTL or not _agent_enabled_cache_timestamp:
+        await _refresh_agent_enabled_cache()
+
+    short_name = agent_name.replace("_agent", "")
+    key = f"agent.{short_name}.enabled"
+    # Default enabled when not configured
+    return _agent_enabled_cache.get(key, True)
 
 
 async def _skill_executor_node(state: BlitzState) -> dict[str, list[BaseMessage]]:

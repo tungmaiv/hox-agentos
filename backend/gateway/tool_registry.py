@@ -64,8 +64,11 @@ async def _refresh_tool_cache(session: AsyncSession) -> None:
         # (convention: "server.tool_name" -> mcp_server="server")
         if row.handler_type == "mcp" and "." in row.name:
             new_cache[row.name]["mcp_server"] = row.name.split(".")[0]
-        # Extract required_permissions from input_schema if stored there,
-        # or from the legacy seeded data
+        # NOTE: required_permissions is currently stored inside input_schema
+        # as {"required_permissions": ["crm:read", ...]}. This is a legacy
+        # convention from the migration of the in-memory registry. Post-MVP,
+        # consider adding a dedicated required_permissions JSON column to
+        # tool_definitions to avoid overloading input_schema's purpose.
         if row.input_schema and "required_permissions" in row.input_schema:
             new_cache[row.name]["required_permissions"] = row.input_schema["required_permissions"]
 

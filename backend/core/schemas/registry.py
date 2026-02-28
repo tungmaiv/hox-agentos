@@ -316,6 +316,13 @@ class PermissionApplyRequest(BaseModel):
 
 
 class StatusUpdate(BaseModel):
+    """Manual status change by admin.
+
+    Only allows active/disabled/deprecated. The pending_review and rejected
+    statuses are set exclusively by the skill import/review flow
+    (SkillImporter + POST /review endpoint) and cannot be set manually.
+    """
+
     status: Literal["active", "disabled", "deprecated"]
 
 

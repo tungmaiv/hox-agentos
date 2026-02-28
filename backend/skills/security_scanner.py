@@ -14,6 +14,7 @@ all prompt_template fields in procedure steps.
 import re
 from dataclasses import dataclass, field
 from typing import Any
+from urllib.parse import urlparse
 
 import structlog
 
@@ -143,13 +144,24 @@ class SecurityScanner:
         )
 
     def _score_source(self, source_url: str | None) -> int:
-        """Score based on source URL reputation."""
+        """Score based on source URL reputation.
+
+        Uses proper URL parsing to prevent bypass via query string tricks
+        (e.g., "https://evil.com?redirect=agentskills.io").
+        """
         if source_url is None:
             # Manual paste / direct creation
             return 40
 
+        parsed = urlparse(source_url)
+        hostname = parsed.hostname or ""
+        # Match hostname or hostname + path prefix for GitHub-style sources
+        full_host_path = f"{hostname}{parsed.path}"
         for trusted in _TRUSTED_SOURCES:
-            if trusted in source_url:
+            if hostname == trusted or hostname.endswith(f".{trusted}"):
+                return 95
+            # Handle path-based sources like "github.com/blitz-agentos"
+            if "/" in trusted and full_host_path.startswith(trusted):
                 return 95
 
         # Unknown URL

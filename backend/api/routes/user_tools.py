@@ -18,7 +18,7 @@ from core.models.tool_definition import ToolDefinition
 from core.models.user import UserContext
 from core.schemas.registry import ToolListItem
 from security.deps import get_current_user
-from security.rbac import check_artifact_permission, has_permission
+from security.rbac import batch_check_artifact_permissions, has_permission
 
 logger = structlog.get_logger(__name__)
 
@@ -55,13 +55,16 @@ async def list_user_tools(
     )
     tools = result.scalars().all()
 
-    visible: list[ToolListItem] = []
-    for tool in tools:
-        allowed = await check_artifact_permission(
-            user, "tool", tool.id, session
-        )
-        if allowed:
-            visible.append(ToolListItem.model_validate(tool))
+    # Batch permission check: 2 queries instead of N per-tool queries
+    all_ids = [tool.id for tool in tools]
+    allowed_ids = await batch_check_artifact_permissions(
+        user, "tool", all_ids, session
+    )
+    visible = [
+        ToolListItem.model_validate(tool)
+        for tool in tools
+        if tool.id in allowed_ids
+    ]
 
     logger.info(
         "user_tools_listed",

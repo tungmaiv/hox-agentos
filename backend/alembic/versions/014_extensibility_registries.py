@@ -280,11 +280,6 @@ def upgrade() -> None:
         ],
     }
 
-    rows = []
-    for role, perms in role_perms.items():
-        for perm in perms:
-            rows.append({"id": sa.text("gen_random_uuid()"), "role": role, "permission": perm})
-
     # Use raw SQL for UUID generation since op.bulk_insert doesn't support sa.text() in values
     for role, perms in role_perms.items():
         for perm in perms:

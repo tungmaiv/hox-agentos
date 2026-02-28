@@ -55,11 +55,14 @@ async function proxyRequest(
     headers,
   };
 
-  // Forward body for methods that have one
-  if (["POST", "PUT", "PATCH"].includes(request.method)) {
-    fetchInit.body = await request.text();
-    if (!headers["Content-Type"]) {
-      headers["Content-Type"] = "application/json";
+  // Forward body for methods that have one (including DELETE with body)
+  if (["POST", "PUT", "PATCH", "DELETE"].includes(request.method)) {
+    const bodyText = await request.text();
+    if (bodyText) {
+      fetchInit.body = bodyText;
+      if (!headers["Content-Type"]) {
+        headers["Content-Type"] = "application/json";
+      }
     }
   }
 

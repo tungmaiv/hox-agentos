@@ -284,3 +284,79 @@ async def check_artifact_permission(
 
     # All rows allow
     return True
+
+
+async def batch_check_artifact_permissions(
+    user: UserContext,
+    artifact_type: str,
+    artifact_ids: list[UUID],
+    session: AsyncSession,
+) -> set[UUID]:
+    """
+    Batch check artifact permissions for multiple artifacts at once.
+
+    Returns the set of artifact_ids that the user is allowed to access.
+    This avoids the N+1 query pattern of calling check_artifact_permission()
+    in a loop for each artifact.
+
+    Logic mirrors check_artifact_permission() but in batch:
+    1. Load all user-level overrides for these artifacts in one query.
+    2. Load all role-level permissions for remaining artifacts in one query.
+    3. Apply same deny-wins logic.
+    """
+    from core.models.artifact_permission import ArtifactPermission
+    from core.models.user_artifact_permission import UserArtifactPermission
+
+    if not artifact_ids:
+        return set()
+
+    user_id = user["user_id"]
+    roles = user["roles"]
+    allowed_ids: set[UUID] = set()
+    resolved_ids: set[UUID] = set()
+
+    # 1. Batch load user-level overrides
+    user_result = await session.execute(
+        select(UserArtifactPermission).where(
+            UserArtifactPermission.artifact_type == artifact_type,
+            UserArtifactPermission.artifact_id.in_(artifact_ids),
+            UserArtifactPermission.user_id == user_id,
+            UserArtifactPermission.status == "active",
+        )
+    )
+    for override in user_result.scalars().all():
+        resolved_ids.add(override.artifact_id)
+        if override.allowed:
+            allowed_ids.add(override.artifact_id)
+
+    # 2. Batch load role-level permissions for unresolved artifacts
+    remaining_ids = [aid for aid in artifact_ids if aid not in resolved_ids]
+    if remaining_ids and roles:
+        role_result = await session.execute(
+            select(ArtifactPermission).where(
+                ArtifactPermission.artifact_type == artifact_type,
+                ArtifactPermission.artifact_id.in_(remaining_ids),
+                ArtifactPermission.role.in_(roles),
+                ArtifactPermission.status == "active",
+            )
+        )
+        # Group by artifact_id to apply deny-wins logic
+        role_rows_by_id: dict[UUID, list[ArtifactPermission]] = {}
+        for row in role_result.scalars().all():
+            role_rows_by_id.setdefault(row.artifact_id, []).append(row)
+
+        for aid in remaining_ids:
+            rows = role_rows_by_id.get(aid, [])
+            if not rows:
+                # No explicit permissions = default ALLOW
+                allowed_ids.add(aid)
+            elif any(not r.allowed for r in rows):
+                # Any denial = DENY
+                pass
+            else:
+                allowed_ids.add(aid)
+    elif remaining_ids:
+        # No roles, default allow for remaining
+        allowed_ids.update(remaining_ids)
+
+    return allowed_ids
