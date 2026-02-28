@@ -49,10 +49,13 @@ async def test_execute_workflow_with_hitl_result_calls_update_state():
     mock_checkpointer.__aexit__ = AsyncMock(return_value=False)
     mock_checkpointer.setup = AsyncMock()
 
+    mock_workflow.name = "Test"
+
     with patch("scheduler.tasks.workflow_execution.async_session") as mock_sf, \
          patch("scheduler.tasks.workflow_execution.compile_workflow_to_stategraph") as mock_compile, \
          patch("scheduler.tasks.workflow_execution.AsyncPostgresSaver") as mock_pg_cls, \
-         patch("scheduler.tasks.workflow_execution.publish_event"):
+         patch("scheduler.tasks.workflow_execution.publish_event"), \
+         patch("scheduler.tasks.workflow_execution.fetch_user_realm_roles", new_callable=AsyncMock, return_value=["employee"]):
 
         mock_session = AsyncMock()
         mock_sf.return_value.__aenter__ = AsyncMock(return_value=mock_session)

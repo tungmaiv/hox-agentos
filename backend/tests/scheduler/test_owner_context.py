@@ -58,10 +58,13 @@ async def test_scheduled_job_runs_as_owner() -> None:
         mock_builder.compile = MagicMock(return_value=mock_compiled)
         return mock_builder
 
+    mock_workflow.name = "Test Workflow"
+
     # Patch all external dependencies
     with patch("scheduler.tasks.workflow_execution.async_session") as mock_sf, \
          patch("scheduler.tasks.workflow_execution.compile_workflow_to_stategraph", side_effect=capture_compile), \
          patch("scheduler.tasks.workflow_execution.publish_event"), \
+         patch("scheduler.tasks.workflow_execution.fetch_user_realm_roles", new_callable=AsyncMock, return_value=["employee", "developer"]), \
          patch("scheduler.tasks.workflow_execution.AsyncPostgresSaver") as mock_pg:
 
         # Setup async session mock
