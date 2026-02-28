@@ -45,15 +45,28 @@ async def _handle_trigger_node(config: dict[str, Any], state: WorkflowState) -> 
 
 async def _handle_agent_node(config: dict[str, Any], state: WorkflowState) -> Any:
     """
-    Invoke a named sub-agent.
+    Invoke a named sub-agent and return formatted text output.
 
     Config fields:
       agent:       one of "email_agent", "calendar_agent", "project_agent"
       instruction: free-text instruction passed to the sub-agent
 
-    04-02 stub: returns a structured mock so the compiler can be tested end-to-end.
-    04-03: replaced with real sub-agent dispatch.
+    Dispatches to the real sub-agent function, extracts the AIMessage content,
+    and formats it for human-readable channel output via format_for_channel().
     """
+    # Lazy imports to avoid circular deps when node_handlers is loaded before subagents
+    from agents.subagents.email_agent import email_agent_node
+    from agents.subagents.calendar_agent import calendar_agent_node
+    from agents.subagents.project_agent import project_agent_node
+    from channels.gateway import format_for_channel
+    from langchain_core.messages import AIMessage, HumanMessage
+
+    AGENT_DISPATCH: dict[str, Any] = {
+        "email_agent": email_agent_node,
+        "calendar_agent": calendar_agent_node,
+        "project_agent": project_agent_node,
+    }
+
     agent_name = config.get("agent", "email_agent")
     instruction = config.get("instruction", "")
     logger.info(
@@ -62,8 +75,31 @@ async def _handle_agent_node(config: dict[str, Any], state: WorkflowState) -> An
         instruction=instruction[:80],
         user_id=str((state.get("user_context") or {}).get("user_id")),
     )
-    # Stub — 04-03 wires real dispatch
-    return {"agent": agent_name, "result": f"[stub] {instruction}", "success": True}
+
+    agent_fn = AGENT_DISPATCH.get(agent_name)
+    if not agent_fn:
+        return {"agent": agent_name, "error": f"Unknown agent: {agent_name}", "success": False}
+
+    try:
+        # Build minimal BlitzState for sub-agent invocation
+        mini_state: dict[str, Any] = {
+            "messages": [HumanMessage(content=instruction or "Please provide a summary.")],
+        }
+        result = await agent_fn(mini_state)
+
+        # Extract AI response content
+        messages = result.get("messages", [])
+        ai_content = next(
+            (str(m.content) for m in messages if isinstance(m, AIMessage)),
+            f"No response from {agent_name}",
+        )
+
+        # Format structured JSON for human-readable channel output
+        formatted = format_for_channel(ai_content)
+        return {"agent": agent_name, "result": formatted, "success": True}
+    except Exception as exc:
+        logger.error("agent_node_error", agent=agent_name, error=str(exc))
+        return {"agent": agent_name, "error": str(exc), "success": False}
 
 
 # ── Tool node ─────────────────────────────────────────────────────────────────
@@ -188,12 +224,21 @@ async def _handle_channel_output_node(config: dict[str, Any], state: WorkflowSta
       template: message template string, e.g. "Digest:\n{output}"
 
     Web channel: returns result without sending (AG-UI handles web delivery).
-    Other channels: sends outbound via ChannelGateway.send_outbound().
+    Other channels: resolves external_chat_id from channel_accounts table,
+    then sends outbound via ChannelGateway.send_outbound().
+
+    Raises ValueError if:
+      - No user_id in workflow context
+      - No linked channel account for the target channel type
     """
+    from core.models.channel import ChannelAccount
+    from sqlalchemy import and_, select
+
     channel = config.get("channel", "web")
     template = config.get("template", "{output}")
     output = state.get("current_output")
-    user_context = state.get("user_context", {})
+    user_context = state.get("user_context") or {}
+    workflow_name = state.get("workflow_name", "")
 
     # Render template -- safe string format, not eval
     try:
@@ -201,16 +246,41 @@ async def _handle_channel_output_node(config: dict[str, Any], state: WorkflowSta
     except (KeyError, ValueError):
         message = str(output)
 
+    # Prefix with workflow name per locked decision
+    if workflow_name:
+        message = f"[{workflow_name}] {message}"
+
     logger.info(
         "channel_output_node_invoked",
         channel=channel,
-        user_id=str((user_context or {}).get("user_id", "")),
+        user_id=str(user_context.get("user_id", "")),
     )
 
     if channel == "web":
         return {"channel": channel, "message": message, "sent": True}
 
-    # Real channel delivery via ChannelGateway
+    # Resolve delivery target from channel_accounts table
+    owner_user_id = user_context.get("user_id")
+    if not owner_user_id:
+        raise ValueError("No user_id in workflow context")
+
+    uid = uuid.UUID(str(owner_user_id))
+    async with async_session() as session:
+        result = await session.execute(
+            select(ChannelAccount).where(
+                and_(
+                    ChannelAccount.user_id == uid,
+                    ChannelAccount.channel == channel,
+                    ChannelAccount.is_paired == True,  # noqa: E712
+                )
+            )
+        )
+        account = result.scalar_one_or_none()
+
+    if not account:
+        raise ValueError(f"No linked {channel} account for user {owner_user_id}")
+
+    # Build outbound message with resolved external_chat_id
     from api.routes.channels import get_channel_gateway
     from channels.models import InternalMessage
 
@@ -218,10 +288,18 @@ async def _handle_channel_output_node(config: dict[str, Any], state: WorkflowSta
     msg = InternalMessage(
         direction="outbound",
         channel=channel,
-        external_user_id=(user_context or {}).get("external_user_id", ""),
+        external_user_id=account.external_user_id,
+        external_chat_id=account.external_user_id,  # DM: chat_id == user_id
         text=message,
     )
     await gateway.send_outbound(msg)
+
+    logger.info(
+        "channel_output_delivered",
+        channel=channel,
+        user_id=str(owner_user_id),
+        external_chat_id=account.external_user_id,
+    )
     return {"channel": channel, "message": message, "sent": True}
 
 
