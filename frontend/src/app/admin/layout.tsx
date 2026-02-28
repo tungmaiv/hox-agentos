@@ -14,6 +14,7 @@ const ADMIN_TABS = [
   { label: "Skills", href: "/admin/skills" },
   { label: "MCP Servers", href: "/admin/mcp-servers" },
   { label: "Permissions", href: "/admin/permissions" },
+  { label: "AI Builder", href: "/admin/create" },
 ] as const;
 
 /** Roles that grant access to the admin dashboard. */
