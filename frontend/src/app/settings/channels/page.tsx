@@ -553,6 +553,21 @@ export default function ChannelLinkingPage() {
       if (res.ok) {
         const data = (await res.json()) as ChannelAccountResponse[];
         setAccounts(data);
+        // Auto-enable toggles for channels that have linked accounts
+        if (data.length > 0) {
+          setToggles((prev) => {
+            const next = { ...prev };
+            let changed = false;
+            for (const acct of data) {
+              if (!next[acct.channel]) {
+                next[acct.channel] = true;
+                changed = true;
+              }
+            }
+            if (changed) setStoredToggles(next);
+            return changed ? next : prev;
+          });
+        }
       }
     } catch {
       // silently fail — empty accounts displayed
