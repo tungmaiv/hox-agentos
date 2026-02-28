@@ -32,6 +32,7 @@ import { CopilotChat } from "@copilotkit/react-ui";
 import "@copilotkit/react-ui/styles.css";
 import type { InputProps, UserMessageProps, AssistantMessageProps } from "@copilotkit/react-ui";
 import { A2UIMessageRenderer } from "@/components/a2ui";
+import { useSkills, type SkillItem } from "@/hooks/use-skills";
 
 /** Minimal Message shape for export serialization (role + content fields from AG-UI). */
 interface ChatMessage {
@@ -72,6 +73,8 @@ interface SlashInputProps extends InputProps {
   /** Ref whose .current is set by this component on mount so the parent can
    *  imperatively push a new input value (e.g. from "Edit message" click). */
   editEventRef: React.MutableRefObject<((text: string) => void) | null>;
+  /** Available skills from the backend for /command autocompletion. */
+  skills: SkillItem[];
 }
 
 function SlashCommandInput({
@@ -81,8 +84,11 @@ function SlashCommandInput({
   onNewConversation,
   onClearMessages,
   editEventRef,
+  skills,
 }: SlashInputProps) {
   const [inputValue, setInputValue] = useState("");
+  const [showSlashMenu, setShowSlashMenu] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(0);
 
   // Register edit handler — lets parent push a value into this input imperatively
   // without a re-render cascade that would lose focus.
@@ -92,6 +98,35 @@ function SlashCommandInput({
       editEventRef.current = null;
     };
   }, [editEventRef]);
+
+  // Built-in commands always shown alongside skills
+  const builtinCommands = [
+    { slashCommand: "/new", displayName: "New Chat", description: "Start a new conversation" },
+    { slashCommand: "/clear", displayName: "Clear", description: "Clear message history" },
+  ];
+
+  // Filter matching commands based on current input
+  const getFilteredCommands = () => {
+    const prefix = inputValue.trim().toLowerCase();
+    if (!prefix.startsWith("/")) return [];
+
+    const all = [
+      ...builtinCommands.map((c) => ({ ...c, isBuiltin: true })),
+      ...skills
+        .filter((s) => s.slashCommand)
+        .map((s) => ({
+          slashCommand: s.slashCommand as string,
+          displayName: s.displayName || s.name,
+          description: s.description || "",
+          isBuiltin: false,
+        })),
+    ];
+
+    if (prefix === "/") return all;
+    return all.filter((c) => c.slashCommand.toLowerCase().startsWith(prefix));
+  };
+
+  const filteredCommands = showSlashMenu ? getFilteredCommands() : [];
 
   const handleSlashCommand = (value: string): boolean => {
     const trimmed = value.trim();
@@ -103,12 +138,60 @@ function SlashCommandInput({
       onClearMessages();
       return true;
     }
+    // Unknown /commands are sent to the agent as regular messages
+    // (the agent's _pre_route() handles dispatch for skill commands)
     return false;
   };
 
+  const handleInputChange = (value: string) => {
+    setInputValue(value);
+    // Show menu when input starts with "/" and is at the beginning
+    if (value.trim().startsWith("/") && !value.includes(" ")) {
+      setShowSlashMenu(true);
+      setSelectedIndex(0);
+    } else {
+      setShowSlashMenu(false);
+    }
+  };
+
+  const selectCommand = (command: string) => {
+    setInputValue(command + " ");
+    setShowSlashMenu(false);
+  };
+
   const handleKeyDown = async (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Handle slash menu navigation
+    if (showSlashMenu && filteredCommands.length > 0) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setSelectedIndex((prev) => Math.min(prev + 1, filteredCommands.length - 1));
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setSelectedIndex((prev) => Math.max(prev - 1, 0));
+        return;
+      }
+      if (e.key === "Tab") {
+        e.preventDefault();
+        const cmd = filteredCommands[selectedIndex];
+        if (cmd) selectCommand(cmd.slashCommand);
+        return;
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setShowSlashMenu(false);
+        return;
+      }
+    }
+
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
+      if (showSlashMenu && filteredCommands.length > 0) {
+        const cmd = filteredCommands[selectedIndex];
+        if (cmd) selectCommand(cmd.slashCommand);
+        return;
+      }
       if (!inputValue.trim() || inProgress) return;
       if (handleSlashCommand(inputValue)) {
         setInputValue("");
@@ -116,18 +199,53 @@ function SlashCommandInput({
       }
       const text = inputValue;
       setInputValue("");
+      setShowSlashMenu(false);
       await onSend(text);
     }
   };
 
   return (
-    <div className="flex items-end gap-2 p-3 border-t border-gray-200 bg-white text-gray-900">
+    <div className="relative flex items-end gap-2 p-3 border-t border-gray-200 bg-white text-gray-900">
+      {/* Slash command dropdown menu */}
+      {showSlashMenu && filteredCommands.length > 0 && (
+        <div className="absolute bottom-full left-3 right-3 mb-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto z-10">
+          {filteredCommands.map((cmd, i) => (
+            <button
+              key={cmd.slashCommand}
+              className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors ${
+                i === selectedIndex
+                  ? "bg-blue-50 text-blue-700"
+                  : "hover:bg-gray-50 text-gray-700"
+              }`}
+              onMouseDown={(e) => {
+                e.preventDefault(); // Prevent textarea blur
+                selectCommand(cmd.slashCommand);
+              }}
+              onMouseEnter={() => setSelectedIndex(i)}
+            >
+              <span className="font-mono text-xs text-gray-500 min-w-[100px]">
+                {cmd.slashCommand}
+              </span>
+              <span className="font-medium">{cmd.displayName}</span>
+              {cmd.description && (
+                <span className="text-gray-400 text-xs truncate ml-auto">
+                  {cmd.description}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
       <textarea
         className="flex-1 resize-none border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px] max-h-40"
-        placeholder="Ask anything... (Enter to send, Shift+Enter for new line, /new for new chat, /clear to clear)"
+        placeholder="Ask anything... (type / for commands, Enter to send)"
         value={inputValue}
-        onChange={(e) => setInputValue(e.target.value)}
+        onChange={(e) => handleInputChange(e.target.value)}
         onKeyDown={handleKeyDown}
+        onBlur={() => {
+          // Small delay to allow click events on menu items
+          setTimeout(() => setShowSlashMenu(false), 150);
+        }}
         rows={1}
         disabled={inProgress}
       />
@@ -150,6 +268,7 @@ function SlashCommandInput({
               }
               const text = inputValue;
               setInputValue("");
+              setShowSlashMenu(false);
               await onSend(text);
             }}
             className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors"
@@ -221,6 +340,7 @@ interface ChatPanelInnerProps {
 function ChatPanelInner({ conversationId, onSidebarToggle, onNewConversation, onConversationUpdate }: ChatPanelInnerProps) {
   const { messages, reset } = useCopilotChatInternal();
   const [isProcessing, setIsProcessing] = useState(false);
+  const { skills } = useSkills();
 
   // History is restored via agent/connect StateSnapshot (runtime.py loads turns
   // from DB and returns them in the snapshot). No client-side fetch needed.
@@ -250,6 +370,11 @@ function ChatPanelInner({ conversationId, onSidebarToggle, onNewConversation, on
   callbacksRef.current.onNewConversation = onNewConversation;
   callbacksRef.current.reset = reset;
 
+  // Stable skills ref — updated every render so the memoized CustomInput always
+  // accesses the latest skills list without requiring recreation.
+  const skillsRef = useRef<SkillItem[]>([]);
+  skillsRef.current = skills;
+
   // Stable component type references — created once, never recreated on re-render.
   // useMemo(()=>..., []) guarantees the same function identity every render, so
   // CopilotChat never unmounts + remounts the input (which would lose focus).
@@ -262,6 +387,7 @@ function ChatPanelInner({ conversationId, onSidebarToggle, onNewConversation, on
             onNewConversation={() => callbacksRef.current.onNewConversation()}
             onClearMessages={() => callbacksRef.current.reset()}
             editEventRef={editEventRef}
+            skills={skillsRef.current}
           />
         );
       },

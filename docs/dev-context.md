@@ -78,6 +78,54 @@ Base URL (local dev): `http://localhost:8000`
 | GET | `/api/mcp/servers` | List registered MCP servers |
 | GET | `/api/mcp/servers/{name}/tools` | List tools on a server |
 
+### Skills (User-facing)
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/skills` | List skills available to current user (role-filtered) |
+| POST | `/api/skills/{name}/run` | Execute a skill by name (procedural or instructional) |
+
+### Tools (User-facing)
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/tools` | List tools available to current user (role-filtered) |
+
+### Admin — Extensibility Registries (Phase 6)
+
+All admin endpoints require `registry:manage` permission (Gate 2 RBAC — it-admin role).
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/admin/agents` | List all agent definitions |
+| POST | `/api/admin/agents` | Create agent definition |
+| GET | `/api/admin/agents/{id}` | Get agent by UUID |
+| PUT | `/api/admin/agents/{id}` | Update agent fields |
+| PATCH | `/api/admin/agents/{id}/status` | Enable/disable agent |
+| PATCH | `/api/admin/agents/{id}/activate` | Activate version (deactivate others) |
+| PATCH | `/api/admin/agents/bulk-status` | Bulk status update |
+| GET | `/api/admin/tools` | List all tool definitions |
+| POST | `/api/admin/tools` | Create tool definition |
+| GET | `/api/admin/tools/{id}` | Get tool by UUID |
+| PUT | `/api/admin/tools/{id}` | Update tool fields |
+| PATCH | `/api/admin/tools/{id}/status` | Enable/disable tool |
+| PATCH | `/api/admin/tools/{id}/activate` | Activate version |
+| PATCH | `/api/admin/tools/bulk-status` | Bulk status update |
+| GET | `/api/admin/skills` | List all skill definitions |
+| POST | `/api/admin/skills` | Create skill definition |
+| GET | `/api/admin/skills/pending` | List skills pending review |
+| POST | `/api/admin/skills/import` | Import skill from URL or inline |
+| GET | `/api/admin/skills/{id}` | Get skill by UUID |
+| PUT | `/api/admin/skills/{id}` | Update skill fields |
+| PATCH | `/api/admin/skills/{id}/status` | Enable/disable skill |
+| PATCH | `/api/admin/skills/{id}/activate` | Activate version |
+| PATCH | `/api/admin/skills/bulk-status` | Bulk status update |
+| POST | `/api/admin/skills/{id}/validate` | Dry-run validate procedure |
+| POST | `/api/admin/skills/{id}/review` | Approve/reject quarantined skill |
+| GET | `/api/admin/skills/{id}/security-report` | Get security scan report |
+| PUT | `/api/admin/permissions/roles/{role}` | Set role permissions |
+| PUT | `/api/admin/permissions/artifacts/{id}` | Set artifact permissions (staged) |
+| POST | `/api/admin/permissions/apply` | Apply pending permissions |
+| PUT | `/api/admin/permissions/users/{id}` | Set per-user permission override |
+
 ### CopilotKit
 | Method | Path | Description |
 |--------|------|-------------|
@@ -247,3 +295,4 @@ Tools are called via the backend MCPClient — never directly from frontend.
 | 2026-02-26 | JWT: blitz-portal tokens carry no aud claim → verify_aud=False in jwt.py; realm roles emitted as flat realm_roles not realm_access.roles | claude |
 | 2026-02-26 | DB tables: must run `just migrate` on fresh install before backend can serve requests; tool_acl table missing → 500 on every authenticated call | claude |
 | 2026-02-26 | CopilotKit protocol: 3 methods — info, agent/run, agent/connect; connect is called on component mount to restore thread state, same RunAgentInput body/SSE response as run | claude |
+| 2026-02-28 | Phase 6 endpoints: user-facing GET /api/skills, POST /api/skills/{name}/run, GET /api/tools; admin CRUD for agents/tools/skills/permissions at /api/admin/*; skill slash commands detected in master agent _pre_route | claude |
