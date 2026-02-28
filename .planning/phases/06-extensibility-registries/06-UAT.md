@@ -1,9 +1,9 @@
 ---
-status: diagnosed
+status: resolved
 phase: 06-extensibility-registries
 source: 06-01-SUMMARY.md, 06-02-SUMMARY.md, 06-03-SUMMARY.md, 06-04-SUMMARY.md, 06-05-SUMMARY.md, 06-06-SUMMARY.md, 06-07-SUMMARY.md
 started: 2026-02-28T16:10:00Z
-updated: 2026-02-28T16:25:00Z
+updated: 2026-03-01T00:15:00Z
 ---
 
 ## Current Test
@@ -84,7 +84,7 @@ skipped: 0
 ## Gaps
 
 - truth: "Skills tab shows skill-specific columns (type, slash_command, trust score) and Pending Review filter"
-  status: failed
+  status: resolved
   reason: "User reported: skill is not as per describe"
   severity: minor
   test: 4
@@ -98,7 +98,7 @@ skipped: 0
   debug_session: ""
 
 - truth: "Slash command menu shows skill-based commands alongside built-in commands"
-  status: failed
+  status: resolved
   reason: "User reported: only two commands no slash command for skill"
   severity: major
   test: 9
