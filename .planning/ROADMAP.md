@@ -108,7 +108,7 @@ Plans:
   4. Permissions can be assigned per artifact per role, with per-user overrides and staged apply model
   5. Removing an artifact from the registry prevents all future invocations; existing running workflows complete gracefully
   6. Admin dashboard at /admin shows all artifacts with table/card views, permission matrix, and MCP connectivity indicators
-**Plans**: 7 plans
+**Plans**: 8 plans
 
 Plans:
 - [x] 06-01-PLAN.md — ORM models (6 tables + MCP evolution), Alembic migration 014 with seed data + tool_acl migration, Pydantic schemas
@@ -118,6 +118,7 @@ Plans:
 - [x] 06-05-PLAN.md — Skill system: executor with AG-UI streaming, AST-based safe evaluator, validator, import pipeline, security scanner
 - [x] 06-06-PLAN.md — User skill/tool APIs, slash command dispatch, frontend skill menu, integration wiring
 - [x] 06-07-PLAN.md — Frontend admin dashboard: tabbed UI, table/card views, permission matrix, MCP dots
+- [ ] 06-08-PLAN.md — Gap closure: seed built-in skills (migration 015), fix Pending Review filter predicate
 
 ### Phase 7: Hardening and Sandboxing
 **Goal**: Untrusted code executes safely in sandboxed containers, and the full security perimeter is verified through automated testing and policy enforcement
@@ -164,6 +165,6 @@ Plans:
 | 4.1. Phase 4 Polish (INSERTED) | v1.1 | 1/1 | ✅ Complete | 2026-02-27 |
 | 5. Scheduler & Channels | v1.1 | 6/6 | ✅ Complete | 2026-02-28 |
 | 5.1. Workflow Execution Wiring (INSERTED) | v1.1 | 1/1 | ✅ Complete | 2026-02-28 |
-| 6. Extensibility Registries | v1.1 | Complete    | 2026-02-28 | 2026-02-28 |
+| 6. Extensibility Registries | v1.1 | 7/8 complete | 🔧 Gap closure | 2026-02-28 |
 | 7. Hardening & Sandboxing | v1.1 | 0/2 | ○ Not started | — |
 | 8. Observability | v1.1 | 0/2 | ○ Not started | — |
