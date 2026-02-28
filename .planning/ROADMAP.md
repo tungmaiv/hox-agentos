@@ -92,8 +92,10 @@ Plans:
   2. A workflow `agent_node` invokes the real sub-agent (email, calendar, project) and returns actual LLM-generated output instead of stub text
   3. Celery workflow workers use the workflow owner's actual Keycloak roles instead of hardcoded `['employee']`
 
+**Plans:** 1 plan
+
 Plans:
-- [ ] 05.1-01: Fix channel_output_node delivery + agent_node real dispatch + worker roles
+- [ ] 05.1-01-PLAN.md — Channel output delivery + agent_node real dispatch + Keycloak role passthrough + tests
 
 ### Phase 6: Extensibility Registries
 **Goal**: Admins and developers can manage the platform's agents, tools, skills, and MCP servers as runtime artifacts through database-backed registries with granular permissions
@@ -156,7 +158,7 @@ Plans:
 | 4. Canvas & Workflows | v1.1 | 5/5 | ✅ Complete | 2026-02-27 |
 | 4.1. Phase 4 Polish (INSERTED) | v1.1 | 1/1 | ✅ Complete | 2026-02-27 |
 | 5. Scheduler & Channels | v1.1 | 6/6 | ✅ Complete | 2026-02-28 |
-| 5.1. Workflow Execution Wiring (INSERTED) | v1.1 | 0/1 | ○ Not started | — |
+| 5.1. Workflow Execution Wiring (INSERTED) | v1.1 | 0/1 | ◐ Planned | — |
 | 6. Extensibility Registries | v1.1 | 0/3 | ○ Not started | — |
 | 7. Hardening & Sandboxing | v1.1 | 0/2 | ○ Not started | — |
 | 8. Observability | v1.1 | 0/2 | ○ Not started | — |
