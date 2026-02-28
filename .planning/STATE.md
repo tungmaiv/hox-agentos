@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates daily work routines and lets them build custom automations without writing code -- all within an enterprise-secure, on-premise environment.
-**Current focus:** Phase 6 (Extensibility Registries) — Plan 02 complete
+**Current focus:** Phase 6 (Extensibility Registries) — Plan 03 complete
 
 ## Current Position
 
 Milestone: v1.1 Phase 6 (Extensibility Registries) — IN PROGRESS
-Phases: 1, 2, 2.1, 3, 3.1, 4, 4.1, 5, 5.1 — all complete; Phase 6: Plans 01-02 complete
-Current Plan: Phase 6 Plan 03 (next) — 2/7 plans executed
-Status: Phase 6 in progress — DB-backed RBAC and artifact permissions done
-Last activity: 2026-02-28 -- Phase 6 Plan 02: async has_permission, check_artifact_permission, all callers migrated
+Phases: 1, 2, 2.1, 3, 3.1, 4, 4.1, 5, 5.1 — all complete; Phase 6: Plans 01-03 complete
+Current Plan: Phase 6 Plan 04 (next) — 3/7 plans executed
+Status: Phase 6 in progress — Admin CRUD APIs for all artifact types done
+Last activity: 2026-02-28 -- Phase 6 Plan 03: admin CRUD APIs for agents, tools, skills, permissions
 
-Progress: [██░░░░░░░░░░] 28% (2/7 Phase 6 plans)
+Progress: [████░░░░░░░░] 42% (3/7 Phase 6 plans)
 
 ## Performance Metrics
 
@@ -54,6 +54,7 @@ Progress: [██░░░░░░░░░░] 28% (2/7 Phase 6 plans)
 | Phase 05.1-workflow-execution-wiring P01 | 8 | 3 tasks | 10 files |
 | Phase 06-extensibility-registries P01 | 5 | 2 tasks | 11 files |
 | Phase 06-extensibility-registries P02 | 4 | 2 tasks | 9 files |
+| Phase 06-extensibility-registries P03 | 7 | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -184,6 +185,10 @@ Recent decisions affecting current work:
 - [06-02]: runtime.py _check_gates uses shared session for Gate 2 (RBAC) + Gate 3 (ACL) -- avoids opening two sessions
 - [06-02]: _require_admin in mcp_servers.py and system_config.py takes session via Depends(get_db) for DB-backed RBAC
 - [06-02]: MCP registry test mocks updated to AsyncMock for has_permission (now async)
+- [06-03]: Test fixture for permissions must seed role_permissions with it-admin's registry:manage -- cache invalidation queries DB
+- [06-03]: RBAC cache reset in test teardown prevents cross-test contamination from invalidate_permission_cache calls
+- [06-03]: Skill validate endpoint is a stub returning empty errors -- full SkillValidator deferred to Plan 06-05
+- [06-03]: Skill /pending and /bulk-status declared BEFORE /{skill_id} to avoid FastAPI UUID matching collision
 
 ### Pending Todos
 
@@ -209,5 +214,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-28
-Stopped at: Phase 6 Plan 02 complete — async DB-backed RBAC, check_artifact_permission, all callers migrated. All 348 tests green.
-Resume file: .planning/phases/06-extensibility-registries/06-02-SUMMARY.md
+Stopped at: Phase 6 Plan 03 complete — admin CRUD APIs for agents, tools, skills, permissions with staged model. All 390 tests green.
+Resume file: .planning/phases/06-extensibility-registries/06-03-SUMMARY.md

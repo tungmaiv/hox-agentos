@@ -95,7 +95,7 @@ Plans:
 **Plans:** 1 plan
 
 Plans:
-- [ ] 05.1-01-PLAN.md — Channel output delivery + agent_node real dispatch + Keycloak role passthrough + tests
+- [x] 05.1-01-PLAN.md — Channel output delivery + agent_node real dispatch + Keycloak role passthrough + tests
 
 ### Phase 6: Extensibility Registries
 **Goal**: Admins and developers can manage the platform's agents, tools, skills, and MCP servers as runtime artifacts through database-backed registries with granular permissions, with a skill runtime supporting /command invocation, a secure skill import pipeline, and a frontend admin dashboard
@@ -111,9 +111,9 @@ Plans:
 **Plans**: 7 plans
 
 Plans:
-- [ ] 06-01-PLAN.md — ORM models (6 tables + MCP evolution), Alembic migration 014 with seed data + tool_acl migration, Pydantic schemas
-- [ ] 06-02-PLAN.md — RBAC migration to DB-backed role_permissions with cache, artifact permissions with staged model
-- [ ] 06-03-PLAN.md — Admin CRUD APIs with multi-version, bulk status, staged permissions, per-user overrides, graceful removal
+- [x] 06-01-PLAN.md — ORM models (6 tables + MCP evolution), Alembic migration 014 with seed data + tool_acl migration, Pydantic schemas
+- [x] 06-02-PLAN.md — RBAC migration to DB-backed role_permissions with cache, artifact permissions with staged model
+- [x] 06-03-PLAN.md — Admin CRUD APIs with multi-version, bulk status, staged permissions, per-user overrides, graceful removal
 - [ ] 06-04-PLAN.md — Runtime integration: tool registry DB, agent graph DB, MCP evolution, startup seeding, last_seen_at tracking
 - [ ] 06-05-PLAN.md — Skill system: executor with AG-UI streaming, AST-based safe evaluator, validator, import pipeline, security scanner
 - [ ] 06-06-PLAN.md — User skill/tool APIs, slash command dispatch, frontend skill menu, integration wiring
@@ -163,7 +163,7 @@ Plans:
 | 4. Canvas & Workflows | v1.1 | 5/5 | ✅ Complete | 2026-02-27 |
 | 4.1. Phase 4 Polish (INSERTED) | v1.1 | 1/1 | ✅ Complete | 2026-02-27 |
 | 5. Scheduler & Channels | v1.1 | 6/6 | ✅ Complete | 2026-02-28 |
-| 5.1. Workflow Execution Wiring (INSERTED) | v1.1 | 0/1 | ◐ Planned | — |
-| 6. Extensibility Registries | v1.1 | 0/7 | ◐ Planned | — |
+| 5.1. Workflow Execution Wiring (INSERTED) | v1.1 | 1/1 | ✅ Complete | 2026-02-28 |
+| 6. Extensibility Registries | v1.1 | 3/7 | 🚧 In Progress | — |
 | 7. Hardening & Sandboxing | v1.1 | 0/2 | ○ Not started | — |
 | 8. Observability | v1.1 | 0/2 | ○ Not started | — |
