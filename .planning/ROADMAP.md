@@ -25,6 +25,7 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 - [x] **Phase 4: Canvas and Workflows** — React Flow visual builder, canvas-to-StateGraph compiler, workflow templates, HITL approval, cron/webhook triggers (completed 2026-02-27)
 - [x] **Phase 4.1: Phase 4 Polish** (INSERTED) — HITL canvas node amber ring fix, Next.js webhook proxy (completed 2026-02-27)
 - [x] **Phase 5: Scheduler and Channels** — Web chat enhancement, Telegram/WhatsApp/Teams adapters, channel identity resolution, ChannelAdapter protocol (completed 2026-02-28)
+- [ ] **Phase 5.1: Workflow Execution Wiring** (INSERTED) — Fix workflow→channel delivery, wire real agent_node dispatch, Celery worker role passthrough
 - [ ] **Phase 6: Extensibility Registries** — Database-backed registries for agents/tools/skills/MCP servers, CRUD APIs, per-artifact permissions
 - [ ] **Phase 7: Hardening and Sandboxing** — Docker sandbox execution, security audit, RLS policies, credential scanning, penetration testing
 - [ ] **Phase 8: Observability** — Grafana dashboards, Loki log aggregation, LiteLLM cost tracking
@@ -81,6 +82,19 @@ Plans:
 - [x] 05-05-PLAN.md — Integration wiring: agent invocation, delivery router, frontend settings
 - [x] 05-06-PLAN.md — Gap closure: formal ChannelAdapter(Protocol) class (CHAN-05)
 
+### Phase 5.1: Workflow Execution Wiring
+**Goal**: Close integration gaps from v1.1 milestone audit — workflow channel delivery, real agent_node dispatch, and Celery worker role passthrough so that canvas workflows with channel output nodes deliver messages to linked channels
+**Depends on**: Phase 5
+**Gap Closure**: Closes gaps from v1.1-MILESTONE-AUDIT.md
+**Requirements**: WKFL-03 (partial→satisfied), WKFL-04 (partial→satisfied)
+**Success Criteria** (what must be TRUE):
+  1. A workflow with a `channel_output_node` targeting Telegram delivers the message to the workflow owner's linked Telegram chat — `external_chat_id` is resolved from `channel_accounts` table using `owner_user_id` + channel type
+  2. A workflow `agent_node` invokes the real sub-agent (email, calendar, project) and returns actual LLM-generated output instead of stub text
+  3. Celery workflow workers use the workflow owner's actual Keycloak roles instead of hardcoded `['employee']`
+
+Plans:
+- [ ] 05.1-01: Fix channel_output_node delivery + agent_node real dispatch + worker roles
+
 ### Phase 6: Extensibility Registries
 **Goal**: Admins and developers can manage the platform's agents, tools, skills, and MCP servers as runtime artifacts through database-backed registries with granular permissions
 **Depends on**: Phases 4 and 5
@@ -130,7 +144,7 @@ Plans:
 
 ## Progress
 
-**Execution Order:** 1 → 2 → 2.1 → 3 → 3.1 → 4 → 4.1 → 5 → 6 → 7 → 8
+**Execution Order:** 1 → 2 → 2.1 → 3 → 3.1 → 4 → 4.1 → 5 → 5.1 → 6 → 7 → 8
 
 | Phase | Milestone | Plans | Status | Completed |
 |-------|-----------|-------|--------|-----------|
@@ -141,7 +155,8 @@ Plans:
 | 3.1. Memory Read + MCP Hot-Reg | v1.0 | 1/1 | ✅ Complete | 2026-02-26 |
 | 4. Canvas & Workflows | v1.1 | 5/5 | ✅ Complete | 2026-02-27 |
 | 4.1. Phase 4 Polish (INSERTED) | v1.1 | 1/1 | ✅ Complete | 2026-02-27 |
-| 5. Scheduler & Channels | v1.1 | 5/6 | 🚧 In Progress | — |
+| 5. Scheduler & Channels | v1.1 | 6/6 | ✅ Complete | 2026-02-28 |
+| 5.1. Workflow Execution Wiring (INSERTED) | v1.1 | 0/1 | ○ Not started | — |
 | 6. Extensibility Registries | v1.1 | 0/3 | ○ Not started | — |
 | 7. Hardening & Sandboxing | v1.1 | 0/2 | ○ Not started | — |
 | 8. Observability | v1.1 | 0/2 | ○ Not started | — |
