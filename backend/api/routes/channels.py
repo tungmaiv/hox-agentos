@@ -12,6 +12,7 @@ Security notes:
 """
 from uuid import UUID
 
+import httpx
 import structlog
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -70,6 +71,38 @@ class ChannelAccountResponse(BaseModel):
 
 
 # -- Routes ------------------------------------------------------------------
+
+
+@router.get("/info")
+async def channel_info(
+    user: UserContext = Depends(get_current_user),
+) -> dict:
+    """
+    Fan out to each channel sidecar's /info endpoint.
+
+    Returns per-channel availability and bot metadata (username, display_name).
+    Gracefully returns {available: false} for unreachable sidecars.
+    """
+    gateway = get_channel_gateway()
+    result: dict[str, dict] = {}
+
+    async with httpx.AsyncClient(timeout=5.0) as client:
+        for channel, base_url in gateway.sidecar_urls.items():
+            try:
+                resp = await client.get(f"{base_url}/info")
+                if resp.status_code == 200:
+                    data = resp.json()
+                    result[channel] = {
+                        "available": data.get("ok", False),
+                        "username": data.get("username", ""),
+                        "display_name": data.get("first_name", ""),
+                    }
+                else:
+                    result[channel] = {"available": False}
+            except Exception:
+                result[channel] = {"available": False}
+
+    return result
 
 
 @router.post("/incoming")

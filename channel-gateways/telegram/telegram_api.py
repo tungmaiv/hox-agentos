@@ -100,6 +100,22 @@ class TelegramAPI:
                 )
             return resp.json()
 
+    async def get_me(self) -> dict:
+        """Call the getMe API to retrieve bot info (username, id, first_name)."""
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                f"{self._base_url}/getMe",
+                timeout=10.0,
+            )
+            data = resp.json()
+            if resp.status_code != 200 or not data.get("ok"):
+                logger.error(
+                    "telegram_get_me_failed",
+                    status=resp.status_code,
+                    body=resp.text,
+                )
+            return data
+
     @staticmethod
     def escape_markdown_v2(text: str) -> str:
         """Escape special characters for Telegram MarkdownV2 format."""

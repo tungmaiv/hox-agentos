@@ -14,6 +14,7 @@ Environment variables:
   BACKEND_URL          — backend base URL (default: http://backend:8000)
   BOT_USERNAME         — bot username without @ (optional, auto-detected from token if not set)
 """
+import json
 import os
 from contextlib import asynccontextmanager
 from typing import Any
@@ -36,6 +37,9 @@ BOT_USERNAME = os.environ.get("BOT_USERNAME", "").lower()
 
 # Telegram API instance (initialized after token is available)
 telegram_api: TelegramAPI | None = None
+
+# Cached bot info from getMe (populated on startup)
+_bot_info: dict | None = None
 
 # Max Telegram message length
 MAX_MESSAGE_LENGTH = 4096
@@ -77,10 +81,29 @@ class InternalMessage(BaseModel):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):  # type: ignore[no-untyped-def]
-    """Register webhook on startup if TELEGRAM_WEBHOOK_URL is set."""
-    global telegram_api
+    """Register webhook on startup, fetch bot info via getMe."""
+    global telegram_api, _bot_info, BOT_USERNAME
     if TELEGRAM_BOT_TOKEN:
         telegram_api = TelegramAPI(TELEGRAM_BOT_TOKEN)
+
+        # Fetch bot info (username, id, first_name)
+        try:
+            me_resp = await telegram_api.get_me()
+            if me_resp.get("ok"):
+                _bot_info = me_resp.get("result", {})
+                # Auto-set BOT_USERNAME from getMe if not explicitly configured
+                if not BOT_USERNAME and _bot_info.get("username"):
+                    BOT_USERNAME = _bot_info["username"].lower()
+                logger.info(
+                    "bot_info_loaded",
+                    username=_bot_info.get("username"),
+                    bot_id=_bot_info.get("id"),
+                )
+            else:
+                logger.warning("bot_info_failed", response=me_resp)
+        except Exception as exc:
+            logger.warning("bot_info_error", error=str(exc))
+
         if TELEGRAM_WEBHOOK_URL:
             await telegram_api.set_webhook(
                 TELEGRAM_WEBHOOK_URL,
@@ -271,6 +294,26 @@ async def send(request: Request) -> Response:
     return Response(
         content='{"ok":true}',
         status_code=200,
+    )
+
+
+@app.get("/info")
+async def info() -> Response:
+    """Return cached bot info from getMe (username, first_name, id)."""
+    if not _bot_info:
+        return Response(
+            content='{"ok":false,"error":"bot info unavailable"}',
+            status_code=503,
+        )
+    return Response(
+        content=json.dumps({
+            "ok": True,
+            "username": _bot_info.get("username", ""),
+            "first_name": _bot_info.get("first_name", ""),
+            "id": _bot_info.get("id"),
+        }),
+        status_code=200,
+        media_type="application/json",
     )
 
 
