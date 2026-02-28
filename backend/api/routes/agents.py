@@ -52,7 +52,7 @@ async def chat(
     start_ms = int(time.monotonic() * 1000)
 
     # Gate 2: RBAC — require 'chat' permission
-    if not has_permission(user, "chat"):
+    if not await has_permission(user, "chat", session):
         elapsed = int(time.monotonic() * 1000) - start_ms
         await log_tool_call(user["user_id"], "agents.chat", False, elapsed)
         raise HTTPException(

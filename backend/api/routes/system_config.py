@@ -34,14 +34,17 @@ class ConfigUpdate(BaseModel):
     value: Any  # JSONB accepts any JSON-serializable value
 
 
-async def _require_admin(user: UserContext = Depends(get_current_user)) -> UserContext:
+async def _require_admin(
+    user: UserContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> UserContext:
     """
     Gate 2 dependency: deny non-admins with 403.
 
     Only users with the "it-admin" Keycloak role (which grants "tool:admin" permission)
     may access admin config endpoints.
     """
-    if not has_permission(user, "tool:admin"):
+    if not await has_permission(user, "tool:admin", session):
         raise HTTPException(status_code=403, detail="Admin permission required")
     return user
 

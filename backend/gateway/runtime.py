@@ -98,14 +98,14 @@ async def _check_gates(user: UserContext, start_ms: int) -> None:
         user: Authenticated UserContext from Gate 1 (get_current_user dependency).
         start_ms: Monotonic milliseconds at request start for duration tracking.
     """
-    # Gate 2: RBAC — user must have 'chat' permission
-    if not has_permission(user, "chat"):
-        elapsed = int(time.monotonic() * 1000) - start_ms
-        await log_tool_call(user["user_id"], "agents.chat", False, elapsed)
-        raise HTTPException(status_code=403, detail="Permission denied")
-
-    # Gate 3: Tool ACL — check per-user tool allowlist
     async with async_session() as session:
+        # Gate 2: RBAC — user must have 'chat' permission
+        if not await has_permission(user, "chat", session):
+            elapsed = int(time.monotonic() * 1000) - start_ms
+            await log_tool_call(user["user_id"], "agents.chat", False, elapsed)
+            raise HTTPException(status_code=403, detail="Permission denied")
+
+        # Gate 3: Tool ACL — check per-user tool allowlist
         allowed = await check_tool_acl(user["user_id"], "agents.chat", session)
     elapsed = int(time.monotonic() * 1000) - start_ms
     await log_tool_call(user["user_id"], "agents.chat", allowed, elapsed)

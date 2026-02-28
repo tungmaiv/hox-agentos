@@ -32,7 +32,7 @@ async def test_call_mcp_tool_denied_without_permission() -> None:
 
     with (
         patch("mcp.registry.get_tool") as mock_get_tool,
-        patch("mcp.registry.has_permission") as mock_has_perm,
+        patch("mcp.registry.has_permission", new_callable=AsyncMock) as mock_has_perm,
     ):
         mock_get_tool.return_value = {
             "required_permissions": ["crm:read"],
@@ -59,7 +59,7 @@ async def test_call_mcp_tool_denied_by_acl() -> None:
 
     with (
         patch("mcp.registry.get_tool") as mock_get_tool,
-        patch("mcp.registry.has_permission") as mock_has_perm,
+        patch("mcp.registry.has_permission", new_callable=AsyncMock) as mock_has_perm,
         patch(
             "mcp.registry.check_tool_acl", new_callable=AsyncMock
         ) as mock_acl,
@@ -92,7 +92,7 @@ async def test_call_mcp_tool_succeeds_with_all_gates() -> None:
 
     with (
         patch("mcp.registry.get_tool") as mock_get_tool,
-        patch("mcp.registry.has_permission") as mock_has_perm,
+        patch("mcp.registry.has_permission", new_callable=AsyncMock) as mock_has_perm,
         patch(
             "mcp.registry.check_tool_acl", new_callable=AsyncMock
         ) as mock_acl,
@@ -135,7 +135,7 @@ async def test_call_mcp_tool_logs_every_attempt() -> None:
 
     with (
         patch("mcp.registry.get_tool") as mock_get_tool,
-        patch("mcp.registry.has_permission") as mock_has_perm,
+        patch("mcp.registry.has_permission", new_callable=AsyncMock) as mock_has_perm,
         patch(
             "mcp.registry.check_tool_acl", new_callable=AsyncMock
         ) as mock_acl,

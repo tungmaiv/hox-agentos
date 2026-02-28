@@ -127,7 +127,7 @@ async def call_mcp_tool(
 
     # Gate 2: RBAC — check each required permission
     for permission in tool_def.get("required_permissions", []):
-        if not has_permission(user, permission):
+        if not await has_permission(user, permission, db_session):
             elapsed = int(time.monotonic() * 1000) - start_ms
             audit_logger.info(
                 "tool_call",
