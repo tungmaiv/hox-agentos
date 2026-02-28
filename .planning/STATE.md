@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates daily work routines and lets them build custom automations without writing code -- all within an enterprise-secure, on-premise environment.
-**Current focus:** Phase 6 (Extensibility Registries) — Plans 01-05 complete (Wave 4)
+**Current focus:** Phase 6 (Extensibility Registries) — Plans 01-06 complete (Wave 5)
 
 ## Current Position
 
 Milestone: v1.1 Phase 6 (Extensibility Registries) — IN PROGRESS
-Phases: 1, 2, 2.1, 3, 3.1, 4, 4.1, 5, 5.1 — all complete; Phase 6: Plans 01-05 complete
-Current Plan: Phase 6 Plan 06 (next) — 5/7 plans executed
-Status: Phase 6 in progress — Skill system core (validator, executor, scanner, importer) done
-Last activity: 2026-02-28 -- Phase 6 Plan 05: skill system core with AST-safe eval, security scanner, import pipeline
+Phases: 1, 2, 2.1, 3, 3.1, 4, 4.1, 5, 5.1 — all complete; Phase 6: Plans 01-06 complete
+Current Plan: Phase 6 Plan 07 (next) — 6/7 plans executed
+Status: Phase 6 in progress — User skill/tool APIs, slash command dispatch, frontend skill menu done
+Last activity: 2026-02-28 -- Phase 6 Plan 06: user skill/tool APIs, slash commands, frontend skill menu, integration tests
 
-Progress: [███████░░░░░] 71% (5/7 Phase 6 plans)
+Progress: [█████████░░░] 86% (6/7 Phase 6 plans)
 
 ## Performance Metrics
 
@@ -57,6 +57,7 @@ Progress: [███████░░░░░] 71% (5/7 Phase 6 plans)
 | Phase 06-extensibility-registries P03 | 7 | 2 tasks | 9 files |
 | Phase 06-extensibility-registries P04 | 11 | 2 tasks | 12 files |
 | Phase 06-extensibility-registries P05 | 10 | 2 tasks | 13 files |
+| Phase 06-extensibility-registries P06 | 9 | 2 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -200,6 +201,11 @@ Recent decisions affecting current work:
 - [06-05]: Validator dry-run checks AST node types only (not values) -- unknown variables fine at validation, resolved at runtime
 - [06-05]: httpx imported at module top level in importer.py -- lazy imports not patchable in tests
 - [06-05]: /import route declared before /{skill_id} routes -- prevents FastAPI UUID matching collision on POST path
+- [06-06]: SkillExecutor imported at module top level in user_skills.py -- lazy imports not patchable in tests
+- [06-06]: Slash command detection runs BEFORE keyword routing in _pre_route -- /commands take precedence
+- [06-06]: skill_executor node edge to delivery_router -- consistent graph topology, all paths converge
+- [06-06]: Frontend skillsRef.current pattern for memoized CustomInput -- reads latest skills without recreation
+- [06-06]: Instructional skills in skill_executor_node inject markdown as SystemMessage then invoke LLM
 
 ### Pending Todos
 
@@ -225,5 +231,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-28
-Stopped at: Phase 6 Plan 05 complete (Wave 4) — skill system core: validator, executor, scanner, importer.
-Resume file: .planning/phases/06-extensibility-registries/06-05-SUMMARY.md
+Stopped at: Phase 6 Plan 06 complete (Wave 5) — user skill/tool APIs, slash command dispatch, frontend skill menu, integration tests.
+Resume file: .planning/phases/06-extensibility-registries/06-06-SUMMARY.md
