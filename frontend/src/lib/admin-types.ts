@@ -13,7 +13,7 @@
 
 export type ArtifactType = "agents" | "tools" | "skills" | "mcp-servers";
 export type ViewMode = "table" | "cards";
-export type ArtifactStatus = "active" | "disabled" | "deprecated";
+export type ArtifactStatus = "active" | "disabled" | "deprecated" | "pending_review";
 
 // ---------------------------------------------------------------------------
 // Agent definitions

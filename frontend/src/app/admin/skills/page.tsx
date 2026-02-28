@@ -48,12 +48,7 @@ export default function AdminSkillsPage() {
   };
 
   const displayItems = showPendingOnly
-    ? items.filter(
-        (s) =>
-          s.status === "active" &&
-          s.securityScore !== null &&
-          s.securityScore < 70
-      )
+    ? items.filter((s) => s.status === "pending_review")
     : items;
 
   const extraColumns = [
