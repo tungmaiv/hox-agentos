@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates daily work routines and lets them build custom automations without writing code -- all within an enterprise-secure, on-premise environment.
-**Current focus:** v1.1 MVP — Phase 5 (Scheduler & Channels) COMPLETE, Telegram verified live, WhatsApp/Teams deferred
+**Current focus:** v1.1 MVP — Phase 5.1 (Workflow Execution Wiring) COMPLETE
 
 ## Current Position
 
-Milestone: v1.1 Phase 5 (Scheduler & Channels) — HUMAN VERIFIED (Telegram live, WhatsApp/Teams deferred)
-Phases: 1, 2, 2.1, 3, 3.1, 4, 4.1 — all complete; Phase 5: All 6 plans complete + human verification
-Current Plan: Phase 5 complete — Telegram verified end-to-end, WhatsApp/Teams deferred (facilities not ready)
-Status: Phase 5 human-verified (partial) — ready for next phase
-Last activity: 2026-02-28 -- Telegram debugging: 4 fixes (uvicorn bind, gateway URLs, frontend polling, message formatting)
+Milestone: v1.1 Phase 5.1 (Workflow Execution Wiring) — COMPLETE
+Phases: 1, 2, 2.1, 3, 3.1, 4, 4.1 — all complete; Phase 5: complete + verified; Phase 5.1: Plan 01 complete
+Current Plan: Phase 5.1 complete — all 1/1 plans executed
+Status: Phase 5.1 complete — workflow execution wiring done
+Last activity: 2026-02-28 -- Phase 5.1 Plan 01: workflow execution wiring (channel delivery, agent dispatch, Keycloak roles)
 
-Progress: [████████████] 100% (26/26 plans estimated)
+Progress: [████████████] 100% (27/27 plans estimated)
 
 ## Performance Metrics
 
@@ -51,6 +51,7 @@ Progress: [████████████] 100% (26/26 plans estimated)
 | Phase 05-scheduler-and-channels P04 | 4 | 2 tasks | 8 files |
 | Phase 05-scheduler-and-channels P05 | 13 | 3 tasks | 13 files |
 | Phase 05-scheduler-and-channels P06 | 2 | 2 tasks | 3 files |
+| Phase 05.1-workflow-execution-wiring P01 | 8 | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -167,6 +168,11 @@ Recent decisions affecting current work:
 - [05-UX]: Channel toggles default to disabled (false) for new users — prevents confusion with unconfigured channels; existing localStorage values preserved
 - [05-UX]: Telegram sidecar calls getMe on startup, caches result in _bot_info module var, auto-sets BOT_USERNAME if env var not explicitly set
 - [05-UX]: GET /api/channels/info fans out to all sidecar /info endpoints with 5s timeout; returns {available: false} per unreachable sidecar — graceful degradation
+- [05.1-01]: fetch_user_realm_roles uses get_settings() (lazy) not module-level settings — avoids import-time side effects in tests
+- [05.1-01]: format_for_channel extracted as module-level function; instance methods delegate — enables import from node_handlers without ChannelGateway instance
+- [05.1-01]: Sub-agent imports are lazy inside _handle_agent_node body — avoids circular deps; tests patch at definition site
+- [05.1-01]: Keycloak failure immediately fails workflow run — security-first per locked decision; no fallback to stale owner_roles_json
+- [05.1-01]: resolved_roles added to user_context dict — audit trail for Keycloak roles used during workflow execution
 
 ### Pending Todos
 
@@ -192,5 +198,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-28
-Stopped at: Phase 5 human-verified (Telegram working e2e, WhatsApp/Teams deferred). Ready for next phase.
-Resume file: .planning/phases/05-scheduler-and-channels/05-VERIFICATION.md
+Stopped at: Phase 5.1 Plan 01 complete — workflow execution wiring (channel delivery, agent dispatch, Keycloak roles). All 306 tests green.
+Resume file: .planning/phases/05.1-workflow-execution-wiring/05.1-01-SUMMARY.md
