@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates daily work routines and lets them build custom automations without writing code -- all within an enterprise-secure, on-premise environment.
-**Current focus:** Phase 6 (Extensibility Registries) — Plan 02 complete
+**Current focus:** Phase 6 (Extensibility Registries) — Plan 04 complete
 
 ## Current Position
 
 Milestone: v1.1 Phase 6 (Extensibility Registries) — IN PROGRESS
-Phases: 1, 2, 2.1, 3, 3.1, 4, 4.1, 5, 5.1 — all complete; Phase 6: Plans 01-02 complete
-Current Plan: Phase 6 Plan 03 (next) — 2/7 plans executed
-Status: Phase 6 in progress — DB-backed RBAC and artifact permissions done
-Last activity: 2026-02-28 -- Phase 6 Plan 02: async has_permission, check_artifact_permission, all callers migrated
+Phases: 1, 2, 2.1, 3, 3.1, 4, 4.1, 5, 5.1 — all complete; Phase 6: Plans 01-04 complete
+Current Plan: Phase 6 Plan 05 (next) — 4/7 plans executed
+Status: Phase 6 in progress — Runtime integration complete (DB-backed tool/agent registries)
+Last activity: 2026-02-28 -- Phase 6 Plan 04: DB-backed tool registry, dynamic agent graph, MCP evolution
 
-Progress: [██░░░░░░░░░░] 28% (2/7 Phase 6 plans)
+Progress: [█████░░░░░░░] 57% (4/7 Phase 6 plans)
 
 ## Performance Metrics
 
@@ -54,6 +54,7 @@ Progress: [██░░░░░░░░░░] 28% (2/7 Phase 6 plans)
 | Phase 05.1-workflow-execution-wiring P01 | 8 | 3 tasks | 10 files |
 | Phase 06-extensibility-registries P01 | 5 | 2 tasks | 11 files |
 | Phase 06-extensibility-registries P02 | 4 | 2 tasks | 9 files |
+| Phase 06-extensibility-registries P04 | 11 | 2 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -184,6 +185,11 @@ Recent decisions affecting current work:
 - [06-02]: runtime.py _check_gates uses shared session for Gate 2 (RBAC) + Gate 3 (ACL) -- avoids opening two sessions
 - [06-02]: _require_admin in mcp_servers.py and system_config.py takes session via Depends(get_db) for DB-backed RBAC
 - [06-02]: MCP registry test mocks updated to AsyncMock for has_permission (now async)
+- [06-04]: get_tool() and register_tool() now async -- session=None fallback preserves backward compat for callers not yet migrated
+- [06-04]: Tool required_permissions stored in input_schema JSONB field -- avoids adding a new column to tool_definitions
+- [06-04]: _classify_by_keywords returns agent names directly (not intent labels) -- unified routing via keyword map
+- [06-04]: create_master_graph() accepts _db_agents list; sync function with async wrapper create_master_graph_from_db()
+- [06-04]: SQLite stores offset-naive datetimes; normalize with .replace(tzinfo=utc) before comparison in last_seen_at batching
 
 ### Pending Todos
 
@@ -209,5 +215,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-28
-Stopped at: Phase 6 Plan 02 complete — async DB-backed RBAC, check_artifact_permission, all callers migrated. All 348 tests green.
-Resume file: .planning/phases/06-extensibility-registries/06-02-SUMMARY.md
+Stopped at: Phase 6 Plan 04 complete — DB-backed tool registry, dynamic agent graph wiring, MCP evolution. All 379 tests green.
+Resume file: .planning/phases/06-extensibility-registries/06-04-SUMMARY.md
