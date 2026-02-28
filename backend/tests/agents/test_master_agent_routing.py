@@ -72,19 +72,42 @@ def test_classify_by_keywords_general() -> None:
 
 @pytest.mark.asyncio
 async def test_crm_tools_registered() -> None:
-    """CRM tools are registered in the tool registry with correct permissions."""
-    from gateway.tool_registry import get_tool
+    """CRM tools are seeded into tool_definitions and available via DB-backed cache."""
+    from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-    get_project = get_tool("crm.get_project_status")
-    assert get_project is not None
-    assert "crm:read" in get_project["required_permissions"]
-    assert get_project["mcp_server"] == "crm"
-    assert get_project["mcp_tool"] == "get_project_status"
+    from core.db import Base
+    from gateway.tool_registry import (
+        _refresh_tool_cache,
+        get_tool,
+        invalidate_tool_cache,
+        seed_tool_definitions_from_registry,
+    )
 
-    list_proj = get_tool("crm.list_projects")
-    assert list_proj is not None
-    assert "crm:read" in list_proj["required_permissions"]
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    async_sess = async_sessionmaker(engine, expire_on_commit=False)
 
-    update_task = get_tool("crm.update_task_status")
-    assert update_task is not None
-    assert "crm:write" in update_task["required_permissions"]
+    async with async_sess() as session:
+        await seed_tool_definitions_from_registry(session)
+        invalidate_tool_cache()
+        await _refresh_tool_cache(session)
+
+    async with async_sess() as session:
+        get_project = await get_tool("crm.get_project_status", session)
+        assert get_project is not None
+        assert "crm:read" in get_project["required_permissions"]
+        assert get_project["mcp_server"] == "crm"
+        assert get_project["mcp_tool"] == "get_project_status"
+
+        list_proj = await get_tool("crm.list_projects", session)
+        assert list_proj is not None
+        assert "crm:read" in list_proj["required_permissions"]
+
+        update_task = await get_tool("crm.update_task_status", session)
+        assert update_task is not None
+        assert "crm:write" in update_task["required_permissions"]
+
+    await engine.dispose()
+    # Reset cache state so other tests aren't affected
+    invalidate_tool_cache()

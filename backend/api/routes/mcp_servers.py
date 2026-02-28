@@ -1,14 +1,17 @@
 """
-MCP server CRUD API — admin management of MCP server registry.
+MCP server CRUD API -- admin management of MCP server registry.
 
-GET    /api/admin/mcp-servers       — list all registered MCP servers
-POST   /api/admin/mcp-servers       — register a new MCP server
-DELETE /api/admin/mcp-servers/{id}  — remove a registered MCP server
+GET    /api/admin/mcp-servers              -- list all registered MCP servers
+POST   /api/admin/mcp-servers              -- register a new MCP server
+DELETE /api/admin/mcp-servers/{id}         -- remove a registered MCP server
+GET    /api/admin/mcp-servers/{id}/health  -- check MCP server reachability
+PATCH  /api/admin/mcp-servers/{id}/status  -- update server status
 
 Security: admin-only via Gate 2 RBAC (tool:admin permission).
 Auth tokens are AES-256-GCM encrypted before storage; raw token is never logged.
-user_id for audit logging comes from JWT — never from the request body.
+user_id for audit logging comes from JWT -- never from the request body.
 """
+import time
 from typing import Any
 from uuid import UUID
 
@@ -48,6 +51,12 @@ class McpServerCreate(BaseModel):
     auth_token: str | None = None  # plaintext Bearer token; encrypted before storage
 
 
+class StatusPatch(BaseModel):
+    """Request body for updating MCP server status."""
+
+    status: str  # "active", "disabled", "deprecated"
+
+
 @router.get("")
 async def list_mcp_servers(
     user: UserContext = Depends(_require_admin),
@@ -63,7 +72,7 @@ async def list_mcp_servers(
             "name": s.name,
             "url": s.url,
             "is_active": s.is_active,
-            "status": "unknown",  # live connectivity check is out of scope for CRUD
+            "status": s.status,
         }
         for s in servers
     ]
@@ -94,7 +103,7 @@ async def create_mcp_server(
     await session.refresh(server)
 
     # Hot-register: make new server's tools immediately callable without restart.
-    # refresh() is idempotent — best-effort; server is already persisted if this fails.
+    # refresh() is idempotent -- best-effort; server is already persisted if this fails.
     try:
         await MCPToolRegistry.refresh()
     except Exception as exc:
@@ -110,6 +119,7 @@ async def create_mcp_server(
         "name": server.name,
         "url": server.url,
         "is_active": server.is_active,
+        "status": server.status,
     }
 
 
@@ -126,6 +136,10 @@ async def delete_mcp_server(
     server = result.scalar_one_or_none()
     if server is None:
         raise HTTPException(status_code=404, detail="Server not found")
+
+    # Evict client before deletion
+    MCPToolRegistry.evict_client(server.name)
+
     await session.delete(server)
     await session.commit()
     logger.info(
@@ -134,3 +148,96 @@ async def delete_mcp_server(
         user_id=str(user["user_id"]),
     )
     return {"status": "deleted"}
+
+
+@router.get("/{server_id}/health")
+async def check_mcp_server_health(
+    server_id: UUID,
+    user: UserContext = Depends(_require_admin),
+    session: AsyncSession = Depends(get_db),
+) -> dict[str, Any]:
+    """
+    Check reachability of an MCP server.
+
+    Makes an HTTP GET to {server_url}/health with a 5s timeout.
+    Returns reachable status and latency.
+    """
+    import httpx
+
+    result = await session.execute(
+        select(McpServer).where(McpServer.id == server_id)
+    )
+    server = result.scalar_one_or_none()
+    if server is None:
+        raise HTTPException(status_code=404, detail="Server not found")
+
+    start = time.monotonic()
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get(f"{server.url}/health")
+            latency_ms = int((time.monotonic() - start) * 1000)
+            reachable = resp.status_code < 500
+    except Exception:
+        latency_ms = int((time.monotonic() - start) * 1000)
+        reachable = False
+
+    return {
+        "server_id": str(server_id),
+        "name": server.name,
+        "reachable": reachable,
+        "latency_ms": latency_ms,
+    }
+
+
+@router.patch("/{server_id}/status")
+async def patch_mcp_server_status(
+    server_id: UUID,
+    body: StatusPatch,
+    user: UserContext = Depends(_require_admin),
+    session: AsyncSession = Depends(get_db),
+) -> dict[str, Any]:
+    """
+    Update an MCP server's status.
+
+    Valid statuses: active, disabled, deprecated.
+    Disabling a server evicts its client from the MCPToolRegistry cache
+    and invalidates the tool cache.
+    """
+    from gateway.tool_registry import invalidate_tool_cache
+
+    valid_statuses = {"active", "disabled", "deprecated"}
+    if body.status not in valid_statuses:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid status '{body.status}'. Must be one of: {', '.join(sorted(valid_statuses))}",
+        )
+
+    result = await session.execute(
+        select(McpServer).where(McpServer.id == server_id)
+    )
+    server = result.scalar_one_or_none()
+    if server is None:
+        raise HTTPException(status_code=404, detail="Server not found")
+
+    old_status = server.status
+    server.status = body.status
+    await session.commit()
+
+    # If disabled/deprecated, evict client and invalidate tool cache
+    if body.status != "active":
+        MCPToolRegistry.evict_client(server.name)
+        invalidate_tool_cache()
+
+    logger.info(
+        "mcp_server_status_updated",
+        server_id=str(server_id),
+        name=server.name,
+        old_status=old_status,
+        new_status=body.status,
+        user_id=str(user["user_id"]),
+    )
+    return {
+        "id": str(server_id),
+        "name": server.name,
+        "status": body.status,
+    }

@@ -48,7 +48,7 @@ async def call_tool(
     from gateway.tool_registry import get_tool
     from mcp.registry import call_mcp_tool
 
-    tool_def = get_tool(body.tool)
+    tool_def = await get_tool(body.tool, session)
     if tool_def is None:
         raise HTTPException(
             status_code=404, detail=f"Tool '{body.tool}' not registered"
