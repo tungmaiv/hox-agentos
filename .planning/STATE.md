@@ -5,15 +5,15 @@
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates daily work routines and lets them build custom automations without writing code -- all within an enterprise-secure, on-premise environment.
-**Current focus:** v1.1 MVP — Phase 5 (Scheduler & Channels) COMPLETE, all 6 plans done (including gap closure)
+**Current focus:** v1.1 MVP — Phase 5 (Scheduler & Channels) COMPLETE, Telegram verified live, WhatsApp/Teams deferred
 
 ## Current Position
 
-Milestone: v1.1 Phase 5 (Scheduler & Channels) — ALL PLANS COMPLETE (including gap closures)
-Phases: 1, 2, 2.1, 3, 3.1, 4, 4.1 — all complete; Phase 5: Plan 06 of 6 complete
-Current Plan: 05-06 complete — Phase 5 fully finished (CHAN-05 gap closed)
-Status: Phase 5 complete — All channel infrastructure + ChannelAdapter Protocol
-Last activity: 2026-02-28 -- 05-06 executed (2 min, 2 tasks, 4 new tests)
+Milestone: v1.1 Phase 5 (Scheduler & Channels) — HUMAN VERIFIED (Telegram live, WhatsApp/Teams deferred)
+Phases: 1, 2, 2.1, 3, 3.1, 4, 4.1 — all complete; Phase 5: All 6 plans complete + human verification
+Current Plan: Phase 5 complete — Telegram verified end-to-end, WhatsApp/Teams deferred (facilities not ready)
+Status: Phase 5 human-verified (partial) — ready for next phase
+Last activity: 2026-02-28 -- Telegram debugging: 4 fixes (uvicorn bind, gateway URLs, frontend polling, message formatting)
 
 Progress: [████████████] 100% (26/26 plans estimated)
 
@@ -160,6 +160,13 @@ Recent decisions affecting current work:
 - [05-05]: WHATSAPP added to DeliveryTarget enum alongside TELEGRAM and TEAMS
 - [05-05]: Phase 4 scheduler already satisfies CHAN-06 -- user_context in initial_state flows to all node handlers; verified with tests, no code changes needed
 - [05-06]: ChannelAdapter Protocol uses @runtime_checkable for isinstance() support at runtime, not just static type checking
+- [05-debug]: uvicorn must bind --host 0.0.0.0 (not 127.0.0.1) for Docker containers to reach backend via host.docker.internal
+- [05-debug]: Channel gateway URLs (TELEGRAM_GATEWAY_URL etc.) must be localhost:900x when backend runs on host (not Docker service names)
+- [05-debug]: Frontend channel page needs polling (3s interval while pairingActive) to detect pairing completion from backend
+- [05-debug]: Sub-agent JSON responses need _format_for_channel() in gateway.py to render readable text for Telegram (calendar, email, project formatters)
+- [05-UX]: Channel toggles default to disabled (false) for new users — prevents confusion with unconfigured channels; existing localStorage values preserved
+- [05-UX]: Telegram sidecar calls getMe on startup, caches result in _bot_info module var, auto-sets BOT_USERNAME if env var not explicitly set
+- [05-UX]: GET /api/channels/info fans out to all sidecar /info endpoints with 5s timeout; returns {available: false} per unreachable sidecar — graceful degradation
 
 ### Pending Todos
 
@@ -185,5 +192,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-28
-Stopped at: Completed 05-06-PLAN.md — Phase 5 gap closure complete: ChannelAdapter Protocol class (CHAN-05)
-Resume file: .planning/phases/05-scheduler-and-channels/05-06-SUMMARY.md
+Stopped at: Phase 5 human-verified (Telegram working e2e, WhatsApp/Teams deferred). Ready for next phase.
+Resume file: .planning/phases/05-scheduler-and-channels/05-VERIFICATION.md
