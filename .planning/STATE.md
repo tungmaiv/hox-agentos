@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates daily work routines and lets them build custom automations without writing code -- all within an enterprise-secure, on-premise environment.
-**Current focus:** Phase 7 (Hardening and Sandboxing) — COMPLETE (3/3 plans including gap closure 07-03)
+**Current focus:** Phase 8 (Observability) — IN PROGRESS (1/3 plans complete)
 
 ## Current Position
 
-Milestone: v1.1 Phase 7 (Hardening and Sandboxing) — COMPLETE
-Phases: 1, 2, 2.1, 3, 3.1, 4, 4.1, 5, 5.1, 6, 7 — all complete
-Current Plan: Phase 7 complete (including gap closure 07-03) — ready for next phase
-Status: Phase 7 Plan 03 complete — fixed lazy import defect in test_isolation.py; isolation tests now deterministic regardless of run order
-Last activity: 2026-03-01 -- Phase 7 Plan 03: fix import core.models in test_isolation.py; 5 isolation pen tests pass in isolation
+Milestone: v1.2 Phase 8 (Observability)
+Phases: 1, 2, 2.1, 3, 3.1, 4, 4.1, 5, 5.1, 6, 7 — all complete; Phase 8 in progress
+Current Plan: Phase 8 Plan 01 complete — observability infrastructure stack (Prometheus + Grafana + Loki + Alloy + cAdvisor)
+Status: Phase 8 Plan 01 complete — 5 Docker Compose services + 6 infra config files + 3 named volumes
+Last activity: 2026-03-01 -- Phase 8 Plan 01: add observability infrastructure stack
 
-Progress: [████████████] 100% (2/2 Phase 7 plans)
+Progress: [████░░░░░░░░] 33% (1/3 Phase 8 plans)
 
 ## Performance Metrics
 
@@ -237,6 +237,12 @@ Recent decisions affecting current work:
 - [post-07-sandbox]: _cleanup_leaked_containers() wired to FastAPI lifespan startup via asyncio.to_thread() — cleans orphaned containers from prior process restarts without blocking startup
 - [post-07-sandbox]: SANDBOX_LIMITS now includes pids_limit=64, user="nobody", cap_drop=["ALL"] — fork bomb protection, non-root execution, capability stripping
 - [post-07-sandbox]: MemoryFact isolation test permanently skipped in SQLite — Vector(1024) DDL not supported by aiosqlite; marked as known gap, must be run against live PostgreSQL in integration environment
+- [08-01]: Alloy uses loki.source.docker (not file tailing) — structlog JSON written to stdout; Docker captures it via /var/run/docker.sock
+- [08-01]: cAdvisor has no host port binding — Prometheus scrapes cadvisor:8080 on blitz-net only; Keycloak also on 8080 but different DNS name, no collision
+- [08-01]: Grafana GF_AUTH_DISABLE_LOGIN_FORM=false — local admin fallback preserved to prevent lockout when Keycloak is down
+- [08-01]: Grafana OIDC ROLE_ATTRIBUTE_PATH uses realm_roles[*] flat JMESPath (not realm_access.roles) — matches Keycloak JWT claim structure
+- [08-01]: datasource UIDs blitz-prometheus and blitz-loki are stable constants — dashboard panel JSON references these UIDs; changing them breaks all panels
+- [08-01]: loki-config.yml compactor.delete_request_store=filesystem required in Loki 3.3.x when retention_enabled=true; missing causes startup failure
 
 ### Pending Todos
 
@@ -262,5 +268,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Phase 7 COMPLETE (3/3 plans including gap closure 07-03) — fixed lazy import defect in test_isolation.py so isolation pen tests are deterministic regardless of run order. 586 tests passing (5 isolation + 1 skipped pgvector). Phase 7 fully complete — ready for Phase 8 (Observability).
-Resume file: .planning/phases/07-hardening-and-sandboxing/07-03-SUMMARY.md
+Stopped at: Phase 8 Plan 01 COMPLETE — observability infra stack (Prometheus + Grafana + Loki + Alloy + cAdvisor) deployed as Docker Compose services with all config files. Ready for Plan 02 (metrics instrumentation) and Plan 03 (dashboards + alerting).
+Resume file: .planning/phases/08-observability/08-01-SUMMARY.md
