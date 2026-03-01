@@ -146,11 +146,12 @@ Plans:
   1. Grafana dashboards show real-time system health and agent performance
   2. All service logs aggregated in Loki via Alloy, searchable by service/user/tool/time
   3. LiteLLM cost tracking dashboard shows spend by model alias and user
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 08-01: Grafana and Loki setup with Alloy log collection
-- [ ] 08-02: Dashboards for system health, agent performance, and LLM costs
+- [ ] 08-01-PLAN.md — Docker Compose infra stack (prometheus, grafana, loki, alloy, cadvisor) + all config files
+- [ ] 08-02-PLAN.md — Backend Prometheus instrumentation (metrics.py, /metrics endpoint, LiteLLM callback)
+- [ ] 08-03-PLAN.md — Grafana dashboards (Ops + Costs), alerting provisioning, Keycloak SSO verification
 
 ## Progress
 
@@ -169,4 +170,4 @@ Plans:
 | 5.1. Workflow Execution Wiring (INSERTED) | v1.1 | 1/1 | ✅ Complete | 2026-02-28 |
 | 6. Extensibility Registries | v1.1 | 8/8 | ✅ Complete | 2026-03-01 |
 | 7. Hardening & Sandboxing | 4/4 | Complete    | 2026-03-01 | — |
-| 8. Observability | v1.1 | 0/2 | ○ Not started | — |
+| 8. Observability | v1.1 | 0/3 | ○ Not started | — |
