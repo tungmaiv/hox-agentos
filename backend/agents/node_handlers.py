@@ -13,6 +13,9 @@ It returns the node's output, which the compiler wraps in a state update:
 
 Stubs (04-02): agent_node and tool_node return mock output.
 Full wiring (04-03): replaced with real sub-agent invocation and MCP tool calls.
+
+Sandbox routing (07-01): tools with sandbox_required=True are executed in
+Docker containers via SandboxExecutor instead of MCP dispatch.
 """
 import uuid
 from collections.abc import Awaitable
@@ -24,6 +27,8 @@ from agents.condition_evaluator import evaluate_condition
 from agents.workflow_state import WorkflowState
 from core.db import async_session
 from mcp.registry import call_mcp_tool
+from sandbox.executor import SandboxExecutor
+from sandbox.policies import DEFAULT_TIMEOUT
 
 logger = structlog.get_logger(__name__)
 
@@ -127,9 +132,33 @@ async def _handle_tool_node(config: dict[str, Any], state: WorkflowState) -> Any
 
     # Unknown tool: fail fast before opening a DB session
     # session=None uses stale cache (backward compat for workflow context)
-    if await get_tool(tool_name) is None:
+    tool_meta = await get_tool(tool_name)
+    if tool_meta is None:
         logger.warning("tool_node_unknown_tool", tool_name=tool_name)
         return {"error": f"Tool '{tool_name}' not registered", "success": False}
+
+    # Sandbox routing: tools with sandbox_required=True are executed in Docker containers.
+    # This applies to Canvas "Code Execution" nodes and any tool registered with
+    # sandbox_required=True in gateway/tool_registry.py.
+    if tool_meta.get("sandbox_required", False):
+        code = params.get("code", "")
+        language = params.get("language", "python")
+        timeout = int(params.get("timeout", DEFAULT_TIMEOUT))
+        executor = SandboxExecutor()
+        sandbox_result = executor.execute(code=code, language=language, timeout=timeout)
+        logger.info(
+            "sandbox_dispatch",
+            tool=tool_name,
+            language=language,
+            timed_out=sandbox_result.timed_out,
+        )
+        return {
+            "stdout": sandbox_result.stdout,
+            "stderr": sandbox_result.stderr,
+            "exit_code": sandbox_result.exit_code,
+            "timed_out": sandbox_result.timed_out,
+            "success": not sandbox_result.timed_out and sandbox_result.exit_code == 0,
+        }
 
     # Build UserContext from workflow state — user_id must be UUID
     raw_ctx = state.get("user_context") or {}
