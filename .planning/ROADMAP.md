@@ -182,7 +182,7 @@ Plans:
   4. UAT test 12 (Admin Create Skill via API) is implemented and passes in the full test suite
   5. Grafana → Telegram spend alert is live-tested end-to-end with a manual threshold breach
   6. `04.1-VERIFICATION.md` exists documenting both Phase 4.1 success criteria
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 - [ ] 10-01-PLAN.md — ChannelAdapter isinstance enforcement + channel LangGraph continuity + delivery_router unification
@@ -207,4 +207,4 @@ Plans:
 | 7. Hardening & Sandboxing | v1.1 | 4/4 | ✅ Complete | 2026-03-01 |
 | 8. Observability | v1.1 | 4/4 | ✅ Complete | 2026-03-01 |
 | 9. Tech Debt Code Fixes | v1.1 | Complete    | 2026-03-01 | — |
-| 10. Optional Tech Debt Closure | v1.1 | 0/2 | ⬜ Pending | — |
+| 10. Optional Tech Debt Closure | 1/2 | In Progress|  | — |

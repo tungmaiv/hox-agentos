@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates daily work routines and lets them build custom automations without writing code -- all within an enterprise-secure, on-premise environment.
-**Current focus:** Phase 9 (Tech Debt Code Fixes) — COMPLETE (2/2 plans complete)
+**Current focus:** Phase 10 (Optional Tech Debt Closure) — IN PROGRESS (1/2 plans complete)
 
 ## Current Position
 
-Milestone: v1.2 Phase 9 (Tech Debt Code Fixes)
-Phases: 1, 2, 2.1, 3, 3.1, 4, 4.1, 5, 5.1, 6, 7, 8, 9 — all complete
-Current Plan: Phase 9 Plan 02 complete — Wire blitz_llm_calls_total to LLM invocations (OBSV-01)
-Status: Phase 9 COMPLETE — all 2 plans done
-Last activity: 2026-03-02 -- Phase 9 Plan 02: Wire LLM metrics callback, add status label to blitz_llm_calls_total
+Milestone: v1.2 Phase 10 (Optional Tech Debt Closure)
+Phases: 1, 2, 2.1, 3, 3.1, 4, 4.1, 5, 5.1, 6, 7, 8, 9, 10 — 9 complete, 10 in progress
+Current Plan: Phase 10 Plan 01 complete — Channel tech debt closure (register_adapter, _channel_graph_savers, delivery_targets)
+Status: Phase 10 IN PROGRESS — 1/2 plans done
+Last activity: 2026-03-02 -- Phase 10 Plan 01: register_adapter() isinstance enforcement, MemorySaver per-conversation reuse, delivery_targets unification
 
-Progress: [████████████] 100% (2/2 Phase 9 plans)
+Progress: [██████] 50% (1/2 Phase 10 plans)
 
 ## Performance Metrics
 
@@ -67,6 +67,7 @@ Progress: [████████████] 100% (2/2 Phase 9 plans)
 | Phase 08-observability P02 | 199 | 3 tasks | 8 files |
 | Phase 08-observability P03 | ~70min | 3 tasks (2 auto + 1 human-verify) | 4 files |
 | Phase 08-observability P04 | 1min | 1 task | 1 file |
+| Phase 10-optional-tech-debt-closure P01 | 3 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -262,6 +263,9 @@ Recent decisions affecting current work:
 - [09-02]: _LLMMetricsCallback uses lazy import of blitz_llm_calls_total inside on_llm_end/on_llm_error — prevents circular import risk at config.py load time
 - [09-02]: get_llm() must NOT use @lru_cache — each call must create a new ChatOpenAI instance with its own callback instance keyed to the correct alias
 - [09-02]: Delta assertions in test_llm_metrics.py — robust against shared prometheus REGISTRY state; before/after pattern avoids absolute value brittleness
+- [Phase 10-01]: _invoke_agent() returns None — delivery_targets=[msg.channel.upper()] routes response through delivery_router_node directly; eliminates AI text extraction code path
+- [Phase 10-01]: lazy imports in _invoke_agent() must be patched at definition site — security.keycloak_client.fetch_user_realm_roles not channels.gateway.fetch_user_realm_roles
+- [Phase 10-01]: _channel_graph_savers is process-lifetime module-level dict; create_master_graph() checkpointer param uses 'or MemorySaver()' for backward compat
 
 ### Pending Todos
 
@@ -287,4 +291,4 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Phase 9 Plan 02 complete — Wire blitz_llm_calls_total to LLM invocations. SUMMARY at .planning/phases/09-tech-debt-code-fixes/09-02-SUMMARY.md
+Stopped at: Phase 10 Plan 01 complete — Channel tech debt closure (register_adapter, _channel_graph_savers, delivery_targets). SUMMARY at .planning/phases/10-optional-tech-debt-closure/10-01-SUMMARY.md
