@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates daily work routines and lets them build custom automations without writing code -- all within an enterprise-secure, on-premise environment.
-**Current focus:** Phase 8 (Observability) — IN PROGRESS (1/3 plans complete)
+**Current focus:** Phase 8 (Observability) — IN PROGRESS (2/3 plans, mid-plan 03 at checkpoint)
 
 ## Current Position
 
 Milestone: v1.1 Phase 8 (Observability) — IN PROGRESS
 Phases: 1, 2, 2.1, 3, 3.1, 4, 4.1, 5, 5.1, 6, 7 — all complete; Phase 8 in progress
-Current Plan: Phase 8 Plan 01 complete — observability infrastructure stack (5 Docker services, 6 config files, 3 volumes)
-Status: Phase 8 Plan 01 complete — Prometheus + Grafana + Loki + Alloy + cAdvisor added to docker-compose.yml
-Last activity: 2026-03-01 -- Phase 8 Plan 01: add observability Docker Compose infrastructure
+Current Plan: Phase 8 Plan 03 — mid-plan at checkpoint (Tasks 1-2 complete, awaiting human verification for Task 3)
+Status: 08-03 Tasks 1-2 complete — Ops Dashboard + Costs Dashboard + alerting provisioning files created; checkpoint awaiting Grafana visual verification
+Last activity: 2026-03-01 -- Phase 8 Plan 03: create Grafana dashboards and alerting (Tasks 1-2 committed, at checkpoint)
 
-Progress: [████░░░░░░░░] 33% (1/3 Phase 8 plans)
+Progress: [████████░░░░] 67% (2/3 Phase 8 plans auto-work complete, checkpoint gating plan 03 final)
 
 ## Performance Metrics
 
@@ -246,6 +246,9 @@ Recent decisions affecting current work:
 - [Phase 08-01]: Datasource UIDs blitz-prometheus and blitz-loki are locked for dashboard panel datasourceRef stability
 - [Phase 08-02]: prometheus_client REGISTRY stores Counter family under base name without _total suffix — tests check blitz_tool_calls not blitz_tool_calls_total; _total suffix is sample-level only
 - [Phase 08-02]: Single-worker uvicorn requires no PROMETHEUS_MULTIPROC_DIR — default in-process registry works; add multiproc support only if switching to gunicorn multi-process
+- [Phase 08-03]: Daily LiteLLM spend alert threshold set to $10/day (reasonable MVP default per CONTEXT.md Claude's Discretion) — configurable via alert rule expr edit in Grafana
+- [Phase 08-03]: Costs dashboard panels use blitz-prometheus only (no Loki) — cost metrics are all numeric time-series from LiteLLM's built-in Prometheus callbacks
+- [Phase 08-03]: Ops dashboard uses blitz-loki for log tail panel with {job="blitz-agentos"} query — matches Alloy docker label selector from Plan 01
 
 ### Pending Todos
 
@@ -271,5 +274,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Phase 8 Plan 01 complete — observability infrastructure stack (prometheus, grafana, loki, alloy, cadvisor) added to docker-compose.yml with all config files. Plans 08-02 and 08-03 remain.
-Resume file: .planning/phases/08-observability/08-01-SUMMARY.md
+Stopped at: Phase 8 Plan 03 Task 2 complete — checkpoint:human-verify reached. Tasks 1+2 committed (df20c29, ca72858). Resume from Task 3 after human verifies Grafana at localhost:3001 (run `just up` first, complete Keycloak grafana client setup, add GRAFANA_ADMIN_PASSWORD + GRAFANA_OAUTH_CLIENT_SECRET + GRAFANA_ALERT_CHAT_ID to .env).
+Resume file: .planning/phases/08-observability/08-03-PLAN.md (resume at Task 3)
