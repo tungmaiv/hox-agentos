@@ -207,4 +207,4 @@ Plans:
 | 7. Hardening & Sandboxing | v1.1 | 4/4 | ✅ Complete | 2026-03-01 |
 | 8. Observability | v1.1 | 4/4 | ✅ Complete | 2026-03-01 |
 | 9. Tech Debt Code Fixes | v1.1 | Complete    | 2026-03-01 | — |
-| 10. Optional Tech Debt Closure | 2/2 | Complete   | 2026-03-01 | — |
+| 10. Optional Tech Debt Closure | 2/2 | Complete    | 2026-03-01 | — |
