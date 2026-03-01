@@ -331,3 +331,64 @@ def test_instructional_skill_execution(integration_db) -> None:
     assert "Check email" in data["output"]
 
     app.dependency_overrides.pop(get_current_user, None)
+
+
+# ---------------------------------------------------------------------------
+# UAT test 12: Admin Create Skill via API
+# ---------------------------------------------------------------------------
+
+
+def test_uat_12_admin_create_skill(integration_db) -> None:
+    """
+    UAT 12: Admin can create a skill via POST /api/admin/skills.
+
+    Coverage:
+    - POST /api/admin/skills (admin JWT) → 201, body contains 'id'
+    - GET /api/admin/skills/{id}         → 200, name matches
+    - POST /api/admin/skills (no admin)  → 403 Forbidden
+    """
+    # Step 1: Admin creates a skill
+    app.dependency_overrides[get_current_user] = make_admin_ctx
+    admin_client = TestClient(app, raise_server_exceptions=False)
+
+    create_resp = admin_client.post(
+        "/api/admin/skills",
+        json={
+            "name": "uat12_skill",
+            "display_name": "UAT 12 Test Skill",
+            "description": "Created for UAT test 12",
+            "skill_type": "instructional",
+            "instruction_markdown": "# UAT 12\n\nThis skill was created during UAT test 12.",
+        },
+    )
+    assert create_resp.status_code == 201, f"Expected 201, got {create_resp.status_code}: {create_resp.text}"
+    body = create_resp.json()
+    assert "id" in body, f"Response body missing 'id' field: {body}"
+    skill_id = body["id"]
+    assert body["name"] == "uat12_skill"
+    assert body["status"] == "active"
+
+    # Step 2: Skill is retrievable via GET /api/admin/skills/{id}
+    get_resp = admin_client.get(f"/api/admin/skills/{skill_id}")
+    assert get_resp.status_code == 200, f"Expected 200, got {get_resp.status_code}: {get_resp.text}"
+    get_body = get_resp.json()
+    assert get_body["name"] == "uat12_skill"
+    assert get_body["id"] == skill_id
+
+    # Step 3: Employee (non-admin) cannot create a skill
+    app.dependency_overrides[get_current_user] = make_employee_ctx
+    emp_client = TestClient(app, raise_server_exceptions=False)
+
+    forbidden_resp = emp_client.post(
+        "/api/admin/skills",
+        json={
+            "name": "unauthorized_skill",
+            "display_name": "Should Not Be Created",
+            "skill_type": "instructional",
+            "instruction_markdown": "# Unauthorized",
+        },
+    )
+    assert forbidden_resp.status_code == 403, f"Expected 403 for non-admin, got {forbidden_resp.status_code}: {forbidden_resp.text}"
+
+    # Cleanup
+    app.dependency_overrides.pop(get_current_user, None)
