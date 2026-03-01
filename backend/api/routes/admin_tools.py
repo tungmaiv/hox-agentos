@@ -29,6 +29,7 @@ from core.schemas.registry import (
     ToolDefinitionResponse,
     ToolDefinitionUpdate,
 )
+from gateway.tool_registry import invalidate_tool_cache_entry
 from security.deps import get_current_user
 from security.rbac import has_permission
 
@@ -189,6 +190,7 @@ async def patch_tool_status(
 
     tool.status = body.status
     await session.commit()
+    invalidate_tool_cache_entry(tool.name)
 
     # Graceful removal: count active workflow runs referencing this tool
     active_workflow_runs = 0
@@ -249,6 +251,7 @@ async def activate_tool_version(
     tool.is_active = True
     await session.commit()
     await session.refresh(tool)
+    invalidate_tool_cache_entry(tool.name)
 
     logger.info(
         "admin_tool_version_activated",

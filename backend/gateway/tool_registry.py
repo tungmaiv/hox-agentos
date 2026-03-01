@@ -34,6 +34,16 @@ def invalidate_tool_cache() -> None:
     _tool_cache_timestamp = 0.0
 
 
+def invalidate_tool_cache_entry(name: str) -> None:
+    """Evict a single tool entry from the in-process cache.
+
+    Use when a specific tool's status changes (enable/disable/version switch).
+    Does NOT reset the global TTL timestamp — other cached entries remain valid.
+    """
+    _tool_cache.pop(name, None)
+    logger.debug("tool_cache_entry_evicted", name=name)
+
+
 async def _refresh_tool_cache(session: AsyncSession) -> None:
     """Reload cache from tool_definitions table (active + is_active only)."""
     global _tool_cache, _tool_cache_timestamp

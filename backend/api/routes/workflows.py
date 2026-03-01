@@ -4,7 +4,7 @@ Workflow CRUD API — full lifecycle management for canvas workflows.
 Endpoints:
   GET    /api/workflows                           — list user's workflows
   POST   /api/workflows                           — create new workflow
-  GET    /api/workflows/templates                 — list template workflows (public read)
+  GET    /api/workflows/templates                 — list template workflows (requires JWT)
   POST   /api/workflows/templates/{id}/copy       — copy template to user's workflows
   GET    /api/workflows/runs/pending-hitl         — count of paused HITL runs
   GET    /api/workflows/runs/{run_id}             — get a specific run
@@ -104,7 +104,7 @@ async def create_workflow(
 async def list_templates(
     session: AsyncSession = Depends(get_user_db),
 ) -> list[WorkflowResponse]:
-    """List all template workflows (no JWT required — templates are public read)."""
+    """List all template workflows. Requires JWT — authenticated users only."""
     result = await session.execute(
         select(Workflow).where(Workflow.is_template == True)  # noqa: E712
     )
