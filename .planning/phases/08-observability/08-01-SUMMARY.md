@@ -158,3 +158,20 @@ None - no external service configuration required beyond existing `.env` variabl
 ---
 *Phase: 08-observability*
 *Completed: 2026-03-01*
+
+## Self-Check: PASSED
+
+All files verified present:
+- FOUND: infra/prometheus/prometheus.yml
+- FOUND: infra/loki/loki-config.yml
+- FOUND: infra/alloy/config.alloy
+- FOUND: infra/grafana/provisioning/datasources/datasources.yml
+- FOUND: infra/grafana/provisioning/dashboards/dashboards.yml
+- FOUND: .planning/phases/08-observability/08-01-SUMMARY.md
+
+All commits verified:
+- FOUND: 0af347c feat(08-01): add Prometheus, Loki, and Alloy config files
+- FOUND: 31709a9 feat(08-01): add Grafana provisioning datasource and dashboard configs
+- FOUND: f7c215c feat(08-01): add 5 observability services and volumes to docker-compose.yml
+- FOUND: 2498349 fix(08-01): fix Loki delete_request_store and Grafana alerting mount for dev startup
+- FOUND: 35b3930 docs(08-01): complete observability infrastructure plan
