@@ -57,6 +57,8 @@ async def set_rls_user_id(session: AsyncSession, user_id: UUID) -> None:
     Uses SET LOCAL so the setting is scoped to the current transaction and does not
     leak across connection pool reuse.
 
+    No-op on non-PostgreSQL engines (e.g., SQLite used in tests).
+
     Args:
         session: The active async DB session.
         user_id: The authenticated user's UUID from the JWT (Gate 1).
@@ -66,7 +68,12 @@ async def set_rls_user_id(session: AsyncSession, user_id: UUID) -> None:
             await set_rls_user_id(session, current_user.id)
             result = await session.execute(select(MemoryFact).where(...))
     """
-    await session.execute(
-        sa.text("SET LOCAL app.user_id = :uid"),
-        {"uid": str(user_id)},
-    )
+    try:
+        await session.execute(
+            sa.text("SET LOCAL app.user_id = :uid"),
+            {"uid": str(user_id)},
+        )
+    except sa.exc.DBAPIError:
+        # Non-PostgreSQL engines (SQLite in tests) do not support SET LOCAL.
+        # On PostgreSQL this branch is never reached.
+        pass

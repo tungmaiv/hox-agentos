@@ -11,9 +11,8 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 import structlog
 
-from core.db import get_db
 from core.models.user import UserContext
-from security.deps import get_current_user
+from security.deps import get_current_user, get_user_db
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/api/tools", tags=["tools"])
@@ -34,7 +33,7 @@ class ToolCallResponse(BaseModel):
 async def call_tool(
     body: ToolCallRequest,
     user: UserContext = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_user_db),
 ) -> ToolCallResponse:
     """
     Execute a registered tool (backend or MCP) via the tool registry.

@@ -23,11 +23,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 import structlog
 
-from core.db import get_db
 from core.models.memory_long_term import MemoryFact, MemoryEpisode
 from core.models.user import UserContext
 from memory.long_term import mark_fact_superseded
-from security.deps import get_current_user
+from security.deps import get_current_user, get_user_db
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/api/user", tags=["user"])
@@ -41,7 +40,7 @@ router = APIRouter(prefix="/api/user", tags=["user"])
 @router.get("/memory/facts")
 async def list_facts(
     user: UserContext = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_user_db),
 ) -> list[dict[str, Any]]:
     """
     List non-superseded memory facts for the authenticated user.
@@ -74,7 +73,7 @@ async def list_facts(
 async def delete_fact(
     fact_id: UUID,
     user: UserContext = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_user_db),
 ) -> dict[str, str]:
     """
     Soft-delete one fact (sets superseded_at timestamp).
@@ -106,7 +105,7 @@ async def delete_fact(
 @router.delete("/memory/facts")
 async def clear_all_facts(
     user: UserContext = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_user_db),
 ) -> dict[str, str]:
     """
     Soft-delete ALL active facts for the user.
@@ -140,7 +139,7 @@ async def clear_all_facts(
 @router.get("/memory/episodes")
 async def list_episodes(
     user: UserContext = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_user_db),
 ) -> list[dict[str, Any]]:
     """
     List episode summaries for the authenticated user.
@@ -177,7 +176,7 @@ class ChatPreferences(BaseModel):
 @router.get("/preferences")
 async def get_preferences(
     user: UserContext = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_user_db),
 ) -> ChatPreferences:
     """
     Get chat rendering preferences for the authenticated user.
@@ -199,7 +198,7 @@ async def get_preferences(
 async def update_preferences(
     body: ChatPreferences,
     user: UserContext = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_user_db),
 ) -> ChatPreferences:
     """
     Update chat rendering preferences for the authenticated user.

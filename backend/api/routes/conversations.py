@@ -14,11 +14,10 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import aliased
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.db import get_db
 from core.models.conversation_title import ConversationTitle
 from core.models.memory import ConversationTurn
 from core.models.user import UserContext
-from security.deps import get_current_user
+from security.deps import get_current_user, get_user_db
 
 logger = structlog.get_logger(__name__)
 
@@ -35,7 +34,7 @@ class ConversationSummary(BaseModel):
 @router.get("/", response_model=list[ConversationSummary])
 async def list_conversations(
     user: UserContext = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_user_db),
     limit: int = 20,
     offset: int = 0,
 ) -> list[ConversationSummary]:
@@ -129,7 +128,7 @@ async def rename_conversation(
     conversation_id: UUID,
     body: RenameTitleRequest,
     user: UserContext = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_user_db),
 ) -> None:
     """
     Set or update a custom title for a conversation (upsert).
@@ -179,7 +178,7 @@ async def rename_conversation(
 async def delete_conversation(
     conversation_id: UUID,
     user: UserContext = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_user_db),
 ) -> None:
     """
     Delete all turns and the custom title for a conversation.
@@ -231,7 +230,7 @@ class TurnResponse(BaseModel):
 async def get_conversation_messages(
     conversation_id: UUID,
     user: UserContext = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_user_db),
 ) -> list[TurnResponse]:
     """
     Return all turns for a conversation (oldest first) for the current user.

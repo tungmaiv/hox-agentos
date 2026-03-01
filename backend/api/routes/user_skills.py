@@ -18,11 +18,10 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.db import get_db
 from core.models.skill_definition import SkillDefinition
 from core.models.user import UserContext
 from core.schemas.registry import SkillListItem, SkillRunResponse
-from security.deps import get_current_user
+from security.deps import get_current_user, get_user_db
 from security.rbac import batch_check_artifact_permissions, check_artifact_permission, has_permission
 from skills.executor import SkillExecutor
 
@@ -39,7 +38,7 @@ class SkillRunRequest(BaseModel):
 
 async def _require_chat(
     user: UserContext = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_user_db),
 ) -> UserContext:
     """Gate 2 dependency: require 'chat' permission."""
     if not await has_permission(user, "chat", session):
@@ -50,7 +49,7 @@ async def _require_chat(
 @router.get("")
 async def list_user_skills(
     user: UserContext = Depends(_require_chat),
-    session: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_user_db),
 ) -> list[SkillListItem]:
     """List skills available to the current user.
 
@@ -92,7 +91,7 @@ async def run_user_skill(
     skill_name: str,
     body: SkillRunRequest | None = None,
     user: UserContext = Depends(_require_chat),
-    session: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_user_db),
 ) -> SkillRunResponse:
     """Execute a skill by name.
 

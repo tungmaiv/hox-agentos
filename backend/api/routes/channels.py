@@ -24,7 +24,7 @@ from channels.models import InternalMessage
 from core.db import get_db
 from core.models.channel import ChannelAccount
 from core.models.user import UserContext
-from security.deps import get_current_user
+from security.deps import get_current_user, get_user_db
 
 logger = structlog.get_logger(__name__)
 
@@ -124,7 +124,7 @@ async def channel_incoming(
 async def generate_pair_code(
     body: PairRequest,
     user: UserContext = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_user_db),
 ) -> PairResponse:
     """Generate a 6-digit pairing code for linking a channel account."""
     gateway = get_channel_gateway()
@@ -135,7 +135,7 @@ async def generate_pair_code(
 @router.get("/accounts", response_model=list[ChannelAccountResponse])
 async def list_accounts(
     user: UserContext = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_user_db),
 ) -> list[ChannelAccountResponse]:
     """List the authenticated user's linked channel accounts."""
     result = await db.execute(
@@ -163,7 +163,7 @@ async def list_accounts(
 async def unlink_account(
     account_id: UUID,
     user: UserContext = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_user_db),
 ) -> None:
     """Unlink a channel account. Only the owning user can unlink."""
     result = await db.execute(

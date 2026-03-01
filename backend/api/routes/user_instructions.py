@@ -17,10 +17,9 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.db import get_db
 from core.models.user import UserContext
 from core.models.user_instructions import UserInstructions
-from security.deps import get_current_user
+from security.deps import get_current_user, get_user_db
 
 logger = structlog.get_logger(__name__)
 
@@ -62,7 +61,7 @@ async def get_user_instructions(
 @router.get("/", response_model=UserInstructionsResponse)
 async def get_instructions(
     user: UserContext = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_user_db),
 ) -> UserInstructionsResponse:
     """Get current user's custom instructions."""
     instructions = await get_user_instructions(user["user_id"], session)
@@ -80,7 +79,7 @@ async def get_instructions(
 async def update_instructions(
     body: UserInstructionsRequest,
     user: UserContext = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_user_db),
 ) -> UserInstructionsResponse:
     """
     Set or update current user's custom instructions (upsert).

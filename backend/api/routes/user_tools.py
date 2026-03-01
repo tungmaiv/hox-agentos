@@ -13,11 +13,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.db import get_db
 from core.models.tool_definition import ToolDefinition
 from core.models.user import UserContext
 from core.schemas.registry import ToolListItem
-from security.deps import get_current_user
+from security.deps import get_current_user, get_user_db
 from security.rbac import batch_check_artifact_permissions, has_permission
 
 logger = structlog.get_logger(__name__)
@@ -27,7 +26,7 @@ router = APIRouter(prefix="/api/tools", tags=["tools"])
 
 async def _require_chat(
     user: UserContext = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_user_db),
 ) -> UserContext:
     """Gate 2 dependency: require 'chat' permission."""
     if not await has_permission(user, "chat", session):
@@ -38,7 +37,7 @@ async def _require_chat(
 @router.get("")
 async def list_user_tools(
     user: UserContext = Depends(_require_chat),
-    session: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_user_db),
 ) -> list[ToolListItem]:
     """List tools available to the current user.
 

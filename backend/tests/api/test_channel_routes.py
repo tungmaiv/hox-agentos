@@ -1,10 +1,14 @@
 """Tests for channel API routes."""
+import asyncio
 import uuid
+from collections.abc import AsyncGenerator
 from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from core.db import Base, get_db
 from main import create_app
 
 
@@ -25,14 +29,39 @@ def mock_user():
     }
 
 
-def _override_auth(mock_user):
-    """Return a dependency override for get_current_user."""
+@pytest.fixture
+def sqlite_db_override():
+    """Override get_db with SQLite in-memory so get_user_db can connect."""
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
+
+    async def _init() -> None:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+
+    loop = asyncio.new_event_loop()
+    loop.run_until_complete(_init())
+    factory = async_sessionmaker(engine, expire_on_commit=False)
+
+    async def _override() -> AsyncGenerator[AsyncSession, None]:
+        async with factory() as s:
+            yield s
+
+    yield _override
+    loop.run_until_complete(engine.dispose())
+    loop.close()
+
+
+def _override_auth(mock_user, db_override=None):
+    """Return dependency overrides for get_current_user (and optionally get_db)."""
     from security.deps import get_current_user
 
     async def _fake():
         return mock_user
 
-    return {get_current_user: _fake}
+    overrides = {get_current_user: _fake}
+    if db_override is not None:
+        overrides[get_db] = db_override
+    return overrides
 
 
 # -- POST /api/channels/incoming ---------------------------------------------
@@ -66,9 +95,9 @@ def test_pair_requires_auth(client: TestClient):
     assert resp.status_code == 401
 
 
-def test_pair_generates_code(client: TestClient, mock_user):
+def test_pair_generates_code(client: TestClient, mock_user, sqlite_db_override):
     app = client.app
-    app.dependency_overrides = _override_auth(mock_user)
+    app.dependency_overrides = _override_auth(mock_user, db_override=sqlite_db_override)
 
     with patch("api.routes.channels.get_channel_gateway") as mock_gw_fn:
         mock_gw = AsyncMock()

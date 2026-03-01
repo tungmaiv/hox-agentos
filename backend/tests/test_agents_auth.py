@@ -143,7 +143,7 @@ def test_chat_executive_returns_501(sqlite_session_override: None) -> None:
     assert response.status_code == 501
 
 
-def test_chat_unknown_role_returns_403() -> None:
+def test_chat_unknown_role_returns_403(sqlite_session_override: None) -> None:
     """Unknown role → zero permissions → Gate 2 RBAC returns 403."""
     def mock_no_perm() -> UserContext:
         return make_no_permission_ctx()
@@ -155,7 +155,7 @@ def test_chat_unknown_role_returns_403() -> None:
     assert response.status_code == 403
 
 
-def test_chat_403_body_contains_required_fields() -> None:
+def test_chat_403_body_contains_required_fields(sqlite_session_override: None) -> None:
     """403 response must contain permission_required, user_roles, and hint."""
     def mock_no_perm() -> UserContext:
         return make_no_permission_ctx()

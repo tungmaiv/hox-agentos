@@ -37,7 +37,6 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.db import async_session as _async_session
-from core.db import get_db
 from core.models.user import UserContext
 from core.models.workflow import Workflow, WorkflowRun, WorkflowTrigger
 from core.schemas.workflow import (
@@ -52,7 +51,7 @@ from core.schemas.workflow import (
     WorkflowUpdate,
 )
 from scheduler.tasks.workflow_execution import execute_workflow_task
-from security.deps import get_current_user
+from security.deps import get_current_user, get_user_db
 from workflow_events import publish_event, subscribe_events
 
 logger = structlog.get_logger(__name__)
@@ -65,7 +64,7 @@ router = APIRouter(prefix="/api/workflows", tags=["workflows"])
 @router.get("", response_model=list[WorkflowListItem])
 async def list_workflows(
     user: UserContext = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_user_db),
 ) -> list[WorkflowListItem]:
     """List the current user's non-template workflows, newest first."""
     result = await session.execute(
@@ -81,7 +80,7 @@ async def list_workflows(
 async def create_workflow(
     body: WorkflowCreate,
     user: UserContext = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_user_db),
 ) -> WorkflowResponse:
     """Create a new workflow for the current user."""
     workflow = Workflow(
@@ -103,7 +102,7 @@ async def create_workflow(
 
 @router.get("/templates", response_model=list[WorkflowResponse])
 async def list_templates(
-    session: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_user_db),
 ) -> list[WorkflowResponse]:
     """List all template workflows (no JWT required — templates are public read)."""
     result = await session.execute(
@@ -120,7 +119,7 @@ async def list_templates(
 async def copy_template(
     template_id: uuid.UUID,
     user: UserContext = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_user_db),
 ) -> WorkflowResponse:
     """Copy a template workflow into the current user's workspace."""
     result = await session.execute(
@@ -154,7 +153,7 @@ async def copy_template(
 @router.get("/runs/pending-hitl", response_model=PendingHitlResponse)
 async def pending_hitl_count(
     user: UserContext = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_user_db),
 ) -> PendingHitlResponse:
     """Return count of workflow runs paused waiting for human approval."""
     result = await session.execute(
@@ -170,7 +169,7 @@ async def pending_hitl_count(
 async def get_run(
     run_id: uuid.UUID,
     user: UserContext = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_user_db),
 ) -> WorkflowRunResponse:
     """Get a specific workflow run by ID."""
     run = await _get_user_run(run_id, user["user_id"], session)
@@ -181,7 +180,7 @@ async def get_run(
 async def approve_hitl(
     run_id: uuid.UUID,
     user: UserContext = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_user_db),
 ) -> WorkflowRunResponse:
     """Resume a paused_hitl workflow run with approval."""
     run = await _get_user_run(run_id, user["user_id"], session)
@@ -202,7 +201,7 @@ async def approve_hitl(
 async def reject_hitl(
     run_id: uuid.UUID,
     user: UserContext = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_user_db),
 ) -> WorkflowRunResponse:
     """Reject a paused_hitl workflow run — marks it failed."""
     run = await _get_user_run(run_id, user["user_id"], session)
@@ -227,7 +226,7 @@ async def reject_hitl(
 async def get_workflow(
     workflow_id: uuid.UUID,
     user: UserContext = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_user_db),
 ) -> WorkflowResponse:
     """Get a specific workflow by ID (must be owned by caller)."""
     workflow = await _get_user_workflow(workflow_id, user["user_id"], session)
@@ -239,7 +238,7 @@ async def update_workflow(
     workflow_id: uuid.UUID,
     body: WorkflowUpdate,
     user: UserContext = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_user_db),
 ) -> WorkflowResponse:
     """Update workflow name, description, or definition_json."""
     workflow = await _get_user_workflow(workflow_id, user["user_id"], session)
@@ -259,7 +258,7 @@ async def update_workflow(
 async def delete_workflow(
     workflow_id: uuid.UUID,
     user: UserContext = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_user_db),
 ) -> None:
     """Delete a workflow and all its runs and triggers."""
     workflow = await _get_user_workflow(workflow_id, user["user_id"], session)
@@ -276,7 +275,7 @@ async def delete_workflow(
 async def run_workflow(
     workflow_id: uuid.UUID,
     user: UserContext = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_user_db),
 ) -> WorkflowRunResponse:
     """
     Trigger manual execution of a workflow.
@@ -310,7 +309,7 @@ async def run_workflow(
 async def list_triggers(
     workflow_id: uuid.UUID,
     user: UserContext = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_user_db),
 ) -> list[WorkflowTriggerListResponse]:
     """List all triggers for a workflow."""
     await _get_user_workflow(workflow_id, user["user_id"], session)
@@ -329,7 +328,7 @@ async def create_trigger(
     workflow_id: uuid.UUID,
     body: WorkflowTriggerCreate,
     user: UserContext = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_user_db),
 ) -> WorkflowTriggerResponse:
     """Create a new trigger (cron or webhook) for a workflow."""
     await _get_user_workflow(workflow_id, user["user_id"], session)
@@ -364,7 +363,7 @@ async def delete_trigger(
     workflow_id: uuid.UUID,
     trigger_id: uuid.UUID,
     user: UserContext = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_user_db),
 ) -> None:
     """Delete a specific trigger from a workflow."""
     await _get_user_workflow(workflow_id, user["user_id"], session)
@@ -386,7 +385,7 @@ async def delete_trigger(
 async def get_run_events(
     run_id: uuid.UUID,
     user: UserContext = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_user_db),
 ) -> StreamingResponse:
     """
     SSE stream of workflow run events.

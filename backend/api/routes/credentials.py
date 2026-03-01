@@ -19,11 +19,10 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.db import get_db
 from core.models.credentials import UserCredential
 from core.models.user import UserContext
 from security.credentials import delete_credential
-from security.deps import get_current_user
+from security.deps import get_current_user, get_user_db
 
 logger = structlog.get_logger(__name__)
 
@@ -40,7 +39,7 @@ class ConnectedProvider(BaseModel):
 @router.get("/", response_model=list[ConnectedProvider])
 async def list_connected_providers(
     user: UserContext = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_user_db),
 ) -> list[ConnectedProvider]:
     """
     List OAuth providers the current user has connected.
@@ -68,7 +67,7 @@ async def list_connected_providers(
 async def disconnect_provider(
     provider: str,
     user: UserContext = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_user_db),
 ) -> None:
     """
     Disconnect (delete) a specific OAuth provider for the current user.

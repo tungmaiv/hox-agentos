@@ -15,11 +15,10 @@ import time
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.db import get_db
 from core.models.user import UserContext
 from core.schemas.common import ErrorResponse
 from security.acl import check_tool_acl, log_tool_call
-from security.deps import get_current_user
+from security.deps import get_current_user, get_user_db
 from security.rbac import has_permission
 
 import structlog
@@ -38,7 +37,7 @@ router = APIRouter(prefix="/agents", tags=["agents"])
 )
 async def chat(
     user: UserContext = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_user_db),
 ) -> dict:
     """
     Phase 1 stub: validates all 3 security gates and returns 501.
