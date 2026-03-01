@@ -53,12 +53,16 @@ def test_tool_call_counter_increments() -> None:
 
 
 def test_llm_call_counter_increments() -> None:
-    """blitz_llm_calls_total increments correctly with model_alias label."""
+    """blitz_llm_calls_total increments correctly with model_alias and status labels."""
     from core.metrics import blitz_llm_calls_total
 
-    before = _get_counter_value(blitz_llm_calls_total, {"model_alias": "blitz/master"})
-    blitz_llm_calls_total.labels(model_alias="blitz/master").inc()
-    after = _get_counter_value(blitz_llm_calls_total, {"model_alias": "blitz/master"})
+    before = _get_counter_value(
+        blitz_llm_calls_total, {"model_alias": "blitz/master", "status": "success"}
+    )
+    blitz_llm_calls_total.labels(model_alias="blitz/master", status="success").inc()
+    after = _get_counter_value(
+        blitz_llm_calls_total, {"model_alias": "blitz/master", "status": "success"}
+    )
     assert after == before + 1.0
 
 
