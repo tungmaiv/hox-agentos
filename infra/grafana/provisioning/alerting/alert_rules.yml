@@ -1,0 +1,27 @@
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: blitz-cost-alerts
+    folder: __Blitz
+    folderUid: blitz-folder
+    interval: 5m
+    rules:
+      - uid: daily_spend_alert
+        title: Daily LiteLLM Spend Exceeded
+        condition: A
+        for: 5m
+        data:
+          - refId: A
+            datasourceUid: blitz-prometheus
+            model:
+              expr: sum(increase(litellm_spend_metric[24h])) > 10
+              type: range
+        annotations:
+          summary: "Daily LiteLLM spend has exceeded $10"
+          description: "Current 24h spend: {{ $value | humanize }}"
+        labels:
+          severity: warning
+        noDataState: NoData
+        execErrState: Error
+        isPaused: false

@@ -228,9 +228,7 @@ services:
       - ./infra/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
       - ./infra/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
       - ./infra/grafana/dashboards:/etc/grafana/dashboards:ro
-      # Alerting provisioning requires TELEGRAM_BOT_TOKEN in root .env.
-      # To enable: add the line below after setting the token, then restart grafana.
-      # - ./infra/grafana/provisioning/alerting:/etc/grafana/provisioning/alerting:ro
+      - ./infra/grafana/provisioning/alerting:/etc/grafana/provisioning/alerting:ro
     environment:
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
       GF_USERS_ALLOW_SIGN_UP: "false"
