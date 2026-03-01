@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates daily work routines and lets them build custom automations without writing code -- all within an enterprise-secure, on-premise environment.
-**Current focus:** Phase 6 (Extensibility Registries) — COMPLETE (8/8 plans)
+**Current focus:** Phase 7 (Hardening and Sandboxing) — IN PROGRESS (1/2 plans)
 
 ## Current Position
 
-Milestone: v1.1 Phase 6 (Extensibility Registries) — COMPLETE
+Milestone: v1.1 Phase 7 (Hardening and Sandboxing) — IN PROGRESS
 Phases: 1, 2, 2.1, 3, 3.1, 4, 4.1, 5, 5.1, 6 — all complete
-Current Plan: Phase 6 complete — ready for Phase 7 (Hardening and Sandboxing)
-Status: Phase 6 complete — skill seeds, Pending Review filter fix, built-in /summarize /debug /export commands
-Last activity: 2026-03-01 -- Phase 6 Plan 08: seed 3 built-in skills, fix Pending Review filter predicate
+Current Plan: Phase 7 Plan 02 (07-02 — security hardening: BYPASSRLS, trufflehog, security scanner)
+Status: Phase 7 Plan 01 complete — Docker sandbox executor with resource limits, sandbox_required routing
+Last activity: 2026-03-01 -- Phase 7 Plan 01: SandboxExecutor, policies.py, 6 TDD tests, sandbox routing in node_handlers
 
-Progress: [████████████] 100% (8/8 Phase 6 plans)
+Progress: [██░░░░░░░░░░] 50% (1/2 Phase 7 plans)
 
 ## Performance Metrics
 
@@ -60,6 +60,7 @@ Progress: [████████████] 100% (8/8 Phase 6 plans)
 | Phase 06-extensibility-registries P06 | 9 | 2 tasks | 12 files |
 | Phase 06-extensibility-registries P07 | 15 | 3 tasks | 16 files |
 | Phase 06-extensibility-registries P08 | 8 | 2 tasks | 5 files |
+| Phase 07-hardening-and-sandboxing P01 | 4 | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -215,6 +216,9 @@ Recent decisions affecting current work:
 - [06-07]: Catch-all proxy at /api/admin/[...path] forwards GET/POST/PUT/PATCH/DELETE with JWT from session
 - [06-08]: ArtifactStatus union extended with 'pending_review' — backend status column is VARCHAR(20) with no DB enum; frontend type must mirror all real values for TypeScript strict mode
 - [06-08]: StatusBadge color for pending_review is orange (bg-orange-100 text-orange-800) — visually distinct from yellow (deprecated) and gray (disabled)
+- [Phase 07-01]: SandboxExecutor imported at module top level in node_handlers.py — lazy imports not patchable in tests (same pattern as call_mcp_tool)
+- [Phase 07-01]: sandbox routing added to node_handlers._handle_tool_node (not runtime.py) — runtime.py handles AG-UI streaming only; actual tool dispatch lives in node_handlers
+- [Phase 07-01]: ContainerError exit_code=137 or 'timeout' in stderr treated as timed_out=True — Docker sends SIGKILL (137) for OOM and timeout kills
 
 ### Pending Todos
 
@@ -240,5 +244,6 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Phase 6 COMPLETE (8/8 plans) — skill seeds (migration 015), Pending Review filter fix, ArtifactStatus type fix. Ready for Phase 7 (Hardening and Sandboxing).
+Stopped at: Phase 7 Plan 01 COMPLETE — Docker sandbox executor (sandbox/executor.py, sandbox/policies.py), 6 TDD tests with mocked Docker SDK, sandbox_required routing in agents/node_handlers._handle_tool_node. 581 tests passing. Ready for Phase 7 Plan 02 (security hardening).
+Resume file: .planning/phases/07-hardening-and-sandboxing/07-01-SUMMARY.md
 Resume file: .planning/phases/06-extensibility-registries/06-08-SUMMARY.md
