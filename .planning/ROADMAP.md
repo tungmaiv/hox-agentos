@@ -130,11 +130,13 @@ Plans:
   3. Sandbox containers are destroyed after execution or timeout with no resource leaks
   4. Cross-user memory isolation verified by automated penetration tests
   5. PostgreSQL Row Level Security policies enforce user_id isolation as defense-in-depth
-**Plans**: 2 plans
+**Plans**: 4 plans (2 gap closure)
 
 Plans:
 - [ ] 07-01-PLAN.md — Docker sandbox executor: SandboxExecutor TDD, resource limits (CPU=0.5, RAM=256MB, no network), tool registry dispatch wiring
 - [ ] 07-02-PLAN.md — Security hardening: RLS migration 016 on 6 tables, set_rls_user_id helper, cross-user isolation pen tests, bandit dev dep
+- [ ] 07-03-PLAN.md — Gap closure: fix lazy import defect in test_isolation.py (isolation test determinism)
+- [ ] 07-04-PLAN.md — Gap closure: install trufflehog and run git history credential scan
 
 ### Phase 8: Observability
 **Goal**: Operations team can monitor system health, agent performance, LLM costs, and troubleshoot issues through centralized dashboards and log aggregation
