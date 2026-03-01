@@ -192,3 +192,71 @@ async def test_is_pairing_command():
     assert not gw.is_pairing_command(
         InternalMessage(direction="inbound", channel="telegram", external_user_id="1", text=None)
     )
+
+
+# -- register_adapter() enforcement ----------------------------------------
+
+
+def test_register_adapter_raises_type_error_for_non_conforming(gateway: ChannelGateway) -> None:
+    """register_adapter() raises TypeError immediately for non-conforming objects."""
+
+    class BadAdapter:
+        def receive(self, msg):  # wrong method name, not 'send'
+            pass
+
+    with pytest.raises(TypeError, match="ChannelAdapter protocol"):
+        gateway.register_adapter("bad_channel", BadAdapter())
+
+
+def test_register_adapter_accepts_conforming_adapter(gateway: ChannelGateway) -> None:
+    """register_adapter() succeeds silently for a conforming adapter."""
+
+    class GoodAdapter:
+        async def send(self, msg: InternalMessage) -> None:
+            pass
+
+    # Should not raise
+    gateway.register_adapter("good_channel", GoodAdapter())
+
+
+# -- _invoke_agent() saver reuse --------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_invoke_agent_reuses_saver_for_same_conversation(
+    gateway: ChannelGateway,
+) -> None:
+    """_invoke_agent() creates MemorySaver once per conversation_id and reuses it."""
+    import uuid
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    import channels.gateway as gw_module
+
+    conv_id = uuid.uuid4()
+    msg = InternalMessage(
+        direction="inbound",
+        channel="telegram",
+        external_user_id="555",
+        user_id=uuid.uuid4(),
+        conversation_id=conv_id,
+        text="Hello",
+    )
+
+    mock_graph = MagicMock()
+    mock_graph.ainvoke = AsyncMock(return_value={"messages": []})
+
+    # Clear saver dict before test to ensure clean state
+    gw_module._channel_graph_savers.clear()
+
+    with (
+        patch("security.keycloak_client.fetch_user_realm_roles", new=AsyncMock(return_value=["employee"])),
+        patch("agents.master_agent.create_master_graph", return_value=mock_graph) as mock_create,
+    ):
+        await gateway._invoke_agent(msg)
+        await gateway._invoke_agent(msg)
+
+    assert mock_create.call_count == 2
+    saver_call_1 = mock_create.call_args_list[0].kwargs.get("checkpointer")
+    saver_call_2 = mock_create.call_args_list[1].kwargs.get("checkpointer")
+    assert saver_call_1 is saver_call_2
+    assert str(conv_id) in gw_module._channel_graph_savers
