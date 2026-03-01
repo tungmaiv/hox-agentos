@@ -23,3 +23,27 @@
 
 ---
 
+
+## v1.1 Enterprise Platform (Shipped: 2026-03-02)
+
+**Phases completed:** 9 phases (4, 4.1, 5, 5.1, 6, 7, 8, 9, 10) — 33 plans
+**Timeline:** 2026-02-27 → 2026-03-02 (4 days)
+**Test suite:** 586 passed, 1 skipped (pgvector isolation — SQLite limitation)
+**Commits:** 154
+
+**Delivered:** Visual workflow canvas + multi-channel presence + extensibility registries + Docker sandbox + full observability — the platform transitions from AI assistant to autonomous enterprise agentic OS.
+
+**Key accomplishments:**
+1. React Flow drag-and-drop canvas compiles to LangGraph StateGraphs; HITL approval gates; cron/webhook triggers; Morning Digest + Alert pre-built workflow templates
+2. Multi-channel presence: Telegram live (end-to-end verified); WhatsApp + Teams sidecars code-complete; ChannelAdapter protocol with `isinstance()` enforcement and shared LangGraph checkpointer for conversation continuity
+3. Database-backed extensibility registries for agents, tools, skills, and MCP servers; admin dashboard at `/admin` with permission matrix, multi-version support, and skill import pipeline (AST safety evaluation + security scan)
+4. Docker sandbox executor for untrusted code: CPU/RAM/network/PID limits, non-root execution, capability stripping; PostgreSQL RLS on 6 tables; git history credential scan (clean — 0 verified secrets)
+5. Grafana + Loki + Alloy observability stack: Prometheus instrumentation, LiteLLM cost tracking dashboard, Telegram spend-alert live-tested end-to-end
+6. Tech debt closure: tool cache invalidation on status change, `blitz_llm_calls_total` wired in `get_llm()`, delivery_router unification, UAT test 12 (Admin Create Skill) passing
+
+**Archive:** `.planning/milestones/v1.1-ROADMAP.md` · `.planning/milestones/v1.1-MILESTONE-AUDIT.md`
+
+**Known gaps (see audit):** CHAN-03 (WhatsApp) + CHAN-04 (Teams) — code complete, live credentials unavailable
+
+---
+

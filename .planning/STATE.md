@@ -2,20 +2,19 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-26)
+See: .planning/PROJECT.md (updated 2026-03-02 after v1.1 milestone)
 
-**Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates daily work routines and lets them build custom automations without writing code -- all within an enterprise-secure, on-premise environment.
-**Current focus:** Phase 10 (Optional Tech Debt Closure) — COMPLETE (2/2 plans complete)
+**Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates their daily work routines and lets them build custom automations without writing code — all within an enterprise-secure, on-premise environment where data never leaves the company.
+**Current focus:** v1.1 Enterprise Platform SHIPPED — run `/gsd:new-milestone` to define v1.2
 
 ## Current Position
 
-Milestone: v1.2 Phase 10 (Optional Tech Debt Closure)
-Phases: 1, 2, 2.1, 3, 3.1, 4, 4.1, 5, 5.1, 6, 7, 8, 9, 10 — 9 complete, 10 in progress
-Current Plan: Phase 10 Plan 02 complete — UAT test 12, Grafana alert live test, Phase 4.1 VERIFICATION.md
-Status: Phase 10 COMPLETE — 2/2 plans done
-Last activity: 2026-03-02 -- Phase 10 Plan 02: test_uat_12_admin_create_skill, Grafana→Telegram alert confirmed, 04.1-VERIFICATION.md created, contact_points.yml chatid fix
+Milestone: v1.1 COMPLETE — archived 2026-03-02
+Phases: 1–10 all complete (14 phases including inserted)
+Status: Milestone archived — ready for v1.2 planning
+Last activity: 2026-03-02 — v1.1 milestone archived (ROADMAP.md collapsed, PROJECT.md evolved, git tagged v1.1)
 
-Progress: [████████████] 100% (2/2 Phase 10 plans)
+Progress: [████████████] 100% — v1.1 SHIPPED
 
 ## Performance Metrics
 
