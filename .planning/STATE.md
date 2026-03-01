@@ -230,6 +230,13 @@ Recent decisions affecting current work:
 - [07-03]: import core.models at module top-level in test_isolation.py — ConversationTurn (memory_conversations table) not registered in Base.metadata when test file loaded in isolation; lazy import inside test body executes after db_session.create_all(), causing "no such table" error; fix: one import line ensures full ORM registration before any fixture
 - [Phase 07-hardening-and-sandboxing]: [07-03]: import core.models at module top-level in test_isolation.py — fixes lazy import defect so isolation pen tests are deterministic regardless of run order
 - [Phase 07-04]: trufflehog installed via official install.sh (not go install) — go.mod replace directives block go install for all versions; git history scan is CLEAN (0 verified secrets)
+- [post-07-RLS]: get_user_db dependency in security/deps.py calls set_rls_user_id() before yielding session — activates migration 016 FORCE ROW LEVEL SECURITY; all user-scoped routes use get_user_db; admin routes intentionally keep get_db (BYPASSRLS) to query across all users
+- [post-07-RLS]: set_rls_user_id() wraps SET LOCAL in try/except sa.exc.DBAPIError — no-op on SQLite test DBs (aiosqlite does not support SET LOCAL); actual asyncpg connection errors still propagate
+- [post-07-RLS]: Tests that override get_current_user without overriding get_db must also override get_db — get_user_db depends on both; failure to override get_db causes real PostgreSQL connection attempts in CI
+- [post-07-sandbox]: SandboxExecutor is a module-level singleton in node_handlers.py (_sandbox_executor) — Docker client created once at import; executor.execute() wrapped in loop.run_in_executor() to avoid blocking FastAPI event loop up to 120s
+- [post-07-sandbox]: _cleanup_leaked_containers() wired to FastAPI lifespan startup via asyncio.to_thread() — cleans orphaned containers from prior process restarts without blocking startup
+- [post-07-sandbox]: SANDBOX_LIMITS now includes pids_limit=64, user="nobody", cap_drop=["ALL"] — fork bomb protection, non-root execution, capability stripping
+- [post-07-sandbox]: MemoryFact isolation test permanently skipped in SQLite — Vector(1024) DDL not supported by aiosqlite; marked as known gap, must be run against live PostgreSQL in integration environment
 
 ### Pending Todos
 

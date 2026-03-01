@@ -17,6 +17,7 @@ Full wiring (04-03): replaced with real sub-agent invocation and MCP tool calls.
 Sandbox routing (07-01): tools with sandbox_required=True are executed in
 Docker containers via SandboxExecutor instead of MCP dispatch.
 """
+import asyncio
 import uuid
 from collections.abc import Awaitable
 from typing import Any, Callable
@@ -26,11 +27,17 @@ import structlog
 from agents.condition_evaluator import evaluate_condition
 from agents.workflow_state import WorkflowState
 from core.db import async_session
+from gateway.tool_registry import get_tool
 from mcp.registry import call_mcp_tool
 from sandbox.executor import SandboxExecutor
 from sandbox.policies import DEFAULT_TIMEOUT
 
 logger = structlog.get_logger(__name__)
+
+# Module-level singleton — Docker client is created once at import time,
+# not on every tool call. This avoids repeated socket connections and the
+# overhead of constructing a new client for each sandbox execution.
+_sandbox_executor = SandboxExecutor()
 
 # Type alias for node handler functions
 NodeHandler = Callable[[dict[str, Any], WorkflowState], Awaitable[Any]]
@@ -124,78 +131,85 @@ async def _handle_tool_node(config: dict[str, Any], state: WorkflowState) -> Any
     Returns the MCP tool result dict, or an error dict if the call fails.
     """
     from fastapi import HTTPException
-    from gateway.tool_registry import get_tool
     from core.models.user import UserContext
 
     tool_name = config.get("tool_name", "")
     params = config.get("params", {})
 
-    # Unknown tool: fail fast before opening a DB session
-    # session=None uses stale cache (backward compat for workflow context)
-    tool_meta = await get_tool(tool_name)
-    if tool_meta is None:
-        logger.warning("tool_node_unknown_tool", tool_name=tool_name)
-        return {"error": f"Tool '{tool_name}' not registered", "success": False}
+    # Open a DB session early so get_tool() can refresh the cache from the DB.
+    # Passing an active session bypasses the 60s stale cache — critical for
+    # sandbox routing decisions where a revoked sandbox permission must take
+    # effect immediately rather than up to 60 seconds later.
+    async with async_session() as session:
+        tool_meta = await get_tool(tool_name, session=session)
+        if tool_meta is None:
+            logger.warning("tool_node_unknown_tool", tool_name=tool_name)
+            return {"error": f"Tool '{tool_name}' not registered", "success": False}
 
-    # Sandbox routing: tools with sandbox_required=True are executed in Docker containers.
-    # This applies to Canvas "Code Execution" nodes and any tool registered with
-    # sandbox_required=True in gateway/tool_registry.py.
-    if tool_meta.get("sandbox_required", False):
-        code = params.get("code", "")
-        language = params.get("language", "python")
-        timeout = int(params.get("timeout", DEFAULT_TIMEOUT))
-        executor = SandboxExecutor()
-        sandbox_result = executor.execute(code=code, language=language, timeout=timeout)
-        logger.info(
-            "sandbox_dispatch",
-            tool=tool_name,
-            language=language,
-            timed_out=sandbox_result.timed_out,
-        )
-        return {
-            "stdout": sandbox_result.stdout,
-            "stderr": sandbox_result.stderr,
-            "exit_code": sandbox_result.exit_code,
-            "timed_out": sandbox_result.timed_out,
-            "success": not sandbox_result.timed_out and sandbox_result.exit_code == 0,
+        # Sandbox routing: tools with sandbox_required=True are executed in Docker containers.
+        # This applies to Canvas "Code Execution" nodes and any tool registered with
+        # sandbox_required=True in gateway/tool_registry.py.
+        if tool_meta.get("sandbox_required", False):
+            code = params.get("code", "")
+            language = params.get("language", "python")
+            timeout = int(params.get("timeout", DEFAULT_TIMEOUT))
+            # SandboxExecutor.execute() is synchronous (Docker SDK blocks).
+            # Offload to the default thread-pool executor so the async event
+            # loop is not blocked while the container runs.
+            loop = asyncio.get_event_loop()
+            sandbox_result = await loop.run_in_executor(
+                None,
+                lambda: _sandbox_executor.execute(code=code, language=language, timeout=timeout),
+            )
+            logger.info(
+                "sandbox_dispatch",
+                tool=tool_name,
+                language=language,
+                timed_out=sandbox_result.timed_out,
+            )
+            return {
+                "stdout": sandbox_result.stdout,
+                "stderr": sandbox_result.stderr,
+                "exit_code": sandbox_result.exit_code,
+                "timed_out": sandbox_result.timed_out,
+                "success": not sandbox_result.timed_out and sandbox_result.exit_code == 0,
+            }
+
+        # Build UserContext from workflow state — user_id must be UUID
+        raw_ctx = state.get("user_context") or {}
+        try:
+            user_uuid = uuid.UUID(str(raw_ctx.get("user_id", "")))
+        except ValueError:
+            return {"error": "Invalid user_id in workflow state", "success": False}
+
+        user_ctx: UserContext = {
+            "user_id": user_uuid,
+            "email": str(raw_ctx.get("email", "")),
+            "username": str(raw_ctx.get("username", "")),
+            "roles": list(raw_ctx.get("roles", [])),
+            "groups": list(raw_ctx.get("groups", [])),
         }
 
-    # Build UserContext from workflow state — user_id must be UUID
-    raw_ctx = state.get("user_context") or {}
-    try:
-        user_uuid = uuid.UUID(str(raw_ctx.get("user_id", "")))
-    except ValueError:
-        return {"error": "Invalid user_id in workflow state", "success": False}
-
-    user_ctx: UserContext = {
-        "user_id": user_uuid,
-        "email": str(raw_ctx.get("email", "")),
-        "username": str(raw_ctx.get("username", "")),
-        "roles": list(raw_ctx.get("roles", [])),
-        "groups": list(raw_ctx.get("groups", [])),
-    }
-
-    try:
-        async with async_session() as session:
+        try:
             result = await call_mcp_tool(
                 tool_name=tool_name,
                 arguments=params,
                 user=user_ctx,
                 db_session=session,
             )
-        logger.info("tool_node_success", tool=tool_name, user_id=str(user_uuid))
-        return result
-    except HTTPException as exc:
-        logger.warning(
-            "tool_node_denied",
-            tool=tool_name,
-            status_code=exc.status_code,
-            detail=exc.detail,
-        )
-        return {"error": f"{exc.status_code}: {exc.detail}", "success": False}
-    except Exception as exc:
-        logger.error("tool_node_error", tool=tool_name, error=str(exc))
-        return {"error": str(exc), "success": False}
+            logger.info("tool_node_success", tool=tool_name, user_id=str(user_uuid))
+            return result
+        except HTTPException as exc:
+            logger.warning(
+                "tool_node_denied",
+                tool=tool_name,
+                status_code=exc.status_code,
+                detail=exc.detail,
+            )
+            return {"error": f"{exc.status_code}: {exc.detail}", "success": False}
+        except Exception as exc:
+            logger.error("tool_node_error", tool=tool_name, error=str(exc))
+            return {"error": str(exc), "success": False}
 
 
 # ── Condition node ────────────────────────────────────────────────────────────

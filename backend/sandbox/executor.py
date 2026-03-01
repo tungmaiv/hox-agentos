@@ -111,18 +111,28 @@ class SandboxExecutor:
                 read_only=SANDBOX_LIMITS["read_only"],
                 tmpfs=SANDBOX_LIMITS["tmpfs"],
                 labels=SANDBOX_LIMITS["labels"],
+                pids_limit=SANDBOX_LIMITS["pids_limit"],
+                user=SANDBOX_LIMITS["user"],
+                cap_drop=SANDBOX_LIMITS["cap_drop"],
                 # Container lifecycle
                 remove=True,           # auto-remove after run
                 stdout=True,
-                stderr=False,          # stderr goes to exception on non-zero exit
+                stderr=True,           # capture stderr even on zero exit code
                 timeout=effective_timeout,
             )
 
-            stdout = output.decode("utf-8") if isinstance(output, bytes) else str(output)
+            # When both stdout=True and stderr=True, Docker SDK returns a tuple.
+            if isinstance(output, tuple):
+                stdout_raw, stderr_raw = output
+            else:
+                stdout_raw, stderr_raw = output, b""
+
+            stdout = stdout_raw.decode("utf-8") if isinstance(stdout_raw, bytes) else str(stdout_raw)
+            stderr_text = stderr_raw.decode("utf-8") if isinstance(stderr_raw, bytes) else str(stderr_raw or "")
             logger.info("sandbox_execute_success", language=language, exit_code=0)
             return SandboxResult(
                 stdout=stdout,
-                stderr="",
+                stderr=stderr_text,
                 exit_code=0,
                 timed_out=False,
                 container_id=None,  # auto-removed, no ID available

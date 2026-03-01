@@ -12,6 +12,9 @@ SANDBOX_LIMITS: dict = {
     "read_only": True,                           # read-only root filesystem
     "tmpfs": {"/tmp": "size=64m,mode=777"},      # writable temp space only  # nosec B108 — intentional Docker tmpfs mount, not a host tempfile
     "labels": {"blitz.sandbox": "true"},         # for leaked container cleanup
+    "pids_limit": 64,                            # prevent fork bombs
+    "user": "nobody",                            # run as non-root
+    "cap_drop": ["ALL"],                         # drop all Linux capabilities
 }
 
 DEFAULT_TIMEOUT: int = 30    # seconds

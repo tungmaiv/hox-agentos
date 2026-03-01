@@ -33,9 +33,21 @@ def _make_state(user_id: str | None = None) -> WorkflowState:
 async def test_tool_node_returns_error_for_unknown_tool():
     """Unknown tool name returns error dict, does not raise."""
     from agents.node_handlers import get_handler
+
     handler = get_handler("tool_node")
     state = _make_state()
-    result = await handler({"tool_name": "nonexistent.tool", "params": {}}, state)
+
+    with patch("agents.node_handlers.async_session") as mock_session_factory, \
+         patch("agents.node_handlers.get_tool", new_callable=AsyncMock) as mock_get_tool:
+
+        mock_session = AsyncMock()
+        mock_session_factory.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session_factory.return_value.__aexit__ = AsyncMock(return_value=False)
+        # Simulate tool not found in registry
+        mock_get_tool.return_value = None
+
+        result = await handler({"tool_name": "nonexistent.tool", "params": {}}, state)
+
     assert result["success"] is False
     assert "not registered" in result["error"]
 
@@ -46,13 +58,24 @@ async def test_tool_node_calls_mcp_for_known_tool():
     from agents.node_handlers import get_handler
 
     mock_result = {"projects": ["Alpha", "Beta"], "count": 2}
+    known_tool = {
+        "name": "crm.list_projects",
+        "description": "List all CRM projects",
+        "required_permissions": ["crm:read"],
+        "sandbox_required": False,
+        "handler_type": "mcp",
+        "mcp_server": "crm",
+        "mcp_tool": "list_projects",
+    }
 
     with patch("agents.node_handlers.call_mcp_tool", new_callable=AsyncMock) as mock_call, \
-         patch("agents.node_handlers.async_session") as mock_session_factory:
+         patch("agents.node_handlers.async_session") as mock_session_factory, \
+         patch("agents.node_handlers.get_tool", new_callable=AsyncMock) as mock_get_tool:
 
         mock_session = AsyncMock()
         mock_session_factory.return_value.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session_factory.return_value.__aexit__ = AsyncMock(return_value=False)
+        mock_get_tool.return_value = known_tool
         mock_call.return_value = mock_result
 
         handler = get_handler("tool_node")
@@ -75,12 +98,24 @@ async def test_tool_node_returns_error_on_acl_denial():
     from agents.node_handlers import get_handler
     from fastapi import HTTPException
 
+    known_tool = {
+        "name": "crm.list_projects",
+        "description": "List all CRM projects",
+        "required_permissions": ["crm:read"],
+        "sandbox_required": False,
+        "handler_type": "mcp",
+        "mcp_server": "crm",
+        "mcp_tool": "list_projects",
+    }
+
     with patch("agents.node_handlers.call_mcp_tool", new_callable=AsyncMock) as mock_call, \
-         patch("agents.node_handlers.async_session") as mock_session_factory:
+         patch("agents.node_handlers.async_session") as mock_session_factory, \
+         patch("agents.node_handlers.get_tool", new_callable=AsyncMock) as mock_get_tool:
 
         mock_session = AsyncMock()
         mock_session_factory.return_value.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session_factory.return_value.__aexit__ = AsyncMock(return_value=False)
+        mock_get_tool.return_value = known_tool
         mock_call.side_effect = HTTPException(status_code=403, detail="Tool call denied by ACL")
 
         handler = get_handler("tool_node")

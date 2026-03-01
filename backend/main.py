@@ -4,6 +4,7 @@ Blitz AgentOS — FastAPI application factory.
 Routes are registered here after the security layer (plans 01-02, 01-03)
 provides JWT validation, RBAC, and Tool ACL.
 """
+import asyncio
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
@@ -70,6 +71,19 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
         structlog.get_logger(__name__).warning(
             "mcp_refresh_failed", error=str(exc)
+        )
+
+    # Remove any sandbox containers that survived a previous unclean shutdown.
+    # Runs in a thread to avoid blocking the event loop (Docker SDK is synchronous).
+    try:
+        from sandbox.executor import SandboxExecutor
+
+        await asyncio.to_thread(SandboxExecutor()._cleanup_leaked_containers)
+    except Exception as exc:
+        import structlog
+
+        structlog.get_logger(__name__).warning(
+            "sandbox_cleanup_startup_failed", error=str(exc)
         )
 
     yield
