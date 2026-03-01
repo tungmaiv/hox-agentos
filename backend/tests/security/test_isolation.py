@@ -26,6 +26,7 @@ from sqlalchemy.pool import StaticPool
 from sqlalchemy import select
 
 from core.db import Base
+import core.models  # noqa: F401 — registers all ORM models in Base.metadata before db_session fixture
 
 # Ensure CREDENTIAL_ENCRYPTION_KEY is set for crypto tests.
 # test_credentials.py sets this too; setdefault() is idempotent.
