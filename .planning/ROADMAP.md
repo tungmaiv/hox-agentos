@@ -182,10 +182,11 @@ Plans:
   4. UAT test 12 (Admin Create Skill via API) is implemented and passes in the full test suite
   5. Grafana → Telegram spend alert is live-tested end-to-end with a manual threshold breach
   6. `04.1-VERIFICATION.md` exists documenting both Phase 4.1 success criteria
+**Plans:** 2 plans
 
 Plans:
-- [ ] 10-01: ChannelAdapter isinstance enforcement + channel LangGraph continuity + delivery_router unification
-- [ ] 10-02: UAT test 12 + Grafana alert live test + Phase 4.1 VERIFICATION.md
+- [ ] 10-01-PLAN.md — ChannelAdapter isinstance enforcement + channel LangGraph continuity + delivery_router unification
+- [ ] 10-02-PLAN.md — UAT test 12 + Grafana alert live test + Phase 4.1 VERIFICATION.md
 
 ## Progress
 
