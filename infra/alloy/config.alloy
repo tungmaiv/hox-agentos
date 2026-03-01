@@ -1,0 +1,37 @@
+discovery.docker "local_containers" {
+  host = "unix:///var/run/docker.sock"
+}
+
+discovery.relabel "blitz_containers" {
+  targets = discovery.docker.local_containers.targets
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_project"]
+    regex         = "hox-agentos"
+    action        = "keep"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "service"
+  }
+}
+
+loki.source.docker "blitz_logs" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.relabel.blitz_containers.output
+  forward_to = [loki.write.loki_server.receiver]
+  labels     = { job = "blitz-agentos" }
+}
+
+loki.write "loki_server" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}
