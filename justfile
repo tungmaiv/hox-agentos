@@ -48,9 +48,9 @@ restart-svc service:
     docker compose restart {{service}}
 
 # ── Infrastructure groups ──────────────────────────────────────────────────────
-# Start core infra only (postgres, redis, litellm, mcp-crm) — no app services
+# Start core infra only (postgres, redis, litellm, mcp-crm, observability) — no app services
 infra:
-    docker compose up -d postgres redis litellm mcp-crm
+    docker compose up -d postgres redis litellm mcp-crm prometheus grafana loki alloy cadvisor
 
 # Start Celery workers only (requires infra already running)
 workers:
@@ -63,7 +63,7 @@ workers-stop:
 # Start infra + workers only (no Docker backend/frontend — run those locally)
 # Use with: just backend && just frontend
 stack:
-    docker compose up -d postgres redis litellm mcp-crm celery-worker celery-worker-default
+    docker compose up -d postgres redis litellm mcp-crm prometheus grafana loki alloy cadvisor celery-worker celery-worker-default
 
 # Stop the Docker frontend container (use when running frontend locally)
 frontend-docker-stop:
@@ -79,12 +79,12 @@ infra-reset:
     #!/usr/bin/env bash
     set -e
     echo "Stopping infra containers..."
-    docker compose stop postgres redis litellm mcp-crm
-    docker compose rm -f postgres redis litellm mcp-crm
+    docker compose stop postgres redis litellm mcp-crm prometheus grafana loki alloy cadvisor
+    docker compose rm -f postgres redis litellm mcp-crm prometheus grafana loki alloy cadvisor
     echo "Removing postgres data volume..."
     docker volume rm hox-agentos_postgres_data 2>/dev/null || echo "(volume already gone)"
     echo "Starting fresh infra..."
-    docker compose up -d postgres redis litellm mcp-crm
+    docker compose up -d postgres redis litellm mcp-crm prometheus grafana loki alloy cadvisor
     echo ""
     echo "Done. Run 'just migrate' to re-apply the schema."
 
