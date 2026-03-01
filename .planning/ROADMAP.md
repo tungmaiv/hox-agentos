@@ -164,7 +164,7 @@ Plans:
   1. Calling `patch_tool_status()` or `activate_tool_version()` immediately invalidates the tool cache — disabled tools are unavailable within the same request, not after 60s TTL expiry
   2. Each `get_llm()` call increments `blitz_llm_calls_total` — the Prometheus metric reads > 0 after agent conversations in a live environment
   3. `list_templates` endpoint docstring accurately describes its auth requirement (JWT required)
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
 - [x] 09-01-PLAN.md — Cache invalidation (patch_tool_status + activate_tool_version), list_templates docstring fix, regression tests
@@ -205,5 +205,5 @@ Plans:
 | 6. Extensibility Registries | v1.1 | 8/8 | ✅ Complete | 2026-03-01 |
 | 7. Hardening & Sandboxing | v1.1 | 4/4 | ✅ Complete | 2026-03-01 |
 | 8. Observability | v1.1 | 4/4 | ✅ Complete | 2026-03-01 |
-| 9. Tech Debt Code Fixes | v1.1 | 1/2 | 🚧 In Progress | — |
+| 9. Tech Debt Code Fixes | v1.1 | Complete    | 2026-03-01 | — |
 | 10. Optional Tech Debt Closure | v1.1 | 0/2 | ⬜ Pending | — |
