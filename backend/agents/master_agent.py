@@ -697,6 +697,7 @@ async def update_agent_last_seen(agent_name: str, session: AsyncSession) -> None
 def create_master_graph(
     session: AsyncSession | None = None,
     _db_agents: list[Any] | None = None,
+    checkpointer: MemorySaver | None = None,
 ) -> CompiledStateGraph:
     """
     Build and compile the master agent StateGraph with memory and sub-agent routing.
@@ -791,7 +792,7 @@ def create_master_graph(
     graph.add_edge("delivery_router", "save_memory")
     graph.add_edge("save_memory", END)
 
-    return graph.compile(checkpointer=MemorySaver())
+    return graph.compile(checkpointer=checkpointer or MemorySaver())
 
 
 async def create_master_graph_from_db(session: AsyncSession) -> CompiledStateGraph:

@@ -21,6 +21,7 @@ from typing import Any
 import httpx
 import structlog
 from langchain_core.messages import AIMessage, HumanMessage
+from langgraph.checkpoint.memory import MemorySaver
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -31,6 +32,11 @@ logger = structlog.get_logger(__name__)
 
 _PAIRING_CODE_LENGTH = 6
 _PAIRING_EXPIRY_MINUTES = 10
+
+# Module-level LangGraph checkpointer registry.
+# Keyed by str(conversation_id) — reused across _invoke_agent() calls for the same session.
+# Entries persist for the lifetime of the process (acceptable at single-node MVP scale).
+_channel_graph_savers: dict[str, MemorySaver] = {}
 
 
 # ── Module-level formatters (reusable from node_handlers without a gateway instance) ──
@@ -112,6 +118,32 @@ class ChannelGateway:
         self.sidecar_urls = sidecar_urls
 
     # -- Public API ---------------------------------------------------------
+
+    def register_adapter(self, name: str, adapter: object) -> None:
+        """Register a Python-level ChannelAdapter implementation.
+
+        Validates that adapter satisfies the ChannelAdapter protocol at registration
+        time. Raises TypeError immediately if the object does not conform.
+
+        The sidecar_urls mechanism is separate and unchanged — this method is for
+        future Python-level adapter registration only.
+
+        Args:
+            name: Channel identifier (e.g. "telegram", "whatsapp")
+            adapter: Object implementing async def send(msg: InternalMessage) -> None
+
+        Raises:
+            TypeError: If adapter does not satisfy ChannelAdapter protocol.
+        """
+        from channels.adapter import ChannelAdapter
+
+        if not isinstance(adapter, ChannelAdapter):
+            raise TypeError(
+                f"register_adapter({name!r}): adapter must implement ChannelAdapter protocol "
+                f"(requires 'async def send(msg: InternalMessage) -> None'), "
+                f"got {type(adapter).__name__!r}"
+            )
+        logger.info("channel_adapter_registered", name=name, adapter_type=type(adapter).__name__)
 
     def is_pairing_command(self, msg: InternalMessage) -> bool:
         """Check if the message is a /pair command."""
@@ -284,10 +316,10 @@ class ChannelGateway:
         session = await self.resolve_or_create_session(account, msg, db)
         msg.conversation_id = session.conversation_id
 
-        # Agent invocation -- placeholder, wired in 05-05
-        response = await self._invoke_agent(msg)
-        await self.send_outbound(response)
-        return response
+        # Agent invocation — delivers directly via delivery_router_node -> send_outbound()
+        await self._invoke_agent(msg)
+        # Return a placeholder for callers that inspect the return value
+        return self._make_reply(msg, "")
 
     async def send_outbound(self, msg: InternalMessage) -> None:
         """Send an outbound message to the appropriate channel sidecar."""
@@ -336,14 +368,17 @@ class ChannelGateway:
 
     # -- Private helpers ----------------------------------------------------
 
-    async def _invoke_agent(self, msg: InternalMessage) -> InternalMessage:
+    async def _invoke_agent(self, msg: InternalMessage) -> None:
         """
         Invoke the master agent for a channel message.
 
-        Uses the same LangGraph master graph as web chat, but collects the
-        final AI response as text instead of streaming via SSE.  All security
-        gates (RBAC, ACL) and memory isolation apply identically — user_id
-        comes from the ChannelAccount, not from request body.
+        Uses the same LangGraph master graph as web chat. Reuses a MemorySaver
+        keyed by conversation_id for multi-turn continuity within a session.
+        Sets delivery_targets to the inbound channel so delivery_router_node
+        delivers the response directly — no response text extraction needed.
+
+        Security: user_id comes from ChannelAccount (resolved from channel_accounts
+        table), never from request body. All gates apply identically to web chat.
 
         Timeout: 60 seconds per locked decision.
         """
@@ -367,9 +402,11 @@ class ChannelGateway:
                 user_id=str(msg.user_id),
                 error=str(exc),
             )
-            return self._make_reply(
+            error_reply = self._make_reply(
                 msg, "Sorry, I couldn't verify your permissions. Please try again later."
             )
+            await self.send_outbound(error_reply)
+            return
 
         # Build a minimal UserContext for contextvar injection
         user_context = {
@@ -389,45 +426,43 @@ class ChannelGateway:
         )
 
         try:
-            graph = create_master_graph()
+            # Reuse or create a MemorySaver for this conversation_id (multi-turn continuity)
+            saver_key = str(msg.conversation_id or uuid.uuid4())
+            if saver_key not in _channel_graph_savers:
+                _channel_graph_savers[saver_key] = MemorySaver()
+            saver = _channel_graph_savers[saver_key]
 
+            graph = create_master_graph(checkpointer=saver)
+
+            # Set delivery_targets so delivery_router_node routes to the correct channel
             initial_state = {
                 "messages": [HumanMessage(content=msg.text or "")],
+                "delivery_targets": [msg.channel.upper()],
             }
-            config = {"configurable": {"thread_id": str(msg.conversation_id or uuid.uuid4())}}
+            config = {"configurable": {"thread_id": saver_key}}
 
-            result = await asyncio.wait_for(
+            await asyncio.wait_for(
                 graph.ainvoke(initial_state, config=config),
                 timeout=60.0,
             )
-
-            # Extract the last AI message from the result
-            messages = result.get("messages", [])
-            response_text = ""
-            for m in reversed(messages):
-                if isinstance(m, AIMessage):
-                    response_text = str(m.content)
-                    break
-
-            if not response_text:
-                response_text = "I processed your message but have no response to share."
-
-            # Sub-agents return JSON for A2UI rendering on web.
-            # For channels (Telegram, etc.), format as human-readable text.
-            response_text = self._format_for_channel(response_text)
+            # Response delivered directly by delivery_router_node via send_outbound()
 
         except asyncio.TimeoutError:
             logger.error("channel_agent_timeout", channel=msg.channel, user_id=str(msg.user_id))
-            response_text = "Sorry, I couldn't process your request. Please try again."
+            error_reply = self._make_reply(
+                msg, "Sorry, I couldn't process your request. Please try again."
+            )
+            await self.send_outbound(error_reply)
         except Exception as exc:
             logger.error("channel_agent_error", channel=msg.channel, error=str(exc))
-            response_text = "Sorry, I couldn't process your request. Please try again."
+            error_reply = self._make_reply(
+                msg, "Sorry, I couldn't process your request. Please try again."
+            )
+            await self.send_outbound(error_reply)
         finally:
             current_user_ctx.reset(user_token)
             if conv_token is not None:
                 current_conversation_id_ctx.reset(conv_token)
-
-        return self._make_reply(msg, response_text)
 
     def _format_for_channel(self, text: str) -> str:
         """Delegate to module-level format_for_channel (backward compat)."""
