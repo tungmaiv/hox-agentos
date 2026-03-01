@@ -65,6 +65,7 @@ Progress: [████░░░░░░░░] 33% (1/3 Phase 8 plans)
 | Phase 07-hardening-and-sandboxing P03 | 62 | 1 tasks | 1 files |
 | Phase 07-hardening-and-sandboxing P04 | 134 | 1 tasks | 0 files |
 | Phase 08-observability P01 | 3 | 3 tasks | 7 files |
+| Phase 08-observability P02 | 4 | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -243,6 +244,8 @@ Recent decisions affecting current work:
 - [Phase 08-01]: GF_AUTH_DISABLE_LOGIN_FORM=false — local admin kept as fallback if Keycloak is down
 - [Phase 08-01]: Alloy uses loki.source.docker (not file tailing) — structlog writes to stdout, Docker socket collection
 - [Phase 08-01]: Datasource UIDs blitz-prometheus and blitz-loki are locked for dashboard panel datasourceRef stability
+- [Phase 08-02]: prometheus_client REGISTRY stores Counter family under base name without _total suffix — tests check blitz_tool_calls not blitz_tool_calls_total; _total suffix is sample-level only
+- [Phase 08-02]: Single-worker uvicorn requires no PROMETHEUS_MULTIPROC_DIR — default in-process registry works; add multiproc support only if switching to gunicorn multi-process
 
 ### Pending Todos
 
