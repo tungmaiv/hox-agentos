@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates daily work routines and lets them build custom automations without writing code -- all within an enterprise-secure, on-premise environment.
-**Current focus:** Phase 8 (Observability) — COMPLETE (4/4 plans complete, including gap closure)
+**Current focus:** Phase 9 (Tech Debt Code Fixes) — IN PROGRESS (1/2 plans complete)
 
 ## Current Position
 
-Milestone: v1.2 Phase 8 (Observability)
+Milestone: v1.2 Phase 9 (Tech Debt Code Fixes)
 Phases: 1, 2, 2.1, 3, 3.1, 4, 4.1, 5, 5.1, 6, 7, 8 — all complete
-Current Plan: Phase 8 Plan 04 complete — Grafana ops role Viewer→Editor gap closure (UAT test 7)
-Status: Phase 8 COMPLETE — full observability stack operational + ops users can access Explore
-Last activity: 2026-03-01 -- Phase 8 Plan 04: Fix Grafana ROLE_ATTRIBUTE_PATH ops branch Viewer→Editor
+Current Plan: Phase 9 Plan 01 complete — Tool cache invalidation fix (EXTD-03/05)
+Status: Phase 9 IN PROGRESS — Plan 01 complete (tool cache fix), Plan 02 pending
+Last activity: 2026-03-02 -- Phase 9 Plan 01: Fix tool status cache invalidation, add invalidate_tool_cache_entry()
 
-Progress: [████████████] 100% (4/4 Phase 8 plans)
+Progress: [██████] 50% (1/2 Phase 9 plans)
 
 ## Performance Metrics
 
@@ -256,6 +256,9 @@ Recent decisions affecting current work:
 
 0/day for LiteLLM spend — conservative default for ~100 user scale; configurable in alert_rules.yml
 - [Phase 08-04]: 08-04: Ops role maps to Editor (not Viewer) — Grafana 11 requires Editor+ for Explore access; Viewer silently hides Explore sidebar
+- [09-01]: invalidate_tool_cache_entry uses _tool_cache.pop(name, None) — targeted eviction, does NOT reset _tool_cache_timestamp; other cached entries remain valid
+- [09-01]: Cache key is tool.name (string) for all versions — all versions share one cache key; evicting by name correctly invalidates all version data simultaneously
+- [09-01]: bulk_status_update() not patched — requires pre-fetch of tool names before bulk UPDATE; deferred to phase 10 per RESEARCH.md open question
 
 ### Pending Todos
 
@@ -280,5 +283,5 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-01
-Stopped at: Phase 8 Plan 04 complete — Grafana ops role Viewer→Editor gap closure. SUMMARY at .planning/phases/08-observability/08-04-SUMMARY.md
+Last session: 2026-03-02
+Stopped at: Phase 9 Plan 01 complete — Tool cache invalidation fix. SUMMARY at .planning/phases/09-tech-debt-code-fixes/09-01-SUMMARY.md

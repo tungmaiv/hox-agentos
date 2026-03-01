@@ -167,7 +167,7 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 09-01-PLAN.md — Cache invalidation (patch_tool_status + activate_tool_version), list_templates docstring fix, regression tests
+- [x] 09-01-PLAN.md — Cache invalidation (patch_tool_status + activate_tool_version), list_templates docstring fix, regression tests
 - [ ] 09-02-PLAN.md — LLM metric wiring: blitz_llm_calls_total status label + _LLMMetricsCallback in get_llm(), update + new tests
 
 ### Phase 10: Optional Tech Debt Closure
@@ -205,5 +205,5 @@ Plans:
 | 6. Extensibility Registries | v1.1 | 8/8 | ✅ Complete | 2026-03-01 |
 | 7. Hardening & Sandboxing | v1.1 | 4/4 | ✅ Complete | 2026-03-01 |
 | 8. Observability | v1.1 | 4/4 | ✅ Complete | 2026-03-01 |
-| 9. Tech Debt Code Fixes | v1.1 | 0/2 | ⬜ Pending | — |
+| 9. Tech Debt Code Fixes | v1.1 | 1/2 | 🚧 In Progress | — |
 | 10. Optional Tech Debt Closure | v1.1 | 0/2 | ⬜ Pending | — |
