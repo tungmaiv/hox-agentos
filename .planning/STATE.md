@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates daily work routines and lets them build custom automations without writing code -- all within an enterprise-secure, on-premise environment.
-**Current focus:** Phase 7 (Hardening and Sandboxing) — IN PROGRESS (1/2 plans)
+**Current focus:** Phase 7 (Hardening and Sandboxing) — COMPLETE (2/2 plans)
 
 ## Current Position
 
-Milestone: v1.1 Phase 7 (Hardening and Sandboxing) — IN PROGRESS
-Phases: 1, 2, 2.1, 3, 3.1, 4, 4.1, 5, 5.1, 6 — all complete
-Current Plan: Phase 7 Plan 02 (07-02 — security hardening: BYPASSRLS, trufflehog, security scanner)
-Status: Phase 7 Plan 01 complete — Docker sandbox executor with resource limits, sandbox_required routing
-Last activity: 2026-03-01 -- Phase 7 Plan 01: SandboxExecutor, policies.py, 6 TDD tests, sandbox routing in node_handlers
+Milestone: v1.1 Phase 7 (Hardening and Sandboxing) — COMPLETE
+Phases: 1, 2, 2.1, 3, 3.1, 4, 4.1, 5, 5.1, 6, 7 — all complete
+Current Plan: Phase 7 complete — ready for next phase
+Status: Phase 7 Plan 02 complete — RLS migration 016, set_rls_user_id helper, cross-user isolation pen tests, bandit clean
+Last activity: 2026-03-01 -- Phase 7 Plan 02: RLS on 6 tables, 5 pen tests (4 pass + 1 skip pgvector), bandit 0 High severity
 
-Progress: [██░░░░░░░░░░] 50% (1/2 Phase 7 plans)
+Progress: [████████████] 100% (2/2 Phase 7 plans)
 
 ## Performance Metrics
 
@@ -61,6 +61,7 @@ Progress: [██░░░░░░░░░░] 50% (1/2 Phase 7 plans)
 | Phase 06-extensibility-registries P07 | 15 | 3 tasks | 16 files |
 | Phase 06-extensibility-registries P08 | 8 | 2 tasks | 5 files |
 | Phase 07-hardening-and-sandboxing P01 | 4 | 2 tasks | 7 files |
+| Phase 07-hardening-and-sandboxing P02 | 8 | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -219,6 +220,11 @@ Recent decisions affecting current work:
 - [Phase 07-01]: SandboxExecutor imported at module top level in node_handlers.py — lazy imports not patchable in tests (same pattern as call_mcp_tool)
 - [Phase 07-01]: sandbox routing added to node_handlers._handle_tool_node (not runtime.py) — runtime.py handles AG-UI streaming only; actual tool dispatch lives in node_handlers
 - [Phase 07-01]: ContainerError exit_code=137 or 'timeout' in stderr treated as timed_out=True — Docker sends SIGKILL (137) for OOM and timeout kills
+- [07-02]: RLS migration uses actual table names (memory_conversations, user_credentials) not CONTEXT.md conceptual names (conversations/turns, credential_store) — always verify __tablename__ in ORM models before writing migrations
+- [07-02]: FORCE ROW LEVEL SECURITY applies even to table owner; BYPASSRLS on blitz service role allows admin/maintenance queries without app.user_id being set (complementary, not contradictory)
+- [07-02]: MemoryFact isolation test skipped in SQLite — Vector(1024) DDL not supported by aiosqlite; use pgvector-only tests only in integration test suite with live PostgreSQL
+- [07-02]: trufflehog is a Go binary not a Python package — must be installed from GitHub releases, not PyPI; bandit covers Python-level secrets sufficiently for CI
+- [07-02]: bandit B108 nosec for /tmp in Docker sandbox policies — intentional Docker tmpfs mount config is a false positive for hardcoded temp directory warning
 
 ### Pending Todos
 
@@ -244,6 +250,6 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Phase 7 Plan 01 COMPLETE — Docker sandbox executor (sandbox/executor.py, sandbox/policies.py), 6 TDD tests with mocked Docker SDK, sandbox_required routing in agents/node_handlers._handle_tool_node. 581 tests passing. Ready for Phase 7 Plan 02 (security hardening).
-Resume file: .planning/phases/07-hardening-and-sandboxing/07-01-SUMMARY.md
+Stopped at: Phase 7 COMPLETE (2/2 plans) — RLS migration 016 on 6 tables, set_rls_user_id helper, 5 cross-user isolation pen tests (4 passing + 1 skipped pgvector), bandit 0 High severity. 586 tests passing. Phase 7 complete — ready for Phase 8 (Observability).
+Resume file: .planning/phases/07-hardening-and-sandboxing/07-02-SUMMARY.md
 Resume file: .planning/phases/06-extensibility-registries/06-08-SUMMARY.md

@@ -27,7 +27,7 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 - [x] **Phase 5: Scheduler and Channels** — Web chat enhancement, Telegram/WhatsApp/Teams adapters, channel identity resolution, ChannelAdapter protocol (completed 2026-02-28)
 - [ ] **Phase 5.1: Workflow Execution Wiring** (INSERTED) — Fix workflow→channel delivery, wire real agent_node dispatch, Celery worker role passthrough
 - [x] **Phase 6: Extensibility Registries** — Database-backed registries for agents/tools/skills/MCP servers, CRUD APIs, per-artifact permissions, skill runtime with /command support, admin dashboard UI, built-in skill seeds (completed 2026-03-01)
-- [ ] **Phase 7: Hardening and Sandboxing** — Docker sandbox execution, security audit, RLS policies, credential scanning, penetration testing
+- [x] **Phase 7: Hardening and Sandboxing** — Docker sandbox execution, security audit, RLS policies, credential scanning, penetration testing (completed 2026-03-01)
 - [ ] **Phase 8: Observability** — Grafana dashboards, Loki log aggregation, LiteLLM cost tracking
 
 ## Phase Details
@@ -166,5 +166,5 @@ Plans:
 | 5. Scheduler & Channels | v1.1 | 6/6 | ✅ Complete | 2026-02-28 |
 | 5.1. Workflow Execution Wiring (INSERTED) | v1.1 | 1/1 | ✅ Complete | 2026-02-28 |
 | 6. Extensibility Registries | v1.1 | 8/8 | ✅ Complete | 2026-03-01 |
-| 7. Hardening & Sandboxing | v1.1 | 0/2 | ○ Planned (2 plans, Wave 1 parallel) | — |
+| 7. Hardening & Sandboxing | 2/2 | Complete   | 2026-03-01 | — |
 | 8. Observability | v1.1 | 0/2 | ○ Not started | — |
