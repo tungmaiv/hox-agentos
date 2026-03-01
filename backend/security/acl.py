@@ -24,6 +24,7 @@ Audit invariant:
   The log entry contains ONLY: user_id, tool name, allowed decision, duration_ms.
   Credentials (access_token, refresh_token, password) are NEVER logged.
 """
+import time
 from uuid import UUID
 
 import structlog
@@ -31,6 +32,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.logging import get_audit_logger
+from core.metrics import blitz_tool_calls_total, blitz_tool_duration_seconds
 from core.models.tool_acl import ToolAcl
 
 logger = structlog.get_logger(__name__)
@@ -103,3 +105,6 @@ async def log_tool_call(
         allowed=allowed,
         duration_ms=duration_ms,
     )
+    # Prometheus metric increment (alongside existing structlog audit log)
+    blitz_tool_calls_total.labels(tool=tool_name, success=str(allowed)).inc()
+    blitz_tool_duration_seconds.labels(tool=tool_name).observe(duration_ms / 1000.0)

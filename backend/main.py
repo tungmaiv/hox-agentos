@@ -10,6 +10,7 @@ from typing import AsyncGenerator
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from api.routes import (
     admin_agents,
@@ -110,6 +111,10 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    # Prometheus metrics — GET /metrics (no auth, internal blitz-net only)
+    # Single-worker uvicorn: no PROMETHEUS_MULTIPROC_DIR needed.
+    Instrumentator().instrument(app).expose(app)
 
     # Health check — no auth, no /api prefix (reachable by load balancers)
     app.include_router(health.router)
