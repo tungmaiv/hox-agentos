@@ -18,6 +18,7 @@ human_verification:
   - test: "Log in via Keycloak SSO with an ops-role user, confirm Explore is visible in the left sidebar"
     expected: "Explore (compass icon) appears in the sidebar; selecting blitz-loki datasource and running {job=\"blitz-agentos\"} returns log entries"
     why_human: "Role-gated sidebar item requires a live Grafana + Keycloak SSO session with a real ops-role Keycloak user — cannot verify programmatically"
+    status: "APPROVED (2026-03-02) — ops user confirmed Explore visible after docker compose up -d grafana recreated container with new ROLE_ATTRIBUTE_PATH"
   - test: "Trigger a daily spend threshold breach by sending many LLM requests"
     expected: "Telegram message delivered to GRAFANA_ALERT_CHAT_ID within 5 minutes of threshold breach"
     why_human: "Requires running Grafana, live LiteLLM spend metrics, configured Telegram bot token, and real Telegram delivery"
@@ -227,6 +228,7 @@ The fix is structural and verified in the config. The final confirmation — an 
 **Test:** Open http://localhost:3001. Click "Sign in with Keycloak". Log in as a Keycloak user with the `ops` role (not the local admin/admin account). After login, inspect the left sidebar.
 **Expected:** The Explore item (compass icon) is visible in the sidebar. Clicking Explore, selecting "blitz-loki" datasource, and running `{job="blitz-agentos"}` returns log entries (similar to the ~517+ entries confirmed during admin testing).
 **Why human:** Role-gated sidebar feature requires a live Grafana instance with a fresh SSO session using a real ops-role Keycloak user. The config fix is verified; this confirms the Grafana runtime applies the new env var correctly.
+**Checkpoint status:** APPROVED (2026-03-02) — ops user confirmed Explore visible in sidebar. Note: initial `docker compose restart` did not reload env vars; required `docker compose up -d grafana` to recreate container.
 
 ### 3. Telegram Alert Delivery
 

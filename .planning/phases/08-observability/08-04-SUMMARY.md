@@ -73,10 +73,13 @@ Each task was committed atomically:
 
 ## Deviations from Plan
 
-None - plan executed exactly as written.
+**`docker compose restart` vs `docker compose up -d`:** The plan instructed `docker compose restart grafana`. After execution the ops user still could not see Explore — `restart` reuses the container's frozen env from when it was first created; the new `ROLE_ATTRIBUTE_PATH` value was not active. Fix: `docker compose up -d grafana` (recreates the container, re-reads docker-compose.yml). Human verification then passed.
+
+**Lesson:** Always use `docker compose up -d <svc>` after changing env vars in docker-compose.yml. `restart` is only correct for config-file changes (e.g., mounted grafana.ini changes).
 
 ## Issues Encountered
-None.
+
+**`docker compose restart` does not reload env vars** — human verification revealed the fix was not active (`docker exec hox-agentos-grafana-1 env | grep ROLE_ATTRIBUTE` still showed `'Viewer'`). Root cause: `restart` reuses the container image's frozen env. Resolved with `docker compose up -d grafana`. UAT confirmed passed after recreation.
 
 ## User Setup Required
 None - no external service configuration required.

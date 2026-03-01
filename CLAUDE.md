@@ -785,6 +785,7 @@ Hard-won discoveries from prior sessions. Knowing these saves hours of debugging
 | Gotcha | Symptom | Fix |
 |--------|---------|-----|
 | `classifyHandoffIfNeeded` error in executor return | Executor reports "failed" with runtime error | Claude Code bug — spot-check SUMMARY.md + commits; if present, treat as success |
+| `docker compose restart <svc>` does NOT reload env vars | New docker-compose.yml env value silently ignored; old value still active | Use `docker compose up -d <svc>` to recreate container and pick up new env vars |
 | `alembic.ini` script_location must be relative | Portability fails across machines | Use `script_location = alembic` (relative), not absolute path |
 | `conftest.py` must call `configure_logging()` at session start | structlog config order failures in full suite | Add to session-scoped fixture in `conftest.py` |
 | `os.environ.setdefault()` in conftest for test env vars | Real `.env` values overridden in tests | Use `setdefault()` not `os.environ[key] = value` |
