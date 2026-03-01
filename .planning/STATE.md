@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates daily work routines and lets them build custom automations without writing code -- all within an enterprise-secure, on-premise environment.
-**Current focus:** Phase 10 (Optional Tech Debt Closure) — IN PROGRESS (1/2 plans complete)
+**Current focus:** Phase 10 (Optional Tech Debt Closure) — COMPLETE (2/2 plans complete)
 
 ## Current Position
 
 Milestone: v1.2 Phase 10 (Optional Tech Debt Closure)
 Phases: 1, 2, 2.1, 3, 3.1, 4, 4.1, 5, 5.1, 6, 7, 8, 9, 10 — 9 complete, 10 in progress
-Current Plan: Phase 10 Plan 01 complete — Channel tech debt closure (register_adapter, _channel_graph_savers, delivery_targets)
-Status: Phase 10 IN PROGRESS — 1/2 plans done
-Last activity: 2026-03-02 -- Phase 10 Plan 01: register_adapter() isinstance enforcement, MemorySaver per-conversation reuse, delivery_targets unification
+Current Plan: Phase 10 Plan 02 complete — UAT test 12, Grafana alert live test, Phase 4.1 VERIFICATION.md
+Status: Phase 10 COMPLETE — 2/2 plans done
+Last activity: 2026-03-02 -- Phase 10 Plan 02: test_uat_12_admin_create_skill, Grafana→Telegram alert confirmed, 04.1-VERIFICATION.md created, contact_points.yml chatid fix
 
-Progress: [██████] 50% (1/2 Phase 10 plans)
+Progress: [████████████] 100% (2/2 Phase 10 plans)
 
 ## Performance Metrics
 
@@ -68,6 +68,7 @@ Progress: [██████] 50% (1/2 Phase 10 plans)
 | Phase 08-observability P03 | ~70min | 3 tasks (2 auto + 1 human-verify) | 4 files |
 | Phase 08-observability P04 | 1min | 1 task | 1 file |
 | Phase 10-optional-tech-debt-closure P01 | 3 | 2 tasks | 4 files |
+| Phase 10-optional-tech-debt-closure P02 | 51 | 2 tasks + 1 human-verify | 4 files |
 
 ## Accumulated Context
 
@@ -266,6 +267,8 @@ Recent decisions affecting current work:
 - [Phase 10-01]: _invoke_agent() returns None — delivery_targets=[msg.channel.upper()] routes response through delivery_router_node directly; eliminates AI text extraction code path
 - [Phase 10-01]: lazy imports in _invoke_agent() must be patched at definition site — security.keycloak_client.fetch_user_realm_roles not channels.gateway.fetch_user_realm_roles
 - [Phase 10-01]: _channel_graph_savers is process-lifetime module-level dict; create_master_graph() checkpointer param uses 'or MemorySaver()' for backward compat
+- [Phase 10-02]: Grafana contact_points.yml chatid must be hardcoded as quoted string — env-var substitution of negative integers gets re-parsed as YAML number, breaking JSON unmarshal to string; bottoken can safely use ${TELEGRAM_BOT_TOKEN} env-var
+- [Phase 10-02]: Grafana alert for:5m pending period prevents live threshold-lowering tests from being conclusive — use Grafana test notification API to validate contact point delivery pipeline end-to-end
 
 ### Pending Todos
 
@@ -291,4 +294,4 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Phase 10 Plan 01 complete — Channel tech debt closure (register_adapter, _channel_graph_savers, delivery_targets). SUMMARY at .planning/phases/10-optional-tech-debt-closure/10-01-SUMMARY.md
+Stopped at: Phase 10 Plan 02 complete — Phase 10 FULLY COMPLETE (2/2 plans). SUMMARY at .planning/phases/10-optional-tech-debt-closure/10-02-SUMMARY.md

@@ -30,7 +30,7 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 - [x] **Phase 7: Hardening and Sandboxing** — Docker sandbox execution, security audit, RLS policies, credential scanning, penetration testing (completed 2026-03-01)
 - [x] **Phase 8: Observability** — Grafana dashboards, Loki log aggregation, LiteLLM cost tracking (completed 2026-03-01)
 - [x] **Phase 9: Tech Debt Code Fixes** — Cache invalidation on tool status/version changes, LLM metric instrumentation, docstring correctness
-- [ ] **Phase 10: Optional Tech Debt Closure** — ChannelAdapter runtime enforcement, channel LangGraph continuity, delivery_router unification, UAT test 12, Grafana alert live test, Phase 4.1 VERIFICATION.md
+- [x] **Phase 10: Optional Tech Debt Closure** — ChannelAdapter runtime enforcement, channel LangGraph continuity, delivery_router unification, UAT test 12, Grafana alert live test, Phase 4.1 VERIFICATION.md (completed 2026-03-01)
 
 ## Phase Details
 
@@ -182,7 +182,7 @@ Plans:
   4. UAT test 12 (Admin Create Skill via API) is implemented and passes in the full test suite
   5. Grafana → Telegram spend alert is live-tested end-to-end with a manual threshold breach
   6. `04.1-VERIFICATION.md` exists documenting both Phase 4.1 success criteria
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 10-01-PLAN.md — ChannelAdapter isinstance enforcement + channel LangGraph continuity + delivery_router unification
@@ -207,4 +207,4 @@ Plans:
 | 7. Hardening & Sandboxing | v1.1 | 4/4 | ✅ Complete | 2026-03-01 |
 | 8. Observability | v1.1 | 4/4 | ✅ Complete | 2026-03-01 |
 | 9. Tech Debt Code Fixes | v1.1 | Complete    | 2026-03-01 | — |
-| 10. Optional Tech Debt Closure | 1/2 | In Progress|  | — |
+| 10. Optional Tech Debt Closure | 2/2 | Complete   | 2026-03-01 | — |
