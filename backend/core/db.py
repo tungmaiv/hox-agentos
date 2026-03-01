@@ -8,9 +8,15 @@ Usage:
 FastAPI dependency:
     async def endpoint(db: AsyncSession = Depends(get_db)):
         ...
+
+RLS helper:
+    await set_rls_user_id(session, user_id)
+    # Call before any user-scoped query to populate app.user_id for RLS policies.
 """
 from collections.abc import AsyncGenerator
+from uuid import UUID
 
+import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
@@ -38,3 +44,29 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """FastAPI dependency for injecting a database session."""
     async with async_session() as session:
         yield session
+
+
+async def set_rls_user_id(session: AsyncSession, user_id: UUID) -> None:
+    """
+    Set the PostgreSQL session-local variable app.user_id for RLS policy evaluation.
+
+    MUST be called before any user-scoped DB query in route handlers and Celery tasks.
+    This populates the app.user_id context variable that RLS policies read via:
+        current_setting('app.user_id', true)::uuid
+
+    Uses SET LOCAL so the setting is scoped to the current transaction and does not
+    leak across connection pool reuse.
+
+    Args:
+        session: The active async DB session.
+        user_id: The authenticated user's UUID from the JWT (Gate 1).
+
+    Example:
+        async with async_session() as session:
+            await set_rls_user_id(session, current_user.id)
+            result = await session.execute(select(MemoryFact).where(...))
+    """
+    await session.execute(
+        sa.text("SET LOCAL app.user_id = :uid"),
+        {"uid": str(user_id)},
+    )
