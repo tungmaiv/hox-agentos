@@ -28,7 +28,7 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 - [ ] **Phase 5.1: Workflow Execution Wiring** (INSERTED) — Fix workflow→channel delivery, wire real agent_node dispatch, Celery worker role passthrough
 - [x] **Phase 6: Extensibility Registries** — Database-backed registries for agents/tools/skills/MCP servers, CRUD APIs, per-artifact permissions, skill runtime with /command support, admin dashboard UI, built-in skill seeds (completed 2026-03-01)
 - [x] **Phase 7: Hardening and Sandboxing** — Docker sandbox execution, security audit, RLS policies, credential scanning, penetration testing (completed 2026-03-01)
-- [ ] **Phase 8: Observability** — Grafana dashboards, Loki log aggregation, LiteLLM cost tracking
+- [x] **Phase 8: Observability** — Grafana dashboards, Loki log aggregation, LiteLLM cost tracking (completed 2026-03-01)
 
 ## Phase Details
 
@@ -170,4 +170,4 @@ Plans:
 | 5.1. Workflow Execution Wiring (INSERTED) | v1.1 | 1/1 | ✅ Complete | 2026-02-28 |
 | 6. Extensibility Registries | v1.1 | 8/8 | ✅ Complete | 2026-03-01 |
 | 7. Hardening & Sandboxing | 4/4 | Complete    | 2026-03-01 | — |
-| 8. Observability | 2/3 | In Progress|  | — |
+| 8. Observability | 4/4 | Complete   | 2026-03-01 | — |

@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates daily work routines and lets them build custom automations without writing code -- all within an enterprise-secure, on-premise environment.
-**Current focus:** Phase 8 (Observability) — COMPLETE (3/3 plans complete)
+**Current focus:** Phase 8 (Observability) — COMPLETE (4/4 plans complete, including gap closure)
 
 ## Current Position
 
 Milestone: v1.2 Phase 8 (Observability)
 Phases: 1, 2, 2.1, 3, 3.1, 4, 4.1, 5, 5.1, 6, 7, 8 — all complete
-Current Plan: Phase 8 Plan 03 complete — Grafana dashboards (Ops + Costs) and Telegram alerting provisioned
-Status: Phase 8 COMPLETE — full observability stack operational (5 services + /metrics + 2 dashboards + alerting)
-Last activity: 2026-03-01 -- Phase 8 Plan 03: Grafana Ops Dashboard (8 panels), Costs Dashboard (6 panels), Telegram alert rule
+Current Plan: Phase 8 Plan 04 complete — Grafana ops role Viewer→Editor gap closure (UAT test 7)
+Status: Phase 8 COMPLETE — full observability stack operational + ops users can access Explore
+Last activity: 2026-03-01 -- Phase 8 Plan 04: Fix Grafana ROLE_ATTRIBUTE_PATH ops branch Viewer→Editor
 
-Progress: [████████████] 100% (3/3 Phase 8 plans)
+Progress: [████████████] 100% (4/4 Phase 8 plans)
 
 ## Performance Metrics
 
@@ -66,6 +66,7 @@ Progress: [████████████] 100% (3/3 Phase 8 plans)
 | Phase 07-hardening-and-sandboxing P04 | 134 | 1 tasks | 0 files |
 | Phase 08-observability P02 | 199 | 3 tasks | 8 files |
 | Phase 08-observability P03 | ~70min | 3 tasks (2 auto + 1 human-verify) | 4 files |
+| Phase 08-observability P04 | 1min | 1 task | 1 file |
 
 ## Accumulated Context
 
@@ -251,7 +252,10 @@ Recent decisions affecting current work:
 - [Phase 08-03]: Dashboard UIDs blitz-ops and blitz-costs are stable identifiers — Grafana upserts on restart without duplicates
 - [Phase 08-03]: Telegram chosen for alert delivery — in-system, no external dependency; uses TELEGRAM_BOT_TOKEN + GRAFANA_ALERT_CHAT_ID env vars
 - [Phase 08-03]: LiteLLM and Backend DOWN in service uptime panel is expected — they run on host, not Docker Compose; up{} returns 0 for these Prometheus targets
-- [Phase 08-03]: Alert threshold $10/day for LiteLLM spend — conservative default for ~100 user scale; configurable in alert_rules.yml
+- [Phase 08-03]: Alert threshold ### Decisions
+
+0/day for LiteLLM spend — conservative default for ~100 user scale; configurable in alert_rules.yml
+- [Phase 08-04]: 08-04: Ops role maps to Editor (not Viewer) — Grafana 11 requires Editor+ for Explore access; Viewer silently hides Explore sidebar
 
 ### Pending Todos
 
@@ -277,4 +281,4 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Phase 8 Plan 03 complete — all 3 Phase 8 plans done. Full observability stack verified live by human. SUMMARY at .planning/phases/08-observability/08-03-SUMMARY.md
+Stopped at: Phase 8 Plan 04 complete — Grafana ops role Viewer→Editor gap closure. SUMMARY at .planning/phases/08-observability/08-04-SUMMARY.md
