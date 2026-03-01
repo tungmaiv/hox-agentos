@@ -9,12 +9,14 @@ All queries are parameterized on user_id extracted from JWT by get_current_user(
 user_id is NEVER accepted from request body or agent state input.
 Cross-user reads are physically impossible at the query level.
 """
+import time
 from uuid import UUID
 
 import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core.metrics import blitz_memory_duration_seconds, blitz_memory_ops_total
 from core.models.memory import ConversationTurn
 
 logger = structlog.get_logger(__name__)
@@ -37,6 +39,7 @@ async def load_recent_turns(
     even if they share a conversation_id (which the UUID distribution makes
     practically impossible, but the query enforces it anyway).
     """
+    _t0 = time.monotonic()
     result = await session.execute(
         select(ConversationTurn)
         .where(
@@ -47,6 +50,8 @@ async def load_recent_turns(
         .limit(n)
     )
     turns = result.scalars().all()
+    blitz_memory_ops_total.labels(operation="read").inc()
+    blitz_memory_duration_seconds.labels(operation="read").observe(time.monotonic() - _t0)
     # Reverse to chronological order (DESC retrieves newest first, we want oldest first)
     return list(reversed(turns))
 
@@ -81,5 +86,6 @@ async def save_turn(
     # Deliberately no commit() here — the caller owns the transaction.
     # Batch callers (e.g. _save_memory_node) commit once after the loop for
     # atomicity. Single callers must commit themselves after calling save_turn.
+    blitz_memory_ops_total.labels(operation="write").inc()
     logger.debug("turn_saved", role=role, conversation_id=str(conversation_id))
     return turn

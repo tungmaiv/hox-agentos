@@ -11,6 +11,7 @@ All queries are parameterized on user_id from JWT context — never from request
 Memory isolation: WHERE user_id = $1 is present in every SELECT that touches user data.
 """
 
+import time
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -18,6 +19,7 @@ import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core.metrics import blitz_memory_duration_seconds, blitz_memory_ops_total
 from core.models.memory_long_term import MemoryFact
 
 logger = structlog.get_logger(__name__)
@@ -37,6 +39,7 @@ async def save_fact(
     """
     fact = MemoryFact(user_id=user_id, content=content, source=source)
     session.add(fact)
+    blitz_memory_ops_total.labels(operation="write").inc()
     logger.debug("fact_saved", user_id=str(user_id), source=source)
     return fact
 
@@ -77,6 +80,7 @@ async def search_facts(
 
     Uses pgvector cosine distance operator (<=>).
     """
+    _t0 = time.monotonic()
     result = await session.execute(
         select(MemoryFact)
         .where(
@@ -88,5 +92,7 @@ async def search_facts(
         .limit(k)
     )
     facts = list(result.scalars().all())
+    blitz_memory_ops_total.labels(operation="search").inc()
+    blitz_memory_duration_seconds.labels(operation="search").observe(time.monotonic() - _t0)
     logger.debug("facts_searched", user_id=str(user_id), returned=len(facts))
     return facts
