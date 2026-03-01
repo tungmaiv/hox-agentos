@@ -6,7 +6,7 @@
  * - Left (45%): CopilotChat for conversational AI
  * - Right (55%): Live preview of the artifact being built
  */
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { CopilotKit } from "@copilotkit/react-core";
 import { CopilotChat } from "@copilotkit/react-ui";
 import { useCoAgentStateRender } from "@copilotkit/react-core";
@@ -49,31 +49,70 @@ function BuilderInner() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  // Subscribe to co-agent state updates for live preview
+  // Ref to buffer co-agent state updates — avoids setState during render phase
+  const pendingStateRef = useRef<BuilderState | null>(null);
+
+  // Subscribe to co-agent state updates for live preview.
+  // The render callback runs during React's render phase, so we buffer
+  // state into a ref and apply it via useEffect to avoid the
+  // "Cannot update a component while rendering a different component" error.
   useCoAgentStateRender<BuilderState>({
     name: "artifact_builder",
     render: ({ state }) => {
       if (state) {
-        setBuilderState({
+        pendingStateRef.current = {
           artifact_type: state.artifact_type ?? null,
           artifact_draft: state.artifact_draft ?? null,
           validation_errors: state.validation_errors ?? [],
           is_complete: state.is_complete ?? false,
-        });
+        };
       }
       return null;
     },
   });
 
-  // Navigation guard: warn on unsaved draft
+  // Apply buffered state outside the render phase
   useEffect(() => {
-    const handler = (e: BeforeUnloadEvent) => {
-      if (builderState.artifact_draft && !saveSuccess) {
+    const id = setInterval(() => {
+      if (pendingStateRef.current) {
+        setBuilderState(pendingStateRef.current);
+        pendingStateRef.current = null;
+      }
+    }, 100);
+    return () => clearInterval(id);
+  }, []);
+
+  // Navigation guard: warn on unsaved draft.
+  // - beforeunload: browser close / refresh / external URL
+  // - click capture on <a>: in-app SPA navigation (Next.js <Link>)
+  useEffect(() => {
+    if (!builderState.artifact_draft || saveSuccess) return;
+
+    // Browser close / refresh
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    // In-app navigation: intercept link clicks in capture phase
+    // (before Next.js router processes them)
+    const handleClick = (e: MouseEvent) => {
+      const anchor = (e.target as HTMLElement).closest("a");
+      if (!anchor) return;
+      const href = anchor.getAttribute("href");
+      if (!href || href.startsWith("#") || href === window.location.pathname) return;
+
+      if (!window.confirm("Changes you made may not be saved. Leave anyway?")) {
         e.preventDefault();
+        e.stopPropagation();
       }
     };
-    window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
+    document.addEventListener("click", handleClick, true);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      document.removeEventListener("click", handleClick, true);
+    };
   }, [builderState.artifact_draft, saveSuccess]);
 
   const handleSave = useCallback(async () => {
@@ -101,9 +140,23 @@ function BuilderInner() {
           string,
           unknown
         >;
-        throw new Error(
-          (body.detail as string | undefined) ?? `HTTP ${res.status}`
-        );
+        // FastAPI returns Pydantic validation errors as:
+        //   {"detail": [{"loc": [...], "msg": "...", "type": "..."}]}
+        // Handle both string and array-of-objects formats.
+        let errorMsg = `HTTP ${res.status}`;
+        if (typeof body.detail === "string") {
+          errorMsg = body.detail;
+        } else if (Array.isArray(body.detail)) {
+          errorMsg = (body.detail as Array<Record<string, unknown>>)
+            .map((e) => {
+              const loc = Array.isArray(e.loc)
+                ? (e.loc as string[]).join(" > ")
+                : "";
+              return loc ? `${loc}: ${e.msg}` : String(e.msg ?? e);
+            })
+            .join("; ");
+        }
+        throw new Error(errorMsg);
       }
 
       setSaveSuccess(true);

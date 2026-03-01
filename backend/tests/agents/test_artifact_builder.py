@@ -4,6 +4,18 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
 
+def _mock_config():
+    """Return a minimal RunnableConfig for testing nodes that accept config."""
+    return {"callbacks": []}
+
+
+@pytest.fixture(autouse=True)
+def _patch_emit_state():
+    """Patch copilotkit_emit_state for all tests — prevents actual event dispatch."""
+    with patch("agents.artifact_builder.copilotkit_emit_state", new_callable=AsyncMock):
+        yield
+
+
 def test_artifact_builder_state_has_required_fields():
     """ArtifactBuilderState must declare all fields from the design."""
     from agents.state.artifact_builder_types import ArtifactBuilderState
@@ -221,7 +233,7 @@ async def test_gather_type_detects_tool_from_message():
             "validation_errors": [],
             "is_complete": False,
         }
-        result = await _gather_type_node(state)
+        result = await _gather_type_node(state, _mock_config())
 
     assert result["artifact_type"] == "tool"
     assert result["artifact_draft"] == {}
@@ -240,7 +252,7 @@ async def test_validate_and_present_valid_draft():
         "validation_errors": [],
         "is_complete": True,
     }
-    result = await _validate_and_present_node(state)
+    result = await _validate_and_present_node(state, _mock_config())
 
     assert result["is_complete"] is True
     assert result["validation_errors"] == []
@@ -259,7 +271,7 @@ async def test_validate_and_present_invalid_draft():
         "validation_errors": [],
         "is_complete": True,
     }
-    result = await _validate_and_present_node(state)
+    result = await _validate_and_present_node(state, _mock_config())
 
     assert result["is_complete"] is False
     assert len(result["validation_errors"]) > 0
@@ -309,6 +321,85 @@ def test_extract_draft_no_code_block_returns_current():
     from agents.artifact_builder import _extract_draft_from_response
     result = _extract_draft_from_response("Just some text", {"name": "unchanged"})
     assert result == {"name": "unchanged"}
+
+
+def test_extract_draft_fixes_triple_quoted_strings():
+    """LLMs sometimes use Python triple-quotes for multiline values — we fix them."""
+    from agents.artifact_builder import _extract_draft_from_response
+
+    content = (
+        '```json\n'
+        '{\n'
+        '  "name": "daily_summary",\n'
+        '  "skill_type": "instructional",\n'
+        '  "instruction_markdown": """\n'
+        '# Guide\n'
+        '## Step 1\n'
+        'Do something.\n'
+        '"""\n'
+        '}\n'
+        '```'
+    )
+    result = _extract_draft_from_response(content, {})
+    assert result["name"] == "daily_summary"
+    assert result["skill_type"] == "instructional"
+    assert "# Guide" in result["instruction_markdown"]
+    assert "Step 1" in result["instruction_markdown"]
+
+
+def test_extract_draft_prefers_largest_json_block():
+    """When multiple JSON blocks exist, pick the largest (complete definition)."""
+    from agents.artifact_builder import _extract_draft_from_response
+
+    content = (
+        'Here is the input schema:\n'
+        '```json\n{"type": "object", "properties": {"q": {"type": "string"}}}\n```\n'
+        '\nAnd the full definition:\n'
+        '```json\n{"name": "crm_search", "handler_type": "backend", '
+        '"input_schema": {"type": "object", "properties": {"q": {"type": "string"}}}}\n```\n'
+    )
+    result = _extract_draft_from_response(content, {})
+    # Should pick the larger block (complete definition), not the input_schema
+    assert result["name"] == "crm_search"
+    assert result["handler_type"] == "backend"
+    assert "input_schema" in result
+
+
+# ---------------------------------------------------------------------------
+# gather_details validation-on-complete tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_gather_details_validates_before_marking_complete():
+    """When LLM says DRAFT_COMPLETE but draft is invalid, is_complete stays False."""
+    from langchain_core.messages import HumanMessage, AIMessage
+
+    # Draft with DRAFT_COMPLETE marker but missing required 'name' field
+    mock_response = AIMessage(
+        content='```json\n{"handler_type": "backend", "description": "search stuff"}\n```\n\n[DRAFT_COMPLETE]'
+    )
+
+    with patch("agents.artifact_builder.get_llm") as mock_get_llm:
+        mock_llm = MagicMock()
+        mock_llm.ainvoke = AsyncMock(return_value=mock_response)
+        mock_get_llm.return_value = mock_llm
+
+        from agents.artifact_builder import _gather_details_node
+
+        state = {
+            "messages": [HumanMessage(content="That looks good")],
+            "artifact_type": "tool",
+            "artifact_draft": {},
+            "validation_errors": [],
+            "is_complete": False,
+        }
+        result = await _gather_details_node(state, _mock_config())
+
+    # Should NOT be marked complete since 'name' is missing
+    assert result["is_complete"] is False
+    assert len(result["validation_errors"]) > 0
+    assert any("name" in e.lower() for e in result["validation_errors"])
 
 
 # ---------------------------------------------------------------------------
@@ -368,7 +459,7 @@ async def test_gather_details_extracts_draft():
             "validation_errors": [],
             "is_complete": False,
         }
-        result = await _gather_details_node(state)
+        result = await _gather_details_node(state, _mock_config())
 
     assert result["artifact_draft"]["name"] == "crm_search"
     assert result["is_complete"] is False
@@ -397,7 +488,7 @@ async def test_gather_details_detects_draft_complete_marker():
             "validation_errors": [],
             "is_complete": False,
         }
-        result = await _gather_details_node(state)
+        result = await _gather_details_node(state, _mock_config())
 
     assert result["is_complete"] is True
     assert result["artifact_draft"]["name"] == "test_agent"
@@ -422,7 +513,7 @@ async def test_gather_details_llm_error_returns_friendly_message():
             "validation_errors": [],
             "is_complete": False,
         }
-        result = await _gather_details_node(state)
+        result = await _gather_details_node(state, _mock_config())
 
     assert "issue" in result["messages"][0].content.lower() or "encountered" in result["messages"][0].content.lower()
     assert result["artifact_draft"] == {"name": "existing"}
@@ -447,6 +538,6 @@ async def test_gather_type_llm_error_returns_friendly_message():
             "validation_errors": [],
             "is_complete": False,
         }
-        result = await _gather_type_node(state)
+        result = await _gather_type_node(state, _mock_config())
 
     assert "trouble" in result["messages"][0].content.lower() or "having" in result["messages"][0].content.lower()

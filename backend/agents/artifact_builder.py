@@ -19,12 +19,15 @@ import re
 
 import structlog
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.runnables import RunnableConfig
+from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
 from agents.artifact_builder_prompts import get_gather_type_prompt, get_system_prompt
 from agents.artifact_builder_validation import validate_artifact_draft
 from agents.state.artifact_builder_types import ArtifactBuilderState
+from copilotkit.langgraph import copilotkit_emit_state
 from core.config import get_llm
 
 logger = structlog.get_logger(__name__)
@@ -61,27 +64,82 @@ def _detect_artifact_type(text: str) -> str | None:
     return None
 
 
+def _fix_triple_quotes(text: str) -> str:
+    """Convert Python-style triple-quoted strings to valid JSON strings.
+
+    LLMs sometimes output ``"key": \"\"\"\nmultiline\n\"\"\"`` which is
+    invalid JSON.  We replace each ``\"\"\"...\"\"\"`` span with a properly
+    escaped JSON string using ``\\n`` for newlines.
+    """
+    def _replacer(m: re.Match) -> str:
+        inner = m.group(1)
+        escaped = (
+            inner
+            .replace("\\", "\\\\")
+            .replace('"', '\\"')
+            .replace("\n", "\\n")
+            .replace("\t", "\\t")
+        )
+        return f'"{escaped}"'
+
+    return re.sub(r'"""([\s\S]*?)"""', _replacer, text)
+
+
 def _extract_draft_from_response(content: str, current_draft: dict) -> dict:
     """Try to extract a JSON object from the AI response to update the draft.
 
-    Looks for ```json ... ``` code blocks. Falls back to current_draft if none found.
+    Looks for ```json ... ``` code blocks.  When the LLM outputs multiple
+    code blocks (e.g. input_schema, output_schema, full definition), we
+    pick the **largest** dict (by serialised length) — that is almost always
+    the complete artifact definition rather than a nested sub-schema.
+
+    If a code block contains Python-style triple-quoted strings (common LLM
+    mistake for multiline content like instruction_markdown), we attempt to
+    fix them before parsing.
+
+    Falls back to current_draft if no valid JSON block is found.
     """
     pattern = r"```(?:json)?\s*\n?([\s\S]*?)\n?```"
     matches = re.findall(pattern, content)
 
-    for match in matches:
-        try:
-            parsed = json.loads(match.strip())
-            if isinstance(parsed, dict):
-                merged = {**current_draft, **parsed}
-                return merged
-        except (json.JSONDecodeError, ValueError):
-            continue
+    best: dict | None = None
+    best_size = -1
 
+    for match in matches:
+        raw = match.strip()
+        # Try parsing as-is first, then with triple-quote fix
+        for attempt in (raw, _fix_triple_quotes(raw)):
+            try:
+                parsed = json.loads(attempt)
+                if isinstance(parsed, dict) and len(raw) > best_size:
+                    best = parsed
+                    best_size = len(raw)
+                    break
+            except (json.JSONDecodeError, ValueError):
+                continue
+
+    if best is not None:
+        return {**current_draft, **best}
     return current_draft
 
 
-async def _gather_type_node(state: ArtifactBuilderState) -> dict:
+async def _emit_builder_state(
+    config: RunnableConfig,
+    artifact_type: str | None,
+    artifact_draft: dict | None,
+    validation_errors: list[str],
+    is_complete: bool,
+) -> None:
+    """Emit co-agent state to CopilotKit for live preview rendering."""
+    await copilotkit_emit_state(config, {
+        "artifact_type": artifact_type,
+        "artifact_draft": artifact_draft,
+        "validation_errors": validation_errors,
+        "is_complete": is_complete,
+    })
+
+
+async def _gather_type_node(state: ArtifactBuilderState, config: RunnableConfig) -> dict:
     """Ask the user what type of artifact they want, or detect from message."""
     messages = state.get("messages", [])
     llm = get_llm("blitz/master")
@@ -100,6 +158,7 @@ async def _gather_type_node(state: ArtifactBuilderState) -> dict:
                     ])
                 except Exception as exc:
                     logger.error("llm_error", node="gather_type", error=str(exc))
+                    await _emit_builder_state(config, detected, {}, [], False)
                     return {
                         "messages": [AIMessage(
                             content="I encountered an issue processing your request. "
@@ -108,6 +167,7 @@ async def _gather_type_node(state: ArtifactBuilderState) -> dict:
                         "artifact_type": detected,
                         "artifact_draft": {},
                     }
+                await _emit_builder_state(config, detected, {}, [], False)
                 return {
                     "messages": [response],
                     "artifact_type": detected,
@@ -131,7 +191,7 @@ async def _gather_type_node(state: ArtifactBuilderState) -> dict:
     return {"messages": [response]}
 
 
-async def _gather_details_node(state: ArtifactBuilderState) -> dict:
+async def _gather_details_node(state: ArtifactBuilderState, config: RunnableConfig) -> dict:
     """Ask type-specific questions and build the artifact draft progressively."""
     artifact_type = state["artifact_type"]
     messages = state.get("messages", [])
@@ -156,10 +216,12 @@ async def _gather_details_node(state: ArtifactBuilderState) -> dict:
         ])
     except Exception as exc:
         logger.error("llm_error", node="gather_details", error=str(exc))
+        await _emit_builder_state(config, artifact_type, current_draft, [], False)
         return {
             "messages": [AIMessage(
                 content="I encountered an issue. Could you repeat your last response?"
             )],
+            "artifact_type": artifact_type,
             "artifact_draft": current_draft,
         }
 
@@ -167,14 +229,26 @@ async def _gather_details_node(state: ArtifactBuilderState) -> dict:
 
     looks_complete = _DRAFT_COMPLETE_MARKER in response.content
 
+    # If the LLM claims the draft is complete, run validation immediately.
+    # This prevents the frontend from showing "Save to Registry" for an
+    # invalid draft (e.g. missing required `name` field).
+    validation_errors: list[str] = []
+    if looks_complete:
+        validation_errors = validate_artifact_draft(artifact_type, updated_draft)
+        if validation_errors:
+            looks_complete = False
+
+    await _emit_builder_state(config, artifact_type, updated_draft, validation_errors, looks_complete)
     return {
         "messages": [response],
+        "artifact_type": artifact_type,
         "artifact_draft": updated_draft,
+        "validation_errors": validation_errors,
         "is_complete": looks_complete,
     }
 
 
-async def _validate_and_present_node(state: ArtifactBuilderState) -> dict:
+async def _validate_and_present_node(state: ArtifactBuilderState, config: RunnableConfig) -> dict:
     """Validate the artifact draft against its Pydantic schema."""
     artifact_type = state["artifact_type"]
     draft = state.get("artifact_draft") or {}
@@ -187,8 +261,11 @@ async def _validate_and_present_node(state: ArtifactBuilderState) -> dict:
             content=f"I found some issues with the definition:\n\n{error_text}\n\n"
             f"Let me help fix these. What would you like to adjust?"
         )
+        await _emit_builder_state(config, artifact_type, draft, errors, False)
         return {
             "messages": [msg],
+            "artifact_type": artifact_type,
+            "artifact_draft": draft,
             "validation_errors": errors,
             "is_complete": False,
         }
@@ -200,8 +277,11 @@ async def _validate_and_present_node(state: ArtifactBuilderState) -> dict:
         f"Click **Save** to create this {artifact_type.replace('_', ' ')} in the registry, "
         f"or tell me if you'd like to make any changes."
     )
+    await _emit_builder_state(config, artifact_type, draft, [], True)
     return {
         "messages": [msg],
+        "artifact_type": artifact_type,
+        "artifact_draft": draft,
         "validation_errors": [],
         "is_complete": True,
     }
@@ -229,4 +309,4 @@ def create_artifact_builder_graph() -> CompiledStateGraph:
     graph.add_edge("gather_details", END)
     graph.add_edge("validate_and_present", END)
 
-    return graph.compile()
+    return graph.compile(checkpointer=MemorySaver())
