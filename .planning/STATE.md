@@ -63,6 +63,7 @@ Progress: [████████████] 100% (2/2 Phase 7 plans)
 | Phase 07-hardening-and-sandboxing P01 | 4 | 2 tasks | 7 files |
 | Phase 07-hardening-and-sandboxing P02 | 8 | 3 tasks | 5 files |
 | Phase 07-hardening-and-sandboxing P03 | 62 | 1 tasks | 1 files |
+| Phase 07-hardening-and-sandboxing P04 | 134 | 1 tasks | 0 files |
 
 ## Accumulated Context
 
@@ -228,6 +229,7 @@ Recent decisions affecting current work:
 - [07-02]: bandit B108 nosec for /tmp in Docker sandbox policies — intentional Docker tmpfs mount config is a false positive for hardcoded temp directory warning
 - [07-03]: import core.models at module top-level in test_isolation.py — ConversationTurn (memory_conversations table) not registered in Base.metadata when test file loaded in isolation; lazy import inside test body executes after db_session.create_all(), causing "no such table" error; fix: one import line ensures full ORM registration before any fixture
 - [Phase 07-hardening-and-sandboxing]: [07-03]: import core.models at module top-level in test_isolation.py — fixes lazy import defect so isolation pen tests are deterministic regardless of run order
+- [Phase 07-04]: trufflehog installed via official install.sh (not go install) — go.mod replace directives block go install for all versions; git history scan is CLEAN (0 verified secrets)
 
 ### Pending Todos
 
