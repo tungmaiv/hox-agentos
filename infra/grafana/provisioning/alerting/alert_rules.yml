@@ -13,6 +13,9 @@ groups:
         for: 5m
         data:
           - refId: A
+            relativeTimeRange:
+              from: 86400
+              to: 0
             datasourceUid: blitz-prometheus
             model:
               expr: sum(increase(litellm_spend_metric[24h])) > 10
