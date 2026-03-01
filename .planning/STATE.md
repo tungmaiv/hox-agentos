@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates daily work routines and lets them build custom automations without writing code -- all within an enterprise-secure, on-premise environment.
-**Current focus:** Phase 9 (Tech Debt Code Fixes) — IN PROGRESS (1/2 plans complete)
+**Current focus:** Phase 9 (Tech Debt Code Fixes) — COMPLETE (2/2 plans complete)
 
 ## Current Position
 
 Milestone: v1.2 Phase 9 (Tech Debt Code Fixes)
-Phases: 1, 2, 2.1, 3, 3.1, 4, 4.1, 5, 5.1, 6, 7, 8 — all complete
-Current Plan: Phase 9 Plan 01 complete — Tool cache invalidation fix (EXTD-03/05)
-Status: Phase 9 IN PROGRESS — Plan 01 complete (tool cache fix), Plan 02 pending
-Last activity: 2026-03-02 -- Phase 9 Plan 01: Fix tool status cache invalidation, add invalidate_tool_cache_entry()
+Phases: 1, 2, 2.1, 3, 3.1, 4, 4.1, 5, 5.1, 6, 7, 8, 9 — all complete
+Current Plan: Phase 9 Plan 02 complete — Wire blitz_llm_calls_total to LLM invocations (OBSV-01)
+Status: Phase 9 COMPLETE — all 2 plans done
+Last activity: 2026-03-02 -- Phase 9 Plan 02: Wire LLM metrics callback, add status label to blitz_llm_calls_total
 
-Progress: [██████] 50% (1/2 Phase 9 plans)
+Progress: [████████████] 100% (2/2 Phase 9 plans)
 
 ## Performance Metrics
 
@@ -259,6 +259,9 @@ Recent decisions affecting current work:
 - [09-01]: invalidate_tool_cache_entry uses _tool_cache.pop(name, None) — targeted eviction, does NOT reset _tool_cache_timestamp; other cached entries remain valid
 - [09-01]: Cache key is tool.name (string) for all versions — all versions share one cache key; evicting by name correctly invalidates all version data simultaneously
 - [09-01]: bulk_status_update() not patched — requires pre-fetch of tool names before bulk UPDATE; deferred to phase 10 per RESEARCH.md open question
+- [09-02]: _LLMMetricsCallback uses lazy import of blitz_llm_calls_total inside on_llm_end/on_llm_error — prevents circular import risk at config.py load time
+- [09-02]: get_llm() must NOT use @lru_cache — each call must create a new ChatOpenAI instance with its own callback instance keyed to the correct alias
+- [09-02]: Delta assertions in test_llm_metrics.py — robust against shared prometheus REGISTRY state; before/after pattern avoids absolute value brittleness
 
 ### Pending Todos
 
@@ -284,4 +287,4 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Phase 9 Plan 01 complete — Tool cache invalidation fix. SUMMARY at .planning/phases/09-tech-debt-code-fixes/09-01-SUMMARY.md
+Stopped at: Phase 9 Plan 02 complete — Wire blitz_llm_calls_total to LLM invocations. SUMMARY at .planning/phases/09-tech-debt-code-fixes/09-02-SUMMARY.md

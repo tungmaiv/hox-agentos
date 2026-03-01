@@ -29,7 +29,7 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 - [x] **Phase 6: Extensibility Registries** — Database-backed registries for agents/tools/skills/MCP servers, CRUD APIs, per-artifact permissions, skill runtime with /command support, admin dashboard UI, built-in skill seeds (completed 2026-03-01)
 - [x] **Phase 7: Hardening and Sandboxing** — Docker sandbox execution, security audit, RLS policies, credential scanning, penetration testing (completed 2026-03-01)
 - [x] **Phase 8: Observability** — Grafana dashboards, Loki log aggregation, LiteLLM cost tracking (completed 2026-03-01)
-- [ ] **Phase 9: Tech Debt Code Fixes** — Cache invalidation on tool status/version changes, LLM metric instrumentation, docstring correctness
+- [x] **Phase 9: Tech Debt Code Fixes** — Cache invalidation on tool status/version changes, LLM metric instrumentation, docstring correctness
 - [ ] **Phase 10: Optional Tech Debt Closure** — ChannelAdapter runtime enforcement, channel LangGraph continuity, delivery_router unification, UAT test 12, Grafana alert live test, Phase 4.1 VERIFICATION.md
 
 ## Phase Details
@@ -168,7 +168,7 @@ Plans:
 
 Plans:
 - [x] 09-01-PLAN.md — Cache invalidation (patch_tool_status + activate_tool_version), list_templates docstring fix, regression tests
-- [ ] 09-02-PLAN.md — LLM metric wiring: blitz_llm_calls_total status label + _LLMMetricsCallback in get_llm(), update + new tests
+- [x] 09-02-PLAN.md — LLM metric wiring: blitz_llm_calls_total status label + _LLMMetricsCallback in get_llm(), update + new tests
 
 ### Phase 10: Optional Tech Debt Closure
 **Goal:** Close 6 low-severity tech debt items — ChannelAdapter runtime enforcement, channel conversation continuity, delivery routing unification, UAT test coverage, Grafana alert live verification, and Phase 4.1 documentation gap
