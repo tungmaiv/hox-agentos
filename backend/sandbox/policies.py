@@ -10,7 +10,7 @@ SANDBOX_LIMITS: dict = {
     "mem_limit": "256m",                         # 256MB hard limit
     "network_disabled": True,                    # no outbound network
     "read_only": True,                           # read-only root filesystem
-    "tmpfs": {"/tmp": "size=64m,mode=777"},      # writable temp space only
+    "tmpfs": {"/tmp": "size=64m,mode=777"},      # writable temp space only  # nosec B108 — intentional Docker tmpfs mount, not a host tempfile
     "labels": {"blitz.sandbox": "true"},         # for leaked container cleanup
 }
 
