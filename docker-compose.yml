@@ -230,6 +230,7 @@ services:
       - ./infra/grafana/dashboards:/etc/grafana/dashboards:ro
       - ./infra/grafana/provisioning/alerting:/etc/grafana/provisioning/alerting:ro
     environment:
+      GF_SERVER_ROOT_URL: "http://localhost:3001/"
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_AUTH_GENERIC_OAUTH_ENABLED: "true"
@@ -241,11 +242,13 @@ services:
       GF_AUTH_GENERIC_OAUTH_AUTH_URL: "https://keycloak.blitz.local:7443/realms/blitz-internal/protocol/openid-connect/auth"
       GF_AUTH_GENERIC_OAUTH_TOKEN_URL: "https://keycloak.blitz.local:7443/realms/blitz-internal/protocol/openid-connect/token"
       GF_AUTH_GENERIC_OAUTH_API_URL: "https://keycloak.blitz.local:7443/realms/blitz-internal/protocol/openid-connect/userinfo"
-      GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH: "contains(realm_roles[*], 'admin') && 'Admin' || contains(realm_roles[*], 'ops') && 'Viewer' || 'Viewer'"
+      GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH: "contains(realm_roles[*], 'admin') && 'Admin' || contains(realm_roles[*], 'ops') && 'Editor' || 'Viewer'"
       GF_AUTH_GENERIC_OAUTH_TLS_SKIP_VERIFY_INSECURE: "true"
       GF_AUTH_DISABLE_LOGIN_FORM: "false"
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       GRAFANA_ALERT_CHAT_ID: ${GRAFANA_ALERT_CHAT_ID:-}
+    extra_hosts:
+      - "keycloak.blitz.local:172.16.155.115"
     depends_on:
       - prometheus
       - loki
