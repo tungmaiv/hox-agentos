@@ -5,15 +5,15 @@
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates daily work routines and lets them build custom automations without writing code -- all within an enterprise-secure, on-premise environment.
-**Current focus:** Phase 7 (Hardening and Sandboxing) — COMPLETE (2/2 plans)
+**Current focus:** Phase 7 (Hardening and Sandboxing) — COMPLETE (3/3 plans including gap closure 07-03)
 
 ## Current Position
 
 Milestone: v1.1 Phase 7 (Hardening and Sandboxing) — COMPLETE
 Phases: 1, 2, 2.1, 3, 3.1, 4, 4.1, 5, 5.1, 6, 7 — all complete
-Current Plan: Phase 7 complete — ready for next phase
-Status: Phase 7 Plan 02 complete — RLS migration 016, set_rls_user_id helper, cross-user isolation pen tests, bandit clean
-Last activity: 2026-03-01 -- Phase 7 Plan 02: RLS on 6 tables, 5 pen tests (4 pass + 1 skip pgvector), bandit 0 High severity
+Current Plan: Phase 7 complete (including gap closure 07-03) — ready for next phase
+Status: Phase 7 Plan 03 complete — fixed lazy import defect in test_isolation.py; isolation tests now deterministic regardless of run order
+Last activity: 2026-03-01 -- Phase 7 Plan 03: fix import core.models in test_isolation.py; 5 isolation pen tests pass in isolation
 
 Progress: [████████████] 100% (2/2 Phase 7 plans)
 
@@ -62,6 +62,7 @@ Progress: [████████████] 100% (2/2 Phase 7 plans)
 | Phase 06-extensibility-registries P08 | 8 | 2 tasks | 5 files |
 | Phase 07-hardening-and-sandboxing P01 | 4 | 2 tasks | 7 files |
 | Phase 07-hardening-and-sandboxing P02 | 8 | 3 tasks | 5 files |
+| Phase 07-hardening-and-sandboxing P03 | 62 | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -225,6 +226,8 @@ Recent decisions affecting current work:
 - [07-02]: MemoryFact isolation test skipped in SQLite — Vector(1024) DDL not supported by aiosqlite; use pgvector-only tests only in integration test suite with live PostgreSQL
 - [07-02]: trufflehog is a Go binary not a Python package — must be installed from GitHub releases, not PyPI; bandit covers Python-level secrets sufficiently for CI
 - [07-02]: bandit B108 nosec for /tmp in Docker sandbox policies — intentional Docker tmpfs mount config is a false positive for hardcoded temp directory warning
+- [07-03]: import core.models at module top-level in test_isolation.py — ConversationTurn (memory_conversations table) not registered in Base.metadata when test file loaded in isolation; lazy import inside test body executes after db_session.create_all(), causing "no such table" error; fix: one import line ensures full ORM registration before any fixture
+- [Phase 07-hardening-and-sandboxing]: [07-03]: import core.models at module top-level in test_isolation.py — fixes lazy import defect so isolation pen tests are deterministic regardless of run order
 
 ### Pending Todos
 
@@ -250,6 +253,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Phase 7 COMPLETE (2/2 plans) — RLS migration 016 on 6 tables, set_rls_user_id helper, 5 cross-user isolation pen tests (4 passing + 1 skipped pgvector), bandit 0 High severity. 586 tests passing. Phase 7 complete — ready for Phase 8 (Observability).
-Resume file: .planning/phases/07-hardening-and-sandboxing/07-02-SUMMARY.md
-Resume file: .planning/phases/06-extensibility-registries/06-08-SUMMARY.md
+Stopped at: Phase 7 COMPLETE (3/3 plans including gap closure 07-03) — fixed lazy import defect in test_isolation.py so isolation pen tests are deterministic regardless of run order. 586 tests passing (5 isolation + 1 skipped pgvector). Phase 7 fully complete — ready for Phase 8 (Observability).
+Resume file: .planning/phases/07-hardening-and-sandboxing/07-03-SUMMARY.md
