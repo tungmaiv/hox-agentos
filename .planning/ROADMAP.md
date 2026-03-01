@@ -170,4 +170,4 @@ Plans:
 | 5.1. Workflow Execution Wiring (INSERTED) | v1.1 | 1/1 | ✅ Complete | 2026-02-28 |
 | 6. Extensibility Registries | v1.1 | 8/8 | ✅ Complete | 2026-03-01 |
 | 7. Hardening & Sandboxing | 4/4 | Complete    | 2026-03-01 | — |
-| 8. Observability | v1.2 | 1/3 | ⚡ In Progress | — |
+| 8. Observability | 2/3 | In Progress|  | — |

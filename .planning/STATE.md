@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates daily work routines and lets them build custom automations without writing code -- all within an enterprise-secure, on-premise environment.
-**Current focus:** Phase 8 (Observability) — IN PROGRESS (1/3 plans complete)
+**Current focus:** Phase 8 (Observability) — IN PROGRESS (2/3 plans complete)
 
 ## Current Position
 
 Milestone: v1.2 Phase 8 (Observability)
 Phases: 1, 2, 2.1, 3, 3.1, 4, 4.1, 5, 5.1, 6, 7 — all complete; Phase 8 in progress
-Current Plan: Phase 8 Plan 01 complete — observability infrastructure stack (Prometheus + Grafana + Loki + Alloy + cAdvisor)
-Status: Phase 8 Plan 01 complete — 5 Docker Compose services + 6 infra config files + 3 named volumes
-Last activity: 2026-03-01 -- Phase 8 Plan 01: add observability infrastructure stack
+Current Plan: Phase 8 Plan 02 complete — Prometheus metrics instrumentation (core/metrics.py + GET /metrics + LiteLLM callback)
+Status: Phase 8 Plan 02 complete — 6 custom business metrics, /metrics endpoint, LiteLLM prometheus callback
+Last activity: 2026-03-01 -- Phase 8 Plan 02: add Prometheus metrics instrumentation to backend and LiteLLM
 
-Progress: [████░░░░░░░░] 33% (1/3 Phase 8 plans)
+Progress: [████████░░░░] 67% (2/3 Phase 8 plans)
 
 ## Performance Metrics
 
@@ -64,6 +64,7 @@ Progress: [████░░░░░░░░] 33% (1/3 Phase 8 plans)
 | Phase 07-hardening-and-sandboxing P02 | 8 | 3 tasks | 5 files |
 | Phase 07-hardening-and-sandboxing P03 | 62 | 1 tasks | 1 files |
 | Phase 07-hardening-and-sandboxing P04 | 134 | 1 tasks | 0 files |
+| Phase 08-observability P02 | 199 | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -243,6 +244,9 @@ Recent decisions affecting current work:
 - [08-01]: Grafana OIDC ROLE_ATTRIBUTE_PATH uses realm_roles[*] flat JMESPath (not realm_access.roles) — matches Keycloak JWT claim structure
 - [08-01]: datasource UIDs blitz-prometheus and blitz-loki are stable constants — dashboard panel JSON references these UIDs; changing them breaks all panels
 - [08-01]: loki-config.yml compactor.delete_request_store=filesystem required in Loki 3.3.x when retention_enabled=true; missing causes startup failure
+- [Phase 08-02]: Labels are low-cardinality (tool names, model aliases, operation types) — user_id excluded per RESEARCH.md cardinality rule
+- [Phase 08-02]: No PROMETHEUS_MULTIPROC_DIR needed — single-worker uvicorn, no multiprocess mode required
+- [Phase 08-02]: Instrumentator placed after CORSMiddleware in create_app() — /metrics unauthenticated (blitz-net internal only)
 
 ### Pending Todos
 
@@ -268,5 +272,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Phase 8 Plan 01 COMPLETE — observability infra stack (Prometheus + Grafana + Loki + Alloy + cAdvisor) deployed as Docker Compose services with all config files. Ready for Plan 02 (metrics instrumentation) and Plan 03 (dashboards + alerting).
-Resume file: .planning/phases/08-observability/08-01-SUMMARY.md
+Stopped at: Phase 8 Plan 02 COMPLETE — Prometheus metrics instrumentation: core/metrics.py (6 counters/histograms), GET /metrics via Instrumentator, tool call + memory metrics in acl.py/short_term.py/long_term.py, LiteLLM prometheus callback enabled. 595 tests passing. Ready for Plan 03 (Grafana dashboards + alerting).
+Resume file: .planning/phases/08-observability/08-02-SUMMARY.md
