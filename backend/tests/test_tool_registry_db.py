@@ -330,3 +330,41 @@ async def test_seeded_tools_available_via_cache(session: AsyncSession) -> None:
     assert crm["mcp_tool"] == "get_project_status"
     assert crm["mcp_server"] == "crm"
     assert "crm:read" in crm["required_permissions"]
+
+
+# ---------------------------------------------------------------------------
+# Phase 9: targeted cache entry eviction (EXTD-03/05)
+# ---------------------------------------------------------------------------
+
+
+def test_cache_entry_eviction() -> None:
+    """invalidate_tool_cache_entry(name) removes only the named key from _tool_cache.
+
+    Other cached entries remain untouched — this is targeted eviction, not a blanket flush.
+    The global TTL timestamp (_tool_cache_timestamp) must NOT be reset.
+    """
+    import gateway.tool_registry as tr
+    from gateway.tool_registry import invalidate_tool_cache_entry
+
+    # Seed cache with two tools
+    tr._tool_cache["tool.alpha"] = {"name": "tool.alpha", "status": "active"}
+    tr._tool_cache["tool.beta"] = {"name": "tool.beta", "status": "active"}
+
+    # Record current TTL timestamp (should not change)
+    ts_before = tr._tool_cache_timestamp
+
+    # Evict only 'tool.alpha'
+    invalidate_tool_cache_entry("tool.alpha")
+
+    # 'tool.alpha' gone, 'tool.beta' untouched
+    assert "tool.alpha" not in tr._tool_cache, "invalidate_tool_cache_entry should remove the named entry"
+    assert "tool.beta" in tr._tool_cache, "invalidate_tool_cache_entry must not remove other entries"
+
+    # Global TTL timestamp must NOT change (targeted eviction, not blanket flush)
+    assert tr._tool_cache_timestamp == ts_before, (
+        "invalidate_tool_cache_entry must not reset _tool_cache_timestamp. "
+        "Use invalidate_tool_cache() for blanket flush."
+    )
+
+    # Calling with a non-existent key must not raise
+    invalidate_tool_cache_entry("tool.nonexistent")  # must not raise KeyError
