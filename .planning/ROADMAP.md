@@ -156,7 +156,7 @@ Plans:
 - [ ] 08-03-PLAN.md — Grafana dashboards (Ops + Costs), alerting provisioning, Keycloak SSO verification
 
 ### Phase 9: Tech Debt Code Fixes
-**Goal:** Close 4 actionable medium/low-severity tech debt items identified in the v1.1 audit — tool status cache invalidation, LLM metric instrumentation, and docstring correctness
+**Goal:** Close 3 actionable medium/low-severity tech debt items identified in the v1.1 audit — tool status cache invalidation, LLM metric instrumentation, and docstring correctness
 **Depends on:** Phase 8
 **Gap Closure:** Closes tech debt from v1.1-MILESTONE-AUDIT.md
 **Requirements:** EXTD-03 (partial→fully-wired), EXTD-05 (partial→fully-wired), OBSV-01 (partial→fully-wired)
@@ -164,9 +164,11 @@ Plans:
   1. Calling `patch_tool_status()` or `activate_tool_version()` immediately invalidates the tool cache — disabled tools are unavailable within the same request, not after 60s TTL expiry
   2. Each `get_llm()` call increments `blitz_llm_calls_total` — the Prometheus metric reads > 0 after agent conversations in a live environment
   3. `list_templates` endpoint docstring accurately describes its auth requirement (JWT required)
+**Plans:** 2 plans
 
 Plans:
-- [ ] 09-01: Fix `patch_tool_status()` + `activate_tool_version()` cache invalidation, `get_llm()` LLM metric wrapper, `list_templates` docstring
+- [ ] 09-01-PLAN.md — Cache invalidation (patch_tool_status + activate_tool_version), list_templates docstring fix, regression tests
+- [ ] 09-02-PLAN.md — LLM metric wiring: blitz_llm_calls_total status label + _LLMMetricsCallback in get_llm(), update + new tests
 
 ### Phase 10: Optional Tech Debt Closure
 **Goal:** Close 6 low-severity tech debt items — ChannelAdapter runtime enforcement, channel conversation continuity, delivery routing unification, UAT test coverage, Grafana alert live verification, and Phase 4.1 documentation gap
@@ -203,5 +205,5 @@ Plans:
 | 6. Extensibility Registries | v1.1 | 8/8 | ✅ Complete | 2026-03-01 |
 | 7. Hardening & Sandboxing | v1.1 | 4/4 | ✅ Complete | 2026-03-01 |
 | 8. Observability | v1.1 | 4/4 | ✅ Complete | 2026-03-01 |
-| 9. Tech Debt Code Fixes | v1.1 | 0/1 | ⬜ Pending | — |
+| 9. Tech Debt Code Fixes | v1.1 | 0/2 | ⬜ Pending | — |
 | 10. Optional Tech Debt Closure | v1.1 | 0/2 | ⬜ Pending | — |
