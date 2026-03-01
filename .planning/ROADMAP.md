@@ -130,11 +130,11 @@ Plans:
   3. Sandbox containers are destroyed after execution or timeout with no resource leaks
   4. Cross-user memory isolation verified by automated penetration tests
   5. PostgreSQL Row Level Security policies enforce user_id isolation as defense-in-depth
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 07-01: Docker sandbox executor with resource limits and cleanup
-- [ ] 07-02: Security hardening (RLS, credential scanning, pen tests)
+- [ ] 07-01-PLAN.md — Docker sandbox executor: SandboxExecutor TDD, resource limits (CPU=0.5, RAM=256MB, no network), tool registry dispatch wiring
+- [ ] 07-02-PLAN.md — Security hardening: RLS migration 016 on 6 tables, set_rls_user_id helper, cross-user isolation pen tests, bandit dev dep
 
 ### Phase 8: Observability
 **Goal**: Operations team can monitor system health, agent performance, LLM costs, and troubleshoot issues through centralized dashboards and log aggregation
@@ -166,5 +166,5 @@ Plans:
 | 5. Scheduler & Channels | v1.1 | 6/6 | ✅ Complete | 2026-02-28 |
 | 5.1. Workflow Execution Wiring (INSERTED) | v1.1 | 1/1 | ✅ Complete | 2026-02-28 |
 | 6. Extensibility Registries | v1.1 | 8/8 | ✅ Complete | 2026-03-01 |
-| 7. Hardening & Sandboxing | v1.1 | 0/2 | ○ Not started | — |
+| 7. Hardening & Sandboxing | v1.1 | 0/2 | ○ Planned (2 plans, Wave 1 parallel) | — |
 | 8. Observability | v1.1 | 0/2 | ○ Not started | — |
