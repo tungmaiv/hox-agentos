@@ -25,10 +25,12 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 - [x] **Phase 4: Canvas and Workflows** — React Flow visual builder, canvas-to-StateGraph compiler, workflow templates, HITL approval, cron/webhook triggers (completed 2026-02-27)
 - [x] **Phase 4.1: Phase 4 Polish** (INSERTED) — HITL canvas node amber ring fix, Next.js webhook proxy (completed 2026-02-27)
 - [x] **Phase 5: Scheduler and Channels** — Web chat enhancement, Telegram/WhatsApp/Teams adapters, channel identity resolution, ChannelAdapter protocol (completed 2026-02-28)
-- [ ] **Phase 5.1: Workflow Execution Wiring** (INSERTED) — Fix workflow→channel delivery, wire real agent_node dispatch, Celery worker role passthrough
+- [x] **Phase 5.1: Workflow Execution Wiring** (INSERTED) — Fix workflow→channel delivery, wire real agent_node dispatch, Celery worker role passthrough (completed 2026-02-28)
 - [x] **Phase 6: Extensibility Registries** — Database-backed registries for agents/tools/skills/MCP servers, CRUD APIs, per-artifact permissions, skill runtime with /command support, admin dashboard UI, built-in skill seeds (completed 2026-03-01)
 - [x] **Phase 7: Hardening and Sandboxing** — Docker sandbox execution, security audit, RLS policies, credential scanning, penetration testing (completed 2026-03-01)
 - [x] **Phase 8: Observability** — Grafana dashboards, Loki log aggregation, LiteLLM cost tracking (completed 2026-03-01)
+- [ ] **Phase 9: Tech Debt Code Fixes** — Cache invalidation on tool status/version changes, LLM metric instrumentation, docstring correctness
+- [ ] **Phase 10: Optional Tech Debt Closure** — ChannelAdapter runtime enforcement, channel LangGraph continuity, delivery_router unification, UAT test 12, Grafana alert live test, Phase 4.1 VERIFICATION.md
 
 ## Phase Details
 
@@ -153,9 +155,39 @@ Plans:
 - [ ] 08-02-PLAN.md — Backend Prometheus instrumentation (metrics.py, /metrics endpoint, LiteLLM callback)
 - [ ] 08-03-PLAN.md — Grafana dashboards (Ops + Costs), alerting provisioning, Keycloak SSO verification
 
+### Phase 9: Tech Debt Code Fixes
+**Goal:** Close 4 actionable medium/low-severity tech debt items identified in the v1.1 audit — tool status cache invalidation, LLM metric instrumentation, and docstring correctness
+**Depends on:** Phase 8
+**Gap Closure:** Closes tech debt from v1.1-MILESTONE-AUDIT.md
+**Requirements:** EXTD-03 (partial→fully-wired), EXTD-05 (partial→fully-wired), OBSV-01 (partial→fully-wired)
+**Success Criteria** (what must be TRUE):
+  1. Calling `patch_tool_status()` or `activate_tool_version()` immediately invalidates the tool cache — disabled tools are unavailable within the same request, not after 60s TTL expiry
+  2. Each `get_llm()` call increments `blitz_llm_calls_total` — the Prometheus metric reads > 0 after agent conversations in a live environment
+  3. `list_templates` endpoint docstring accurately describes its auth requirement (JWT required)
+
+Plans:
+- [ ] 09-01: Fix `patch_tool_status()` + `activate_tool_version()` cache invalidation, `get_llm()` LLM metric wrapper, `list_templates` docstring
+
+### Phase 10: Optional Tech Debt Closure
+**Goal:** Close 6 low-severity tech debt items — ChannelAdapter runtime enforcement, channel conversation continuity, delivery routing unification, UAT test coverage, Grafana alert live verification, and Phase 4.1 documentation gap
+**Depends on:** Phase 9
+**Gap Closure:** Closes tech debt from v1.1-MILESTONE-AUDIT.md
+**Requirements:** CHAN-05 (isinstance enforcement), CHAN-02 (channel continuity), EXTD-06 (UAT test 12)
+**Success Criteria** (what must be TRUE):
+  1. `ChannelGateway` enforces `isinstance(adapter, ChannelAdapter)` at adapter registration time — non-conforming adapters raise `TypeError` at startup
+  2. Multi-turn channel conversations maintain context across messages — LangGraph checkpointer is shared across `_invoke_agent()` calls for the same `channel_session_id`
+  3. Channel invocations flow through `delivery_router` like web chat invocations — no special-cased bypass in master agent
+  4. UAT test 12 (Admin Create Skill via API) is implemented and passes in the full test suite
+  5. Grafana → Telegram spend alert is live-tested end-to-end with a manual threshold breach
+  6. `04.1-VERIFICATION.md` exists documenting both Phase 4.1 success criteria
+
+Plans:
+- [ ] 10-01: ChannelAdapter isinstance enforcement + channel LangGraph continuity + delivery_router unification
+- [ ] 10-02: UAT test 12 + Grafana alert live test + Phase 4.1 VERIFICATION.md
+
 ## Progress
 
-**Execution Order:** 1 → 2 → 2.1 → 3 → 3.1 → 4 → 4.1 → 5 → 5.1 → 6 → 7 → 8
+**Execution Order:** 1 → 2 → 2.1 → 3 → 3.1 → 4 → 4.1 → 5 → 5.1 → 6 → 7 → 8 → 9 → 10
 
 | Phase | Milestone | Plans | Status | Completed |
 |-------|-----------|-------|--------|-----------|
@@ -169,5 +201,7 @@ Plans:
 | 5. Scheduler & Channels | v1.1 | 6/6 | ✅ Complete | 2026-02-28 |
 | 5.1. Workflow Execution Wiring (INSERTED) | v1.1 | 1/1 | ✅ Complete | 2026-02-28 |
 | 6. Extensibility Registries | v1.1 | 8/8 | ✅ Complete | 2026-03-01 |
-| 7. Hardening & Sandboxing | 4/4 | Complete    | 2026-03-01 | — |
-| 8. Observability | 4/4 | Complete   | 2026-03-01 | — |
+| 7. Hardening & Sandboxing | v1.1 | 4/4 | ✅ Complete | 2026-03-01 |
+| 8. Observability | v1.1 | 4/4 | ✅ Complete | 2026-03-01 |
+| 9. Tech Debt Code Fixes | v1.1 | 0/1 | ⬜ Pending | — |
+| 10. Optional Tech Debt Closure | v1.1 | 0/2 | ⬜ Pending | — |
