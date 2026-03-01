@@ -6,6 +6,7 @@ Never import provider SDKs (anthropic, openai) directly — always use get_llm()
 """
 from functools import lru_cache
 
+from langchain_core.callbacks import BaseCallbackHandler
 from langchain_openai import ChatOpenAI
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -78,6 +79,33 @@ def get_settings() -> Settings:
 settings = get_settings()
 
 
+class _LLMMetricsCallback(BaseCallbackHandler):
+    """LangChain callback that increments blitz_llm_calls_total on each LLM call.
+
+    Attached to every ChatOpenAI client returned by get_llm(). Fires:
+    - on_llm_end: increments with status='success'
+    - on_llm_error: increments with status='error'
+
+    Counter is imported lazily inside the methods to avoid circular imports
+    at module load time (metrics.py imports nothing from config.py, but this
+    prevents any future circular import surprises).
+    """
+
+    def __init__(self, model_alias: str) -> None:
+        super().__init__()
+        self._alias = model_alias
+
+    def on_llm_end(self, response: object, **kwargs: object) -> None:
+        from core.metrics import blitz_llm_calls_total
+
+        blitz_llm_calls_total.labels(model_alias=self._alias, status="success").inc()
+
+    def on_llm_error(self, error: BaseException, **kwargs: object) -> None:
+        from core.metrics import blitz_llm_calls_total
+
+        blitz_llm_calls_total.labels(model_alias=self._alias, status="error").inc()
+
+
 def get_llm(alias: str) -> ChatOpenAI:
     """
     Single entry point for all LLM clients.
@@ -103,4 +131,5 @@ def get_llm(alias: str) -> ChatOpenAI:
         base_url=f"{settings.litellm_url}/v1",
         api_key=settings.litellm_master_key,
         streaming=True,
+        callbacks=[_LLMMetricsCallback(alias)],
     )

@@ -26,8 +26,8 @@ blitz_tool_duration_seconds = Histogram(
 # LLM call metrics — instrumented in core/config.py get_llm() wrapper
 blitz_llm_calls_total = Counter(
     "blitz_llm_calls_total",
-    "Total LLM calls by model alias",
-    ["model_alias"],
+    "Total LLM calls by model alias and status",
+    ["model_alias", "status"],
 )
 blitz_llm_duration_seconds = Histogram(
     "blitz_llm_duration_seconds",
