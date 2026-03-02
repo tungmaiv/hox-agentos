@@ -431,6 +431,14 @@ def _classify_by_keywords(text: str) -> str:
     return "general"
 
 
+# TODO(tech-debt): Replace _route_after_master with Agent-as-Tool pattern.
+# Current approach: keyword map routes to hardcoded sub-agent modules.
+# This prevents adding agents without touching routing code and blocks
+# multi-agent queries (e.g. "summarize my emails AND create a Jira ticket").
+# Correct approach: each registered agent/skill is exposed as a callable tool
+# to the master LLM — routing becomes natural tool selection by the LLM.
+# Tracked as deferred work: Phase 11 CONTEXT.md -> Deferred Ideas.
+# DO NOT remove this function until the Agent-as-Tool routing phase is complete.
 async def _pre_route(state: BlitzState) -> str:
     """
     Routing conditional after load_memory, BEFORE master_agent runs.
