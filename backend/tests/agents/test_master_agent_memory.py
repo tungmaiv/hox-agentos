@@ -340,8 +340,13 @@ async def test_get_episode_threshold_returns_db_value():
     mock_result = MagicMock()
     mock_result.scalar_one_or_none.return_value = mock_row
 
+    mock_begin_ctx = AsyncMock()
+    mock_begin_ctx.__aenter__ = AsyncMock(return_value=None)
+    mock_begin_ctx.__aexit__ = AsyncMock(return_value=None)
+
     mock_session = AsyncMock()
     mock_session.execute = AsyncMock(return_value=mock_result)
+    mock_session.begin = MagicMock(return_value=mock_begin_ctx)
 
     mock_session_ctx = AsyncMock()
     mock_session_ctx.__aenter__ = AsyncMock(return_value=mock_session)
@@ -363,8 +368,13 @@ async def test_get_episode_threshold_falls_back_to_settings():
     mock_result = MagicMock()
     mock_result.scalar_one_or_none.return_value = None  # key not in system_config
 
+    mock_begin_ctx = AsyncMock()
+    mock_begin_ctx.__aenter__ = AsyncMock(return_value=None)
+    mock_begin_ctx.__aexit__ = AsyncMock(return_value=None)
+
     mock_session = AsyncMock()
     mock_session.execute = AsyncMock(return_value=mock_result)
+    mock_session.begin = MagicMock(return_value=mock_begin_ctx)
 
     mock_session_ctx = AsyncMock()
     mock_session_ctx.__aenter__ = AsyncMock(return_value=mock_session)

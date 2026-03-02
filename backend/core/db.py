@@ -43,7 +43,11 @@ class Base(DeclarativeBase):
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """FastAPI dependency for injecting a database session."""
     async with async_session() as session:
-        yield session
+        try:
+            yield session
+        except Exception:
+            await session.rollback()
+            raise
 
 
 async def set_rls_user_id(session: AsyncSession, user_id: UUID) -> None:

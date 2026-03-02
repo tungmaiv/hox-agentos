@@ -236,14 +236,15 @@ async def _get_episode_threshold() -> int:
 
     try:
         async with async_session() as s:
-            result = await s.execute(
-                select(SystemConfig).where(
-                    SystemConfig.key == "memory.episode_turn_threshold"
+            async with s.begin():
+                result = await s.execute(
+                    select(SystemConfig).where(
+                        SystemConfig.key == "memory.episode_turn_threshold"
+                    )
                 )
-            )
-            row = result.scalar_one_or_none()
-            if row is not None:
-                return int(row.value)
+                row = result.scalar_one_or_none()
+                if row is not None:
+                    return int(row.value)
     except Exception:
         pass
     return settings.episode_turn_threshold  # fallback to 10
@@ -299,38 +300,42 @@ async def _save_memory_node(state: BlitzState) -> dict:
     # initial_message_count (never set by LangGraphAGUIAgent) can't be trusted.
     # Instead, count existing turns in DB — anything beyond that is new.
     async with async_session() as session:
-        count_result = await session.execute(
-            select(func.count()).where(
-                ConversationTurn.user_id == user_id,
-                ConversationTurn.conversation_id == conversation_id,
+        try:
+            count_result = await session.execute(
+                select(func.count()).where(
+                    ConversationTurn.user_id == user_id,
+                    ConversationTurn.conversation_id == conversation_id,
+                )
             )
-        )
-        existing_count = count_result.scalar_one()
-        new_messages = messages[existing_count:]
+            existing_count = count_result.scalar_one()
+            new_messages = messages[existing_count:]
 
-        if not new_messages:
-            return {}
+            if not new_messages:
+                return {}
 
-        for msg in new_messages:
-            if isinstance(msg, HumanMessage):
-                await save_turn(
-                    session,
-                    user_id=user_id,
-                    conversation_id=conversation_id,
-                    role="user",
-                    content=str(msg.content),
-                )
-            elif isinstance(msg, AIMessage):
-                await save_turn(
-                    session,
-                    user_id=user_id,
-                    conversation_id=conversation_id,
-                    role="assistant",
-                    content=str(msg.content),
-                )
-        # Single commit after the loop — all turns saved atomically.
-        # save_turn() no longer commits internally; the session owner commits.
-        await session.commit()
+            for msg in new_messages:
+                if isinstance(msg, HumanMessage):
+                    await save_turn(
+                        session,
+                        user_id=user_id,
+                        conversation_id=conversation_id,
+                        role="user",
+                        content=str(msg.content),
+                    )
+                elif isinstance(msg, AIMessage):
+                    await save_turn(
+                        session,
+                        user_id=user_id,
+                        conversation_id=conversation_id,
+                        role="assistant",
+                        content=str(msg.content),
+                    )
+            # Single commit after the loop — all turns saved atomically.
+            # save_turn() no longer commits internally; the session owner commits.
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
 
     logger.debug("memory_saved", new_turns=len(new_messages), conversation_id=str(conversation_id))
 
@@ -494,14 +499,15 @@ async def _refresh_slash_cache() -> None:
 
     try:
         async with async_session() as session:
-            result = await session.execute(
-                select(_SkillDef.slash_command, _SkillDef.name).where(
-                    _SkillDef.slash_command.isnot(None),
-                    _SkillDef.status == "active",
-                    _SkillDef.is_active == True,  # noqa: E712
+            async with session.begin():
+                result = await session.execute(
+                    select(_SkillDef.slash_command, _SkillDef.name).where(
+                        _SkillDef.slash_command.isnot(None),
+                        _SkillDef.status == "active",
+                        _SkillDef.is_active == True,  # noqa: E712
+                    )
                 )
-            )
-            _slash_cache = {row[0]: row[1] for row in result.all()}
+                _slash_cache = {row[0]: row[1] for row in result.all()}
     except Exception as exc:
         logger.warning("slash_cache_refresh_failed", error=str(exc))
         # Keep stale cache on failure
@@ -524,13 +530,14 @@ async def _refresh_agent_enabled_cache() -> None:
 
     try:
         async with async_session() as session:
-            result = await session.execute(
-                select(SystemConfig).where(
-                    SystemConfig.key.like("agent.%.enabled")
+            async with session.begin():
+                result = await session.execute(
+                    select(SystemConfig).where(
+                        SystemConfig.key.like("agent.%.enabled")
+                    )
                 )
-            )
-            rows = result.scalars().all()
-            _agent_enabled_cache = {row.key: bool(row.value) for row in rows}
+                rows = result.scalars().all()
+                _agent_enabled_cache = {row.key: bool(row.value) for row in rows}
     except Exception as exc:
         logger.warning("agent_enabled_cache_refresh_failed", error=str(exc))
     _agent_enabled_cache_timestamp = time.monotonic()
@@ -571,14 +578,15 @@ async def _skill_executor_node(state: BlitzState) -> dict[str, list[BaseMessage]
 
     try:
         async with async_session() as session:
-            result = await session.execute(
-                select(_SkillDef).where(
-                    _SkillDef.slash_command == command,
-                    _SkillDef.status == "active",
-                    _SkillDef.is_active == True,  # noqa: E712
+            async with session.begin():
+                result = await session.execute(
+                    select(_SkillDef).where(
+                        _SkillDef.slash_command == command,
+                        _SkillDef.status == "active",
+                        _SkillDef.is_active == True,  # noqa: E712
+                    )
                 )
-            )
-            skill = result.scalar_one_or_none()
+                skill = result.scalar_one_or_none()
     except Exception as exc:
         logger.error("skill_executor_db_error", command=command, error=str(exc))
         return {"messages": [AIMessage(content=f"Error loading skill for {command}: {str(exc)}")]}
@@ -612,7 +620,11 @@ async def _skill_executor_node(state: BlitzState) -> dict[str, list[BaseMessage]
 
         executor = SkillExecutor()
         async with async_session() as session:
-            skill_result = await executor.run(skill, user_context, session)
+            try:
+                skill_result = await executor.run(skill, user_context, session)
+            except Exception:
+                await session.rollback()
+                raise
 
         logger.info(
             "skill_executor_completed",
