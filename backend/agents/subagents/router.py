@@ -8,17 +8,9 @@ import structlog
 from langchain_core.messages import HumanMessage
 
 from core.config import get_llm
+from core.prompts import load_prompt
 
 logger = structlog.get_logger(__name__)
-
-_CLASSIFICATION_PROMPT = """You are an intent classifier. Given a user message, output EXACTLY one of these labels — nothing else:
-- email     (user asks about emails, inbox, messages, read/send/reply)
-- calendar  (user asks about schedule, meetings, appointments, events, today/tomorrow/week)
-- project   (user asks about project status, CRM, tasks, Jira, sprint, milestones)
-- general   (everything else)
-
-User message: {message}
-Label:"""
 
 _VALID_LABELS = {"email", "calendar", "project", "general"}
 
@@ -31,7 +23,7 @@ async def classify_intent(message: str) -> str:
     llm = get_llm("blitz/fast")
     try:
         response = await llm.ainvoke(
-            [HumanMessage(content=_CLASSIFICATION_PROMPT.format(message=message))]
+            [HumanMessage(content=load_prompt("intent_classifier", message=message))]
         )
         label = str(response.content).strip().lower()
         if label not in _VALID_LABELS:
