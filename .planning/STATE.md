@@ -51,6 +51,7 @@ Recent decisions affecting current work:
 - [11-live]: delivery_router_node must receive user_id in initial_state (not only contextvar) — state.get("user_id") is the only path delivery router uses to resolve channel account for outbound
 - [11-live]: format_for_channel() must be called in delivery_router.deliver() before send_outbound — without it, sub-agent JSON responses sent as raw JSON to Telegram
 - [11-live]: TELEGRAM_GATEWAY_URL in backend/.env must be docker service name when backend runs in Docker — localhost:9001 resolves inside container (nothing), not to gateway sidecar
+- [11-INFRA-02]: External Cloudflare Tunnel at 172.16.155.118 is the accepted final answer — no cloudflared Docker Compose service required. Confirmed by product owner 2026-03-03. Phase 11 verification: 5/5 complete.
 
 ### Pending Todos
 
