@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-03-02 after v1.2 roadmap)
 ## Current Position
 
 Milestone: v1.2 Developer Experience
-Phase: 11 of 14 (Infrastructure and Debt) — In progress (1/3 plans complete)
-Plan: 11-01 complete — ready for 11-02
+Phase: 11 of 14 (Infrastructure and Debt) — In progress (2/3 plans complete)
+Plan: 11-02 complete — ready for 11-03
 Status: Executing Phase 11
-Last activity: 2026-03-02 — 11-01 Prompt Externalization complete (4 commits, 4 min)
+Last activity: 2026-03-02 — 11-02 Tunnel Documentation + Dead Code Removal complete (4 commits, 4 min)
 
-Progress: [█░░░░░░░░░░░] 4% — v1.2 Phase 11 started
+Progress: [██░░░░░░░░░░] 8% — v1.2 Phase 11 in progress
 
 ## Performance Metrics
 
@@ -44,6 +44,8 @@ Recent decisions affecting current work:
 - [09-02]: get_llm() must NOT use @lru_cache — each call creates new ChatOpenAI instance with its own callback
 - [11-01]: load_prompt() first parameter is prompt_name (not name) — avoids Python kwargs collision when name= is used as a template variable
 - [11-01]: PromptLoader caches raw template string (not rendered output) — same template rendered fresh per call with caller-supplied vars
+- [11-02]: _route_after_master in plan = _pre_route in code (renamed in Phase 6); TODO(tech-debt) comment placed on _pre_route
+- [11-02]: update_agent_last_seen and serverFetch marked TODO: verify dead — no production callers but not confirmed dead (future wiring possible)
 
 ### Pending Todos
 
@@ -59,4 +61,4 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed 11-01-PLAN.md — Prompt Externalization done. Next: 11-02 (Tunnel + AG-UI serialization)
+Stopped at: Completed 11-02-PLAN.md — Tunnel documentation + dead code removal done. Next: 11-03 (AG-UI wave serialization)
