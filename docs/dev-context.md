@@ -29,6 +29,24 @@ Ollama runs on the **host machine** — containers reach it via `host.docker.int
 
 ---
 
+## Cloudflare Tunnel (Webhook Routing)
+
+**Status:** Running externally — no docker-compose service needed.
+
+The Cloudflare Tunnel for this project runs on an external machine at:
+- IP: `172.16.155.118`
+
+All three channel webhook endpoints are exposed through this tunnel:
+- `POST /api/channels/telegram/webhook`
+- `POST /api/channels/whatsapp/webhook`
+- `POST /api/channels/teams/webhook`
+
+INFRA-01 (webhook endpoints via Cloudflare Tunnel) and INFRA-02 (tunnel runs as service with token in .env) are satisfied externally. No `cloudflared` container exists in docker-compose.yml — the tunnel is managed on the dedicated external machine.
+
+To verify the tunnel is routing correctly: check the Cloudflare Tunnel dashboard, or send a test Telegram message and confirm it reaches the backend webhook handler.
+
+---
+
 ## 2. Backend API Endpoints
 
 Base URL (local dev): `http://localhost:8000`
@@ -296,3 +314,4 @@ Tools are called via the backend MCPClient — never directly from frontend.
 | 2026-02-26 | DB tables: must run `just migrate` on fresh install before backend can serve requests; tool_acl table missing → 500 on every authenticated call | claude |
 | 2026-02-26 | CopilotKit protocol: 3 methods — info, agent/run, agent/connect; connect is called on component mount to restore thread state, same RunAgentInput body/SSE response as run | claude |
 | 2026-02-28 | Phase 6 endpoints: user-facing GET /api/skills, POST /api/skills/{name}/run, GET /api/tools; admin CRUD for agents/tools/skills/permissions at /api/admin/*; skill slash commands detected in master agent _pre_route | claude |
+| 2026-03-02 | [Phase 11]: Added Cloudflare Tunnel documentation (172.16.155.118, external machine, INFRA-01/02 satisfied) | claude |
