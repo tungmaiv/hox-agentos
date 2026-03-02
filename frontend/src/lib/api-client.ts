@@ -41,6 +41,9 @@ export interface ApiError extends Error {
  * @throws ApiError if the response status is not 2xx
  * @throws Error("Not authenticated") if there is no active session
  */
+// TODO: verify dead — serverFetch is not imported by any Server Component yet.
+// Designed for use in Server Components that need JWT-authenticated backend calls.
+// Safe to keep: low overhead, no side-effects. Remove if still unused after Phase 12.
 export async function serverFetch<T>(
   path: string,
   options: ApiClientOptions = {}

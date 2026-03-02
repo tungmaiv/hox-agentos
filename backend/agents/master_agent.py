@@ -651,6 +651,8 @@ async def _skill_executor_node(state: BlitzState) -> dict[str, list[BaseMessage]
         return {"messages": [AIMessage(content=f"Unknown skill type: {skill.skill_type}")]}
 
 
+# TODO: verify dead — update_agent_last_seen has no production callers; only called from tests.
+# Designed for future wiring when dynamic agent dispatch logs last_seen_at to agent_definitions.
 async def update_agent_last_seen(agent_name: str, session: AsyncSession) -> None:
     """
     Update last_seen_at on an agent after successful dispatch.
