@@ -1,0 +1,15 @@
+FROM node:20-alpine
+WORKDIR /app
+
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+# Install dependencies only — source code comes from volume mount
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+
+EXPOSE 3000
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+ENV NODE_EXTRA_CA_CERTS=/app/certs/keycloak.crt
+
+CMD ["pnpm", "dev"]

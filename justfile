@@ -69,9 +69,24 @@ stack:
 frontend-docker-stop:
     docker compose stop frontend
 
+# Start full stack with hot reload — no rebuilds needed on code change
+# Backend: uvicorn --reload watches ./backend; Frontend: pnpm dev HMR
+# First run only: docker compose -f docker-compose.yml -f docker-compose.local.yml build frontend
+dev-local:
+    docker compose -f docker-compose.yml -f docker-compose.local.yml up -d
+
+# Stop dev-local stack
+dev-local-down:
+    docker compose -f docker-compose.yml -f docker-compose.local.yml down
+
 # Force-rebuild and restart a single service: just rebuild backend
 rebuild service:
     docker compose build {{service}} && docker compose up -d --no-deps {{service}}
+
+# Force-rebuild using local override (dev): just rebuild-local frontend
+rebuild-local service:
+    docker compose -f docker-compose.yml -f docker-compose.local.yml build {{service}} && \
+    docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --no-deps {{service}}
 
 # Wipe and restart infra containers + postgres volume (DESTRUCTIVE — loses all DB data)
 # Run `just migrate` afterwards to re-apply schema
@@ -91,11 +106,11 @@ infra-reset:
 # ── Backend (FastAPI / uvicorn) ───────────────────────────────────────────────
 # Start backend dev server (hot reload, port 8000)
 backend:
-    cd {{BACKEND_DIR}} && PYTHONPATH=. .venv/bin/uvicorn main:app --port 8000 --reload
+    cd {{BACKEND_DIR}} && PYTHONPATH=. .venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
 # Start backend in background (writes PID to .backend.pid)
 backend-bg:
-    cd {{BACKEND_DIR}} && PYTHONPATH=. .venv/bin/uvicorn main:app --port 8000 --reload & echo $! > ../.backend.pid
+    cd {{BACKEND_DIR}} && PYTHONPATH=. .venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000 --reload & echo $! > ../.backend.pid
     @echo "Backend started (PID $(cat .backend.pid))"
 
 # Stop background backend process
@@ -165,7 +180,7 @@ dev:
         exit 0
     fi
     tmux new-session -d -s blitz -n infra 'just up && docker compose logs -f' 2>/dev/null || true
-    tmux new-window -t blitz -n backend 'cd {{BACKEND_DIR}} && PYTHONPATH=. .venv/bin/uvicorn main:app --port 8000 --reload'
+    tmux new-window -t blitz -n backend 'cd {{BACKEND_DIR}} && PYTHONPATH=. .venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000 --reload'
     tmux new-window -t blitz -n frontend 'cd {{FRONTEND_DIR}} && pnpm dev'
     tmux select-window -t blitz:backend
     tmux attach-session -t blitz

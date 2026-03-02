@@ -59,7 +59,13 @@ class SandboxExecutor:
     """
 
     def __init__(self) -> None:
-        self._client = docker.from_env()
+        self._client: docker.DockerClient | None = None
+
+    def _get_client(self) -> docker.DockerClient:
+        """Lazy-initialize Docker client on first use (not at import time)."""
+        if self._client is None:
+            self._client = docker.from_env()
+        return self._client
 
     def _get_image(self, language: str) -> str:
         """Return the Docker image for the given programming language."""
@@ -101,7 +107,7 @@ class SandboxExecutor:
         )
 
         try:
-            output = self._client.containers.run(
+            output = self._get_client().containers.run(
                 image=image,
                 command=command,
                 # Resource limits from policies
@@ -206,7 +212,7 @@ class SandboxExecutor:
         Called periodically (e.g., on scheduler startup) to prevent resource leaks.
         """
         try:
-            leaked = self._client.containers.list(
+            leaked = self._get_client().containers.list(
                 all=True,
                 filters={"label": "blitz.sandbox=true"},
             )
