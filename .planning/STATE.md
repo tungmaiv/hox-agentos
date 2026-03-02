@@ -10,12 +10,11 @@ See: .planning/PROJECT.md (updated 2026-03-02 after v1.2 roadmap)
 ## Current Position
 
 Milestone: v1.2 Developer Experience
-Phase: 11 of 14 (Infrastructure and Debt) — In progress (2/3 plans complete)
-Plan: 11-02 complete — ready for 11-03
-Status: Executing Phase 11
-Last activity: 2026-03-02 — 11-02 Tunnel Documentation + Dead Code Removal complete (4 commits, 4 min)
+Phase: 11 of 14 (Infrastructure and Debt) — COMPLETE (all 3 plans + live E2E verified)
+Status: Phase 11 complete — ready for Phase 12
+Last activity: 2026-03-03 — Telegram E2E verified live (message in → LLM → formatted reply out)
 
-Progress: [██░░░░░░░░░░] 8% — v1.2 Phase 11 in progress
+Progress: [███░░░░░░░░░] 21% — v1.2 Phase 11 complete, Phase 12 next
 
 ## Performance Metrics
 
@@ -46,6 +45,12 @@ Recent decisions affecting current work:
 - [11-01]: PromptLoader caches raw template string (not rendered output) — same template rendered fresh per call with caller-supplied vars
 - [11-02]: _route_after_master in plan = _pre_route in code (renamed in Phase 6); TODO(tech-debt) comment placed on _pre_route
 - [11-02]: update_agent_last_seen and serverFetch marked TODO: verify dead — no production callers but not confirmed dead (future wiring possible)
+- [11-live]: docker-compose.local.yml is the canonical Docker dev override — always use `just dev-local` for full hot-reload stack; never mount ./backend:/app (overwrites .venv)
+- [11-live]: Keycloak admin API for service account requires master realm password grant (admin/admin-cli) — client_credentials token has custom flat mapper that breaks resource_access.realm-management.roles format required by admin REST API
+- [11-live]: KEYCLOAK_URL in backend/.env has no port (443) — Docker containers need port 7443 override in docker-compose.local.yml; keycloak.blitz.local resolves to 172.16.155.115 via Tailscale DNS
+- [11-live]: delivery_router_node must receive user_id in initial_state (not only contextvar) — state.get("user_id") is the only path delivery router uses to resolve channel account for outbound
+- [11-live]: format_for_channel() must be called in delivery_router.deliver() before send_outbound — without it, sub-agent JSON responses sent as raw JSON to Telegram
+- [11-live]: TELEGRAM_GATEWAY_URL in backend/.env must be docker service name when backend runs in Docker — localhost:9001 resolves inside container (nothing), not to gateway sidecar
 
 ### Pending Todos
 
@@ -60,5 +65,5 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-02
-Stopped at: Completed 11-02-PLAN.md — Tunnel documentation + dead code removal done. Next: 11-03 (AG-UI wave serialization)
+Last session: 2026-03-03
+Stopped at: Phase 11 fully complete — Cloudflare Tunnel live, Docker dev workflow operational, Telegram E2E verified. Next: Phase 12
