@@ -39,6 +39,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from agents.state.types import BlitzState
 from api.routes.user_instructions import get_user_instructions
 from core.config import get_llm, settings
+from core.prompts import load_prompt
 from core.context import current_conversation_id_ctx, current_user_ctx
 from core.db import async_session
 from core.models.memory import ConversationTurn
@@ -185,22 +186,6 @@ async def _load_memory_node(state: BlitzState) -> dict:
     return {}
 
 
-_DEFAULT_SYSTEM_PROMPT = (
-    "You are Blitz, an intelligent AI assistant for Blitz employees. "
-    "You are professional but warm — like a smart, helpful colleague. "
-    "You are clear, direct, and occasionally light in tone.\n\n"
-    "When you don't know something: Say so directly. Don't make up information.\n\n"
-    "Format your responses with markdown when it improves clarity (headers, bold, "
-    "code blocks). Keep responses focused and appropriately concise.\n\n"
-    "IMPORTANT — math formatting rules you must always follow:\n"
-    "- NEVER use LaTeX notation. No backslashes, no \\frac, no \\times, no \\cdot.\n"
-    "- NEVER wrap math in ( ) or [ ] delimiters like ( x ) or [ x = 5 ].\n"
-    "- NEVER wrap math in backticks or code blocks.\n"
-    "- Write math as plain readable prose: '15 / 3 = 5', '1239 × 17 = 21063'.\n"
-    "- Use the Unicode × character for multiplication, ÷ for division."
-)
-
-
 async def _master_node(state: BlitzState) -> dict[str, list[BaseMessage]]:
     """
     Call blitz/master LLM with current conversation messages and return response.
@@ -208,7 +193,7 @@ async def _master_node(state: BlitzState) -> dict[str, list[BaseMessage]]:
     Uses get_llm() — never a direct provider SDK. The LiteLLM proxy routes
     'blitz/master' to the configured primary (Ollama/Qwen2.5) or fallback (Claude Sonnet).
 
-    Always prepends _DEFAULT_SYSTEM_PROMPT as the first SystemMessage so formatting
+    Always prepends the master_agent prompt as the first SystemMessage so formatting
     rules (no LaTeX, markdown etc.) reach the LLM regardless of CopilotKit's
     instructions prop handling. Appends per-user custom instructions if set in DB.
     """
@@ -227,7 +212,7 @@ async def _master_node(state: BlitzState) -> dict[str, list[BaseMessage]]:
 
     # Build system content: default prompt + optional per-user instructions.
     # Always injected so the LLM sees formatting rules on every call.
-    system_content = _DEFAULT_SYSTEM_PROMPT
+    system_content = load_prompt("master_agent")
     if custom_instructions:
         system_content += (
             f"\n\nAdditional user instructions (follow these for all responses):\n\n"
@@ -642,7 +627,7 @@ async def _skill_executor_node(state: BlitzState) -> dict[str, list[BaseMessage]
                 content=f"[Skill: {skill.display_name or skill.name}]\n\n{instruction}"
             ),
         )
-        messages = [SystemMessage(content=_DEFAULT_SYSTEM_PROMPT)] + messages
+        messages = [SystemMessage(content=load_prompt("master_agent"))] + messages
 
         response = await llm.ainvoke(messages)
 
