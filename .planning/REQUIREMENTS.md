@@ -66,38 +66,36 @@
 
 ## Traceability
 
-*Populated during roadmap creation.*
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ADMIN-01 | — | Pending |
-| ADMIN-02 | — | Pending |
-| ADMIN-03 | — | Pending |
-| ADMIN-04 | — | Pending |
-| ADMIN-05 | — | Pending |
-| ADMIN-06 | — | Pending |
-| AUTH-01 | — | Pending |
-| AUTH-02 | — | Pending |
-| AUTH-03 | — | Pending |
-| AUTH-04 | — | Pending |
-| AUTH-05 | — | Pending |
-| ECO-01 | — | Pending |
-| ECO-02 | — | Pending |
-| ECO-03 | — | Pending |
-| ECO-04 | — | Pending |
-| ECO-05 | — | Pending |
-| ECO-06 | — | Pending |
-| INFRA-01 | — | Pending |
-| INFRA-02 | — | Pending |
-| INFRA-03 | — | Pending |
-| INFRA-04 | — | Pending |
-| DEBT-01 | — | Pending |
+| ADMIN-01 | Phase 12 | Pending |
+| ADMIN-02 | Phase 12 | Pending |
+| ADMIN-03 | Phase 12 | Pending |
+| ADMIN-04 | Phase 12 | Pending |
+| ADMIN-05 | Phase 12 | Pending |
+| ADMIN-06 | Phase 12 | Pending |
+| AUTH-01 | Phase 13 | Pending |
+| AUTH-02 | Phase 13 | Pending |
+| AUTH-03 | Phase 13 | Pending |
+| AUTH-04 | Phase 13 | Pending |
+| AUTH-05 | Phase 13 | Pending |
+| ECO-01 | Phase 14 | Pending |
+| ECO-02 | Phase 14 | Pending |
+| ECO-03 | Phase 14 | Pending |
+| ECO-04 | Phase 14 | Pending |
+| ECO-05 | Phase 14 | Pending |
+| ECO-06 | Phase 14 | Pending |
+| INFRA-01 | Phase 11 | Pending |
+| INFRA-02 | Phase 11 | Pending |
+| INFRA-03 | Phase 11 | Pending |
+| INFRA-04 | Phase 11 | Pending |
+| DEBT-01 | Phase 11 | Pending |
 
 **Coverage:**
 - v1.2 requirements: 22 total
-- Mapped to phases: 0 (TBD by roadmapper)
-- Unmapped: 22 ⚠️
+- Mapped to phases: 22 ✓
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-02*
-*Last updated: 2026-03-02 after initial definition*
+*Last updated: 2026-03-02 — traceability populated after roadmap creation*
