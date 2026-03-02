@@ -224,8 +224,11 @@ async def webhook(request: Request) -> Response:
         )
         return Response(content='{"ok":true}', status_code=200)
 
-    # Send typing indicator
-    await telegram_api.send_chat_action(chat_id=chat.get("id"), action="typing")
+    # Send typing indicator — best-effort, don't crash if Telegram API is slow
+    try:
+        await telegram_api.send_chat_action(chat_id=chat.get("id"), action="typing")
+    except Exception:
+        pass
 
     # Build InternalMessage
     internal_msg = InternalMessage(

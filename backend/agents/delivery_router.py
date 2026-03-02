@@ -97,7 +97,9 @@ async def deliver(target: DeliveryTarget, payload: Any, user_id: UUID | None = N
         }
         channel = channel_map[target]
         gateway = _get_gateway()
-        text = str(payload.content) if hasattr(payload, "content") else str(payload)
+        raw_text = str(payload.content) if hasattr(payload, "content") else str(payload)
+        from channels.gateway import format_for_channel
+        text = format_for_channel(raw_text)
 
         # Resolve external_chat_id from channel_accounts (required by sidecar /send)
         external_user_id = ""

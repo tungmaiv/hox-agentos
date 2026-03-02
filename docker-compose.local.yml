@@ -36,6 +36,20 @@ services:
       - ./backend/security:/app/security
       - ./backend/skills:/app/skills
       - /var/run/docker.sock:/var/run/docker.sock  # sandbox executor needs Docker
+      - ./frontend/certs:/app/certs:ro  # Keycloak CA cert for TLS verification
+    environment:
+      # Override host paths/URLs from backend/.env with Docker-network equivalents
+      KEYCLOAK_URL: https://keycloak.blitz.local:7443
+      KEYCLOAK_CA_CERT: /app/certs/keycloak.crt
+      KEYCLOAK_CLIENT_ID: blitz-backend
+      KEYCLOAK_CLIENT_SECRET: blitz-portal-secret-dev
+      KEYCLOAK_ADMIN_USERNAME: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      TELEGRAM_GATEWAY_URL: http://telegram-gateway:9001
+      WHATSAPP_GATEWAY_URL: http://whatsapp-gateway:9002
+      TEAMS_GATEWAY_URL: http://teams-gateway:9003
+    extra_hosts:
+      - "keycloak.blitz.local:172.16.155.115"  # remote Keycloak server
 
   # ── Frontend: dev mode with HMR ─────────────────────────────
   frontend:

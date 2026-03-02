@@ -24,8 +24,9 @@ async def fetch_user_realm_roles(user_id: str) -> list[str]:
     """
     Fetch a user's realm-level role names from the Keycloak Admin API.
 
-    Uses the backend service account's client_credentials grant to obtain
-    an admin token, then queries the user's realm role mappings.
+    Uses the master realm admin credentials (password grant via admin-cli) to
+    obtain an admin token, then queries the user's realm role mappings.
+    This approach works regardless of custom protocol mappers on the backend client.
 
     Args:
         user_id: The Keycloak user UUID string.
@@ -38,19 +39,18 @@ async def fetch_user_realm_roles(user_id: str) -> list[str]:
         httpx.HTTPStatusError: If token or role endpoint returns non-2xx.
     """
     settings = get_settings()
-    base = f"{settings.keycloak_url}/realms/{settings.keycloak_realm}"
-    token_url = f"{base}/protocol/openid-connect/token"
-
     verify: str | bool = settings.keycloak_ca_cert or True
 
     async with httpx.AsyncClient(verify=verify, timeout=10.0) as client:
-        # Step 1: Obtain admin access token via client credentials grant
+        # Step 1: Obtain admin token via master realm password grant
+        master_token_url = f"{settings.keycloak_url}/realms/master/protocol/openid-connect/token"
         token_resp = await client.post(
-            token_url,
+            master_token_url,
             data={
-                "grant_type": "client_credentials",
-                "client_id": settings.keycloak_client_id,
-                "client_secret": settings.keycloak_client_secret,
+                "grant_type": "password",
+                "client_id": "admin-cli",
+                "username": settings.keycloak_admin_username,
+                "password": settings.keycloak_admin_password,
             },
         )
         token_resp.raise_for_status()

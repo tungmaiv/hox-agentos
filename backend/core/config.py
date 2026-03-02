@@ -33,6 +33,10 @@ class Settings(BaseSettings):
     # Path to CA cert for self-signed Keycloak TLS (local dev only).
     # Set this when Keycloak uses a self-signed cert not in the system trust store.
     keycloak_ca_cert: str = ""
+    # Admin credentials for master realm — used by keycloak_client to fetch user roles
+    # via admin API (avoids client_credentials token mapper issues).
+    keycloak_admin_username: str = "admin"
+    keycloak_admin_password: str = ""
 
     # LiteLLM
     litellm_url: str

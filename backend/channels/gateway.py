@@ -434,10 +434,12 @@ class ChannelGateway:
 
             graph = create_master_graph(checkpointer=saver)
 
-            # Set delivery_targets so delivery_router_node routes to the correct channel
+            # Set delivery_targets so delivery_router_node routes to the correct channel.
+            # user_id must be in state so delivery_router_node can resolve the channel account.
             initial_state = {
                 "messages": [HumanMessage(content=msg.text or "")],
                 "delivery_targets": [msg.channel.upper()],
+                "user_id": msg.user_id,
             }
             config = {"configurable": {"thread_id": saver_key}}
 
