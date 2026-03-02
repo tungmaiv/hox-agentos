@@ -59,7 +59,11 @@ Full phase details: `.planning/milestones/v1.1-ROADMAP.md`
   3. All LLM system prompts can be found and edited in `backend/prompts/*.md` files — no inline prompt strings remain in Python files
   4. `PromptLoader.load_prompt("name", **vars)` returns the correct rendered string with variable substitution, and repeated calls return the cached value without re-reading disk
   5. `classify_intent()` no longer exists in `router.py` — grep returns no results and all 586+ tests still pass
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 11-01-PLAN.md — PromptLoader + externalize all LLM prompts to backend/prompts/*.md
+- [ ] 11-02-PLAN.md — Cloudflare Tunnel docs + delete classify_intent dead code + annotate _route_after_master
 
 ### Phase 12: Unified Admin Desk
 **Goal**: All artifact management is consolidated at `/admin` — there is one place for admins to operate, and every artifact type can be created through a guided wizard that validates input, prevents name conflicts, and starts from templates or existing clones.
@@ -119,7 +123,7 @@ Full phase details: `.planning/milestones/v1.1-ROADMAP.md`
 | 8. Observability | v1.1 | 4/4 | ✅ Complete | 2026-03-01 |
 | 9. Tech Debt Code Fixes (INSERTED) | v1.1 | 2/2 | ✅ Complete | 2026-03-01 |
 | 10. Optional Tech Debt Closure (INSERTED) | v1.1 | 2/2 | ✅ Complete | 2026-03-02 |
-| 11. Infrastructure & Debt | v1.2 | 0/TBD | Not started | - |
+| 11. Infrastructure & Debt | v1.2 | 0/2 | Not started | - |
 | 12. Unified Admin Desk | v1.2 | 0/TBD | Not started | - |
 | 13. Local Auth | v1.2 | 0/TBD | Not started | - |
 | 14. Ecosystem Capabilities | v1.2 | 0/TBD | Not started | - |
