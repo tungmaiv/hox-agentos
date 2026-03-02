@@ -35,8 +35,8 @@
 
 - [ ] **INFRA-01**: Webhook endpoints for Telegram, WhatsApp, and MS Teams are exposed via Cloudflare Tunnel (replacing ngrok)
 - [ ] **INFRA-02**: Cloudflare Tunnel runs as a Docker Compose service with tunnel token stored in .env
-- [ ] **INFRA-03**: All LLM system prompts are stored as .md files in backend/prompts/ — no inline prompt strings in Python files
-- [ ] **INFRA-04**: `PromptLoader` utility in backend/core/prompts.py provides `load_prompt(name, **vars)` with variable substitution and in-memory caching
+- [x] **INFRA-03**: All LLM system prompts are stored as .md files in backend/prompts/ — no inline prompt strings in Python files
+- [x] **INFRA-04**: `PromptLoader` utility in backend/core/prompts.py provides `load_prompt(name, **vars)` with variable substitution and in-memory caching
 
 ### Tech Debt
 
@@ -87,8 +87,8 @@
 | ECO-06 | Phase 14 | Pending |
 | INFRA-01 | Phase 11 | Pending |
 | INFRA-02 | Phase 11 | Pending |
-| INFRA-03 | Phase 11 | Pending |
-| INFRA-04 | Phase 11 | Pending |
+| INFRA-03 | Phase 11 | Complete |
+| INFRA-04 | Phase 11 | Complete |
 | DEBT-01 | Phase 11 | Pending |
 
 **Coverage:**

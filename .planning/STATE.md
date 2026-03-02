@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-03-02 after v1.2 roadmap)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates their daily work routines and lets them build custom automations without writing code — all within an enterprise-secure, on-premise environment where data never leaves the company.
-**Current focus:** v1.2 Developer Experience — Phase 11 ready to plan
+**Current focus:** v1.2 Developer Experience — Phase 11 in progress
 
 ## Current Position
 
-Milestone: v1.2 Developer Experience — ROADMAP CREATED 2026-03-02
-Phase: 11 of 14 (Infrastructure and Debt) — Not started
-Plan: —
-Status: Ready to plan Phase 11
-Last activity: 2026-03-02 — v1.2 roadmap created (4 phases, 22 requirements mapped)
+Milestone: v1.2 Developer Experience
+Phase: 11 of 14 (Infrastructure and Debt) — In progress (1/3 plans complete)
+Plan: 11-01 complete — ready for 11-02
+Status: Executing Phase 11
+Last activity: 2026-03-02 — 11-01 Prompt Externalization complete (4 commits, 4 min)
 
-Progress: [░░░░░░░░░░░░] 0% — v1.2 starting
+Progress: [█░░░░░░░░░░░] 4% — v1.2 Phase 11 started
 
 ## Performance Metrics
 
@@ -42,6 +42,8 @@ Recent decisions affecting current work:
 - [v1.2 Roadmap]: Phase 14 depends on Phase 12 (needs unified /admin for repository management UI)
 - [Phase 10-02]: Grafana contact_points.yml chatid must be hardcoded as quoted string — env-var substitution of negative integers re-parsed as YAML number
 - [09-02]: get_llm() must NOT use @lru_cache — each call creates new ChatOpenAI instance with its own callback
+- [11-01]: load_prompt() first parameter is prompt_name (not name) — avoids Python kwargs collision when name= is used as a template variable
+- [11-01]: PromptLoader caches raw template string (not rendered output) — same template rendered fresh per call with caller-supplied vars
 
 ### Pending Todos
 
@@ -57,4 +59,4 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: v1.2 roadmap created — 4 phases (11–14), 22/22 requirements mapped. Next: `/gsd:plan-phase 11`
+Stopped at: Completed 11-01-PLAN.md — Prompt Externalization done. Next: 11-02 (Tunnel + AG-UI serialization)

@@ -123,7 +123,7 @@ Plans:
 | 8. Observability | v1.1 | 4/4 | ✅ Complete | 2026-03-01 |
 | 9. Tech Debt Code Fixes (INSERTED) | v1.1 | 2/2 | ✅ Complete | 2026-03-01 |
 | 10. Optional Tech Debt Closure (INSERTED) | v1.1 | 2/2 | ✅ Complete | 2026-03-02 |
-| 11. Infrastructure & Debt | v1.2 | 0/2 | Not started | - |
+| 11. Infrastructure & Debt | 1/2 | In Progress|  | - |
 | 12. Unified Admin Desk | v1.2 | 0/TBD | Not started | - |
 | 13. Local Auth | v1.2 | 0/TBD | Not started | - |
 | 14. Ecosystem Capabilities | v1.2 | 0/TBD | Not started | - |
