@@ -56,6 +56,9 @@ Recent decisions affecting current work:
 
 - [ ] Start WhatsApp Business API verification process (takes 1-4 weeks, needed for future live testing)
 - [ ] Add CREDENTIAL_ENCRYPTION_KEY to production .env before Phase 3 OAuth flows
+- [ ] [TECH DEBT] Fix Keycloak custom flat mapper — it corrupts resource_access in service account tokens, forcing use of over-privileged admin/admin-cli credentials for role fetching. Fix: remove the custom mapper from blitz-internal realm so standard resource_access.realm-management.roles format applies, then revert keycloak_client.py to client_credentials grant with only view-users + query-users roles
+- [ ] [TECH DEBT] Move KEYCLOAK_ADMIN_PASSWORD + KEYCLOAK_CLIENT_SECRET out of docker-compose.local.yml defaults into backend/.env (already done via env var substitution, but add explicit values to .env template/.dev-secrets.example)
+- [ ] [POST-MVP] HashiCorp Vault for secret management — replace .env file secrets + DB AES-256 with Vault for rotation, audit trail, and zero-trust credential access
 
 ### Blockers/Concerns
 
