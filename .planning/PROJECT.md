@@ -44,9 +44,19 @@ Every Blitz employee gets an intelligent, context-aware assistant that automates
 - ✓ LLM call metrics wired (blitz_llm_calls_total incremented in get_llm()) — v1.1
 - ✓ Credential management UI — frontend Settings page to view/disconnect OAuth providers — v1.1
 
-### Active (v1.2+)
+### Active (v1.2 — Developer Experience)
 
-*(To be defined — run `/gsd:new-milestone`)*
+**Goal:** Make AgentOS easier to extend, explore, and operate — unified admin desk, guided artifact creation, capabilities introspection, API→MCP generation, external skill repositories, local auth, and infrastructure hardening.
+
+- [ ] Consolidate all admin features from /settings into /admin (single admin desk)
+- [ ] Guided artifact creation wizard for agents, tools, skills, MCP servers (templates, validation, name conflict check)
+- [ ] System capabilities explorer tool (`system.capabilities`) queryable from chat and agents
+- [ ] API→MCP auto-generation skill: scan OpenAPI spec → generate + register MCP server
+- [ ] External skill/tool repository management (add/remove repos, search, import, agentskills.io compliance)
+- [ ] Local user & group management with dual auth (local username/password + Keycloak SSO)
+- [ ] Replace ngrok with Cloudflare Tunnel for stable webhook exposure (Telegram, WhatsApp, Teams only)
+- [ ] Externalize all LLM prompts from Python files to markdown files with `PromptLoader` utility
+- [ ] Clean up orphaned `classify_intent()` in router.py (v1.1 tech debt)
 
 ### Out of Scope
 
@@ -118,5 +128,19 @@ Every Blitz employee gets an intelligent, context-aware assistant that automates
 | Docker sandbox for untrusted code | Security requirement: skill execution must be isolated from host and other users | ✓ Good — CPU/RAM/network/PID limits; non-root; cap_drop=ALL; no resource leaks; RLS as defense-in-depth |
 | Grafana + Loki + Alloy for observability | Prometheus-compatible; structured JSON logs from structlog pipe directly to Loki | ✓ Good — full stack live; Telegram spend alerting verified end-to-end; datasource UIDs stable |
 
+## Current Milestone: v1.2 Developer Experience
+
+**Goal:** Make AgentOS easier to extend, explore, and operate — unified admin, guided artifact creation, ecosystem integrations, local auth, and infrastructure hardening.
+
+**Target features:**
+- Unified admin desk at /admin (migrate /settings admin features)
+- Guided artifact creation wizard (agents, tools, skills, MCP)
+- System capabilities explorer (`system.capabilities` tool)
+- API→MCP auto-generation skill
+- External skill/tool repository management + agentskills.io compliance
+- Local user & group management with dual auth (local + Keycloak)
+- Cloudflare Tunnel replacing ngrok for webhook exposure
+- Prompt externalization to markdown files
+
 ---
-*Last updated: 2026-03-02 after v1.1 milestone*
+*Last updated: 2026-03-02 after v1.2 milestone start*
