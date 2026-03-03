@@ -1,5 +1,5 @@
 /**
- * next-auth v5 configuration with Keycloak OIDC provider.
+ * next-auth v5 configuration with Keycloak OIDC and local Credentials providers.
  *
  * Security policy:
  * - JWT stored in server-side session (strategy: "jwt") — NOT in localStorage (XSS protection)
@@ -7,13 +7,18 @@
  * - Client session only exposes user id and email
  *
  * Token refresh:
- * - expiresAt (Unix seconds) is stored alongside access_token on sign-in
- * - jwt() callback checks expiry on every call; refreshes 30s before expiry
- * - On refresh failure, error is propagated to session so the client can redirect to sign-in
+ * - Keycloak tokens: refreshed 30s before expiry via refresh_token flow
+ * - Local tokens: 8-hour fixed expiry; no refresh_token. On expiry, error="SessionExpired"
+ *   so the client can redirect to /login.
+ *
+ * Auth providers:
+ * - "keycloak" — Keycloak OIDC (SSO); RS256 verified by backend
+ * - "credentials" — local username/password; HS256 JWT issued by backend local auth
  */
 import NextAuth from "next-auth";
 import type { JWT } from "next-auth/jwt";
 import Keycloak from "next-auth/providers/keycloak";
+import Credentials from "next-auth/providers/credentials";
 
 async function refreshAccessToken(token: JWT): Promise<JWT> {
   try {
@@ -62,27 +67,96 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       clientSecret: process.env.KEYCLOAK_CLIENT_SECRET ?? "",
       issuer: process.env.KEYCLOAK_ISSUER,
     }),
+    Credentials({
+      credentials: {
+        username: { label: "Username", type: "text" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.username || !credentials?.password) return null;
+        const backendUrl =
+          process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+        try {
+          const res = await fetch(`${backendUrl}/api/auth/local/token`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              username: credentials.username,
+              password: credentials.password,
+            }),
+          });
+          if (!res.ok) return null;
+          const { access_token } = (await res.json()) as {
+            access_token: string;
+          };
+          // Decode JWT payload (no verification — backend already verified)
+          const payloadPart = access_token.split(".")[1] ?? "";
+          const payload = JSON.parse(
+            Buffer.from(payloadPart, "base64url").toString()
+          ) as {
+            sub?: string;
+            preferred_username?: string;
+            email?: string;
+            realm_roles?: string[];
+          };
+          return {
+            id: payload.sub ?? "",
+            name: payload.preferred_username ?? "",
+            email: payload.email ?? "",
+            accessToken: access_token,
+            realmRoles: payload.realm_roles ?? [],
+          };
+        } catch {
+          return null;
+        }
+      },
+    }),
   ],
   session: { strategy: "jwt" }, // JWT in server memory — NOT localStorage
   callbacks: {
-    async jwt({ token, account }) {
-      // Initial sign-in — store all tokens and expiry from Keycloak
-      if (account) {
+    async jwt({ token, account, user }) {
+      // Initial sign-in from Credentials provider
+      if (account?.provider === "credentials" && user) {
+        const u = user as {
+          accessToken?: string;
+          realmRoles?: string[];
+        };
+        return {
+          ...token,
+          accessToken: u.accessToken,
+          realmRoles: u.realmRoles ?? [],
+          // Local tokens: 8-hour expiry from now, no refresh token
+          expiresAt: Math.floor(Date.now() / 1000) + 8 * 3600,
+          authProvider: "credentials",
+        };
+      }
+
+      // Initial sign-in from Keycloak
+      if (account?.provider === "keycloak" && account) {
         return {
           ...token,
           accessToken: account.access_token,
           idToken: account.id_token,
           refreshToken: account.refresh_token,
           expiresAt: account.expires_at, // Unix timestamp in seconds
+          authProvider: "keycloak",
         };
       }
 
-      // Access token still valid (30-second buffer before expiry) — return as-is
+      // Local credentials token: check expiry, no refresh possible
+      if (token.authProvider === "credentials") {
+        if (Date.now() >= (token.expiresAt as number) * 1000) {
+          return { ...token, error: "SessionExpired" };
+        }
+        return token;
+      }
+
+      // Keycloak token: check expiry with 30-second buffer
       if (Date.now() < (token.expiresAt as number) * 1000 - 30_000) {
         return token;
       }
 
-      // Access token expired — use refresh_token to get a new one.
+      // Keycloak token expired — attempt refresh.
       // If refreshToken is missing (old session pre-dating this change), return
       // the token as-is rather than making a broken refresh call. The backend
       // will return 401 and the user will be prompted to sign in again.
@@ -100,7 +174,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.accessToken;
       session.user.id = token.sub ?? "";
 
-      // Propagate refresh errors so the client can force re-login
+      // Propagate realm roles to session for admin layout RBAC check
+      (session as unknown as Record<string, unknown>).realmRoles =
+        (token.realmRoles as string[] | undefined) ?? [];
+
+      // Propagate auth errors so the client can force re-login
       if (token.error) {
         (session as unknown as Record<string, unknown>).error = token.error;
       }
