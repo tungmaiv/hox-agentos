@@ -61,6 +61,7 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  trustHost: true, // Required for Docker: container binds to 0.0.0.0, not localhost
   providers: [
     Keycloak({
       clientId: process.env.KEYCLOAK_CLIENT_ID ?? "",
