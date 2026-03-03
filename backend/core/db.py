@@ -73,11 +73,16 @@ async def set_rls_user_id(session: AsyncSession, user_id: UUID) -> None:
             result = await session.execute(select(MemoryFact).where(...))
     """
     try:
+        # Use a literal UUID string (no bind params) so asyncpg sends SET LOCAL via the
+        # Simple Query Protocol instead of Extended Query Protocol (PARSE + BIND + EXECUTE).
+        # PostgreSQL rejects PARSE for SET statements, which aborts the transaction.
+        # user_id is already a UUID type from JWT validation — str() only produces
+        # hex digits and dashes, so there is no SQL injection risk here.
         await session.execute(
-            sa.text("SET LOCAL app.user_id = :uid"),
-            {"uid": str(user_id)},
+            sa.text(f"SET LOCAL app.user_id = '{user_id!s}'"),
         )
-    except sa.exc.DBAPIError:
+    except sa.exc.OperationalError:
         # Non-PostgreSQL engines (SQLite in tests) do not support SET LOCAL.
-        # On PostgreSQL this branch is never reached.
+        # Narrowed from DBAPIError: PostgreSQL errors (InFailedSQLTransactionError etc.)
+        # are not OperationalError and should not be silently swallowed.
         pass
