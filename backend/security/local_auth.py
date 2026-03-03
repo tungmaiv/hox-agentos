@@ -5,8 +5,9 @@ This module handles the local username/password auth path, parallel to
 Keycloak SSO. Local JWTs use HS256 (symmetric) signing with LOCAL_JWT_SECRET.
 
 Public API:
-  hash_password(plain)                         — bcrypt hash via passlib
-  verify_password(plain, hashed)               — bcrypt verify via passlib
+  validate_password_complexity(plain)          — raise ValueError if too weak
+  hash_password(plain)                         — validate + bcrypt hash
+  verify_password(plain, hashed)               — bcrypt verify
   create_local_token(user_id, email, username, roles) — issue HS256 JWT
   validate_local_token(token)                  — verify HS256 JWT + is_active DB check
   resolve_user_roles(session, user_id)         — union of group + direct roles
@@ -44,7 +45,7 @@ _PASSWORD_MIN_LEN = 8
 _PASSWORD_RE = re.compile(r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$")
 
 
-def _validate_password_complexity(plain: str) -> None:
+def validate_password_complexity(plain: str) -> None:
     """
     Raise ValueError if the password does not meet complexity requirements.
 
@@ -71,6 +72,7 @@ def hash_password(plain: str) -> str:
     Hash a plaintext password using bcrypt.
 
     Uses the bcrypt library directly (not passlib) for Python 3.12 + bcrypt 5.x compatibility.
+    Validates password complexity before hashing — callers do not need to check separately.
 
     Args:
         plain: The plaintext password to hash.
@@ -78,11 +80,10 @@ def hash_password(plain: str) -> str:
     Returns:
         A bcrypt hash string suitable for storage in local_users.password_hash.
 
-    Note:
-        Does NOT validate password complexity — callers that create passwords
-        (admin user create/update) should call _validate_password_complexity() first.
-        validate_local_token() only calls verify_password(), not this.
+    Raises:
+        ValueError: if the password does not meet complexity requirements.
     """
+    validate_password_complexity(plain)
     return _bcrypt.hashpw(plain.encode("utf-8"), _bcrypt.gensalt()).decode("utf-8")
 
 

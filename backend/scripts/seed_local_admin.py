@@ -7,27 +7,34 @@ credentials and access /admin/users to create additional users.
 Usage:
     cd backend
     PYTHONPATH=. .venv/bin/python scripts/seed_local_admin.py
-    PYTHONPATH=. .venv/bin/python scripts/seed_local_admin.py --username admin --email admin@blitz.local --password secret
+    PYTHONPATH=. .venv/bin/python scripts/seed_local_admin.py --username admin --email admin@blitz.local --password 'MyStr0ng!'
 
 Idempotent: skips creation if the username already exists.
 """
 import argparse
 import asyncio
+import secrets
 import sys
 import uuid
 
-import bcrypt
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 # Bootstrap path so core.* imports work without the full app startup
 sys.path.insert(0, ".")
 
 from core.db import async_session
 from core.models.local_auth import LocalUser, LocalUserRole
+from security.local_auth import hash_password
 
 
 async def seed(username: str, email: str, password: str) -> None:
+    # Validate complexity before any DB operation
+    try:
+        pw_hash = hash_password(password)
+    except ValueError as exc:
+        print(f"Error: {exc}")
+        sys.exit(1)
+
     async with async_session() as session:
         # Check if user already exists
         existing = await session.scalar(
@@ -37,18 +44,13 @@ async def seed(username: str, email: str, password: str) -> None:
             print(f"User '{username}' already exists (id={existing.id}) — skipping.")
             return
 
-        # Hash password
-        password_hash = bcrypt.hashpw(
-            password.encode(), bcrypt.gensalt()
-        ).decode()
-
         # Insert user
         user_id = uuid.uuid4()
         user = LocalUser(
             id=user_id,
             username=username,
             email=email,
-            password_hash=password_hash,
+            password_hash=pw_hash,
             is_active=True,
         )
         session.add(user)
@@ -71,10 +73,15 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Seed first local admin user")
     parser.add_argument("--username", default="admin", help="Username (default: admin)")
     parser.add_argument("--email", default="admin@blitz.local", help="Email (default: admin@blitz.local)")
-    parser.add_argument("--password", default="admin", help="Password (default: admin)")
+    parser.add_argument(
+        "--password",
+        default=None,
+        help="Password (auto-generated if not provided)",
+    )
     args = parser.parse_args()
+    password: str = args.password or secrets.token_urlsafe(16)
 
-    asyncio.run(seed(args.username, args.email, args.password))
+    asyncio.run(seed(args.username, args.email, password))
 
 
 if __name__ == "__main__":

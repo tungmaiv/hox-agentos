@@ -18,6 +18,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, field_validator
 
+from security.local_auth import validate_password_complexity
+
 
 # ---------------------------------------------------------------------------
 # Login
@@ -63,17 +65,8 @@ class LocalUserCreate(BaseModel):
     @field_validator("password")
     @classmethod
     def validate_password(cls, v: str) -> str:
-        """Validate password complexity: min 8 chars, uppercase, lowercase, digit."""
-        import re
-
-        if len(v) < 8:
-            raise ValueError("Password must be at least 8 characters long")
-        if not re.search(r"[A-Z]", v):
-            raise ValueError("Password must contain at least one uppercase letter")
-        if not re.search(r"[a-z]", v):
-            raise ValueError("Password must contain at least one lowercase letter")
-        if not re.search(r"\d", v):
-            raise ValueError("Password must contain at least one digit")
+        """Validate password complexity."""
+        validate_password_complexity(v)
         return v
 
 
@@ -101,16 +94,7 @@ class LocalUserUpdate(BaseModel):
         """Validate password complexity when provided."""
         if v is None:
             return v
-        import re
-
-        if len(v) < 8:
-            raise ValueError("Password must be at least 8 characters long")
-        if not re.search(r"[A-Z]", v):
-            raise ValueError("Password must contain at least one uppercase letter")
-        if not re.search(r"[a-z]", v):
-            raise ValueError("Password must contain at least one lowercase letter")
-        if not re.search(r"\d", v):
-            raise ValueError("Password must contain at least one digit")
+        validate_password_complexity(v)
         return v
 
 
