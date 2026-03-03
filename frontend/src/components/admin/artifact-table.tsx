@@ -3,11 +3,12 @@
  * ArtifactTable — generic table view for admin artifact management.
  *
  * Displays artifacts in a sortable table with status badges, action buttons
- * (edit, enable/disable, activate version), and filter controls.
+ * (edit, enable/disable, activate version, clone), and filter controls.
  *
  * Generic over T which must extend ArtifactBase.
  */
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import type { ArtifactBase, ArtifactStatus } from "@/lib/admin-types";
 
 type SortField = "name" | "version" | "status" | "lastSeenAt";
@@ -23,6 +24,8 @@ interface Column<T> {
 interface ArtifactTableProps<T extends ArtifactBase> {
   items: T[];
   columns?: Column<T>[];
+  /** Artifact type used for the clone URL query param (e.g., "agent", "tool"). */
+  artifactType?: string;
   onEdit?: (item: T) => void;
   onPatchStatus?: (
     id: string,
@@ -70,10 +73,12 @@ function RelativeTime({ dateStr }: { dateStr: string | null }) {
 export function ArtifactTable<T extends ArtifactBase>({
   items,
   columns,
+  artifactType,
   onEdit,
   onPatchStatus,
   onActivateVersion,
 }: ArtifactTableProps<T>) {
+  const router = useRouter();
   const [sortField, setSortField] = useState<SortField>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -216,6 +221,18 @@ export function ArtifactTable<T extends ArtifactBase>({
                         className="text-xs px-2 py-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
                       >
                         Edit
+                      </button>
+                    )}
+                    {artifactType && (
+                      <button
+                        onClick={() =>
+                          router.push(
+                            `/admin/create?clone_type=${artifactType}&clone_id=${item.id}`
+                          )
+                        }
+                        className="text-xs px-2 py-1 text-gray-600 border border-gray-200 rounded hover:bg-gray-50 transition-colors"
+                      >
+                        Clone
                       </button>
                     )}
                     {onPatchStatus && item.status === "active" && (

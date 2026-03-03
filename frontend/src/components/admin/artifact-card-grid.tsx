@@ -2,9 +2,11 @@
 /**
  * ArtifactCardGrid — generic card grid view for admin artifact management.
  *
- * Displays artifacts as responsive cards with status badges, action buttons,
- * and truncated descriptions. Responsive: 3 cols on lg, 2 on md, 1 on sm.
+ * Displays artifacts as responsive cards with status badges, action buttons
+ * (edit, enable/disable, activate version, clone), and truncated descriptions.
+ * Responsive: 3 cols on lg, 2 on md, 1 on sm.
  */
+import { useRouter } from "next/navigation";
 import type { ArtifactBase, ArtifactStatus } from "@/lib/admin-types";
 
 function StatusBadge({ status }: { status: ArtifactStatus }) {
@@ -47,6 +49,8 @@ interface ArtifactCardGridProps<T extends ArtifactBase> {
   items: T[];
   /** Render additional info on the card (e.g., handler_type for tools). */
   renderExtra?: (item: T) => React.ReactNode;
+  /** Artifact type used for the clone URL query param (e.g., "agent", "tool"). */
+  artifactType?: string;
   onEdit?: (item: T) => void;
   onPatchStatus?: (
     id: string,
@@ -58,10 +62,12 @@ interface ArtifactCardGridProps<T extends ArtifactBase> {
 export function ArtifactCardGrid<T extends ArtifactBase>({
   items,
   renderExtra,
+  artifactType,
   onEdit,
   onPatchStatus,
   onActivateVersion,
 }: ArtifactCardGridProps<T>) {
+  const router = useRouter();
   if (items.length === 0) {
     return (
       <div className="text-center py-12 text-sm text-gray-400">
@@ -121,13 +127,25 @@ export function ArtifactCardGrid<T extends ArtifactBase>({
           )}
 
           {/* Actions */}
-          <div className="flex items-center gap-1 border-t border-gray-100 pt-2">
+          <div className="flex items-center gap-1 flex-wrap border-t border-gray-100 pt-2">
             {onEdit && (
               <button
                 onClick={() => onEdit(item)}
                 className="text-xs px-2 py-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
               >
                 Edit
+              </button>
+            )}
+            {artifactType && (
+              <button
+                onClick={() =>
+                  router.push(
+                    `/admin/create?clone_type=${artifactType}&clone_id=${item.id}`
+                  )
+                }
+                className="text-xs px-2 py-1 text-gray-600 border border-gray-200 rounded hover:bg-gray-50 transition-colors"
+              >
+                Clone
               </button>
             )}
             {onPatchStatus && item.status === "active" && (
