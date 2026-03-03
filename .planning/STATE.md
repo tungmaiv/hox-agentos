@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-02 after v1.2 roadmap)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates their daily work routines and lets them build custom automations without writing code — all within an enterprise-secure, on-premise environment where data never leaves the company.
-**Current focus:** v1.2 Developer Experience — Phase 13 complete, Phase 14 next
+**Current focus:** v1.2 Developer Experience — Phase 14 context gathered, ready for planning
 
 ## Current Position
 
 Milestone: v1.2 Developer Experience
-Phase: 13 of 14 (Local Auth) — COMPLETE (both plans done)
-Status: Phase 13 Plan 02 COMPLETE — frontend local auth: Credentials provider + dual login page + admin Users tab
-Last activity: 2026-03-03 — Phase 13-02 frontend local auth: NextAuth Credentials, redesigned /login, /admin/users CRUD
+Phase: 14 of 14 (Ecosystem Capabilities) — Context gathered, ready for planning
+Status: Phase 14 CONTEXT.md written with decisions on capabilities card, OpenAPI wizard, Skill Store, and export UX
+Last activity: 2026-03-04 — Phase 14 discuss-phase completed
 
-Progress: [███░░░░░░░░░] 23% — v1.2 Phase 13 complete, Phase 14 next
+Progress: [███░░░░░░░░░] 25% — v1.2 Phase 14 context ready
 
 ## Performance Metrics
 
@@ -95,5 +95,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-03
-Stopped at: Phase 13 Plan 02 COMPLETE — frontend local auth done (Credentials provider + redesigned /login + admin Users tab + 8 proxy routes; pnpm build 0 errors)
+Last session: 2026-03-04
+Stopped at: Phase 14 context gathered — CONTEXT.md written with decisions on capabilities card, OpenAPI wizard, Skill Store, and export UX
+Resume file: .planning/phases/14-ecosystem-capabilities/14-CONTEXT.md
