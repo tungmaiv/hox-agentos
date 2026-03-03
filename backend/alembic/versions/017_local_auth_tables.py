@@ -112,13 +112,6 @@ def upgrade() -> None:
         sa.Column("role", sa.String(64), primary_key=True, nullable=False),
     )
 
-    # Trigger: keep local_users.updated_at current on every UPDATE
-    op.execute("""
-        CREATE TRIGGER local_users_set_updated_at
-        BEFORE UPDATE ON local_users
-        FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-    """)
-
 
 def downgrade() -> None:
     # Drop in reverse dependency order
@@ -128,6 +121,5 @@ def downgrade() -> None:
     op.drop_index("ix_local_groups_name", table_name="local_groups")
     op.drop_table("local_groups")
     op.drop_index("ix_local_users_email", table_name="local_users")
-    op.execute("DROP TRIGGER IF EXISTS local_users_set_updated_at ON local_users;")
     op.drop_index("ix_local_users_username", table_name="local_users")
     op.drop_table("local_users")
