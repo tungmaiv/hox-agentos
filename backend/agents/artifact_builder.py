@@ -9,6 +9,7 @@ Graph topology:
     |-> gather_type           (if artifact_type not set)
     |-> gather_details        (if type set but draft incomplete)
     |-> validate_and_present  (if draft looks ready)
+    |-> fill_form_node        (after fill_form tool call — emits form state)
   Each node -> END (runs once per user message turn)
 
 This agent is separate from blitz_master. It has no memory nodes,
@@ -18,8 +19,9 @@ import json
 import re
 
 import structlog
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_core.runnables import RunnableConfig
+from langchain_core.tools import tool
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
 from langgraph.graph.state import CompiledStateGraph
@@ -46,8 +48,47 @@ _TYPE_KEYWORDS: list[tuple[str, str]] = [
 _DRAFT_COMPLETE_MARKER = "[DRAFT_COMPLETE]"
 
 
+@tool
+def fill_form(
+    name: str | None = None,
+    description: str | None = None,
+    artifact_type: str | None = None,
+    required_permissions: list[str] | None = None,
+    model_alias: str | None = None,
+    system_prompt: str | None = None,
+    handler_module: str | None = None,
+    sandbox_required: bool | None = None,
+    entry_point: str | None = None,
+    url: str | None = None,
+    version: str | None = None,
+) -> str:
+    """
+    Fill one or more form fields in the artifact creation form.
+    Only provide the fields you want to set or change — omitted fields are unchanged.
+    After calling this tool, the user will see the form fields update live.
+    """
+    # Build a summary of what was filled for the tool return message
+    filled = {
+        k: v for k, v in {
+            "name": name, "description": description, "artifact_type": artifact_type,
+            "required_permissions": required_permissions, "model_alias": model_alias,
+            "system_prompt": system_prompt, "handler_module": handler_module,
+            "sandbox_required": sandbox_required, "entry_point": entry_point,
+            "url": url, "version": version,
+        }.items() if v is not None
+    }
+    return f"Filled {len(filled)} field(s): {', '.join(filled.keys())}"
+
+
 def _route_intent(state: ArtifactBuilderState) -> str:
     """Conditional entry point: decide which node to run next."""
+    # Check if the last message is a ToolMessage from fill_form
+    messages = state.get("messages", [])
+    if messages:
+        last_msg = messages[-1]
+        if isinstance(last_msg, ToolMessage):
+            return "fill_form_node"
+
     if state.get("artifact_type") is None:
         return "gather_type"
     if state.get("is_complete"):
@@ -129,20 +170,24 @@ async def _emit_builder_state(
     artifact_draft: dict | None,
     validation_errors: list[str],
     is_complete: bool,
+    form_updates: dict | None = None,
 ) -> None:
-    """Emit co-agent state to CopilotKit for live preview rendering."""
-    await copilotkit_emit_state(config, {
+    """Emit co-agent state to CopilotKit for live preview + form field rendering."""
+    state: dict = {
         "artifact_type": artifact_type,
         "artifact_draft": artifact_draft,
         "validation_errors": validation_errors,
         "is_complete": is_complete,
-    })
+    }
+    if form_updates:
+        state.update(form_updates)
+    await copilotkit_emit_state(config, state)
 
 
 async def _gather_type_node(state: ArtifactBuilderState, config: RunnableConfig) -> dict:
     """Ask the user what type of artifact they want, or detect from message."""
     messages = state.get("messages", [])
-    llm = get_llm("blitz/master")
+    llm = get_llm("blitz/master").bind_tools([fill_form])
 
     # Check if the user already mentioned a type in their last message
     if messages:
@@ -203,13 +248,15 @@ async def _gather_details_node(state: ArtifactBuilderState, config: RunnableConf
         f"\n\nCurrent artifact_draft so far:\n```json\n{json.dumps(current_draft, indent=2)}\n```\n"
         f"Continue asking questions for missing fields. When you have enough information "
         f"to create a valid definition, output the complete artifact_draft as a JSON code block "
-        f"and include the marker {_DRAFT_COMPLETE_MARKER} in your response."
+        f"and include the marker {_DRAFT_COMPLETE_MARKER} in your response.\n"
+        f"You can also call the fill_form tool to update the frontend form fields directly."
         if current_draft
-        else "\n\nNo fields collected yet. Start by asking about the artifact's purpose and name."
+        else "\n\nNo fields collected yet. Start by asking about the artifact's purpose and name. "
+             "You can call the fill_form tool to update the frontend form fields as you gather information."
     )
 
     try:
-        llm = get_llm("blitz/master")
+        llm = get_llm("blitz/master").bind_tools([fill_form])
         response = await llm.ainvoke([
             SystemMessage(content=sys_prompt + draft_context),
             *messages,
@@ -287,6 +334,69 @@ async def _validate_and_present_node(state: ArtifactBuilderState, config: Runnab
     }
 
 
+async def _fill_form_node(state: ArtifactBuilderState, config: RunnableConfig) -> dict:
+    """Process fill_form tool call results and emit updated form state."""
+    # Extract form field values from the last AI message's tool calls
+    # to update the state, then emit them to the frontend.
+    messages = state.get("messages", [])
+
+    # Find the most recent AIMessage with tool_calls to extract fill_form arguments
+    form_state_updates: dict = {}
+    for msg in reversed(messages):
+        if isinstance(msg, AIMessage) and hasattr(msg, "tool_calls") and msg.tool_calls:
+            for tc in msg.tool_calls:
+                if tc.get("name") == "fill_form":
+                    args = tc.get("args", {})
+                    if args.get("name") is not None:
+                        form_state_updates["form_name"] = args["name"]
+                    if args.get("description") is not None:
+                        form_state_updates["form_description"] = args["description"]
+                    if args.get("version") is not None:
+                        form_state_updates["form_version"] = args["version"]
+                    if args.get("required_permissions") is not None:
+                        form_state_updates["form_required_permissions"] = args["required_permissions"]
+                    if args.get("model_alias") is not None:
+                        form_state_updates["form_model_alias"] = args["model_alias"]
+                    if args.get("system_prompt") is not None:
+                        form_state_updates["form_system_prompt"] = args["system_prompt"]
+                    if args.get("handler_module") is not None:
+                        form_state_updates["form_handler_module"] = args["handler_module"]
+                    if args.get("sandbox_required") is not None:
+                        form_state_updates["form_sandbox_required"] = args["sandbox_required"]
+                    if args.get("entry_point") is not None:
+                        form_state_updates["form_entry_point"] = args["entry_point"]
+                    if args.get("url") is not None:
+                        form_state_updates["form_url"] = args["url"]
+                    if args.get("artifact_type") is not None:
+                        form_state_updates["artifact_type"] = args["artifact_type"]
+            break
+
+    # Merge into existing form state
+    current_form = {
+        "form_name": state.get("form_name"),
+        "form_description": state.get("form_description"),
+        "form_version": state.get("form_version"),
+        "form_required_permissions": state.get("form_required_permissions"),
+        "form_model_alias": state.get("form_model_alias"),
+        "form_system_prompt": state.get("form_system_prompt"),
+        "form_handler_module": state.get("form_handler_module"),
+        "form_sandbox_required": state.get("form_sandbox_required"),
+        "form_entry_point": state.get("form_entry_point"),
+        "form_url": state.get("form_url"),
+    }
+    merged = {**current_form, **form_state_updates}
+
+    await _emit_builder_state(
+        config,
+        state.get("artifact_type"),
+        state.get("artifact_draft"),
+        state.get("validation_errors", []),
+        state.get("is_complete", False),
+        form_updates=merged,
+    )
+    return {**merged}
+
+
 def create_artifact_builder_graph() -> CompiledStateGraph:
     """Build and compile the artifact builder LangGraph."""
     graph = StateGraph(ArtifactBuilderState)
@@ -294,6 +404,7 @@ def create_artifact_builder_graph() -> CompiledStateGraph:
     graph.add_node("gather_type", _gather_type_node)
     graph.add_node("gather_details", _gather_details_node)
     graph.add_node("validate_and_present", _validate_and_present_node)
+    graph.add_node("fill_form_node", _fill_form_node)
 
     # Conditional entry point: routes to correct node based on state
     graph.set_conditional_entry_point(
@@ -302,11 +413,13 @@ def create_artifact_builder_graph() -> CompiledStateGraph:
             "gather_type": "gather_type",
             "gather_details": "gather_details",
             "validate_and_present": "validate_and_present",
+            "fill_form_node": "fill_form_node",
         },
     )
 
     graph.add_edge("gather_type", END)
     graph.add_edge("gather_details", END)
     graph.add_edge("validate_and_present", END)
+    graph.add_edge("fill_form_node", END)
 
     return graph.compile(checkpointer=MemorySaver())

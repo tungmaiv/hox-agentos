@@ -22,7 +22,7 @@ from uuid import UUID
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.db import get_db
@@ -130,6 +130,22 @@ async def list_pending_skills(
         count=len(skills),
     )
     return [SkillDefinitionResponse.model_validate(s) for s in skills]
+
+
+@router.get("/check-name")
+async def check_skill_name(
+    name: str = Query(..., min_length=1),
+    user: UserContext = Depends(_require_registry_manager),
+    session: AsyncSession = Depends(get_db),
+) -> dict[str, bool]:
+    """Returns {"available": true/false} for the given skill name (case-insensitive)."""
+    count = await session.scalar(
+        select(func.count()).where(
+            func.lower(SkillDefinition.name) == name.lower(),
+            SkillDefinition.is_active == True,  # noqa: E712
+        )
+    )
+    return {"available": (count or 0) == 0}
 
 
 @router.patch("/bulk-status")

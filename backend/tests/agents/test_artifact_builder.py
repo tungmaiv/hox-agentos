@@ -221,6 +221,7 @@ async def test_gather_type_detects_tool_from_message():
 
     with patch("agents.artifact_builder.get_llm") as mock_get_llm:
         mock_llm = MagicMock()
+        mock_llm.bind_tools.return_value = mock_llm
         mock_llm.ainvoke = AsyncMock(return_value=mock_response)
         mock_get_llm.return_value = mock_llm
 
@@ -382,6 +383,8 @@ async def test_gather_details_validates_before_marking_complete():
 
     with patch("agents.artifact_builder.get_llm") as mock_get_llm:
         mock_llm = MagicMock()
+        # bind_tools returns itself so ainvoke is still accessible
+        mock_llm.bind_tools.return_value = mock_llm
         mock_llm.ainvoke = AsyncMock(return_value=mock_response)
         mock_get_llm.return_value = mock_llm
 
@@ -447,6 +450,7 @@ async def test_gather_details_extracts_draft():
 
     with patch("agents.artifact_builder.get_llm") as mock_get_llm:
         mock_llm = MagicMock()
+        mock_llm.bind_tools.return_value = mock_llm
         mock_llm.ainvoke = AsyncMock(return_value=mock_response)
         mock_get_llm.return_value = mock_llm
 
@@ -476,6 +480,7 @@ async def test_gather_details_detects_draft_complete_marker():
 
     with patch("agents.artifact_builder.get_llm") as mock_get_llm:
         mock_llm = MagicMock()
+        mock_llm.bind_tools.return_value = mock_llm
         mock_llm.ainvoke = AsyncMock(return_value=mock_response)
         mock_get_llm.return_value = mock_llm
 
@@ -501,6 +506,7 @@ async def test_gather_details_llm_error_returns_friendly_message():
 
     with patch("agents.artifact_builder.get_llm") as mock_get_llm:
         mock_llm = MagicMock()
+        mock_llm.bind_tools.return_value = mock_llm
         mock_llm.ainvoke = AsyncMock(side_effect=RuntimeError("LLM timeout"))
         mock_get_llm.return_value = mock_llm
 
@@ -526,6 +532,7 @@ async def test_gather_type_llm_error_returns_friendly_message():
 
     with patch("agents.artifact_builder.get_llm") as mock_get_llm:
         mock_llm = MagicMock()
+        mock_llm.bind_tools.return_value = mock_llm
         mock_llm.ainvoke = AsyncMock(side_effect=RuntimeError("Connection refused"))
         mock_get_llm.return_value = mock_llm
 

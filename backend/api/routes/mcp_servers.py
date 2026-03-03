@@ -16,9 +16,9 @@ from typing import Any
 from uuid import UUID
 
 import structlog
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.db import get_db
@@ -114,6 +114,21 @@ async def create_mcp_server(
         "is_active": server.is_active,
         "status": server.status,
     }
+
+
+@router.get("/check-name")
+async def check_mcp_server_name(
+    name: str = Query(..., min_length=1),
+    user: UserContext = Depends(_require_admin),
+    session: AsyncSession = Depends(get_db),
+) -> dict[str, bool]:
+    """Returns {"available": true/false} for the given MCP server name (case-insensitive)."""
+    count = await session.scalar(
+        select(func.count()).where(
+            func.lower(McpServer.name) == name.lower(),
+        )
+    )
+    return {"available": (count or 0) == 0}
 
 
 @router.delete("/{server_id}")

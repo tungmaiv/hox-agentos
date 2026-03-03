@@ -16,7 +16,7 @@ from uuid import UUID
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.db import get_db
@@ -93,6 +93,22 @@ async def create_agent(
         user_id=str(user["user_id"]),
     )
     return AgentDefinitionResponse.model_validate(agent)
+
+
+@router.get("/check-name")
+async def check_agent_name(
+    name: str = Query(..., min_length=1),
+    user: UserContext = Depends(_require_registry_manager),
+    session: AsyncSession = Depends(get_db),
+) -> dict[str, bool]:
+    """Returns {"available": true/false} for the given agent name (case-insensitive)."""
+    count = await session.scalar(
+        select(func.count()).where(
+            func.lower(AgentDefinition.name) == name.lower(),
+            AgentDefinition.is_active == True,  # noqa: E712
+        )
+    )
+    return {"available": (count or 0) == 0}
 
 
 @router.get("/{agent_id}")
