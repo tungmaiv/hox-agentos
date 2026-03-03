@@ -121,6 +121,10 @@ async def test_channel_output_node_telegram_delivery():
     mock_session.execute = AsyncMock(
         return_value=MagicMock(scalar_one_or_none=MagicMock(return_value=mock_account))
     )
+    mock_begin_ctx = AsyncMock()
+    mock_begin_ctx.__aenter__ = AsyncMock(return_value=None)
+    mock_begin_ctx.__aexit__ = AsyncMock(return_value=None)
+    mock_session.begin = MagicMock(return_value=mock_begin_ctx)
 
     mock_gateway = MagicMock()
     mock_gateway.send_outbound = AsyncMock()
@@ -162,6 +166,10 @@ async def test_channel_output_node_no_linked_account():
     mock_session.execute = AsyncMock(
         return_value=MagicMock(scalar_one_or_none=MagicMock(return_value=None))
     )
+    mock_begin_ctx = AsyncMock()
+    mock_begin_ctx.__aenter__ = AsyncMock(return_value=None)
+    mock_begin_ctx.__aexit__ = AsyncMock(return_value=None)
+    mock_session.begin = MagicMock(return_value=mock_begin_ctx)
 
     with patch("agents.node_handlers.async_session") as mock_sf:
         mock_sf.return_value.__aenter__ = AsyncMock(return_value=mock_session)

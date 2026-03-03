@@ -117,14 +117,15 @@ async def _check_gates(user: UserContext, start_ms: int) -> None:
         start_ms: Monotonic milliseconds at request start for duration tracking.
     """
     async with async_session() as session:
-        # Gate 2: RBAC — user must have 'chat' permission
-        if not await has_permission(user, "chat", session):
-            elapsed = int(time.monotonic() * 1000) - start_ms
-            await log_tool_call(user["user_id"], "agents.chat", False, elapsed)
-            raise HTTPException(status_code=403, detail="Permission denied")
+        async with session.begin():
+            # Gate 2: RBAC — user must have 'chat' permission
+            if not await has_permission(user, "chat", session):
+                elapsed = int(time.monotonic() * 1000) - start_ms
+                await log_tool_call(user["user_id"], "agents.chat", False, elapsed)
+                raise HTTPException(status_code=403, detail="Permission denied")
 
-        # Gate 3: Tool ACL — check per-user tool allowlist
-        allowed = await check_tool_acl(user["user_id"], "agents.chat", session)
+            # Gate 3: Tool ACL — check per-user tool allowlist
+            allowed = await check_tool_acl(user["user_id"], "agents.chat", session)
     elapsed = int(time.monotonic() * 1000) - start_ms
     await log_tool_call(user["user_id"], "agents.chat", allowed, elapsed)
 
@@ -221,12 +222,13 @@ async def copilotkit_endpoint(
             else:
                 # DB errors propagate — only the UUID parse is expected to fail
                 async with async_session() as db:
-                    turns = await load_recent_turns(
-                        db,
-                        user_id=user["user_id"],
-                        conversation_id=conv_id,
-                        n=50,
-                    )
+                    async with db.begin():
+                        turns = await load_recent_turns(
+                            db,
+                            user_id=user["user_id"],
+                            conversation_id=conv_id,
+                            n=50,
+                        )
                 logger.debug("connect_history_loaded", thread_id=thread_id, turns=len(turns))
 
         async def connect_generator():
@@ -258,11 +260,12 @@ async def copilotkit_endpoint(
         # artifact_builder requires registry:manage permission (not just chat)
         if agent_id == "artifact_builder":
             async with async_session() as session:
-                if not await has_permission(user, "registry:manage", session):
-                    raise HTTPException(
-                        status_code=403,
-                        detail="Registry manage permission required",
-                    )
+                async with session.begin():
+                    if not await has_permission(user, "registry:manage", session):
+                        raise HTTPException(
+                            status_code=403,
+                            detail="Registry manage permission required",
+                        )
 
         body = envelope.get("body") or {}
         try:

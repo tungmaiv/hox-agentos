@@ -141,7 +141,8 @@ async def _handle_tool_node(config: dict[str, Any], state: WorkflowState) -> Any
     # sandbox routing decisions where a revoked sandbox permission must take
     # effect immediately rather than up to 60 seconds later.
     async with async_session() as session:
-        tool_meta = await get_tool(tool_name, session=session)
+        async with session.begin():
+            tool_meta = await get_tool(tool_name, session=session)
         if tool_meta is None:
             logger.warning("tool_node_unknown_tool", tool_name=tool_name)
             return {"error": f"Tool '{tool_name}' not registered", "success": False}
@@ -200,6 +201,7 @@ async def _handle_tool_node(config: dict[str, Any], state: WorkflowState) -> Any
             logger.info("tool_node_success", tool=tool_name, user_id=str(user_uuid))
             return result
         except HTTPException as exc:
+            await session.rollback()
             logger.warning(
                 "tool_node_denied",
                 tool=tool_name,
@@ -208,6 +210,7 @@ async def _handle_tool_node(config: dict[str, Any], state: WorkflowState) -> Any
             )
             return {"error": f"{exc.status_code}: {exc.detail}", "success": False}
         except Exception as exc:
+            await session.rollback()
             logger.error("tool_node_error", tool=tool_name, error=str(exc))
             return {"error": str(exc), "success": False}
 
@@ -310,16 +313,17 @@ async def _handle_channel_output_node(config: dict[str, Any], state: WorkflowSta
 
     uid = uuid.UUID(str(owner_user_id))
     async with async_session() as session:
-        result = await session.execute(
-            select(ChannelAccount).where(
-                and_(
-                    ChannelAccount.user_id == uid,
-                    ChannelAccount.channel == channel,
-                    ChannelAccount.is_paired == True,  # noqa: E712
+        async with session.begin():
+            result = await session.execute(
+                select(ChannelAccount).where(
+                    and_(
+                        ChannelAccount.user_id == uid,
+                        ChannelAccount.channel == channel,
+                        ChannelAccount.is_paired == True,  # noqa: E712
+                    )
                 )
             )
-        )
-        account = result.scalar_one_or_none()
+            account = result.scalar_one_or_none()
 
     if not account:
         raise ValueError(f"No linked {channel} account for user {owner_user_id}")

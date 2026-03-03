@@ -41,6 +41,10 @@ async def test_tool_node_returns_error_for_unknown_tool():
          patch("agents.node_handlers.get_tool", new_callable=AsyncMock) as mock_get_tool:
 
         mock_session = AsyncMock()
+        mock_begin_ctx = AsyncMock()
+        mock_begin_ctx.__aenter__ = AsyncMock(return_value=None)
+        mock_begin_ctx.__aexit__ = AsyncMock(return_value=None)
+        mock_session.begin = MagicMock(return_value=mock_begin_ctx)
         mock_session_factory.return_value.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session_factory.return_value.__aexit__ = AsyncMock(return_value=False)
         # Simulate tool not found in registry
@@ -73,6 +77,10 @@ async def test_tool_node_calls_mcp_for_known_tool():
          patch("agents.node_handlers.get_tool", new_callable=AsyncMock) as mock_get_tool:
 
         mock_session = AsyncMock()
+        mock_begin_ctx = AsyncMock()
+        mock_begin_ctx.__aenter__ = AsyncMock(return_value=None)
+        mock_begin_ctx.__aexit__ = AsyncMock(return_value=None)
+        mock_session.begin = MagicMock(return_value=mock_begin_ctx)
         mock_session_factory.return_value.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session_factory.return_value.__aexit__ = AsyncMock(return_value=False)
         mock_get_tool.return_value = known_tool
@@ -113,6 +121,10 @@ async def test_tool_node_returns_error_on_acl_denial():
          patch("agents.node_handlers.get_tool", new_callable=AsyncMock) as mock_get_tool:
 
         mock_session = AsyncMock()
+        mock_begin_ctx = AsyncMock()
+        mock_begin_ctx.__aenter__ = AsyncMock(return_value=None)
+        mock_begin_ctx.__aexit__ = AsyncMock(return_value=None)
+        mock_session.begin = MagicMock(return_value=mock_begin_ctx)
         mock_session_factory.return_value.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session_factory.return_value.__aexit__ = AsyncMock(return_value=False)
         mock_get_tool.return_value = known_tool

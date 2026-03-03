@@ -46,6 +46,10 @@ async def test_load_memory_node_injects_facts_as_system_message():
 
         # Mock async context manager for async_session
         mock_session = AsyncMock()
+        mock_begin_ctx = AsyncMock()
+        mock_begin_ctx.__aenter__ = AsyncMock(return_value=None)
+        mock_begin_ctx.__aexit__ = AsyncMock(return_value=None)
+        mock_session.begin = MagicMock(return_value=mock_begin_ctx)
         mock_session_ctx = AsyncMock()
         mock_session_ctx.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session_ctx.__aexit__ = AsyncMock(return_value=None)
@@ -427,6 +431,10 @@ async def test_load_memory_node_injects_episodes_as_system_message():
 
         # Mock async context manager for async_session
         mock_session = AsyncMock()
+        mock_begin_ctx = AsyncMock()
+        mock_begin_ctx.__aenter__ = AsyncMock(return_value=None)
+        mock_begin_ctx.__aexit__ = AsyncMock(return_value=None)
+        mock_session.begin = MagicMock(return_value=mock_begin_ctx)
         mock_session_ctx = AsyncMock()
         mock_session_ctx.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session_ctx.__aexit__ = AsyncMock(return_value=None)
@@ -481,6 +489,10 @@ async def test_load_memory_node_gracefully_handles_episode_failure():
         mock_episodes.side_effect = RuntimeError("DB connection lost")
 
         mock_session = AsyncMock()
+        mock_begin_ctx = AsyncMock()
+        mock_begin_ctx.__aenter__ = AsyncMock(return_value=None)
+        mock_begin_ctx.__aexit__ = AsyncMock(return_value=None)
+        mock_session.begin = MagicMock(return_value=mock_begin_ctx)
         mock_session_ctx = AsyncMock()
         mock_session_ctx.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session_ctx.__aexit__ = AsyncMock(return_value=None)

@@ -37,18 +37,19 @@ async def _resolve_channel_account(
     from sqlalchemy import and_, select
 
     async with async_session() as session:
-        result = await session.execute(
-            select(ChannelAccount).where(
-                and_(
-                    ChannelAccount.user_id == user_id,
-                    ChannelAccount.channel == channel,
-                    ChannelAccount.is_paired == True,  # noqa: E712
+        async with session.begin():
+            result = await session.execute(
+                select(ChannelAccount).where(
+                    and_(
+                        ChannelAccount.user_id == user_id,
+                        ChannelAccount.channel == channel,
+                        ChannelAccount.is_paired == True,  # noqa: E712
+                    )
                 )
             )
-        )
-        account = result.scalar_one_or_none()
-        if account:
-            return account.external_user_id, account.external_user_id
+            account = result.scalar_one_or_none()
+            if account:
+                return account.external_user_id, account.external_user_id
     return "", None
 
 

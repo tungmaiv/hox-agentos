@@ -99,7 +99,8 @@ async def _load_memory_node(state: BlitzState) -> dict:
         skip_short_term = True
     else:
         async with async_session() as session:
-            turns = await load_recent_turns(session, user_id=user_id, conversation_id=conversation_id, n=20)
+            async with session.begin():
+                turns = await load_recent_turns(session, user_id=user_id, conversation_id=conversation_id, n=20)
 
         history = []
         for turn in turns:
@@ -126,12 +127,13 @@ async def _load_memory_node(state: BlitzState) -> dict:
             provider = BGE_M3Provider()
             query_embedding = (await provider.embed([str(last_user_message)]))[0]
             async with async_session() as session:
-                facts = await search_facts(
-                    session,
-                    user_id=user_id,
-                    query_embedding=query_embedding,
-                    k=5,
-                )
+                async with session.begin():
+                    facts = await search_facts(
+                        session,
+                        user_id=user_id,
+                        query_embedding=query_embedding,
+                        k=5,
+                    )
             loaded_facts = [f.content for f in facts]
             if loaded_facts:
                 facts_context = "\n".join(f"- {fact}" for fact in loaded_facts)
@@ -156,7 +158,8 @@ async def _load_memory_node(state: BlitzState) -> dict:
     if user_id:
         try:
             async with async_session() as session:
-                episodes = await load_recent_episodes(session, user_id=user_id, n=3)
+                async with session.begin():
+                    episodes = await load_recent_episodes(session, user_id=user_id, n=3)
             if episodes:
                 episode_context = "\n".join(f"- {ep.summary}" for ep in episodes)
                 history.insert(
@@ -204,9 +207,10 @@ async def _master_node(state: BlitzState) -> dict[str, list[BaseMessage]]:
     try:
         user = current_user_ctx.get()
         async with async_session() as session:
-            custom_instructions = await get_user_instructions(user["user_id"], session)
-    except LookupError:
-        pass  # No user context in tests — skip custom instructions
+            async with session.begin():
+                custom_instructions = await get_user_instructions(user["user_id"], session)
+    except (LookupError, Exception):
+        pass  # No user context in tests, or DB error — skip custom instructions
 
     messages = list(state["messages"])
 

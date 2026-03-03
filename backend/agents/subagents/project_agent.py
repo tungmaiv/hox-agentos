@@ -41,12 +41,16 @@ async def project_agent_node(state: BlitzState) -> dict:
 
     try:
         async with async_session() as session:
-            result = await call_mcp_tool(
-                "crm.get_project_status",
-                {"project_name": project_name},
-                user,
-                session,
-            )
+            try:
+                result = await call_mcp_tool(
+                    "crm.get_project_status",
+                    {"project_name": project_name},
+                    user,
+                    session,
+                )
+            except Exception:
+                await session.rollback()
+                raise
 
         if not result.get("success"):
             error_msg = result.get("error", "Unknown error from CRM")
