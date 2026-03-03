@@ -9,12 +9,14 @@ import { auth } from "@/auth";
 import Link from "next/link";
 
 const ADMIN_TABS = [
-  { label: "Agents", href: "/admin/agents" },
-  { label: "Tools", href: "/admin/tools" },
-  { label: "Skills", href: "/admin/skills" },
+  { label: "Agents",      href: "/admin/agents" },
+  { label: "Tools",       href: "/admin/tools" },
+  { label: "Skills",      href: "/admin/skills" },
   { label: "MCP Servers", href: "/admin/mcp-servers" },
   { label: "Permissions", href: "/admin/permissions" },
-  { label: "AI Builder", href: "/admin/create" },
+  { label: "Config",      href: "/admin/config" },
+  { label: "Credentials", href: "/admin/credentials" },
+  { label: "AI Builder",  href: "/admin/create" },
 ] as const;
 
 /** Roles that grant access to the admin dashboard. */

@@ -14,6 +14,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 from api.routes import (
     admin_agents,
+    admin_credentials,
     admin_permissions,
     admin_skills,
     admin_tools,
@@ -154,6 +155,9 @@ def create_app() -> FastAPI:
 
     # Admin permission management — /api/admin/permissions (registry:manage permission)
     app.include_router(admin_permissions.router)
+
+    # Admin credential management — /api/admin/credentials (registry:manage permission)
+    app.include_router(admin_credentials.router)
 
     # User skill listing and execution — GET /api/skills, POST /api/skills/{name}/run
     # Note: router already includes /api prefix in its definition
