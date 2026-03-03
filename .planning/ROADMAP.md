@@ -76,7 +76,11 @@ Plans:
   4. User sees a live "name available" / "name taken" indicator while typing the artifact name in the creation form — no round-trip submit needed to detect conflicts
   5. User selects required permissions from a dropdown list (not a free-text field) when creating a tool or skill
   6. User can clone an existing artifact — the creation wizard opens pre-filled with the source artifact's values, ready to save under a new name
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 12-01-PLAN.md — Config + Credentials tabs added to /admin; Admin section removed from /settings
+- [ ] 12-02-PLAN.md — Hybrid form wizard at /admin/create with fill_form AI tool, templates, name check, clone support
 
 ### Phase 13: Local Auth
 **Goal**: Admins can manage local users and groups entirely within AgentOS, and employees can sign in with a local username/password as an alternative to Keycloak SSO — with identical RBAC and Tool ACL behavior for both auth paths.
