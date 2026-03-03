@@ -85,6 +85,7 @@ Recent decisions affecting current work:
 - [ ] [TECH DEBT] Move KEYCLOAK_ADMIN_PASSWORD + KEYCLOAK_CLIENT_SECRET out of docker-compose.local.yml defaults into backend/.env (already done via env var substitution, but add explicit values to .env template/.dev-secrets.example)
 - [ ] [POST-MVP] HashiCorp Vault for secret management — replace .env file secrets + DB AES-256 with Vault for rotation, audit trail, and zero-trust credential access
 - [ ] Add user preferences for LLM thinking mode (on/off) and response style (concise/detailed/auto) — backend API + chat UI session controls + LiteLLM extra_body passthrough
+- [ ] Add user profile and logout to UI with session expiration — profile menu, logout endpoint, auto-logout timer, configurable session timeout in settings
 
 ### Blockers/Concerns
 
