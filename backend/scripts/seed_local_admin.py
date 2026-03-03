@@ -14,6 +14,7 @@ Idempotent: skips creation if the username already exists.
 import argparse
 import asyncio
 import secrets
+import string
 import sys
 import uuid
 
@@ -25,6 +26,16 @@ sys.path.insert(0, ".")
 from core.db import async_session
 from core.models.local_auth import LocalUser, LocalUserRole
 from security.local_auth import hash_password
+
+_ALPHABET = string.ascii_letters + string.digits
+
+
+def _generate_password() -> str:
+    """Generate a random 20-char password guaranteed to satisfy complexity rules."""
+    while True:
+        pwd = "".join(secrets.choice(_ALPHABET) for _ in range(20))
+        if any(c.isupper() for c in pwd) and any(c.islower() for c in pwd) and any(c.isdigit() for c in pwd):
+            return pwd
 
 
 async def seed(username: str, email: str, password: str) -> None:
@@ -79,7 +90,7 @@ def main() -> None:
         help="Password (auto-generated if not provided)",
     )
     args = parser.parse_args()
-    password: str = args.password or secrets.token_urlsafe(16)
+    password: str = args.password or _generate_password()
 
     asyncio.run(seed(args.username, args.email, password))
 
