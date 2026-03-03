@@ -109,7 +109,13 @@ Plans:
   4. User can search and browse skills from registered external repositories inside the AgentOS UI and see name, description, and source repository for each result
   5. User can import a skill from an external repository — it enters `pending_review` status, an admin can approve it, and after approval the skill becomes available for use
   6. Admin can export any AgentOS skill definition as an agentskills.io-compliant manifest JSON file from the admin panel
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 14-01-PLAN.md — DB migration 019 (skill_repositories table, mcp_servers.openapi_spec_url, tool_definitions.config_json) + system.capabilities agent tool with permission-filtered registry introspection
+- [ ] 14-02-PLAN.md — OpenAPI Bridge: spec parser, runtime HTTP proxy, admin routes + frontend Connect OpenAPI wizard on MCP Servers page
+- [ ] 14-03-PLAN.md — Skill repos backend (CRUD, browse, import with SecurityScanner quarantine) + frontend Skill Store tab with Repositories and Browse sub-tabs
+- [ ] 14-04-PLAN.md — Skill export as agentskills.io-compliant zip (SKILL.md + procedure.json + schemas.json) + Export button on Skills admin page + admin proxy binary fix
 
 ## Progress
 
@@ -134,4 +140,4 @@ Plans:
 | 11. Infrastructure & Debt | 2/2 | Complete    | 2026-03-02 | - |
 | 12. Unified Admin Desk | 2/2 | Complete    | 2026-03-03 | - |
 | 13. Local Auth | 2/2 | Complete   | 2026-03-03 | - |
-| 14. Ecosystem Capabilities | v1.2 | 0/TBD | Not started | - |
+| 14. Ecosystem Capabilities | v1.2 | 0/4 | Planning complete | - |
