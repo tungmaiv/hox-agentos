@@ -16,11 +16,11 @@
 
 ### Auth
 
-- [ ] **AUTH-01**: Admin can create, edit, and delete local user accounts (username/password)
-- [ ] **AUTH-02**: Admin can create and manage local groups and assign users to groups
-- [ ] **AUTH-03**: Admin can assign roles to local users and groups
-- [ ] **AUTH-04**: User can sign in with local username/password credentials (parallel to Keycloak SSO login)
-- [ ] **AUTH-05**: Local auth issues JWTs with same claims structure as Keycloak (roles, user_id) so RBAC and Tool ACL work identically for local and SSO users
+- [x] **AUTH-01**: Admin can create, edit, and delete local user accounts (username/password)
+- [x] **AUTH-02**: Admin can create and manage local groups and assign users to groups
+- [x] **AUTH-03**: Admin can assign roles to local users and groups
+- [x] **AUTH-04**: User can sign in with local username/password credentials (parallel to Keycloak SSO login)
+- [x] **AUTH-05**: Local auth issues JWTs with same claims structure as Keycloak (roles, user_id) so RBAC and Tool ACL work identically for local and SSO users
 
 ### Ecosystem
 
@@ -74,11 +74,11 @@
 | ADMIN-04 | Phase 12 | Complete |
 | ADMIN-05 | Phase 12 | Complete |
 | ADMIN-06 | Phase 12 | Complete |
-| AUTH-01 | Phase 13 | Pending |
-| AUTH-02 | Phase 13 | Pending |
-| AUTH-03 | Phase 13 | Pending |
-| AUTH-04 | Phase 13 | Pending |
-| AUTH-05 | Phase 13 | Pending |
+| AUTH-01 | Phase 13 | Complete |
+| AUTH-02 | Phase 13 | Complete |
+| AUTH-03 | Phase 13 | Complete |
+| AUTH-04 | Phase 13 | Complete |
+| AUTH-05 | Phase 13 | Complete |
 | ECO-01 | Phase 14 | Pending |
 | ECO-02 | Phase 14 | Pending |
 | ECO-03 | Phase 14 | Pending |

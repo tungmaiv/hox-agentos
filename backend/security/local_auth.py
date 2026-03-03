@@ -22,11 +22,11 @@ import re
 import time
 from uuid import UUID
 
+import bcrypt as _bcrypt
 import structlog
 from fastapi import HTTPException
 from jose import ExpiredSignatureError, JWTError
 from jose import jwt as jose_jwt
-from passlib.context import CryptContext
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -35,12 +35,6 @@ from core.models.local_auth import LocalGroupRole, LocalUser, LocalUserGroup, Lo
 from core.models.user import UserContext
 
 logger = structlog.get_logger(__name__)
-
-# ---------------------------------------------------------------------------
-# Password hashing
-# ---------------------------------------------------------------------------
-
-_pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 _ISSUER = "blitz-local"
 
@@ -76,6 +70,8 @@ def hash_password(plain: str) -> str:
     """
     Hash a plaintext password using bcrypt.
 
+    Uses the bcrypt library directly (not passlib) for Python 3.12 + bcrypt 5.x compatibility.
+
     Args:
         plain: The plaintext password to hash.
 
@@ -87,7 +83,7 @@ def hash_password(plain: str) -> str:
         (admin user create/update) should call _validate_password_complexity() first.
         validate_local_token() only calls verify_password(), not this.
     """
-    return _pwd_context.hash(plain)
+    return _bcrypt.hashpw(plain.encode("utf-8"), _bcrypt.gensalt()).decode("utf-8")
 
 
 def verify_password(plain: str, hashed: str) -> bool:
@@ -101,7 +97,11 @@ def verify_password(plain: str, hashed: str) -> bool:
     Returns:
         True if the password matches, False otherwise.
     """
-    return _pwd_context.verify(plain, hashed)
+    try:
+        return _bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
+    except Exception:
+        # Catches invalid hash format (e.g., dummy hash during timing attack prevention)
+        return False
 
 
 # ---------------------------------------------------------------------------
@@ -210,11 +210,10 @@ async def validate_local_token(token: str, session: AsyncSession) -> UserContext
     # This allows deactivation to take effect on the next request without
     # needing a token blocklist.
     user_id = UUID(payload["sub"])
-    async with session.begin():
-        result = await session.execute(
-            select(LocalUser.is_active).where(LocalUser.id == user_id)
-        )
-        is_active = result.scalar_one_or_none()
+    result = await session.execute(
+        select(LocalUser.is_active).where(LocalUser.id == user_id)
+    )
+    is_active = result.scalar_one_or_none()
 
     if is_active is None:
         # User was deleted after token was issued
@@ -251,8 +250,12 @@ async def resolve_user_roles(session: AsyncSession, user_id: UUID) -> list[str]:
     SQL approach: two separate queries joined in Python (simpler than a UNION
     query for this scale — ~100 users means negligible overhead).
 
+    The caller is responsible for transaction management. This function runs
+    queries directly on the session without starting a new transaction, so
+    it works correctly whether called inside or outside a begin() block.
+
     Args:
-        session: Async DB session.
+        session: Async DB session (any transaction state).
         user_id: LocalUser.id to resolve roles for.
 
     Returns:
@@ -261,21 +264,20 @@ async def resolve_user_roles(session: AsyncSession, user_id: UUID) -> list[str]:
     """
     roles: set[str] = set()
 
-    async with session.begin():
-        # Group roles: roles inherited through group membership
-        group_role_result = await session.execute(
-            select(LocalGroupRole.role)
-            .join(LocalUserGroup, LocalUserGroup.group_id == LocalGroupRole.group_id)
-            .where(LocalUserGroup.user_id == user_id)
-        )
-        for row in group_role_result:
-            roles.add(row[0])
+    # Group roles: roles inherited through group membership
+    group_role_result = await session.execute(
+        select(LocalGroupRole.role)
+        .join(LocalUserGroup, LocalUserGroup.group_id == LocalGroupRole.group_id)
+        .where(LocalUserGroup.user_id == user_id)
+    )
+    for row in group_role_result:
+        roles.add(row[0])
 
-        # Direct user roles: roles assigned directly to the user
-        direct_role_result = await session.execute(
-            select(LocalUserRole.role).where(LocalUserRole.user_id == user_id)
-        )
-        for row in direct_role_result:
-            roles.add(row[0])
+    # Direct user roles: roles assigned directly to the user
+    direct_role_result = await session.execute(
+        select(LocalUserRole.role).where(LocalUserRole.user_id == user_id)
+    )
+    for row in direct_role_result:
+        roles.add(row[0])
 
     return sorted(roles)

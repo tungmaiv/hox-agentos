@@ -1,3 +1,16 @@
+---
+gsd_state_version: 1.0
+milestone: v1.2
+milestone_name: Developer Experience
+status: unknown
+last_updated: "2026-03-03T14:02:49.301Z"
+progress:
+  total_phases: 3
+  completed_phases: 2
+  total_plans: 6
+  completed_plans: 5
+---
+
 # Project State
 
 ## Project Reference
@@ -10,9 +23,9 @@ See: .planning/PROJECT.md (updated 2026-03-02 after v1.2 roadmap)
 ## Current Position
 
 Milestone: v1.2 Developer Experience
-Phase: 12 of 14 (Unified Admin Desk) — IN PROGRESS (Plan 02 tasks complete, awaiting human-verify)
-Status: Phase 12 Plan 02 automated tasks complete — checkpoint at Task 3 human-verify
-Last activity: 2026-03-03 — Phase 12-02 hybrid wizard implemented (fill_form tool, check-name endpoints, split-panel /admin/create)
+Phase: 13 of 14 (Local Auth) — IN PROGRESS (Plan 01 complete, Plan 02 pending)
+Status: Phase 13 Plan 01 COMPLETE — backend local auth implemented (632 tests passing)
+Last activity: 2026-03-03 — Phase 13-01 backend local auth: ORM models, HS256 JWT, dual-issuer dispatch, admin CRUD API
 
 Progress: [███░░░░░░░░░] 21% — v1.2 Phase 11 complete, Phase 12 next
 
@@ -58,6 +71,8 @@ Recent decisions affecting current work:
 - [Phase 12-01]: /settings/agents and /settings/integrations kept as files (not deleted) — Server Component redirect() returns HTTP redirect not 404; /settings stripped of Admin section
 - [Phase 12]: [12-02]: fill_form co-agent tool added to artifact_builder — AI can now update form fields live via copilotkit_emit_state
 - [Phase 12]: [12-02]: check-name endpoints declared BEFORE /{id} routes in all 4 admin route files to prevent FastAPI routing collision
+- [Phase 13-01]: [13-01]: Replace passlib with direct bcrypt — passlib 1.7.4 incompatible with bcrypt 5.x (detect_wrap_bug rejects 256-byte test password)
+- [Phase 13-01]: [13-01]: validate_local_token takes AsyncSession param — reuses request-scoped DB session for is_active check in get_current_user
 
 ### Pending Todos
 
@@ -77,4 +92,4 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: Phase 12 Plan 02 COMPLETE (human-verified approved) — 609 tests passing, 0 TS errors, all commits merged
+Stopped at: Phase 13 Plan 01 COMPLETE — 632 tests passing, local auth backend complete (ORM models + HS256 JWT + dual-issuer dispatch + admin CRUD + 23 new tests)

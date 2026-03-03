@@ -133,5 +133,5 @@ Plans:
 | 10. Optional Tech Debt Closure (INSERTED) | v1.1 | 2/2 | ✅ Complete | 2026-03-02 |
 | 11. Infrastructure & Debt | 2/2 | Complete    | 2026-03-02 | - |
 | 12. Unified Admin Desk | 2/2 | Complete    | 2026-03-03 | - |
-| 13. Local Auth | v1.2 | 0/2 | Planned | - |
+| 13. Local Auth | 1/2 | In Progress|  | - |
 | 14. Ecosystem Capabilities | v1.2 | 0/TBD | Not started | - |
