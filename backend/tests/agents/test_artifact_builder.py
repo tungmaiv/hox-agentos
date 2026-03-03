@@ -184,11 +184,18 @@ def test_get_system_prompt_returns_string_for_each_type():
 
 
 def test_get_system_prompt_contains_schema_fields():
-    """System prompts must mention the key fields for their artifact type."""
+    """System prompts must mention the key fields for their artifact type.
+
+    The agent prompt was redesigned in Phase 12-02 to focus on fill_form fields
+    (model_alias, system_prompt) rather than the underlying registry schema fields
+    (routing_keywords, handler_module) — those are now managed by the form directly.
+    Tool, skill, and mcp_server prompts retain their full schema field documentation.
+    """
     from agents.artifact_builder_prompts import get_system_prompt
     agent_prompt = get_system_prompt("agent")
-    assert "routing_keywords" in agent_prompt
-    assert "handler_module" in agent_prompt
+    # Agent prompt focuses on fill_form fields for the new wizard
+    assert "model_alias" in agent_prompt
+    assert "system_prompt" in agent_prompt
 
     tool_prompt = get_system_prompt("tool")
     assert "handler_type" in tool_prompt
