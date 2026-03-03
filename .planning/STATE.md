@@ -53,6 +53,9 @@ Recent decisions affecting current work:
 - [11-live]: async_session() context manager calls session.close() NOT session.rollback() — when a DB query aborts a PostgreSQL transaction, closing without ROLLBACK returns the connection dirty to the pool → InFailedSQLTransactionError on next request. Fix: wrap read-only queries with `async with session.begin():` (auto-rollback) and use explicit try/except rollback/raise for write sessions. Also fix get_db() FastAPI dependency.
 - [11-live]: TELEGRAM_GATEWAY_URL in backend/.env must be docker service name when backend runs in Docker — localhost:9001 resolves inside container (nothing), not to gateway sidecar
 - [11-INFRA-02]: External Cloudflare Tunnel at 172.16.155.118 is the accepted final answer — no cloudflared Docker Compose service required. Confirmed by product owner 2026-03-03. Phase 11 verification: 5/5 complete.
+- [Phase 12-01]: Admin credential API returns metadata only (user_id, provider, connected_at) — token values never in response; registry:manage RBAC gate
+- [Phase 12-01]: Next.js admin credential proxy uses NEXT_PUBLIC_API_URL not BACKEND_INTERNAL_URL — matches existing admin proxy pattern in config/route.ts
+- [Phase 12-01]: /settings/agents and /settings/integrations kept as files (not deleted) — Server Component redirect() returns HTTP redirect not 404; /settings stripped of Admin section
 
 ### Pending Todos
 

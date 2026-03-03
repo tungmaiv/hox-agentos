@@ -7,7 +7,7 @@
 
 ### Admin
 
-- [ ] **ADMIN-01**: Admin can manage all artifacts (agents, tools, skills, MCP servers) from /admin only — admin features removed from /settings
+- [x] **ADMIN-01**: Admin can manage all artifacts (agents, tools, skills, MCP servers) from /admin only — admin features removed from /settings
 - [ ] **ADMIN-02**: User can create an artifact using a guided creation wizard (choose type → fill form with inline validation → preview JSON → submit)
 - [ ] **ADMIN-03**: User can pick from starter templates when creating a new artifact
 - [ ] **ADMIN-04**: User sees live name availability check while typing artifact name in creation form
@@ -68,7 +68,7 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ADMIN-01 | Phase 12 | Pending |
+| ADMIN-01 | Phase 12 | Complete |
 | ADMIN-02 | Phase 12 | Pending |
 | ADMIN-03 | Phase 12 | Pending |
 | ADMIN-04 | Phase 12 | Pending |
