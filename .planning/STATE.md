@@ -50,6 +50,7 @@ Recent decisions affecting current work:
 - [11-live]: KEYCLOAK_URL in backend/.env has no port (443) — Docker containers need port 7443 override in docker-compose.local.yml; keycloak.blitz.local resolves to 172.16.155.115 via Tailscale DNS
 - [11-live]: delivery_router_node must receive user_id in initial_state (not only contextvar) — state.get("user_id") is the only path delivery router uses to resolve channel account for outbound
 - [11-live]: format_for_channel() must be called in delivery_router.deliver() before send_outbound — without it, sub-agent JSON responses sent as raw JSON to Telegram
+- [11-live]: async_session() context manager calls session.close() NOT session.rollback() — when a DB query aborts a PostgreSQL transaction, closing without ROLLBACK returns the connection dirty to the pool → InFailedSQLTransactionError on next request. Fix: wrap read-only queries with `async with session.begin():` (auto-rollback) and use explicit try/except rollback/raise for write sessions. Also fix get_db() FastAPI dependency.
 - [11-live]: TELEGRAM_GATEWAY_URL in backend/.env must be docker service name when backend runs in Docker — localhost:9001 resolves inside container (nothing), not to gateway sidecar
 - [11-INFRA-02]: External Cloudflare Tunnel at 172.16.155.118 is the accepted final answer — no cloudflared Docker Compose service required. Confirmed by product owner 2026-03-03. Phase 11 verification: 5/5 complete.
 
