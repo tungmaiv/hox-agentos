@@ -92,7 +92,11 @@ Plans:
   3. User can sign in via a local username/password form on the login page (separate from the Keycloak SSO button) and reach the main chat UI
   4. A locally-authenticated user's JWT carries the same `roles` and `user_id` claims as a Keycloak JWT — the RBAC permission check and Tool ACL check pass identically for both
   5. A local user with the `it-admin` role can access `/admin` and perform the same operations as a Keycloak-authenticated admin
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 13-01-PLAN.md — Backend: ORM models, Alembic migration, dual-issuer JWT, login endpoint, admin CRUD API, tests
+- [ ] 13-02-PLAN.md — Frontend: NextAuth Credentials provider, login page redesign, /admin Users tab with CRUD dialogs
 
 ### Phase 14: Ecosystem Capabilities
 **Goal**: Agents and users can introspect what the platform can do, any OpenAPI-described service can be wired in as an MCP server in minutes, and external skill repositories can be browsed, imported, and exported in a standard format — turning AgentOS into an open, extensible ecosystem.
@@ -129,5 +133,5 @@ Plans:
 | 10. Optional Tech Debt Closure (INSERTED) | v1.1 | 2/2 | ✅ Complete | 2026-03-02 |
 | 11. Infrastructure & Debt | 2/2 | Complete    | 2026-03-02 | - |
 | 12. Unified Admin Desk | 2/2 | Complete    | 2026-03-03 | - |
-| 13. Local Auth | v1.2 | 0/TBD | Not started | - |
+| 13. Local Auth | v1.2 | 0/2 | Planned | - |
 | 14. Ecosystem Capabilities | v1.2 | 0/TBD | Not started | - |
