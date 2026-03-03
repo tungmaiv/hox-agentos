@@ -94,33 +94,6 @@ export default function SettingsPage() {
           </Link>
         </div>
 
-        <h2 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">
-          Admin
-        </h2>
-        <div className="grid grid-cols-2 gap-3">
-          <Link
-            href="/settings/agents"
-            className="flex items-center p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors"
-          >
-            <div>
-              <p className="text-sm font-medium text-gray-900">Agents</p>
-              <p className="text-xs text-gray-500 mt-0.5">
-                Enable or disable AI agents
-              </p>
-            </div>
-          </Link>
-          <Link
-            href="/settings/integrations"
-            className="flex items-center p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors"
-          >
-            <div>
-              <p className="text-sm font-medium text-gray-900">Integrations</p>
-              <p className="text-xs text-gray-500 mt-0.5">
-                MCP server connections
-              </p>
-            </div>
-          </Link>
-        </div>
       </nav>
 
       <section className="mb-8">
