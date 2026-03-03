@@ -105,6 +105,73 @@ def _detect_artifact_type(text: str) -> str | None:
     return None
 
 
+def _try_extract_fill_form_args(content: str) -> dict | None:
+    """Try to extract fill_form arguments from text-format tool call in message content.
+
+    Some models (e.g. Ollama/qwen3.5) output tool calls as text JSON rather than
+    structured tool_calls in the AIMessage. This handles both formats:
+      - {"name": "fill_form", "arguments": {...}}
+      - {"name": "fill_form", "args": {...}}
+    """
+    if not content or "fill_form" not in content:
+        return None
+
+    try:
+        for match in re.finditer(r"\{", content):
+            start = match.start()
+            depth = 0
+            for i, ch in enumerate(content[start:]):
+                if ch == "{":
+                    depth += 1
+                elif ch == "}":
+                    depth -= 1
+                    if depth == 0:
+                        candidate = content[start : start + i + 1]
+                        try:
+                            parsed = json.loads(candidate)
+                            if (
+                                isinstance(parsed, dict)
+                                and parsed.get("name") == "fill_form"
+                            ):
+                                args = parsed.get("arguments") or parsed.get("args") or {}
+                                if isinstance(args, dict):
+                                    return args
+                        except json.JSONDecodeError:
+                            pass
+                        break
+    except Exception:
+        pass
+
+    return None
+
+
+# Mapping from fill_form arg names to co-agent state field names.
+_FILL_FORM_ARG_TO_STATE: dict[str, str] = {
+    "name": "form_name",
+    "description": "form_description",
+    "version": "form_version",
+    "model_alias": "form_model_alias",
+    "system_prompt": "form_system_prompt",
+    "handler_module": "form_handler_module",
+    "entry_point": "form_entry_point",
+    "url": "form_url",
+    "required_permissions": "form_required_permissions",
+    "sandbox_required": "form_sandbox_required",
+    # artifact_type is stored directly (no "form_" prefix)
+    "artifact_type": "artifact_type",
+}
+
+
+def _args_to_form_updates(args: dict) -> dict:
+    """Convert fill_form args dict to co-agent state field names."""
+    updates: dict = {}
+    for arg_key, state_key in _FILL_FORM_ARG_TO_STATE.items():
+        val = args.get(arg_key)
+        if val is not None:
+            updates[state_key] = val
+    return updates
+
+
 def _fix_triple_quotes(text: str) -> str:
     """Convert Python-style triple-quoted strings to valid JSON strings.
 
@@ -212,11 +279,15 @@ async def _gather_type_node(state: ArtifactBuilderState, config: RunnableConfig)
                         "artifact_type": detected,
                         "artifact_draft": {},
                     }
-                await _emit_builder_state(config, detected, {}, [], False)
+                form_updates = _args_to_form_updates(
+                    _try_extract_fill_form_args(response.content) or {}
+                )
+                await _emit_builder_state(config, detected, {}, [], False, form_updates or None)
                 return {
                     "messages": [response],
                     "artifact_type": detected,
                     "artifact_draft": {},
+                    **form_updates,
                 }
 
     # No type detected — ask explicitly
@@ -233,6 +304,13 @@ async def _gather_type_node(state: ArtifactBuilderState, config: RunnableConfig)
                 "would you like to create? (agent, tool, skill, or MCP server)"
             )],
         }
+    form_updates = _args_to_form_updates(
+        _try_extract_fill_form_args(response.content) or {}
+    )
+    if form_updates:
+        detected_type = form_updates.pop("artifact_type", None)
+        await _emit_builder_state(config, detected_type, {}, [], False, form_updates or None)
+        return {"messages": [response], "artifact_type": detected_type, **form_updates}
     return {"messages": [response]}
 
 
@@ -285,13 +363,39 @@ async def _gather_details_node(state: ArtifactBuilderState, config: RunnableConf
         if validation_errors:
             looks_complete = False
 
-    await _emit_builder_state(config, artifact_type, updated_draft, validation_errors, looks_complete)
+    # Also parse text-format fill_form calls (for models that output tool calls as text)
+    form_updates = _args_to_form_updates(
+        _try_extract_fill_form_args(response.content) or {}
+    )
+    # Merge draft fields into form_updates so the form reflects the latest draft
+    # (handles models that update artifact_draft without calling fill_form)
+    draft_to_form = {
+        "name": "form_name",
+        "description": "form_description",
+        "version": "form_version",
+        "model_alias": "form_model_alias",
+        "system_prompt": "form_system_prompt",
+        "handler_module": "form_handler_module",
+        "entry_point": "form_entry_point",
+        "url": "form_url",
+        "required_permissions": "form_required_permissions",
+        "sandbox_required": "form_sandbox_required",
+    }
+    for draft_key, state_key in draft_to_form.items():
+        if draft_key in updated_draft and state_key not in form_updates:
+            form_updates[state_key] = updated_draft[draft_key]
+
+    await _emit_builder_state(
+        config, artifact_type, updated_draft, validation_errors, looks_complete,
+        form_updates or None,
+    )
     return {
         "messages": [response],
         "artifact_type": artifact_type,
         "artifact_draft": updated_draft,
         "validation_errors": validation_errors,
         "is_complete": looks_complete,
+        **form_updates,
     }
 
 
