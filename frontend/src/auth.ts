@@ -75,8 +75,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
       async authorize(credentials) {
         if (!credentials?.username || !credentials?.password) return null;
+        // BACKEND_URL is set in Docker (http://backend:8000).
+        // Falls back to NEXT_PUBLIC_API_URL for local dev server.
         const backendUrl =
-          process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+          process.env.BACKEND_URL ??
+          process.env.NEXT_PUBLIC_API_URL ??
+          "http://localhost:8000";
         try {
           const res = await fetch(`${backendUrl}/api/auth/local/token`, {
             method: "POST",
