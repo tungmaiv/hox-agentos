@@ -199,26 +199,53 @@ async def _master_node(state: BlitzState) -> dict[str, list[BaseMessage]]:
     Always prepends the master_agent prompt as the first SystemMessage so formatting
     rules (no LaTeX, markdown etc.) reach the LLM regardless of CopilotKit's
     instructions prop handling. Appends per-user custom instructions if set in DB.
+
+    Injects dynamic context variables into the prompt template:
+    - user_context: username and role info from JWT
+    - current_datetime: current date/time for time-aware responses
+    - available_tools: dynamically loaded tool list from registry
     """
     llm = get_llm("blitz/master")
 
-    # Load custom instructions (empty string if not set or no user context)
+    # Load custom instructions and user context (empty if not set or no user context)
     custom_instructions = ""
+    user_context_str = ""
     try:
         user = current_user_ctx.get()
+        user_context_str = f"User: {user.get('username', 'unknown')} ({user.get('email', '')})"
         async with async_session() as session:
             async with session.begin():
                 custom_instructions = await get_user_instructions(user["user_id"], session)
     except LookupError:
-        pass  # No user context in tests or isolated runs — skip custom instructions
+        pass  # No user context in tests or isolated runs — skip
     except Exception:
         logger.warning("custom_instructions_load_failed", exc_info=True)
 
+    # Load available tools from registry for context injection
+    available_tools_str = ""
+    try:
+        async with async_session() as session:
+            async with session.begin():
+                from gateway.tool_registry import list_tools
+                tool_names = await list_tools(session)
+                if tool_names:
+                    available_tools_str = (
+                        "Registered tools: " + ", ".join(tool_names)
+                    )
+    except Exception:
+        logger.debug("tool_list_load_skipped", exc_info=True)
+
     messages = list(state["messages"])
 
-    # Build system content: default prompt + optional per-user instructions.
+    # Build system content: default prompt with context variables + optional per-user instructions.
     # Always injected so the LLM sees formatting rules on every call.
-    system_content = load_prompt("master_agent")
+    now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    system_content = load_prompt(
+        "master_agent",
+        user_context=user_context_str,
+        current_datetime=now_str,
+        available_tools=available_tools_str,
+    )
     if custom_instructions:
         system_content += (
             f"\n\nAdditional user instructions (follow these for all responses):\n\n"

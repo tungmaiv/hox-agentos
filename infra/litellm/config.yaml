@@ -1,46 +1,51 @@
 model_list:
   # Primary models — local Ollama (fast, private, no egress cost)
+  # think: false disables qwen3.5 reasoning tokens (6x faster, ~1.4s vs ~9s per call)
+  # TODO: make thinking mode configurable per-user via preferences API
   - model_name: blitz-master
     litellm_params:
-      model: ollama/qwen2.5:7b
+      model: ollama/qwen3.5:cloud
       api_base: http://host.docker.internal:11434
+      extra_body:
+        think: false
 
   - model_name: blitz-fast
     litellm_params:
-      model: ollama/llama3.2:3b
+      model: ollama/qwen3.5:cloud
       api_base: http://host.docker.internal:11434
+      extra_body:
+        think: false
 
   - model_name: blitz-coder
     litellm_params:
-      model: ollama/qwen2.5-coder:7b
+      model: ollama/qwen3.5:cloud
       api_base: http://host.docker.internal:11434
+      extra_body:
+        think: false
 
   - model_name: blitz-summarizer
     litellm_params:
-      model: ollama/llama3.2:3b
+      model: ollama/qwen3.5:cloud
       api_base: http://host.docker.internal:11434
+      extra_body:
+        think: false
 
-  # Cloud fallback models — used when Ollama is unavailable or times out.
+  # Cloud fallback — free OpenRouter model, used when Ollama is unavailable.
   # Prefixed with "fb-" to avoid name collisions with primary entries.
-  - model_name: fb-claude-sonnet
+  - model_name: fb-openrouter-free
     litellm_params:
-      model: anthropic/claude-sonnet-4-6
-      api_key: os.environ/ANTHROPIC_KEY
-
-  - model_name: fb-gpt-4o-mini
-    litellm_params:
-      model: openai/gpt-4o-mini
-      api_key: os.environ/OPENAI_KEY
+      model: openrouter/arcee-ai/trinity-large-preview:free
+      api_key: os.environ/OPENROUTER_API_KEY
 
 router_settings:
   # If the primary Ollama model fails (connection error, timeout), route to
-  # the corresponding cloud fallback. Keeps the system available during
-  # Ollama restarts or when the host GPU is busy.
+  # the cloud fallback. Keeps the system available during Ollama restarts
+  # or when the host GPU is busy.
   fallbacks:
-    - {"blitz-master": ["fb-claude-sonnet"]}
-    - {"blitz-fast": ["fb-gpt-4o-mini"]}
-    - {"blitz-coder": ["fb-claude-sonnet"]}
-    - {"blitz-summarizer": ["fb-gpt-4o-mini"]}
+    - {"blitz-master": ["fb-openrouter-free"]}
+    - {"blitz-fast": ["fb-openrouter-free"]}
+    - {"blitz-coder": ["fb-openrouter-free"]}
+    - {"blitz-summarizer": ["fb-openrouter-free"]}
 
 litellm_settings:
   drop_params: true
