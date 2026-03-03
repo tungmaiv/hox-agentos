@@ -5,9 +5,9 @@ Used by Celery workflow workers to resolve the owner's current roles
 before executing a workflow graph. This ensures tool ACL checks use
 live role assignments rather than stale owner_roles_json snapshots.
 
-Security: Uses client_credentials grant with the backend's service account.
-The service account (blitz-backend) must have the realm-management >
-view-users role assigned in Keycloak.
+Security: Uses password grant via the master realm admin-cli client.
+Credentials (KEYCLOAK_ADMIN_USERNAME / KEYCLOAK_ADMIN_PASSWORD) come from
+settings and must belong to a Keycloak admin with view-users permission.
 
 Error handling: All httpx errors propagate to the caller. Per locked decision:
 "if Keycloak is unreachable, fail the workflow run".

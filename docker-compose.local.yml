@@ -45,6 +45,7 @@ services:
       KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-blitz-portal-secret-dev}
       KEYCLOAK_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME:-admin}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      ENVIRONMENT: development
       TELEGRAM_GATEWAY_URL: http://telegram-gateway:9001
       WHATSAPP_GATEWAY_URL: http://whatsapp-gateway:9002
       TEAMS_GATEWAY_URL: http://teams-gateway:9003
@@ -65,9 +66,10 @@ services:
       # Override wrong KEYCLOAK_CLIENT_ID from root .env (blitz-agentos → blitz-portal)
       # Root .env injects as process env vars which override .env.local in Next.js
       KEYCLOAK_CLIENT_ID: blitz-portal
-      # Hardcoded — NOT ${KEYCLOAK_CLIENT_SECRET} which docker-compose resolves from root .env
-      # (yKIMRhwQCEJPMJ5SFPCON5XzelpxLRMc), wrong for blitz-portal. blitz-portal's actual secret:
-      KEYCLOAK_CLIENT_SECRET: blitz-portal-secret-dev
+      # NOT ${KEYCLOAK_CLIENT_SECRET} — docker-compose resolves that from root .env which holds
+      # the blitz-backend secret (yKIMRhwQCEJPMJ5SFPCON5XzelpxLRMc), wrong for blitz-portal.
+      # Use a separate var so it can be overridden without touching the backend secret.
+      KEYCLOAK_CLIENT_SECRET: ${FRONTEND_KEYCLOAK_CLIENT_SECRET:-blitz-portal-secret-dev}
       KEYCLOAK_ISSUER: https://keycloak.blitz.local:7443/realms/blitz-internal
       # Backend URL for server-side fetches (route.ts proxy) — localhost doesn't exist in container
       NEXT_PUBLIC_API_URL: http://backend:8000

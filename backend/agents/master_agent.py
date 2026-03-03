@@ -3,7 +3,7 @@
 Master agent — Phase 3 conversational graph with sub-agent routing, short-term + long-term memory.
 
 Graph topology (Phase 3):
-    START → load_memory → master_agent → [_route_after_master]
+    START → load_memory → master_agent → [_pre_route]
                                               ├── email_agent    → delivery_router → save_memory → END
                                               ├── calendar_agent → delivery_router → save_memory → END
                                               ├── project_agent  → delivery_router → save_memory → END
@@ -209,8 +209,10 @@ async def _master_node(state: BlitzState) -> dict[str, list[BaseMessage]]:
         async with async_session() as session:
             async with session.begin():
                 custom_instructions = await get_user_instructions(user["user_id"], session)
-    except (LookupError, Exception):
-        pass  # No user context in tests, or DB error — skip custom instructions
+    except LookupError:
+        pass  # No user context in tests or isolated runs — skip custom instructions
+    except Exception:
+        logger.warning("custom_instructions_load_failed", exc_info=True)
 
     messages = list(state["messages"])
 
