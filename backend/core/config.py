@@ -46,6 +46,12 @@ class Settings(BaseSettings):
     secret_key: str
     credential_encryption_key: str = ""  # Hex-encoded 32-byte key for AES-256-GCM
 
+    # Local auth — HS256 JWT signing for local username/password accounts
+    # LOCAL_JWT_SECRET must be a cryptographically random string, minimum 32 chars.
+    # Users authenticated via Keycloak SSO are unaffected when this is empty.
+    local_jwt_secret: str = ""
+    local_jwt_expires_hours: int = 8  # 8-hour workday — user logs in each morning
+
     # Application
     cors_origins: list[str] = ["http://localhost:3000"]
     log_level: str = "INFO"

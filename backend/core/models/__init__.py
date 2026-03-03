@@ -6,6 +6,7 @@ When you add a new model, add its import to this file. Alembic reads Base.metada
 """
 
 from core.models.agent_definition import AgentDefinition  # noqa: F401
+from core.models.local_auth import LocalGroup, LocalGroupRole, LocalUser, LocalUserGroup, LocalUserRole  # noqa: F401
 from core.models.artifact_permission import ArtifactPermission  # noqa: F401
 from core.models.channel import ChannelAccount, ChannelSession  # noqa: F401
 from core.models.conversation_title import ConversationTitle  # noqa: F401

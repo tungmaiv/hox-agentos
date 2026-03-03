@@ -15,6 +15,10 @@ from alembic import context
 from core.db import Base
 from core.config import settings
 
+# Import all models so Base.metadata is fully populated for autogenerate.
+# When adding a new model, also add it to core/models/__init__.py.
+import core.models  # noqa: F401
+
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config

@@ -17,6 +17,7 @@ dependencies = [
     "langchain-openai==0.3.0",
     "langgraph>=0.4.11",
     "langgraph-checkpoint-postgres>=3.0.4",
+    "passlib[bcrypt]>=1.7.4",
     "pgvector>=0.4.2",
     "prometheus-client>=0.20.0",
     "prometheus-fastapi-instrumentator>=7.1.0",
