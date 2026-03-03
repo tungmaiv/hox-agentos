@@ -137,6 +137,13 @@ metrics:
 
 **Task 3 is a `checkpoint:human-verify`** — execution pauses here for human validation of the /admin/create wizard end-to-end.
 
+**2. [Rule 1 - Bug] Fixed test assertion for redesigned agent prompt**
+- **Found during:** Post-approval final verification
+- **Issue:** `test_get_system_prompt_contains_schema_fields` checked for `routing_keywords` and `handler_module` in agent prompt; these were removed in commit `9271c73` (prompt rewritten to focus on fill_form fields for the hybrid wizard)
+- **Fix:** Updated assertion to check `model_alias` and `system_prompt` instead — the actual fields the new agent prompt documents
+- **Files modified:** `backend/tests/agents/test_artifact_builder.py`
+- **Commit:** 0a4a33b
+
 ## Self-Check: PASSED
 
-All 8 declared files found on disk. All 3 task commits exist in git (693c72e, 2b8a76d, 12e8356). Backend 609 tests passing. TypeScript 0 errors.
+All 8 declared files found on disk. All commits exist in git (693c72e, 2b8a76d, 12e8356, 557df5d, 0a4a33b). Backend 609 tests passing. TypeScript 0 errors.
