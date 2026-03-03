@@ -223,6 +223,11 @@ async def test_refresh_skips_disabled_servers() -> None:
     mock_result.scalars.return_value.all.return_value = [disabled_server, active_server]
     mock_session.execute = AsyncMock(return_value=mock_result)
 
+    mock_begin_ctx = AsyncMock()
+    mock_begin_ctx.__aenter__ = AsyncMock(return_value=None)
+    mock_begin_ctx.__aexit__ = AsyncMock(return_value=None)
+    mock_session.begin = MagicMock(return_value=mock_begin_ctx)
+
     # async_session() returns a context manager; mock it as MagicMock with
     # __aenter__/__aexit__ so `async with async_session() as session:` works
     mock_cm = MagicMock()

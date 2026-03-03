@@ -50,8 +50,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         from gateway.tool_registry import _refresh_tool_cache, seed_tool_definitions_from_registry
 
         async with async_session() as session:
-            await seed_tool_definitions_from_registry(session)
-            await _refresh_tool_cache(session)
+            try:
+                await seed_tool_definitions_from_registry(session)
+                await _refresh_tool_cache(session)
+            except Exception:
+                await session.rollback()
+                raise
     except Exception as exc:
         import structlog
 

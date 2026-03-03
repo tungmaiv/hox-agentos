@@ -58,9 +58,10 @@ class MCPToolRegistry:
         from security.credentials import decrypt_token
 
         async with async_session() as session:
-            # Load all servers to evict disabled ones
-            all_result = await session.execute(select(McpServer))
-            all_servers = all_result.scalars().all()
+            async with session.begin():
+                # Load all servers to evict disabled ones
+                all_result = await session.execute(select(McpServer))
+                all_servers = all_result.scalars().all()
 
         # Evict clients for disabled/inactive servers
         for server in all_servers:
@@ -86,18 +87,22 @@ class MCPToolRegistry:
 
                 # Upsert discovered tools into tool_definitions table
                 async with async_session() as session:
-                    for tool in tools:
-                        tool_name = f"{server.name}.{tool['name']}"
-                        await register_tool(
-                            session,
-                            name=tool_name,
-                            description=tool.get("description", ""),
-                            required_permissions=[f"{server.name}:read"],
-                            mcp_server=server.name,
-                            mcp_tool=tool["name"],
-                            handler_type="mcp",
-                            mcp_server_id=server.id,
-                        )
+                    try:
+                        for tool in tools:
+                            tool_name = f"{server.name}.{tool['name']}"
+                            await register_tool(
+                                session,
+                                name=tool_name,
+                                description=tool.get("description", ""),
+                                required_permissions=[f"{server.name}:read"],
+                                mcp_server=server.name,
+                                mcp_tool=tool["name"],
+                                handler_type="mcp",
+                                mcp_server_id=server.id,
+                            )
+                    except Exception:
+                        await session.rollback()
+                        raise
 
                 logger.info(
                     "mcp_tools_registered",
