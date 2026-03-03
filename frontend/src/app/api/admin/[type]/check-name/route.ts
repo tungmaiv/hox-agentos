@@ -4,20 +4,20 @@
  * Validates the artifact type, then forwards to the backend check-name endpoint.
  * Returns {"available": boolean} — 400 if type or name is invalid.
  */
-import { auth } from "@/auth";
 import { NextRequest, NextResponse } from "next/server";
+import { getAccessToken } from "@/lib/server-auth";
 
 const ALLOWED_TYPES = new Set(["agents", "tools", "skills", "mcp-servers"]);
 
 const BACKEND_URL =
-  process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+  process.env.BACKEND_INTERNAL_URL ?? process.env.BACKEND_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ type: string }> }
 ) {
-  const session = await auth();
-  if (!session) {
+  const accessToken = await getAccessToken();
+  if (!accessToken) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -31,15 +31,12 @@ export async function GET(
     return NextResponse.json({ error: "name query parameter required" }, { status: 400 });
   }
 
-  const accessToken = (session as unknown as Record<string, unknown>)
-    .accessToken as string | undefined;
-
   try {
     const res = await fetch(
       `${BACKEND_URL}/api/admin/${type}/check-name?name=${encodeURIComponent(name)}`,
       {
         headers: {
-          Authorization: `Bearer ${accessToken ?? ""}`,
+          Authorization: `Bearer ${accessToken}`,
         },
         cache: "no-store",
       }

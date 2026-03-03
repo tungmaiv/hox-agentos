@@ -7,16 +7,10 @@
  * Non-admin users receive the backend 403 response forwarded as-is.
  */
 
-import { auth } from "@/auth";
 import { NextResponse } from "next/server";
+import { getAccessToken } from "@/lib/server-auth";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-
-async function getAccessToken(): Promise<string | undefined> {
-  const session = await auth();
-  return (session as unknown as Record<string, unknown>)
-    ?.accessToken as string | undefined;
-}
+const API_URL = process.env.BACKEND_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export async function GET(): Promise<NextResponse> {
   const accessToken = await getAccessToken();
