@@ -8,7 +8,7 @@ from functools import lru_cache
 
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_openai import ChatOpenAI
-from pydantic import model_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -51,6 +51,17 @@ class Settings(BaseSettings):
     # Users authenticated via Keycloak SSO are unaffected when this is empty.
     local_jwt_secret: str = ""
     local_jwt_expires_hours: int = 8  # 8-hour workday — user logs in each morning
+
+    @field_validator("local_jwt_secret")
+    @classmethod
+    def validate_local_jwt_secret(cls, v: str) -> str:
+        """Require minimum 32-character secret when local auth is enabled."""
+        if v and len(v) < 32:
+            raise ValueError(
+                "LOCAL_JWT_SECRET must be at least 32 characters long "
+                '(use: python -c "import secrets; print(secrets.token_hex(32))")'
+            )
+        return v
 
     # Application
     cors_origins: list[str] = ["http://localhost:3000"]

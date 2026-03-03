@@ -803,12 +803,11 @@ export default function AdminUsersPage() {
 
   // ---- Group mutations ----
 
-  function handleGroupSuccess(group: LocalGroup): void {
+  function handleGroupSuccess(_group: LocalGroup): void {
     setGroupDialog({ open: false, edit: null });
     void fetchGroups();
     // Re-fetch users too since role resolution may have changed
     void fetchUsers();
-    void group; // used above via callback
   }
 
   // ---- Filtered data ----

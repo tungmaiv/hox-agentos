@@ -117,6 +117,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
   ],
+  pages: {
+    signIn: "/login", // Use our custom login page instead of Auth.js default
+  },
   session: { strategy: "jwt" }, // JWT in server memory — NOT localStorage
   callbacks: {
     async jwt({ token, account, user }) {
@@ -175,17 +178,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       // The accessToken is set here so serverFetch() in Server Components can
       // inject the Authorization: Bearer header when calling the backend.
       // It is never serialized into the browser session cookie.
-      (session as unknown as Record<string, unknown>).accessToken =
-        token.accessToken;
+      session.accessToken = token.accessToken;
       session.user.id = token.sub ?? "";
 
       // Propagate realm roles to session for admin layout RBAC check
-      (session as unknown as Record<string, unknown>).realmRoles =
-        (token.realmRoles as string[] | undefined) ?? [];
+      session.realmRoles = token.realmRoles ?? [];
 
       // Propagate auth errors so the client can force re-login
       if (token.error) {
-        (session as unknown as Record<string, unknown>).error = token.error;
+        session.error = token.error;
       }
 
       return session;

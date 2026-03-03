@@ -3,17 +3,10 @@
  * Assigns one or more groups to a user.
  */
 
-import { auth } from "@/auth";
 import { NextRequest, NextResponse } from "next/server";
+import { getAccessToken } from "@/lib/server-auth";
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-
-async function getAccessToken(): Promise<string | null> {
-  const session = await auth();
-  if (!session) return null;
-  return (session as unknown as Record<string, unknown>)
-    .accessToken as string | null;
-}
+const API = process.env.BACKEND_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export async function POST(
   req: NextRequest,
