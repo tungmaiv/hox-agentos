@@ -17,6 +17,7 @@ Security notes:
     not a special "account disabled" message that reveals account existence).
   - No rate limiting for MVP (on-premise ~100 users, low brute-force risk per CONTEXT.md).
 """
+import bcrypt as _bcrypt
 import structlog
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
@@ -31,9 +32,9 @@ logger = structlog.get_logger(__name__)
 
 router = APIRouter(prefix="/api/auth/local", tags=["local-auth"])
 
-# Dummy bcrypt hash used to keep constant-time behavior when user is not found.
-# Prevents timing-based username enumeration.
-_DUMMY_HASH = "$2b$12$invalidhashtopreventtimingaaaaaaaaaaaaaaaaaaaaaaaaaa"
+# Pre-computed hash of a random string — provides real bcrypt timing for username-not-found path.
+# Generated once at module load; cost factor 12 matches hash_password() in security/local_auth.py.
+_DUMMY_HASH: str = _bcrypt.hashpw(b"dummy-timing-placeholder", _bcrypt.gensalt(rounds=12)).decode("utf-8")
 
 
 @router.post("/token")
@@ -69,7 +70,7 @@ async def local_login(
         raise HTTPException(status_code=401, detail="Invalid username or password")
 
     if not user.is_active:
-        logger.info("local_login_failed", username=body.username, reason="account_deactivated")
+        logger.info("local_login_failed", username=body.username, reason="invalid_credentials")
         raise HTTPException(status_code=401, detail="Invalid username or password")
 
     # Resolve effective roles: union(group roles, direct user roles)
