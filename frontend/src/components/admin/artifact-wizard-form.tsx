@@ -27,8 +27,9 @@ export interface FormState {
   // Tool + Skill fields
   required_permissions: string[];
   sandbox_required: boolean;
-  handler_module: string;  // Tool
-  entry_point: string;     // Skill
+  handler_module: string;        // Tool
+  entry_point: string;           // Skill (optional: Python entry point)
+  instruction_markdown: string;  // Skill (required for instructional type)
   // MCP Server fields
   url: string;
   auth_token: string;
@@ -44,6 +45,7 @@ export const EMPTY_FORM: FormState = {
   sandbox_required: false,
   handler_module: "",
   entry_point: "",
+  instruction_markdown: "",
   url: "",
   auth_token: "",
 };
@@ -125,9 +127,10 @@ function buildSubmitPayload(
         ...base,
         skill_type: "instructional",
         source_type: "user_created",
+        instruction_markdown: formState.instruction_markdown || undefined,
         entry_point: formState.entry_point || undefined,
         required_permissions: formState.required_permissions,
-        sandbox_required: formState.sandbox_required,
+        sandbox_required: formState.sandbox_required || undefined,
       };
     case "mcp_server":
       return {
@@ -245,7 +248,8 @@ export function ArtifactWizardForm({
     isSubmitting ||
     !formState.name ||
     nameAvailable !== true ||
-    !artifactType;
+    !artifactType ||
+    (artifactType === "skill" && !formState.instruction_markdown);
 
   const inputCls =
     "w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500";
@@ -419,7 +423,19 @@ export function ArtifactWizardForm({
         {artifactType === "skill" && (
           <div>
             <SectionLabel>Skill Settings</SectionLabel>
-            <FieldWrapper label="Entry Point" highlight={pulsingFields.has("entry_point") || pulsingFields.has("form_entry_point")}>
+            <FieldWrapper
+              label="Instructions * (Markdown)"
+              highlight={pulsingFields.has("instruction_markdown") || pulsingFields.has("form_instruction_markdown")}
+            >
+              <textarea
+                value={formState.instruction_markdown}
+                onChange={(e) => onFormChange({ instruction_markdown: e.target.value })}
+                rows={5}
+                className={inputCls}
+                placeholder="# Skill Instructions&#10;&#10;Describe what this skill does and how to use it..."
+              />
+            </FieldWrapper>
+            <FieldWrapper label="Entry Point (optional)" highlight={pulsingFields.has("entry_point") || pulsingFields.has("form_entry_point")}>
               <input
                 type="text"
                 value={formState.entry_point}

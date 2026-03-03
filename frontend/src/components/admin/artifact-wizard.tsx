@@ -180,6 +180,7 @@ function WizardInner() {
           // Tool/Skill-specific
           handler_module: typeof data.handler_module === "string" ? data.handler_module : prev.handler_module,
           entry_point: typeof data.entry_point === "string" ? data.entry_point : prev.entry_point,
+          instruction_markdown: typeof data.instruction_markdown === "string" ? data.instruction_markdown : prev.instruction_markdown,
           sandbox_required: typeof data.sandbox_required === "boolean" ? data.sandbox_required : prev.sandbox_required,
           // MCP-specific
           url: typeof data.url === "string" ? data.url : prev.url,
@@ -244,6 +245,7 @@ function WizardInner() {
       case "skill":
         payload.skill_type = "instructional";
         payload.source_type = "user_created";
+        payload.instruction_markdown = formState.instruction_markdown || undefined;
         payload.entry_point = formState.entry_point || undefined;
         payload.required_permissions = formState.required_permissions;
         payload.sandbox_required = formState.sandbox_required;
