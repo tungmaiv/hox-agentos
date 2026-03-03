@@ -661,3 +661,230 @@ async def test_admin_endpoints_require_registry_manage(db_session) -> None:
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             resp = await client.get("/api/admin/local/users")
     assert resp.status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# Mutation endpoint tests (PUT user, DELETE group, deactivation flow, etc.)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_update_user_username_and_email(db_session, admin_user_ctx) -> None:
+    """PUT /api/admin/local/users/{id} updates username and email."""
+    from httpx import AsyncClient, ASGITransport
+
+    user = await _create_test_user(
+        db_session, username="oldname", email="old@example.com", password="Password1"
+    )
+
+    with patch("api.routes.admin_local_users.has_permission", new_callable=AsyncMock, return_value=True):
+        app = _make_admin_app(db_session, admin_user_ctx)
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            resp = await client.put(
+                f"/api/admin/local/users/{user.id}",
+                json={"username": "newname", "email": "new@example.com"},
+            )
+
+    assert resp.status_code == 200, f"Expected 200 but got {resp.status_code}: {resp.json()}"
+    body = resp.json()
+    assert body["username"] == "newname"
+    assert body["email"] == "new@example.com"
+    # Old values must not be present
+    assert body["username"] != "oldname"
+    assert body["email"] != "old@example.com"
+
+
+@pytest.mark.asyncio
+async def test_update_user_password_changes_hash(db_session, admin_user_ctx) -> None:
+    """PUT with new password allows login with new password and rejects old one."""
+    from httpx import AsyncClient, ASGITransport
+
+    user = await _create_test_user(
+        db_session, username="pwdchange", email="pwdchange@example.com", password="Password1"
+    )
+
+    # Change password via admin PUT
+    with patch("api.routes.admin_local_users.has_permission", new_callable=AsyncMock, return_value=True):
+        admin_app = _make_admin_app(db_session, admin_user_ctx)
+        async with AsyncClient(transport=ASGITransport(app=admin_app), base_url="http://test") as client:
+            resp = await client.put(
+                f"/api/admin/local/users/{user.id}",
+                json={"password": "NewPassword2"},
+            )
+    assert resp.status_code == 200
+
+    # Login with new password should succeed
+    login_app = _make_test_app(db_session)
+    async with AsyncClient(transport=ASGITransport(app=login_app), base_url="http://test") as client:
+        resp = await client.post(
+            "/api/auth/local/token",
+            json={"username": "pwdchange", "password": "NewPassword2"},
+        )
+    assert resp.status_code == 200, f"Login with new password failed: {resp.json()}"
+
+    # Login with old password should fail
+    async with AsyncClient(transport=ASGITransport(app=login_app), base_url="http://test") as client:
+        resp = await client.post(
+            "/api/auth/local/token",
+            json={"username": "pwdchange", "password": "Password1"},
+        )
+    assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_update_user_deactivate_blocks_login(db_session, admin_user_ctx) -> None:
+    """Deactivating a user via PUT is_active=False blocks subsequent login."""
+    from httpx import AsyncClient, ASGITransport
+
+    user = await _create_test_user(
+        db_session, username="deactflow", email="deactflow@example.com", password="Password1"
+    )
+
+    # Verify login works before deactivation
+    login_app = _make_test_app(db_session)
+    async with AsyncClient(transport=ASGITransport(app=login_app), base_url="http://test") as client:
+        resp = await client.post(
+            "/api/auth/local/token",
+            json={"username": "deactflow", "password": "Password1"},
+        )
+    assert resp.status_code == 200, "Login should succeed before deactivation"
+
+    # Deactivate user via admin PUT
+    with patch("api.routes.admin_local_users.has_permission", new_callable=AsyncMock, return_value=True):
+        admin_app = _make_admin_app(db_session, admin_user_ctx)
+        async with AsyncClient(transport=ASGITransport(app=admin_app), base_url="http://test") as client:
+            resp = await client.put(
+                f"/api/admin/local/users/{user.id}",
+                json={"is_active": False},
+            )
+    assert resp.status_code == 200
+    assert resp.json()["is_active"] is False
+
+    # Login should now fail
+    async with AsyncClient(transport=ASGITransport(app=login_app), base_url="http://test") as client:
+        resp = await client.post(
+            "/api/auth/local/token",
+            json={"username": "deactflow", "password": "Password1"},
+        )
+    assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_delete_group_cascades(db_session, admin_user_ctx) -> None:
+    """DELETE /api/admin/local/groups/{id} removes group, roles, and user memberships."""
+    from httpx import AsyncClient, ASGITransport
+    from sqlalchemy import select
+
+    user = await _create_test_user(
+        db_session, username="grpdeluser", email="grpdel@example.com"
+    )
+    group = await _create_test_group(
+        db_session, name="grp_to_delete", roles=["employee", "developer"]
+    )
+    db_session.add(LocalUserGroup(user_id=user.id, group_id=group.id))
+    await db_session.commit()
+
+    with patch("api.routes.admin_local_users.has_permission", new_callable=AsyncMock, return_value=True):
+        app = _make_admin_app(db_session, admin_user_ctx)
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            resp = await client.delete(f"/api/admin/local/groups/{group.id}")
+    assert resp.status_code == 204
+
+    # Verify group is gone
+    result = await db_session.execute(select(LocalGroup).where(LocalGroup.id == group.id))
+    assert result.scalar_one_or_none() is None
+
+    # Verify LocalUserGroup entries for that group are gone (CASCADE)
+    memberships = await db_session.execute(
+        select(LocalUserGroup).where(LocalUserGroup.group_id == group.id)
+    )
+    assert memberships.scalar_one_or_none() is None
+
+    # Verify LocalGroupRole entries for that group are gone (CASCADE)
+    group_roles = await db_session.execute(
+        select(LocalGroupRole).where(LocalGroupRole.group_id == group.id)
+    )
+    assert group_roles.scalar_one_or_none() is None
+
+
+@pytest.mark.asyncio
+async def test_remove_user_from_group(db_session, admin_user_ctx) -> None:
+    """DELETE /api/admin/local/users/{id}/groups/{gid} removes membership; user's groups is empty."""
+    from httpx import AsyncClient, ASGITransport
+
+    user = await _create_test_user(
+        db_session, username="rmgrpuser", email="rmgrp@example.com"
+    )
+    group = await _create_test_group(db_session, name="rmgrp_group", roles=["employee"])
+    db_session.add(LocalUserGroup(user_id=user.id, group_id=group.id))
+    await db_session.commit()
+
+    with patch("api.routes.admin_local_users.has_permission", new_callable=AsyncMock, return_value=True):
+        app = _make_admin_app(db_session, admin_user_ctx)
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            # Remove user from group
+            resp = await client.delete(
+                f"/api/admin/local/users/{user.id}/groups/{group.id}"
+            )
+            assert resp.status_code == 204
+
+            # Verify user's groups list is now empty
+            resp = await client.get(f"/api/admin/local/users/{user.id}")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["groups"] == []
+
+
+@pytest.mark.asyncio
+async def test_remove_user_role(db_session, admin_user_ctx) -> None:
+    """DELETE /api/admin/local/users/{id}/roles/{role} removes the direct role."""
+    from httpx import AsyncClient, ASGITransport
+
+    user = await _create_test_user(
+        db_session, username="rmroleuser", email="rmrole@example.com"
+    )
+
+    with patch("api.routes.admin_local_users.has_permission", new_callable=AsyncMock, return_value=True):
+        app = _make_admin_app(db_session, admin_user_ctx)
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            # Add direct role
+            resp = await client.post(
+                f"/api/admin/local/users/{user.id}/roles",
+                json={"roles": ["it-admin"]},
+            )
+            assert resp.status_code == 204
+
+            # Remove the role
+            resp = await client.delete(
+                f"/api/admin/local/users/{user.id}/roles/it-admin"
+            )
+            assert resp.status_code == 204
+
+            # Verify role is gone
+            resp = await client.get(f"/api/admin/local/users/{user.id}")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert "it-admin" not in body["roles"]
+
+
+@pytest.mark.asyncio
+async def test_update_group_roles_replaces_all(db_session, admin_user_ctx) -> None:
+    """PUT /api/admin/local/groups/{id} with roles replaces the entire role set."""
+    from httpx import AsyncClient, ASGITransport
+
+    group = await _create_test_group(
+        db_session, name="roles_replace_grp", roles=["employee"]
+    )
+
+    with patch("api.routes.admin_local_users.has_permission", new_callable=AsyncMock, return_value=True):
+        app = _make_admin_app(db_session, admin_user_ctx)
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            resp = await client.put(
+                f"/api/admin/local/groups/{group.id}",
+                json={"roles": ["developer", "it-admin"]},
+            )
+
+    assert resp.status_code == 200, f"Expected 200 but got {resp.status_code}: {resp.json()}"
+    body = resp.json()
+    assert sorted(body["roles"]) == sorted(["developer", "it-admin"])
+    assert "employee" not in body["roles"]
