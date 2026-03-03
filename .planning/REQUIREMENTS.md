@@ -8,11 +8,11 @@
 ### Admin
 
 - [x] **ADMIN-01**: Admin can manage all artifacts (agents, tools, skills, MCP servers) from /admin only — admin features removed from /settings
-- [ ] **ADMIN-02**: User can create an artifact using a guided creation wizard (choose type → fill form with inline validation → preview JSON → submit)
-- [ ] **ADMIN-03**: User can pick from starter templates when creating a new artifact
-- [ ] **ADMIN-04**: User sees live name availability check while typing artifact name in creation form
-- [ ] **ADMIN-05**: User can select required permissions from a dropdown (not free-text input) when creating tools or skills
-- [ ] **ADMIN-06**: User can clone an existing artifact to use as a starting point for a new version
+- [x] **ADMIN-02**: User can create an artifact using a guided creation wizard (choose type → fill form with inline validation → preview JSON → submit)
+- [x] **ADMIN-03**: User can pick from starter templates when creating a new artifact
+- [x] **ADMIN-04**: User sees live name availability check while typing artifact name in creation form
+- [x] **ADMIN-05**: User can select required permissions from a dropdown (not free-text input) when creating tools or skills
+- [x] **ADMIN-06**: User can clone an existing artifact to use as a starting point for a new version
 
 ### Auth
 
@@ -69,11 +69,11 @@
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | ADMIN-01 | Phase 12 | Complete |
-| ADMIN-02 | Phase 12 | Pending |
-| ADMIN-03 | Phase 12 | Pending |
-| ADMIN-04 | Phase 12 | Pending |
-| ADMIN-05 | Phase 12 | Pending |
-| ADMIN-06 | Phase 12 | Pending |
+| ADMIN-02 | Phase 12 | Complete |
+| ADMIN-03 | Phase 12 | Complete |
+| ADMIN-04 | Phase 12 | Complete |
+| ADMIN-05 | Phase 12 | Complete |
+| ADMIN-06 | Phase 12 | Complete |
 | AUTH-01 | Phase 13 | Pending |
 | AUTH-02 | Phase 13 | Pending |
 | AUTH-03 | Phase 13 | Pending |

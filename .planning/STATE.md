@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-03-02 after v1.2 roadmap)
 ## Current Position
 
 Milestone: v1.2 Developer Experience
-Phase: 11 of 14 (Infrastructure and Debt) — COMPLETE (all 3 plans + live E2E verified)
-Status: Phase 11 complete — ready for Phase 12
-Last activity: 2026-03-03 — Telegram E2E verified live (message in → LLM → formatted reply out)
+Phase: 12 of 14 (Unified Admin Desk) — IN PROGRESS (Plan 02 tasks complete, awaiting human-verify)
+Status: Phase 12 Plan 02 automated tasks complete — checkpoint at Task 3 human-verify
+Last activity: 2026-03-03 — Phase 12-02 hybrid wizard implemented (fill_form tool, check-name endpoints, split-panel /admin/create)
 
 Progress: [███░░░░░░░░░] 21% — v1.2 Phase 11 complete, Phase 12 next
 
@@ -56,6 +56,8 @@ Recent decisions affecting current work:
 - [Phase 12-01]: Admin credential API returns metadata only (user_id, provider, connected_at) — token values never in response; registry:manage RBAC gate
 - [Phase 12-01]: Next.js admin credential proxy uses NEXT_PUBLIC_API_URL not BACKEND_INTERNAL_URL — matches existing admin proxy pattern in config/route.ts
 - [Phase 12-01]: /settings/agents and /settings/integrations kept as files (not deleted) — Server Component redirect() returns HTTP redirect not 404; /settings stripped of Admin section
+- [Phase 12]: [12-02]: fill_form co-agent tool added to artifact_builder — AI can now update form fields live via copilotkit_emit_state
+- [Phase 12]: [12-02]: check-name endpoints declared BEFORE /{id} routes in all 4 admin route files to prevent FastAPI routing collision
 
 ### Pending Todos
 
@@ -74,4 +76,4 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: Phase 11 fully complete — Cloudflare Tunnel live, Docker dev workflow operational, Telegram E2E verified. Next: Phase 12
+Stopped at: Phase 12 Plan 02 complete (Tasks 1+2a+2b committed) — awaiting human-verify checkpoint for /admin/create wizard E2E validation (Task 3)
