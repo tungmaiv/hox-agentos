@@ -30,6 +30,8 @@ from api.routes import (
     user_skills,
     user_tools,
 )
+from api.routes.admin_local_users import router as admin_local_users_router
+from api.routes.auth_local import router as auth_local_router
 from api.routes.channels import router as channels_router
 from api.routes.webhooks import router as webhooks_router
 from api.routes.workflows import router as workflows_router
@@ -123,6 +125,12 @@ def create_app() -> FastAPI:
 
     # Health check — no auth, no /api prefix (reachable by load balancers)
     app.include_router(health.router)
+
+    # Local auth — POST /api/auth/local/token (no auth required — it IS the auth)
+    app.include_router(auth_local_router)
+
+    # Admin CRUD for local users and groups — /api/admin/local/users + groups (registry:manage)
+    app.include_router(admin_local_users_router)
 
     # Agent routes — all protected by 3-gate security chain
     app.include_router(agents.router, prefix="/api")

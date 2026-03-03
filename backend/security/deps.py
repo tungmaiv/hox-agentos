@@ -36,13 +36,19 @@ _bearer = HTTPBearer(auto_error=False)
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+    session: AsyncSession = Depends(get_db),
 ) -> UserContext:
     """
     FastAPI dependency: validate the Bearer token and return a UserContext.
 
+    Passes the DB session to validate_token() so that local HS256 tokens can
+    perform the is_active check without opening a second connection. For Keycloak
+    RS256 tokens, the session is ignored.
+
     Args:
         credentials: Extracted from the Authorization: Bearer <token> header.
                      None when the header is absent.
+        session:     DB session used by the local token is_active check.
 
     Returns:
         UserContext with user_id, email, username, roles, groups.
@@ -51,10 +57,11 @@ async def get_current_user(
         HTTPException(401, "Not authenticated")  — missing Authorization header
         HTTPException(401, "Token has expired")  — expired token
         HTTPException(401, "Invalid token")      — bad signature / wrong iss/aud
+        HTTPException(401, "Account deactivated")— local user deactivated
     """
     if credentials is None:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    return await validate_token(credentials.credentials)
+    return await validate_token(credentials.credentials, session=session)
 
 
 async def get_user_db(

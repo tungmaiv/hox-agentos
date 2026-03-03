@@ -2,9 +2,9 @@
 JWT validation — Gate 1 of the 3-gate security system.
 
 Responsibilities:
-  1. Fetch Keycloak's JWKS endpoint (with in-process TTL cache).
-  2. Decode and validate an RS256 JWT (signature, expiry, issuer, audience).
-  3. Extract claims into a UserContext for use by the rest of the system.
+  1. Peek at the `iss` claim (unverified) to dispatch to the correct validator.
+  2. Keycloak path: fetch JWKS, decode RS256, verify signature/expiry/issuer.
+  3. Local path: decode HS256 with LOCAL_JWT_SECRET, verify issuer + is_active.
 
 Public API:
   validate_token(token: str) -> UserContext   — raises HTTPException on any error
@@ -15,6 +15,8 @@ Security invariants (never break):
   - JWKS is cached in-process for JWKS_TTL_SECONDS (300s) to avoid a Keycloak
     round-trip on every request.
   - ExpiredSignatureError is handled separately so the error message is specific.
+  - The issuer peek (get_unverified_claims) is intentionally unverified — the
+    actual signature and claims are verified by the dispatched validator.
 """
 import time
 from typing import Any
@@ -25,6 +27,7 @@ import structlog
 from fastapi import HTTPException
 from jose import ExpiredSignatureError, JWTError
 from jose import jwt as jose_jwt
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.config import settings
 from core.models.user import UserContext
@@ -42,7 +45,7 @@ _jwks_fetched_at: float = 0.0  # monotonic clock timestamp of last fetch
 
 
 # ---------------------------------------------------------------------------
-# Internal helpers
+# Internal helpers — Keycloak RS256 path
 # ---------------------------------------------------------------------------
 
 
@@ -92,20 +95,18 @@ async def _get_jwks() -> dict[str, Any]:
     return _JWKS_CACHE
 
 
-# ---------------------------------------------------------------------------
-# Public API
-# ---------------------------------------------------------------------------
-
-
-async def validate_token(token: str) -> UserContext:
+async def _validate_keycloak_token(token: str) -> UserContext:
     """
-    Validate an RS256 Bearer token against Keycloak's JWKS.
+    Validate a Keycloak RS256 Bearer token.
+
+    This is the original validate_token() body extracted into a private function.
+    Zero behavior change from the pre-refactor implementation.
 
     Checks:
       - Signature (RS256, against JWKS public key)
       - Expiry (exp claim)
       - Issuer (iss must equal settings.keycloak_issuer)
-      - Audience: skipped — blitz-portal tokens carry no aud claim (issuer is sufficient)
+      - Audience: skipped — blitz-portal tokens carry no aud claim
 
     Returns:
         UserContext populated from JWT claims.
@@ -145,3 +146,68 @@ async def validate_token(token: str) -> UserContext:
         roles=roles,
         groups=payload.get("groups", []),
     )
+
+
+# ---------------------------------------------------------------------------
+# Public API — dual-issuer dispatcher
+# ---------------------------------------------------------------------------
+
+
+async def validate_token(
+    token: str,
+    session: AsyncSession | None = None,
+) -> UserContext:
+    """
+    Validate a Bearer token, routing to the correct validator by issuer.
+
+    Dispatch logic:
+      1. Peek at `iss` claim WITHOUT signature verification (fast, safe peek).
+      2. `iss == settings.keycloak_issuer` → _validate_keycloak_token() (RS256+JWKS)
+      3. `iss == "blitz-local"`            → validate_local_token() (HS256+LOCAL_JWT_SECRET)
+      4. Anything else                     → HTTPException(401, "Unknown token issuer")
+
+    The peek step is intentionally unverified — the actual signature is verified
+    by the dispatched validator, which raises 401 on any tampered token.
+
+    Args:
+        token:   The raw JWT string (no "Bearer " prefix).
+        session: Optional DB session for local token is_active check.
+                 Required when a local token is expected.
+                 If None and the token is local, a temporary session is opened.
+
+    Returns:
+        UserContext with user_id, email, username, roles, groups.
+
+    Raises:
+        HTTPException(401, "Token has expired")      — expired token (either path)
+        HTTPException(401, "Invalid token")          — bad signature / wrong issuer
+        HTTPException(401, "Account deactivated")    — local user deactivated
+        HTTPException(401, "Unknown token issuer")   — unrecognized iss claim
+        HTTPException(503, ...)                      — Keycloak JWKS unreachable
+    """
+    try:
+        unverified = jose_jwt.get_unverified_claims(token)
+    except JWTError:
+        # Malformed token — can't even peek at claims
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    issuer = unverified.get("iss", "")
+
+    if issuer == settings.keycloak_issuer:
+        return await _validate_keycloak_token(token)
+    elif issuer == "blitz-local":
+        # Import here to avoid circular import: local_auth imports from core.models,
+        # and some modules may import from security.jwt first.
+        from security.local_auth import validate_local_token
+
+        if session is None:
+            # No session provided — open one for the is_active check.
+            # This path is hit when validate_token is called directly (e.g., tests).
+            from core.db import async_session
+
+            async with async_session() as db_session:
+                return await validate_local_token(token, db_session)
+        return await validate_local_token(token, session)
+    else:
+        logger.warning("jwt_unknown_issuer", issuer=issuer)
+        raise HTTPException(status_code=401, detail="Unknown token issuer")

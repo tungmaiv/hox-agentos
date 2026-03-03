@@ -28,6 +28,8 @@ _TEST_ENV: dict[str, str] = {
     "LITELLM_URL": "http://localhost:4000",
     "LITELLM_MASTER_KEY": "test-key",
     "SECRET_KEY": "test-secret-key-32-chars-minimum!",
+    # Local auth — HS256 secret for test_local_auth.py (must be >= 32 chars)
+    "LOCAL_JWT_SECRET": "test-local-jwt-secret-at-least-32-characters-long",
 }
 
 # Apply before collection — this ensures core.config.settings is importable
