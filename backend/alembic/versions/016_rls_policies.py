@@ -38,15 +38,16 @@ branch_labels = None
 depends_on = None
 
 # All user-scoped tables that require RLS isolation.
-# These are the actual PostgreSQL table names (not conceptual names from CONTEXT.md).
-_RLS_TABLES = [
-    "memory_facts",
-    "memory_conversations",
-    "user_credentials",
-    "workflow_runs",
-    "memory_episodes",
-    "conversation_titles",
-]
+# Maps table name → the column that holds the owner's user_id.
+# Most tables use "user_id"; workflow_runs uses "owner_user_id".
+_RLS_TABLES: dict[str, str] = {
+    "memory_facts": "user_id",
+    "memory_conversations": "user_id",
+    "user_credentials": "user_id",
+    "workflow_runs": "owner_user_id",
+    "memory_episodes": "user_id",
+    "conversation_titles": "user_id",
+}
 
 
 def upgrade() -> None:
@@ -55,7 +56,7 @@ def upgrade() -> None:
         # RLS is PostgreSQL-only — skip entirely for SQLite (used in unit tests)
         return
 
-    for table in _RLS_TABLES:
+    for table, col in _RLS_TABLES.items():
         # Enable RLS on the table
         op.execute(sa.text(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY"))  # nosec B608
         # FORCE ensures even the table owner (blitz role) is subject to RLS.
@@ -66,7 +67,7 @@ def upgrade() -> None:
         op.execute(
             sa.text(
                 f"CREATE POLICY user_isolation ON {table} "  # nosec B608
-                "USING (user_id = current_setting('app.user_id', true)::uuid)"
+                f"USING ({col} = current_setting('app.user_id', true)::uuid)"  # nosec B608
             )
         )
 
@@ -75,15 +76,15 @@ def upgrade() -> None:
         op.execute(
             sa.text(
                 f"CREATE POLICY user_isolation_insert ON {table} "  # nosec B608
-                "FOR INSERT WITH CHECK (user_id = current_setting('app.user_id', true)::uuid)"
+                f"FOR INSERT WITH CHECK ({col} = current_setting('app.user_id', true)::uuid)"  # nosec B608
             )
         )
 
-    # Grant BYPASSRLS to the blitz service role so that:
+    # Grant BYPASSRLS attribute to the blitz service role so that:
     # 1. Celery workers and backend API can access tables without RLS blocking them
     # 2. Service code can still call SET LOCAL app.user_id = '...' for user-scoped queries
-    # This BYPASSRLS grant is complementary to (not a replacement for) SET LOCAL.
-    op.execute(sa.text("GRANT BYPASSRLS TO blitz"))
+    # BYPASSRLS is a role attribute (ALTER ROLE), not a grantable privilege (GRANT ... TO).
+    op.execute(sa.text("ALTER ROLE blitz BYPASSRLS"))
 
 
 def downgrade() -> None:
@@ -97,5 +98,6 @@ def downgrade() -> None:
         op.execute(sa.text(f"ALTER TABLE {table} DISABLE ROW LEVEL SECURITY"))  # nosec B608
         op.execute(sa.text(f"ALTER TABLE {table} NO FORCE ROW LEVEL SECURITY"))  # nosec B608
 
-    # Revoke BYPASSRLS (best-effort — ignore if not granted)
-    op.execute(sa.text("REVOKE BYPASSRLS FROM blitz"))
+
+    # Revoke BYPASSRLS attribute (ALTER ROLE, not REVOKE ... FROM)
+    op.execute(sa.text("ALTER ROLE blitz NOBYPASSRLS"))
