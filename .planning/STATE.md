@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Developer Experience
 status: unknown
-last_updated: "2026-03-03T14:02:49.301Z"
+last_updated: "2026-03-03T14:15:20Z"
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 6
-  completed_plans: 5
+  completed_plans: 6
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-02 after v1.2 roadmap)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates their daily work routines and lets them build custom automations without writing code — all within an enterprise-secure, on-premise environment where data never leaves the company.
-**Current focus:** v1.2 Developer Experience — Phase 11 in progress
+**Current focus:** v1.2 Developer Experience — Phase 13 complete, Phase 14 next
 
 ## Current Position
 
 Milestone: v1.2 Developer Experience
-Phase: 13 of 14 (Local Auth) — IN PROGRESS (Plan 01 complete, Plan 02 pending)
-Status: Phase 13 Plan 01 COMPLETE — backend local auth implemented (632 tests passing)
-Last activity: 2026-03-03 — Phase 13-01 backend local auth: ORM models, HS256 JWT, dual-issuer dispatch, admin CRUD API
+Phase: 13 of 14 (Local Auth) — COMPLETE (both plans done)
+Status: Phase 13 Plan 02 COMPLETE — frontend local auth: Credentials provider + dual login page + admin Users tab
+Last activity: 2026-03-03 — Phase 13-02 frontend local auth: NextAuth Credentials, redesigned /login, /admin/users CRUD
 
-Progress: [███░░░░░░░░░] 21% — v1.2 Phase 11 complete, Phase 12 next
+Progress: [███░░░░░░░░░] 23% — v1.2 Phase 13 complete, Phase 14 next
 
 ## Performance Metrics
 
@@ -73,6 +73,9 @@ Recent decisions affecting current work:
 - [Phase 12]: [12-02]: check-name endpoints declared BEFORE /{id} routes in all 4 admin route files to prevent FastAPI routing collision
 - [Phase 13-01]: [13-01]: Replace passlib with direct bcrypt — passlib 1.7.4 incompatible with bcrypt 5.x (detect_wrap_bug rejects 256-byte test password)
 - [Phase 13-01]: [13-01]: validate_local_token takes AsyncSession param — reuses request-scoped DB session for is_active check in get_current_user
+- [Phase 13-02]: [13-02]: Credentials provider authorize() calls backend directly from server side — token proxy route is supplementary only
+- [Phase 13-02]: [13-02]: Local token expiry uses error="SessionExpired" to distinguish from Keycloak "RefreshAccessTokenError" on login page
+- [Phase 13-02]: [13-02]: Admin Users page edit dialog limited to username/email/password — group/role management kept separate (KISS)
 
 ### Pending Todos
 
@@ -92,4 +95,4 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: Phase 13 Plan 01 COMPLETE — 632 tests passing, local auth backend complete (ORM models + HS256 JWT + dual-issuer dispatch + admin CRUD + 23 new tests)
+Stopped at: Phase 13 Plan 02 COMPLETE — frontend local auth done (Credentials provider + redesigned /login + admin Users tab + 8 proxy routes; pnpm build 0 errors)
