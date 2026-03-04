@@ -772,14 +772,16 @@ async def _capabilities_node(state: BlitzState) -> dict[str, list[BaseMessage]]:
         }
 
 
-# TODO: verify dead — update_agent_last_seen has no production callers; only called from tests.
-# Designed for future wiring when dynamic agent dispatch logs last_seen_at to agent_definitions.
 async def update_agent_last_seen(agent_name: str, session: AsyncSession) -> None:
     """
     Update last_seen_at on an agent after successful dispatch.
 
     Batched: only updates if last_seen_at is older than 60s or NULL,
     to avoid excessive DB writes on high-frequency agent invocations.
+
+    Forward-compatibility: no production callers yet. Called from tests to validate the
+    batching logic. Wire into the agent dispatch path when dynamic agent routing
+    needs last_seen_at tracking in agent_definitions.
     """
     from core.models.agent_definition import AgentDefinition
 

@@ -9,7 +9,7 @@ Usage:
     system = load_prompt("master_agent")
 
     # With Jinja2-style {{ var }} substitution
-    prompt = load_prompt("intent_classifier", message="check my emails")
+    prompt = load_prompt("master_agent")  # see backend/prompts/*.md for available prompts
 
 Dev mode (ENVIRONMENT=development): bypasses cache so .md edits are visible without restart.
 Production/test mode: caches raw template in-process after first read.
@@ -49,7 +49,7 @@ def load_prompt(prompt_name: str, **vars: str) -> str:
 
     Example:
         load_prompt("master_agent")
-        load_prompt("intent_classifier", message="check my emails")
+        load_prompt("artifact_builder", context="my api spec")  # see backend/prompts/*.md for available prompts
         load_prompt("_test_probe", name="World")  # name= is a valid var here
     """
     env = os.getenv("ENVIRONMENT", "production")
