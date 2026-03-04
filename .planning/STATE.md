@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Developer Experience
-status: unknown
-last_updated: "2026-03-04T03:16:44.743Z"
+status: in_progress
+last_updated: "2026-03-04T04:03:28Z"
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 10
-  completed_plans: 9
+  completed_plans: 10
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-02 after v1.2 roadmap)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates their daily work routines and lets them build custom automations without writing code — all within an enterprise-secure, on-premise environment where data never leaves the company.
-**Current focus:** v1.2 Developer Experience — Phase 14 context gathered, ready for planning
+**Current focus:** v1.2 Developer Experience — Phase 14 complete (all 5 plans done)
 
 ## Current Position
 
 Milestone: v1.2 Developer Experience
-Phase: 14 of 14 (Ecosystem Capabilities) — Plan 03 complete
-Status: Phase 14 Plan 03 complete — skill repository management, Skill Store tab, browse/import UI
-Last activity: 2026-03-04 — Plan 14-03 executed
+Phase: 14 of 14 (Ecosystem Capabilities) — Plan 05 complete
+Status: Phase 14 Plan 05 complete — openapi_proxy dispatch branch wired, ECO-02 fully satisfied
+Last activity: 2026-03-04 — Plan 14-05 executed
 
-Progress: [████████░░░░] 65% — v1.2 Phase 14 Plan 03 done
+Progress: [████████████] 100% — v1.2 Phase 14 Plan 05 done (all plans complete)
 
 ## Performance Metrics
 
@@ -88,6 +88,10 @@ Recent decisions affecting current work:
 - [Phase 14-03]: browse_skills reads cached_index from DB — no remote HTTP calls at browse time, freshness via explicit sync action
 - [Phase 14-03]: User proxy routes at /api/skill-repos/* are separate files from /api/admin/[...path] catch-all — different RBAC gates (chat vs registry:manage)
 - [Phase 14-03]: 2-step import dialog — confirm intent then show security score/recommendation before closing — user must see scan results
+- [Phase 14-05]: openapi_proxy dispatch branch placed as elif between mcp_server and 501 fallback — preserves all existing behavior unchanged
+- [Phase 14-05]: mcp_server_id from cache is str; cast to uuid.UUID() before McpServer.id query — avoids PostgreSQL type mismatch
+- [Phase 14-05]: update_tool_last_seen wrapped in try/except — best-effort, never fails the tool call
+- [Phase 14-05]: is_error = result.get("error") is True (strict bool check) — avoids false positives from result dicts with non-True "error" keys
 
 ### Pending Todos
 
@@ -108,5 +112,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-03-04
-Stopped at: Completed 14-03-PLAN.md — Skill Repositories (CRUD, browse, import, Skill Store tab)
-Resume file: .planning/phases/14-ecosystem-capabilities/14-02-SUMMARY.md
+Stopped at: Completed 14-05-PLAN.md — OpenAPI Proxy dispatch branch (ECO-02 gap closure)
+Resume file: .planning/phases/14-ecosystem-capabilities/14-05-SUMMARY.md
