@@ -61,7 +61,7 @@ Full phase details: `.planning/milestones/v1.2-ROADMAP.md`
 - Track 1 — Foundations: Phases 15-18 (auth, UX, performance, identity)
 - Track 2 — Skill Platform: Phases 19-23 (standards, catalog, security, marketplace, builder)
 
-- [x] **Phase 15: Session & Auth Hardening** — Protected routes, secure cookies, session lifecycle, CVE mitigation (completed 2026-03-04)
+- [ ] **Phase 15: Session & Auth Hardening** — Protected routes, secure cookies, session lifecycle, CVE mitigation (UAT gap closure in progress)
 - [ ] **Phase 16: Navigation & User Experience** — Nav rail, profile page, user preferences, settings reorg
 - [ ] **Phase 17: Performance & Embedding Sidecar** — Embedding sidecar extraction, instrumentation, bottleneck fixes
 - [ ] **Phase 18: Identity Configuration** — Keycloak-optional boot, admin runtime config, connection testing
@@ -83,11 +83,12 @@ Full phase details: `.planning/milestones/v1.2-ROADMAP.md`
   3. Clicking "Sign Out" clears all auth state and returns the user to `/login` — refreshing the page after logout does not restore the session
   4. An expired or revoked session (e.g., backend restart, Keycloak token revocation) automatically redirects the user to `/login` with no broken UI state
   5. Next.js is confirmed at version 15.2.3+ before any middleware ships (CVE-2025-29927 mitigation verified)
-**Plans**: 2 plans in 1 wave
+**Plans**: 3 plans (2 complete + 1 gap closure)
 
 Plans:
-- [ ] 15-01: Middleware route protection, jose installation, cookie hardening, CVE verification, per-page auth removal
-- [ ] 15-02: Session refresh upgrade (5-min buffer), Keycloak end-session logout, session error detection, callbackUrl support
+- [x] 15-01: Middleware route protection, jose installation, cookie hardening, CVE verification, per-page auth removal
+- [x] 15-02: Session refresh upgrade (5-min buffer), Keycloak end-session logout, session error detection, callbackUrl support
+- [ ] 15-03: UAT gap closure — middleware secret fix, sign-out button wiring, session expiry detection, multi-tab sync
 
 ### Phase 16: Navigation & User Experience
 **Goal**: Users can navigate the entire application from a persistent navigation rail and manage their profile and preferences from a dedicated page
@@ -239,7 +240,7 @@ Plans:
 | 12. Unified Admin Desk | v1.2 | 2/2 | ✅ Complete | 2026-03-03 |
 | 13. Local Auth | v1.2 | 2/2 | ✅ Complete | 2026-03-03 |
 | 14. Ecosystem Capabilities | v1.2 | 5/5 | ✅ Complete | 2026-03-04 |
-| 15. Session & Auth Hardening | 2/2 | Complete    | 2026-03-04 | - |
+| 15. Session & Auth Hardening | v1.3 | 2/3 | Gap closure | - |
 | 16. Navigation & UX | v1.3 | 0/TBD | Not started | - |
 | 17. Performance & Embedding Sidecar | v1.3 | 0/TBD | Not started | - |
 | 18. Identity Configuration | v1.3 | 0/TBD | Not started | - |
