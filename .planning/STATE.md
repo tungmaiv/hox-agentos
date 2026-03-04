@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Developer Experience
 status: unknown
-last_updated: "2026-03-04T02:53:00Z"
+last_updated: "2026-03-04T03:13:10.627Z"
 progress:
-  total_phases: 3
-  completed_phases: 2
-  total_plans: 6
-  completed_plans: 6
+  total_phases: 4
+  completed_phases: 3
+  total_plans: 10
+  completed_plans: 8
 ---
 
 # Project State
@@ -23,11 +23,11 @@ See: .planning/PROJECT.md (updated 2026-03-02 after v1.2 roadmap)
 ## Current Position
 
 Milestone: v1.2 Developer Experience
-Phase: 14 of 14 (Ecosystem Capabilities) — Plan 01 complete
-Status: Phase 14 Plan 01 complete — migration 019, capabilities tool, CapabilitiesCard A2UI component
-Last activity: 2026-03-04 — Plan 14-01 executed
+Phase: 14 of 14 (Ecosystem Capabilities) — Plan 04 complete
+Status: Phase 14 Plan 04 complete — skill export zip, Export button, admin proxy binary fix
+Last activity: 2026-03-04 — Plan 14-04 executed
 
-Progress: [████░░░░░░░░] 35% — v1.2 Phase 14 Plan 01 done
+Progress: [████████░░░░] 65% — v1.2 Phase 14 Plan 04 done
 
 ## Performance Metrics
 
@@ -81,6 +81,8 @@ Recent decisions affecting current work:
 - [14-01]: Capabilities routing handled in _classify_by_keywords() before agent routing — returns 'capabilities' intent
 - [14-01]: _capabilities_node routes through delivery_router like all other nodes — consistent graph topology
 - [14-01]: Agents and MCP servers use default-allow; tools and skills use batch_check_artifact_permissions() filtering
+- [Phase 14]: 14-04: skill_export router registered before admin_skills.router — literal /export must precede UUID /{skill_id} for correct FastAPI routing
+- [Phase 14]: 14-04: admin proxy binary fix branches on Content-Type — application/zip uses arrayBuffer(), others keep text() for backward compat
 
 ### Pending Todos
 
@@ -101,5 +103,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-03-04
-Stopped at: Completed 14-01-PLAN.md — ecosystem capabilities foundation (migration 019, capabilities tool, CapabilitiesCard)
-Resume file: .planning/phases/14-ecosystem-capabilities/14-01-SUMMARY.md
+Stopped at: Completed 14-04-PLAN.md — skill export as agentskills.io-compliant zip, Export button, binary proxy fix
+Resume file: .planning/phases/14-ecosystem-capabilities/14-04-SUMMARY.md

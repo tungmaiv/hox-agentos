@@ -29,7 +29,7 @@
 - [ ] **ECO-03**: Admin can add and remove external skill/tool repositories by URL
 - [ ] **ECO-04**: User can search and browse skills/tools from registered external repositories inside AgentOS
 - [ ] **ECO-05**: User can import a skill or tool from an external repository into AgentOS (imported artifact enters security review flow before activation)
-- [ ] **ECO-06**: AgentOS skill definitions can be exported in agentskills.io-compliant manifest format
+- [x] **ECO-06**: AgentOS skill definitions can be exported in agentskills.io-compliant manifest format
 
 ### Infrastructure
 
@@ -84,7 +84,7 @@
 | ECO-03 | Phase 14 | Pending |
 | ECO-04 | Phase 14 | Pending |
 | ECO-05 | Phase 14 | Pending |
-| ECO-06 | Phase 14 | Pending |
+| ECO-06 | Phase 14 | Complete |
 | INFRA-01 | Phase 11 | Complete |
 | INFRA-02 | Phase 11 | Complete |
 | INFRA-03 | Phase 11 | Complete |
