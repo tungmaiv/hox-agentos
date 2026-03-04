@@ -26,9 +26,9 @@
 
 - [x] **ECO-01**: Agent or user can query `system.capabilities` tool to list all registered agents, tools, skills, and MCP servers with descriptions
 - [x] **ECO-02**: User can run `api-to-mcp` skill: provide an app URL, have AgentOS fetch the OpenAPI spec, select endpoints to expose, and generate + register an MCP server
-- [ ] **ECO-03**: Admin can add and remove external skill/tool repositories by URL
-- [ ] **ECO-04**: User can search and browse skills/tools from registered external repositories inside AgentOS
-- [ ] **ECO-05**: User can import a skill or tool from an external repository into AgentOS (imported artifact enters security review flow before activation)
+- [x] **ECO-03**: Admin can add and remove external skill/tool repositories by URL
+- [x] **ECO-04**: User can search and browse skills/tools from registered external repositories inside AgentOS
+- [x] **ECO-05**: User can import a skill or tool from an external repository into AgentOS (imported artifact enters security review flow before activation)
 - [x] **ECO-06**: AgentOS skill definitions can be exported in agentskills.io-compliant manifest format
 
 ### Infrastructure
@@ -81,9 +81,9 @@
 | AUTH-05 | Phase 13 | Complete |
 | ECO-01 | Phase 14 | Complete |
 | ECO-02 | Phase 14 | Complete |
-| ECO-03 | Phase 14 | Pending |
-| ECO-04 | Phase 14 | Pending |
-| ECO-05 | Phase 14 | Pending |
+| ECO-03 | Phase 14 | Complete |
+| ECO-04 | Phase 14 | Complete |
+| ECO-05 | Phase 14 | Complete |
 | ECO-06 | Phase 14 | Complete |
 | INFRA-01 | Phase 11 | Complete |
 | INFRA-02 | Phase 11 | Complete |

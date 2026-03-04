@@ -23,11 +23,11 @@ See: .planning/PROJECT.md (updated 2026-03-02 after v1.2 roadmap)
 ## Current Position
 
 Milestone: v1.2 Developer Experience
-Phase: 14 of 14 (Ecosystem Capabilities) — Plan 04 complete
-Status: Phase 14 Plan 04 complete — skill export zip, Export button, admin proxy binary fix
-Last activity: 2026-03-04 — Plan 14-04 executed
+Phase: 14 of 14 (Ecosystem Capabilities) — Plan 03 complete
+Status: Phase 14 Plan 03 complete — skill repository management, Skill Store tab, browse/import UI
+Last activity: 2026-03-04 — Plan 14-03 executed
 
-Progress: [████████░░░░] 65% — v1.2 Phase 14 Plan 04 done
+Progress: [████████░░░░] 65% — v1.2 Phase 14 Plan 03 done
 
 ## Performance Metrics
 
@@ -85,6 +85,9 @@ Recent decisions affecting current work:
 - [Phase 14]: 14-04: admin proxy binary fix branches on Content-Type — application/zip uses arrayBuffer(), others keep text() for backward compat
 - [Phase 14-02]: encrypt_token imported at module level in service.py — required for unittest.mock.patch() testability
 - [Phase 14-02]: Tool registry cache now includes config_json and mcp_server_id — enables openapi_proxy dispatch without extra DB round-trips
+- [Phase 14-03]: browse_skills reads cached_index from DB — no remote HTTP calls at browse time, freshness via explicit sync action
+- [Phase 14-03]: User proxy routes at /api/skill-repos/* are separate files from /api/admin/[...path] catch-all — different RBAC gates (chat vs registry:manage)
+- [Phase 14-03]: 2-step import dialog — confirm intent then show security score/recommendation before closing — user must see scan results
 
 ### Pending Todos
 
@@ -105,5 +108,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-03-04
-Stopped at: Completed 14-02-PLAN.md — OpenAPI Bridge (parser, proxy, service, routes, admin wizard)
+Stopped at: Completed 14-03-PLAN.md — Skill Repositories (CRUD, browse, import, Skill Store tab)
 Resume file: .planning/phases/14-ecosystem-capabilities/14-02-SUMMARY.md

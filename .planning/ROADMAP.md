@@ -45,7 +45,7 @@ Full phase details: `.planning/milestones/v1.1-ROADMAP.md`
 - [x] **Phase 11: Infrastructure and Debt** — Cloudflare Tunnel, prompt externalization, dead code removal (completed 2026-03-02)
 - [x] **Phase 12: Unified Admin Desk** — Consolidate /settings into /admin, guided artifact creation wizard (completed 2026-03-03)
 - [x] **Phase 13: Local Auth** — Local user/group management with dual auth (local + Keycloak) (completed 2026-03-03)
-- [ ] **Phase 14: Ecosystem Capabilities** — Capabilities tool, API-to-MCP generation, external skill repositories
+- [x] **Phase 14: Ecosystem Capabilities** — Capabilities tool, API-to-MCP generation, external skill repositories (completed 2026-03-04)
 
 ## Phase Details
 
@@ -140,4 +140,4 @@ Plans:
 | 11. Infrastructure & Debt | 2/2 | Complete    | 2026-03-02 | - |
 | 12. Unified Admin Desk | 2/2 | Complete    | 2026-03-03 | - |
 | 13. Local Auth | 2/2 | Complete   | 2026-03-03 | - |
-| 14. Ecosystem Capabilities | 3/4 | In Progress|  | - |
+| 14. Ecosystem Capabilities | 4/4 | Complete   | 2026-03-04 | - |
