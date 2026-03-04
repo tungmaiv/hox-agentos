@@ -83,11 +83,11 @@ Full phase details: `.planning/milestones/v1.2-ROADMAP.md`
   3. Clicking "Sign Out" clears all auth state and returns the user to `/login` — refreshing the page after logout does not restore the session
   4. An expired or revoked session (e.g., backend restart, Keycloak token revocation) automatically redirects the user to `/login` with no broken UI state
   5. Next.js is confirmed at version 15.2.3+ before any middleware ships (CVE-2025-29927 mitigation verified)
-**Plans**: TBD
+**Plans**: 2 plans in 1 wave
 
 Plans:
-- [ ] 15-01: TBD
-- [ ] 15-02: TBD
+- [ ] 15-01: Middleware route protection, jose installation, cookie hardening, CVE verification, per-page auth removal
+- [ ] 15-02: Session refresh upgrade (5-min buffer), Keycloak end-session logout, session error detection, callbackUrl support
 
 ### Phase 16: Navigation & User Experience
 **Goal**: Users can navigate the entire application from a persistent navigation rail and manage their profile and preferences from a dedicated page
@@ -239,7 +239,7 @@ Plans:
 | 12. Unified Admin Desk | v1.2 | 2/2 | ✅ Complete | 2026-03-03 |
 | 13. Local Auth | v1.2 | 2/2 | ✅ Complete | 2026-03-03 |
 | 14. Ecosystem Capabilities | v1.2 | 5/5 | ✅ Complete | 2026-03-04 |
-| 15. Session & Auth Hardening | v1.3 | 0/TBD | Not started | - |
+| 15. Session & Auth Hardening | v1.3 | 0/2 | Planned | - |
 | 16. Navigation & UX | v1.3 | 0/TBD | Not started | - |
 | 17. Performance & Embedding Sidecar | v1.3 | 0/TBD | Not started | - |
 | 18. Identity Configuration | v1.3 | 0/TBD | Not started | - |
