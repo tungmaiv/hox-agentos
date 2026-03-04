@@ -69,6 +69,8 @@ async def _refresh_tool_cache(session: AsyncSession) -> None:
             "handler_type": row.handler_type,
             "handler_module": row.handler_module,
             "handler_function": row.handler_function,
+            "mcp_server_id": str(row.mcp_server_id) if row.mcp_server_id else None,
+            "config_json": row.config_json,
         }
         # Derive mcp_server name from the tool name for MCP tools
         # (convention: "server.tool_name" -> mcp_server="server")

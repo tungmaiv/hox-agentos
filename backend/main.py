@@ -38,6 +38,7 @@ from api.routes.workflows import router as workflows_router
 from core.config import settings
 from core.logging import configure_logging
 from gateway import runtime
+from openapi_bridge.routes import router as openapi_bridge_router
 from skill_export.routes import router as skill_export_router
 
 
@@ -204,6 +205,10 @@ def create_app() -> FastAPI:
     # Channel integration routes — incoming (no auth), pair/accounts (JWT)
     # Note: router already includes /api/channels prefix in its definition
     app.include_router(channels_router)
+
+    # OpenAPI Bridge — admin wizard to connect REST APIs as tool definitions
+    # Note: router already includes /api/admin/openapi prefix in its definition
+    app.include_router(openapi_bridge_router)
 
     return app
 
