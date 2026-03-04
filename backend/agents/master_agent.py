@@ -439,7 +439,9 @@ def _classify_by_keywords(text: str) -> str:
     Phase 6: Uses _keyword_to_agent map if populated from DB agents,
     falls back to hardcoded keywords if empty (backward compat).
 
-    Returns the agent name (e.g. "email_agent") or "general".
+    Phase 14: Detects capabilities-intent phrases before agent routing.
+
+    Returns the agent name (e.g. "email_agent"), "capabilities", or "general".
 
     Using keywords instead of an LLM here is intentional: routing functions
     run outside graph nodes, so any LLM call they make gets streamed by
@@ -449,6 +451,22 @@ def _classify_by_keywords(text: str) -> str:
     import re
     lowered = text.lower()
     words = set(re.findall(r"\w+", lowered))
+
+    # Phase 14: Capabilities intent detection (checked before agent routing)
+    _CAPABILITIES_PHRASES = [
+        "what can you do",
+        "what are your capabilities",
+        "list capabilities",
+        "show capabilities",
+        "available tools",
+        "available skills",
+        "show me your capabilities",
+        "what capabilities",
+        "list your capabilities",
+    ]
+    for phrase in _CAPABILITIES_PHRASES:
+        if phrase in lowered:
+            return "capabilities"
 
     # DB mode: _keyword_to_agent is populated from agent_definitions.routing_keywords
     # by create_master_graph(). Fallback mode: uses _FALLBACK_KEYWORD_MAP when DB
@@ -518,6 +536,10 @@ async def _pre_route(state: BlitzState) -> str:
 
     if intent == "general":
         return "master_agent"
+
+    # Phase 14: Capabilities intent — route to capabilities_node
+    if intent == "capabilities":
+        return "capabilities_node"
 
     if await _agent_enabled(intent):
         return intent
@@ -696,6 +718,60 @@ async def _skill_executor_node(state: BlitzState) -> dict[str, list[BaseMessage]
         return {"messages": [AIMessage(content=f"Unknown skill type: {skill.skill_type}")]}
 
 
+async def _capabilities_node(state: BlitzState) -> dict[str, list[BaseMessage]]:
+    """
+    Phase 14: Handle capabilities-intent messages by invoking system_capabilities().
+
+    Builds a CapabilitiesResponse from all four artifact registries, then formats
+    the result as a JSON-serializable A2UI card (agent="capabilities") for the
+    frontend CapabilitiesCard component. Falls back to markdown summary for
+    non-web channels (via delivery_router format_for_channel).
+
+    This node is reached via _pre_route when the user message matches a
+    capabilities-intent phrase (e.g. "what can you do", "list capabilities").
+    """
+    from capabilities.tool import system_capabilities
+
+    user_id = state.get("user_id")
+    if not user_id:
+        try:
+            ctx_user = current_user_ctx.get()
+            user_id = ctx_user["user_id"]
+        except LookupError:
+            pass
+
+    if not user_id:
+        return {
+            "messages": [AIMessage(content="Cannot list capabilities: no user context available.")]
+        }
+
+    try:
+        from core.db import async_session as _async_session
+        async with _async_session() as session:
+            async with session.begin():
+                result = await system_capabilities(user_id=user_id, session=session)
+
+        # Serialize as A2UI card for frontend CapabilitiesCard rendering
+        import json
+        card_data = {
+            "agent": "capabilities",
+            "agents": [a.model_dump() for a in result.agents],
+            "tools": [t.model_dump() for t in result.tools],
+            "skills": [s.model_dump() for s in result.skills],
+            "mcp_servers": [m.model_dump() for m in result.mcp_servers],
+            "summary": result.summary,
+        }
+        content = json.dumps(card_data)
+        logger.info("capabilities_node_complete", summary=result.summary)
+        return {"messages": [AIMessage(content=content)]}
+
+    except Exception as exc:
+        logger.error("capabilities_node_error", error=str(exc))
+        return {
+            "messages": [AIMessage(content=f"Error fetching capabilities: {str(exc)}")]
+        }
+
+
 # TODO: verify dead — update_agent_last_seen has no production callers; only called from tests.
 # Designed for future wiring when dynamic agent dispatch logs last_seen_at to agent_definitions.
 async def update_agent_last_seen(agent_name: str, session: AsyncSession) -> None:
@@ -758,6 +834,7 @@ def create_master_graph(
     graph.add_node("load_memory", _load_memory_node)
     graph.add_node("master_agent", _master_node)
     graph.add_node("skill_executor", _skill_executor_node)
+    graph.add_node("capabilities_node", _capabilities_node)
 
     from agents.delivery_router import delivery_router_node
 
@@ -767,6 +844,7 @@ def create_master_graph(
     route_map: dict[str, str] = {
         "master_agent": "master_agent",
         "skill_executor": "skill_executor",
+        "capabilities_node": "capabilities_node",
     }
     agent_nodes: list[str] = []
 
@@ -827,6 +905,7 @@ def create_master_graph(
     # All paths converge at delivery_router -> save_memory -> END
     graph.add_edge("master_agent", "delivery_router")
     graph.add_edge("skill_executor", "delivery_router")
+    graph.add_edge("capabilities_node", "delivery_router")
     for node_name in agent_nodes:
         graph.add_edge(node_name, "delivery_router")
     graph.add_edge("delivery_router", "save_memory")
