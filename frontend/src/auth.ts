@@ -7,7 +7,7 @@
  * - Client session only exposes user id and email
  *
  * Token refresh:
- * - Keycloak tokens: refreshed 30s before expiry via refresh_token flow
+ * - Keycloak tokens: refreshed 5 minutes before expiry via refresh_token flow (AUTH-04)
  * - Local tokens: 8-hour fixed expiry; no refresh_token. On expiry, error="SessionExpired"
  *   so the client can redirect to /login.
  *
@@ -159,8 +159,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return token;
       }
 
-      // Keycloak token: check expiry with 30-second buffer
-      if (Date.now() < (token.expiresAt as number) * 1000 - 30_000) {
+      // Keycloak token: check expiry with 5-minute buffer (AUTH-04)
+      // 5 minutes gives margin for slow internal networks and prevents mid-request token expiry
+      if (Date.now() < (token.expiresAt as number) * 1000 - 300_000) {
         return token;
       }
 
@@ -183,6 +184,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
       // Propagate realm roles to session for admin layout RBAC check
       session.realmRoles = token.realmRoles ?? [];
+
+      // Pass idToken for Keycloak end-session logout (AUTH-05)
+      // idToken is the OIDC identity token used only for logout — not the access token
+      session.idToken = token.idToken;
+
+      // Pass authProvider so logout component knows whether to call Keycloak end-session
+      session.authProvider = token.authProvider;
 
       // Propagate auth errors so the client can force re-login
       if (token.error) {

@@ -16,6 +16,10 @@ declare module "next-auth" {
     realmRoles?: string[];
     /** Auth error: "RefreshAccessTokenError" | "SessionExpired" */
     error?: string;
+    /** OIDC identity token — used only for Keycloak end-session logout (AUTH-05) */
+    idToken?: string;
+    /** Auth provider — "keycloak" or "credentials" — used for logout flow selection */
+    authProvider?: "keycloak" | "credentials";
   }
 }
 

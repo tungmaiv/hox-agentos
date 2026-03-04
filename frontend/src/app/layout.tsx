@@ -16,7 +16,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <SessionProvider>{children}</SessionProvider>
+        <SessionProvider refetchOnWindowFocus={true}>{children}</SessionProvider>
         <AuthErrorToasts />
       </body>
     </html>
