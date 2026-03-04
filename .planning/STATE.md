@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-03-05)
 Phase: 15 of 23 (Session & Auth Hardening)
 Plan: 02 of 02 complete
 Status: Phase 15 complete — all 2 plans done (15-01, 15-02)
-Last activity: 2026-03-04 — Completed 15-02: session lifecycle hardening (5-min refresh buffer, Keycloak end-session, auto-redirect on expiry, callbackUrl)
+Last activity: 2026-03-04 — Completed 15-01 (SUMMARY created): middleware route protection, jose install, cookie hardening, per-page auth check removal
 
 Progress: [#░░░░░░░░░] ~11%
 
@@ -52,6 +52,9 @@ v1.3 roadmap decisions:
 - [roadmap]: Two-track structure — foundations (15-18) then skill platform (19-23)
 - [roadmap]: Phase 17 (performance) architecturally independent of Phase 16 — can parallelize if needed
 - [roadmap]: Phase 21 (security hardening) depends on both Phase 19 and Phase 20
+- [15-01]: Allowlist middleware approach — all routes protected by default, public routes explicitly listed
+- [15-01]: Use getToken() from next-auth/jwt (not raw jose) — next-auth v5 encrypts cookie with NEXTAUTH_SECRET
+- [15-01]: Admin layout keeps RBAC role check; only auth redirect removed (defense-in-depth)
 - [Phase 15]: No confirmation dialog on Sign Out — instant logout for clean UX per user preference
 - [Phase 15]: Keycloak end-session uses id_token_hint — required for proper Keycloak SSO session termination
 - [Phase 15]: refetchOnWindowFocus over BroadcastChannel — built-in next-auth, simpler for 100-user scale
@@ -71,5 +74,5 @@ v1.3 roadmap decisions:
 ## Session Continuity
 
 Last session: 2026-03-04
-Stopped at: Completed 15-02-PLAN.md — session lifecycle hardening (5-min token refresh, Keycloak end-session, session error detection, callbackUrl redirect)
+Stopped at: Completed 15-01-PLAN.md — middleware route protection with allowlist approach, per-page auth check removal, 15-01-SUMMARY.md created
 Resume file: N/A

@@ -61,7 +61,7 @@ Full phase details: `.planning/milestones/v1.2-ROADMAP.md`
 - Track 1 — Foundations: Phases 15-18 (auth, UX, performance, identity)
 - Track 2 — Skill Platform: Phases 19-23 (standards, catalog, security, marketplace, builder)
 
-- [ ] **Phase 15: Session & Auth Hardening** — Protected routes, secure cookies, session lifecycle, CVE mitigation
+- [x] **Phase 15: Session & Auth Hardening** — Protected routes, secure cookies, session lifecycle, CVE mitigation (completed 2026-03-04)
 - [ ] **Phase 16: Navigation & User Experience** — Nav rail, profile page, user preferences, settings reorg
 - [ ] **Phase 17: Performance & Embedding Sidecar** — Embedding sidecar extraction, instrumentation, bottleneck fixes
 - [ ] **Phase 18: Identity Configuration** — Keycloak-optional boot, admin runtime config, connection testing
@@ -239,7 +239,7 @@ Plans:
 | 12. Unified Admin Desk | v1.2 | 2/2 | ✅ Complete | 2026-03-03 |
 | 13. Local Auth | v1.2 | 2/2 | ✅ Complete | 2026-03-03 |
 | 14. Ecosystem Capabilities | v1.2 | 5/5 | ✅ Complete | 2026-03-04 |
-| 15. Session & Auth Hardening | 1/2 | In Progress|  | - |
+| 15. Session & Auth Hardening | 2/2 | Complete   | 2026-03-04 | - |
 | 16. Navigation & UX | v1.3 | 0/TBD | Not started | - |
 | 17. Performance & Embedding Sidecar | v1.3 | 0/TBD | Not started | - |
 | 18. Identity Configuration | v1.3 | 0/TBD | Not started | - |

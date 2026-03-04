@@ -9,9 +9,9 @@
 
 ## Session & Auth Hardening
 
-- [ ] **AUTH-01**: Protected routes (`/chat`, `/admin`, `/canvas`, `/profile`, `/workflows`, `/skills`, `/settings`) redirect unauthenticated users to `/login` via Next.js `middleware.ts` using `jose` for Edge Runtime JWT verification
-- [ ] **AUTH-02**: Next.js upgraded to ≥15.2.3 before any `middleware.ts` is written (CVE-2025-29927 mitigation — CVSS 9.1 middleware bypass)
-- [ ] **AUTH-03**: Session cookie set with `HttpOnly`, `Secure` (production), `SameSite=Lax` — JWT never stored in localStorage
+- [x] **AUTH-01**: Protected routes (`/chat`, `/admin`, `/canvas`, `/profile`, `/workflows`, `/skills`, `/settings`) redirect unauthenticated users to `/login` via Next.js `middleware.ts` using `jose` for Edge Runtime JWT verification
+- [x] **AUTH-02**: Next.js upgraded to ≥15.2.3 before any `middleware.ts` is written (CVE-2025-29927 mitigation — CVSS 9.1 middleware bypass)
+- [x] **AUTH-03**: Session cookie set with `HttpOnly`, `Secure` (production), `SameSite=Lax` — JWT never stored in localStorage
 - [x] **AUTH-04**: Session silent refresh via `/api/auth/refresh` renews access token when it has <5 min remaining, using HttpOnly refresh token cookie (7d TTL)
 - [x] **AUTH-05**: User can log out via `POST /api/auth/logout` which clears all auth cookies; Keycloak path also calls Keycloak logout endpoint
 - [x] **AUTH-06**: Client-side `SessionProvider` wrapper detects `session.error` (`SessionExpired`, `RefreshAccessTokenError`) and auto-redirects to `/login`
@@ -131,9 +131,9 @@
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| AUTH-01 | Phase 15 | pending |
-| AUTH-02 | Phase 15 | pending |
-| AUTH-03 | Phase 15 | pending |
+| AUTH-01 | Phase 15 | Complete |
+| AUTH-02 | Phase 15 | Complete |
+| AUTH-03 | Phase 15 | Complete |
 | AUTH-04 | Phase 15 | Complete |
 | AUTH-05 | Phase 15 | Complete |
 | AUTH-06 | Phase 15 | Complete |
