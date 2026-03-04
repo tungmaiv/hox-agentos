@@ -1,4 +1,5 @@
 // frontend/src/app/chat/page.tsx
+import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { ChatLayout } from "@/components/chat/chat-layout";
 import type { Conversation } from "@/components/chat/chat-layout";
@@ -10,6 +11,9 @@ async function fetchConversations(accessToken: string): Promise<Conversation[]> 
       headers: { Authorization: `Bearer ${accessToken}` },
       cache: "no-store",
     });
+    if (response.status === 401) {
+      redirect("/login?error=SessionExpired&callbackUrl=/chat");
+    }
     if (!response.ok) return [];
     return (await response.json()) as Conversation[];
   } catch {
