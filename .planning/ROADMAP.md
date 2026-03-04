@@ -239,7 +239,7 @@ Plans:
 | 12. Unified Admin Desk | v1.2 | 2/2 | ✅ Complete | 2026-03-03 |
 | 13. Local Auth | v1.2 | 2/2 | ✅ Complete | 2026-03-03 |
 | 14. Ecosystem Capabilities | v1.2 | 5/5 | ✅ Complete | 2026-03-04 |
-| 15. Session & Auth Hardening | 2/2 | Complete   | 2026-03-04 | - |
+| 15. Session & Auth Hardening | 2/2 | Complete    | 2026-03-04 | - |
 | 16. Navigation & UX | v1.3 | 0/TBD | Not started | - |
 | 17. Performance & Embedding Sidecar | v1.3 | 0/TBD | Not started | - |
 | 18. Identity Configuration | v1.3 | 0/TBD | Not started | - |
