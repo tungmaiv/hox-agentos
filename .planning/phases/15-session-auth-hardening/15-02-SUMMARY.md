@@ -132,6 +132,22 @@ None — plan executed exactly as written.
 - Phase 15 (Session & Auth Hardening) now complete — all requirements AUTH-01 through AUTH-07 satisfied
 - Ready for Phase 16 (next phase in v1.3 roadmap)
 
+## Self-Check: PASSED
+
+Files verified present:
+- frontend/src/auth.ts: FOUND
+- frontend/src/components/sign-out-button.tsx: FOUND
+- frontend/src/components/auth-error-toasts.tsx: FOUND
+- frontend/src/app/login/page.tsx: FOUND
+- frontend/src/app/layout.tsx: FOUND
+- frontend/src/types/next-auth.d.ts: FOUND
+- .planning/phases/15-session-auth-hardening/15-02-SUMMARY.md: FOUND
+
+Commits verified:
+- e1c9160 (Task 1): FOUND
+- 348e642 (Task 2): FOUND
+- 335976a (docs/metadata): FOUND
+
 ---
 *Phase: 15-session-auth-hardening*
 *Completed: 2026-03-04*
