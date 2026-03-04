@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Developer Experience
 status: unknown
-last_updated: "2026-03-04T03:13:10.627Z"
+last_updated: "2026-03-04T03:16:44.743Z"
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 10
-  completed_plans: 8
+  completed_plans: 9
 ---
 
 # Project State
@@ -83,6 +83,8 @@ Recent decisions affecting current work:
 - [14-01]: Agents and MCP servers use default-allow; tools and skills use batch_check_artifact_permissions() filtering
 - [Phase 14]: 14-04: skill_export router registered before admin_skills.router — literal /export must precede UUID /{skill_id} for correct FastAPI routing
 - [Phase 14]: 14-04: admin proxy binary fix branches on Content-Type — application/zip uses arrayBuffer(), others keep text() for backward compat
+- [Phase 14-02]: encrypt_token imported at module level in service.py — required for unittest.mock.patch() testability
+- [Phase 14-02]: Tool registry cache now includes config_json and mcp_server_id — enables openapi_proxy dispatch without extra DB round-trips
 
 ### Pending Todos
 
@@ -103,5 +105,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-03-04
-Stopped at: Completed 14-04-PLAN.md — skill export as agentskills.io-compliant zip, Export button, binary proxy fix
-Resume file: .planning/phases/14-ecosystem-capabilities/14-04-SUMMARY.md
+Stopped at: Completed 14-02-PLAN.md — OpenAPI Bridge (parser, proxy, service, routes, admin wizard)
+Resume file: .planning/phases/14-ecosystem-capabilities/14-02-SUMMARY.md
