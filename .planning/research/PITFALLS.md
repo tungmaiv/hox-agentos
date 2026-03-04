@@ -1,7 +1,7 @@
 # Pitfalls Research
 
 **Domain:** Enterprise Agentic OS Platform (LangGraph + CopilotKit + React Flow + Keycloak + pgvector + LiteLLM + Multi-Channel)
-**Researched:** 2026-02-24
+**Researched:** 2026-02-24 (v1.0 original) | Updated: 2026-03-05 (v1.3 additions)
 **Confidence:** HIGH (verified across official docs, GitHub issues, and multiple independent sources)
 
 ---
@@ -217,6 +217,248 @@ The bge-m3 model (`BAAI/bge-m3`) requires approximately 1.06 GB of GPU memory (f
 
 ---
 
+## v1.3-Specific Pitfalls
+
+The following pitfalls are specific to adding v1.3 features (session management, nav redesign, embedding sidecar, Keycloak runtime config, Agent Skills compliance) to the existing v1.2 system. Confidence: HIGH for code-verified items, MEDIUM for ecosystem-pattern items.
+
+---
+
+### Pitfall 8: Next.js Middleware Infinite Redirect Loop on Authenticated Routes
+
+**What goes wrong:**
+`middleware.ts` is configured with a broad matcher pattern (e.g., `/((?!api|_next/static|_next/image|favicon.ico).*)`) and redirect logic that says "if authenticated, go to /dashboard." When an authenticated user requests `/dashboard`, the middleware fires again, sees the user is authenticated, and redirects to `/dashboard` again — infinite loop. Browser shows "ERR_TOO_MANY_REDIRECTS."
+
+Current system: no `middleware.ts` exists. Every page does its own auth check in component code. When `middleware.ts` is added, the existing per-page redirects will interact with middleware redirects unless both are coordinated.
+
+**Why it happens:**
+The redirect logic is written from the wrong perspective. Instead of asking "who should NOT be here?" (unauthenticated users on protected pages), it asks "where should this user GO?" — which fires on every request including the destination.
+
+**How to avoid:**
+Use `NextResponse.next()` for already-authorized users — never redirect an authenticated user further. Middleware should only redirect unauthenticated users away from protected routes.
+
+```typescript
+// CORRECT: middleware.ts
+export function middleware(request: NextRequest) {
+  const token = request.cookies.get('auth-token')?.value
+  const isProtected = !request.nextUrl.pathname.startsWith('/login')
+
+  if (!token && isProtected) {
+    return NextResponse.redirect(new URL('/login', request.url))
+  }
+  return NextResponse.next()  // Always pass through — never redirect authenticated users
+}
+```
+
+Matcher must explicitly exclude static files and API routes:
+```typescript
+export const config = {
+  matcher: ['/((?!api|_next/static|_next/image|favicon\\.ico|login).*)'],
+}
+```
+
+After middleware handles auth, remove per-page auth redirect logic from existing pages to prevent two-layer redirect conflicts.
+
+**Warning signs:**
+- Browser shows "ERR_TOO_MANY_REDIRECTS" on any route
+- Middleware logs firing more than once per request for the same URL
+- `/login` becomes inaccessible (loop catches it too if matcher not properly scoped)
+- Next.js internal `x-middleware-subrequest` depth counter reaches 5
+
+**Phase to address:** Session & Auth Hardening (first phase of v1.3). Must be stable before navigation overhaul.
+
+---
+
+### Pitfall 9: CVE-2025-29927 — Middleware Auth Bypass via `x-middleware-subrequest` Header
+
+**What goes wrong:**
+Any Next.js version before 15.2.3 allows complete bypass of `middleware.ts` by sending the `x-middleware-subrequest` header. An attacker skips auth entirely by adding `x-middleware-subrequest: middleware` to any request. This is a known critical vulnerability actively exploited as of March 2025.
+
+**Why it happens:**
+Next.js uses `x-middleware-subrequest` internally to prevent infinite loops (see Pitfall 8). The header was designed for internal use but was never validated against external input before version 15.2.3. The same mechanism that prevents loops enables bypass.
+
+Adding `middleware.ts` to the project without upgrading to 15.2.3+ ships a known critical vulnerability.
+
+**How to avoid:**
+1. Confirm current Next.js version and upgrade to ≥ 15.2.3 before writing any `middleware.ts`
+2. At the reverse-proxy layer (Nginx), strip the header before it reaches Next.js: `proxy_set_header x-middleware-subrequest ""`
+3. Treat middleware as UX convenience only — the backend's 3-gate security (JWT → RBAC → Tool ACL) is the actual enforcement layer
+
+**Warning signs:**
+- `next --version` reports < 15.2.3
+- No reverse proxy header stripping in docker-compose nginx config
+- Security scanner flags CVE-2025-29927 in frontend deps
+
+**Phase to address:** Session & Auth Hardening. Version upgrade must happen before any `middleware.ts` is written.
+
+---
+
+### Pitfall 10: Keycloak Made Optional — Boot-Time Validation Breaks Local-Auth-Only Mode
+
+**What goes wrong:**
+`core/config.py` declares `keycloak_url: str` as a required field with no default. When Keycloak is made optional (for local-auth-first boot), pydantic-settings validation fails at startup if `KEYCLOAK_URL` is not set — even if the admin configured local-auth-only mode. The backend refuses to start before any feature flags can be checked.
+
+Additionally, `keycloak_client.py` calls `settings.keycloak_url` to construct URLs. If `keycloak_url` is empty, URL construction produces malformed strings like `"/realms/blitz-internal/protocol/openid-connect/certs"` that pass validation but fail at runtime.
+
+The Celery workflow execution path calls `fetch_user_realm_roles()` for every scheduled run. For local users, this hits the Keycloak Admin API with a `user_id` that doesn't exist in Keycloak — returning 404 and failing every local user's scheduled workflow.
+
+**Why it happens:**
+The system was designed with Keycloak as a hard dependency. The dual-issuer dispatcher in `jwt.py` already handles local tokens correctly — the authentication runtime is already optional. The bootup validation and service calls are the broken parts that must be surgically updated.
+
+**How to avoid:**
+- Change `keycloak_url: str` to `keycloak_url: str = ""` with a `@field_validator` that validates non-empty only when `keycloak_enabled: bool = True`
+- Wrap all Keycloak service calls in guards: `if not settings.keycloak_enabled: ...`
+- The JWKS fetch in `_validate_keycloak_token` must short-circuit if Keycloak is disabled
+- In `workflow_execution.py`: if owner is a local user, skip the Keycloak Admin API call and use `owner_roles_json` snapshot directly
+- Add health check endpoint that reports Keycloak status separately from overall app health
+- Add `KEYCLOAK_ENABLED=false` test to CI that starts backend without `KEYCLOAK_URL` and asserts HTTP 200 on `/health`
+
+**Warning signs:**
+- `pydantic_settings.ValidationError: keycloak_url field required` at startup when removing `KEYCLOAK_URL`
+- `settings.keycloak_jwks_url` is empty string after removing `KEYCLOAK_URL`
+- Celery logs show `httpx.HTTPStatusError: 404` for local user UUIDs during workflow execution
+- `httpx.ConnectError` in Celery worker logs for local-user workflows
+
+**Phase to address:** Keycloak Runtime Config phase. This must be tackled atomically — half-done optional Keycloak causes auth regressions for all users.
+
+---
+
+### Pitfall 11: Embedding Sidecar Migration — bge-m3 Loaded in Both FastAPI Process AND Sidecar
+
+**What goes wrong:**
+`master_agent.py` currently calls `BGE_M3Provider().embed()` directly in `_load_memory_node`. When the embedding sidecar is added as a new Docker service, developers add the sidecar but forget to remove the in-process call. Result: bge-m3 is loaded in three processes simultaneously — FastAPI uvicorn, Celery embedding worker, and the new sidecar — consuming ~4GB RAM total. The bug is invisible until memory profiling or until Docker host OOM-kills a process.
+
+The in-process call uses `run_in_executor` (non-blocking) so it still "works" — no test catches the dual-load unless memory is explicitly profiled.
+
+**Why it happens:**
+The sidecar is added as a new service without removing the old in-process embedding. Both paths produce valid 1024-dim vectors. No existing test asserts "BGE_M3Provider is NOT imported in agents/."
+
+**How to avoid:**
+- The migration commit must include both: adding the sidecar service AND removing `from memory.embeddings import BGE_M3Provider` from `master_agent.py`
+- Replace the in-process embed call in `_load_memory_node` with an HTTP call to the sidecar endpoint
+- Add a test that asserts `BGE_M3Provider` is NOT imported from any file under `backend/agents/`
+- The sidecar must expose a health endpoint; docker-compose `depends_on: condition: service_healthy` ensures backend waits for sidecar
+- Celery embedding tasks (`scheduler/tasks/embedding.py`) must also be migrated to the sidecar HTTP call — or kept as-is if the sidecar handles only synchronous query-time embedding
+
+**Warning signs:**
+- `bge_m3_model_loaded` log line appears in both backend uvicorn logs AND embedding-sidecar logs
+- `backend` Docker container memory grows by 1.3GB after sidecar deployment
+- `pgrep -f FlagModel` shows more than one process with the model loaded
+
+**Phase to address:** Performance & Embedding Sidecar phase. Extraction must be atomic — add sidecar and remove in-process call in the same commit.
+
+---
+
+### Pitfall 12: PostgreSQL tsvector Full-Text Search — Language Config Mismatch Silently Disables Index
+
+**What goes wrong:**
+A GIN index is created with `to_tsvector('english', content)` but queries use `to_tsvector(content)` (no explicit language, uses `default_text_search_config`). PostgreSQL does NOT use the GIN index for the implicit-language query — it falls back to sequential scan. Search "works" but is O(n) instead of O(log n).
+
+For this project specifically: the platform has Vietnamese content (bge-m3 is multilingual). The `english` dictionary does not stem Vietnamese. Using `'simple'` (no stemming, just lowercasing) is correct for mixed Vietnamese/English content. Using `'english'` on Vietnamese produces poor search quality.
+
+**Why it happens:**
+Developers copy the standard PostgreSQL FTS pattern without realizing the language argument must be explicit and identical in both the index definition and the query. Vietnamese has no built-in PostgreSQL text search configuration — there is no `'vietnamese'` option.
+
+**How to avoid:**
+- Always use explicit language in both index AND query: `to_tsvector('simple', content) @@ plainto_tsquery('simple', query)`
+- Create index: `CREATE INDEX idx_skills_fts ON skills USING GIN (to_tsvector('simple', name || ' ' || description))`
+- Backfill existing rows when adding a tsvector column: `UPDATE skills SET tsv = to_tsvector('simple', name || ' ' || description)`
+- Alembic autogenerate does NOT capture GIN expression indexes — write them as explicit `op.execute()` in migrations
+- Verify index usage with `EXPLAIN ANALYZE` — must show "Bitmap Index Scan on idx_skills_fts", not "Seq Scan"
+
+**Warning signs:**
+- `EXPLAIN ANALYZE` shows "Seq Scan" on the skill search query
+- Search works but is slower than expected
+- Search for Vietnamese words returns 0 results when using `'english'` dictionary
+
+**Phase to address:** Performance & Embedding Sidecar phase, or whichever phase adds FTS to the skill catalog. Validate with `EXPLAIN ANALYZE` before shipping.
+
+---
+
+### Pitfall 13: LangGraph Graph Topology Change Breaks HITL-Interrupted Checkpoints
+
+**What goes wrong:**
+Existing canvas workflows have persisted checkpoints in PostgreSQL (via `AsyncPostgresSaver`). LangGraph supports adding new nodes for completed threads, but does NOT support renaming or removing nodes for threads currently interrupted at a HITL approval node. If a workflow is paused at HITL when the deployment adds a `security_review` node, it becomes impossible to resume — the checkpointed "next node" no longer matches the new topology.
+
+LangGraph raises `ValueError: Node X not found in graph` when trying to resume an interrupted thread whose checkpointed next-node no longer exists.
+
+**Why it happens:**
+LangGraph's checkpoint stores the "next node to execute" alongside state. For HITL-interrupted threads, the next-node is the node after the interrupt. If that node name is removed or the insertion point changes, the checkpoint becomes invalid.
+
+Note: CVE-2025-64439 affects `langgraph-checkpoint` < 3.0 via `JsonPlusSerializer` RCE. This project is already at `langgraph-checkpoint-postgres>=3.0.4` (confirmed in pyproject.toml) — verify before any checkpoint-touching changes.
+
+**How to avoid:**
+- Before adding new nodes: drain all `status='pending_hitl'` workflow runs. Mark them as failed or let users re-trigger
+- Add new nodes as optional branches from existing nodes rather than inserting between existing nodes
+- Never rename or remove existing node names from master_agent or canvas workflow graphs
+- Add a pre-deployment check: query `workflow_runs` for `status='pending_hitl'` rows; block deploy if found
+- After deploying new graph topology, add a cleanup job that marks old-topology interrupted runs as `status='stale'`
+
+**Warning signs:**
+- `ValueError: Node X not found in graph` in Celery logs after deployment
+- HITL workflow runs permanently stuck in `pending_hitl` status
+- `workflow_runs` rows with `status='pending_hitl'` older than the deployment timestamp
+
+**Phase to address:** Skill & Security Builder phase (when `security_review` node is added). Pre-deployment HITL drain is a required deployment step.
+
+---
+
+### Pitfall 14: Navigation Overhaul — Root Layout Wraps Login Page and API Routes
+
+**What goes wrong:**
+When the navigation rail is added to `app/layout.tsx`, all routes inherit it — including `/login` (shows nav rail before authentication) and `/api/copilotkit` (API routes get HTML wrapping). The current `app/layout.tsx` only wraps `SessionProvider` and auth toasts, so there is no precedent for this issue yet.
+
+Additionally, hardcoded paths in existing A2UI cards that reference `/settings` break when the settings page moves to `/admin` or a renamed route during the navigation redesign.
+
+**Why it happens:**
+Next.js App Router root layout is universal — it applies to everything under `app/`, including API routes. Developers add the nav component to `app/layout.tsx` for simplicity, not realizing the scope.
+
+**How to avoid:**
+- Create `app/(protected)/layout.tsx` route group containing the nav rail. Move all authenticated pages under `(protected)/`. `/login` and `/api/` stay at root
+- Route groups (`(protected)/`) are transparent to URLs — `/dashboard` stays `/dashboard` regardless of physical location under `(protected)/dashboard/page.tsx`
+- Audit all A2UI cards and channel message formatters for hardcoded route strings before restructuring
+- Add a smoke test: `curl /api/copilotkit` must return JSON, not HTML with nav components
+- Keep `app/layout.tsx` minimal — only providers that must wrap everything
+
+**Warning signs:**
+- Login page shows nav rail or user avatar before authentication
+- `/api/copilotkit` returns HTML instead of JSON
+- Admin URLs like `/admin#skills` show 404 after restructure
+- Console errors: hooks called in Server Components inside the layout
+
+**Phase to address:** Navigation & UX Overhaul phase. Must be done AFTER middleware.ts is stable — middleware determines auth state used by the nav rail.
+
+---
+
+### Pitfall 15: agentskills.io Compliance — `name` Field Constraints Silently Produce Non-Compliant Exports
+
+**What goes wrong:**
+The agentskills.io specification (verified from agentskills.io/specification) requires:
+- `name`: max 64 chars, lowercase alphanumeric and hyphens only (`a-z`, `0-9`, `-`), no consecutive hyphens, must match parent directory name
+- `description`: max 1024 chars, non-empty, must describe both what the skill does AND when to use it
+
+Existing skills in the DB were created before these constraints were enforced. Names like `"Email Fetch v2"`, `"CRM_Lookup"`, or `"Morning-Digest-Workflow"` (uppercase, underscores, or spaces) fail the spec. The export silently produces a non-compliant zip. Consumers using `skills-ref validate` reject the import.
+
+Additionally: the zip directory structure must be `<name>/SKILL.md`, not a flat zip. The `name` field in SKILL.md frontmatter must match the enclosing directory name exactly.
+
+**Why it happens:**
+The export was implemented in v1.2 before the agentskills.io spec's naming constraints were finalized. No validation was added at skill creation time.
+
+**How to avoid:**
+- Add `normalize_skill_name(name: str) -> str` that slugifies names: lowercase, replace spaces/underscores with hyphens, remove invalid chars, truncate to 64 chars
+- Add name validation to the skill creation wizard (reject at input time, not export time)
+- Zip structure must be `<normalized-name>/SKILL.md`, not flat
+- Run `skills-ref validate ./skill-directory` in CI on exported zips
+- Truncate description to 1024 chars with a warning log if truncation occurs
+
+**Warning signs:**
+- Exported skill zips fail `skills-ref validate`
+- Skill names in DB contain spaces, uppercase, or underscores
+- `name` field in SKILL.md doesn't match the enclosing directory name in the zip
+
+**Phase to address:** Skill Platform Compliance phase. Add validation at the DB model level so the catalog stays spec-compliant from creation.
+
+---
+
 ## Technical Debt Patterns
 
 Shortcuts that seem reasonable but create long-term problems.
@@ -230,6 +472,13 @@ Shortcuts that seem reasonable but create long-term problems.
 | Single LiteLLM container with no redundancy | Simpler deployment | Single point of failure for all LLM calls | MVP only -- add health checks and restart policies in Phase 1, consider replication in Phase 6 |
 | No TTL on LangGraph checkpoints | All workflow states preserved forever | PostgreSQL checkpoint table grows unboundedly, slows down queries | MVP only -- add TTL-based cleanup in Phase 5 |
 | AES-256 encryption keys in environment variables | No need for HashiCorp Vault | Key rotation requires redeploying all containers, key visible in `docker inspect` | MVP only -- documented as acceptable in architecture |
+| Per-page auth checks without middleware.ts (current state) | Simple, no middleware | Every page must duplicate redirect logic; unauthenticated API calls return HTML | Never post-v1.3 — replace with middleware.ts |
+| bge-m3 loaded in FastAPI process via `_load_memory_node` (current state) | No network hop for query-time embedding | 1.3GB+ RAM consumed in uvicorn; model load on cold start blocks first request for 10-15s | Never post-v1.3 — move to sidecar |
+| `owner_roles_json` snapshot for Keycloak roles | Works offline | Stale if user's roles change between schedule and execution | Acceptable for local users and when Keycloak is unavailable |
+| Keycloak as hard boot dependency (current state) | Simple config validation | Prevents local-auth-only deployments; 503 on all requests if Keycloak restarts | Never post-v1.3 — make optional |
+| Skills catalog search via ILIKE (current state) | No index maintenance | O(n) scan; acceptable at 100 skills, poor at 1000+ | Acceptable until skill catalog exceeds ~500 rows |
+
+---
 
 ## Integration Gotchas
 
@@ -248,6 +497,14 @@ Common mistakes when connecting to external services.
 | React Flow v12 | Importing from `react-flow-renderer` (v10 package name) | v12 uses `@xyflow/react` -- the package name changed and old imports will not resolve |
 | PostgresSaver | Creating Postgres connection without `autocommit=True` and `row_factory=dict_row` | PostgresSaver requires `autocommit=True` for `.setup()` to commit checkpoint tables, and `dict_row` factory because it accesses rows by key name |
 | CopilotKit + LangGraph | Using LangGraph tools for HITL approval nodes | ToolMessage format incompatibility between LangGraph and CopilotKit causes ZodError -- use dedicated graph interrupt nodes instead of tools for HITL |
+| Next.js middleware + NextAuth | Middleware reads session using `getToken()` — requires same `NEXTAUTH_SECRET` as the NextAuth handler | Use `getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })` in middleware; ensure env var is consistent across all contexts |
+| Next.js middleware + App Router API routes | Root `middleware.ts` matcher catches `/api/copilotkit` — middleware runs on every backend API call | Explicitly exclude `/api/` from middleware matcher pattern |
+| agentskills.io spec + existing skill names | Skill names with uppercase, spaces, or underscores exported verbatim | Normalize to spec format (lowercase, hyphens only) before export; validate with `skills-ref validate` |
+| LangGraph checkpoint + graph topology change | Deploying a new node while HITL threads are interrupted | Drain HITL-interrupted runs before deployment; use feature flags for new nodes |
+| bge-m3 sidecar + Celery workers | Celery workers still import `BGE_M3Provider` directly after sidecar migration | Celery embedding tasks must also be refactored to call sidecar HTTP endpoint, not in-process model |
+| PostgreSQL tsvector + Alembic autogenerate | `CREATE INDEX USING GIN (to_tsvector(...))` not captured by Alembic autogenerate | Write GIN index as explicit `op.execute()` in the migration |
+
+---
 
 ## Performance Traps
 
@@ -261,6 +518,11 @@ Patterns that work at small scale but fail as usage grows.
 | Serializing full `BlitzState` to LangGraph checkpoint on every step | Checkpoint write latency grows from 5ms to 500ms as state accumulates tool outputs | Use `jsonb` compression, strip large tool outputs from state before checkpointing, set checkpoint TTL | States with 50+ messages or tool outputs |
 | A single Celery worker handling both embedding tasks and scheduled workflow jobs | Embedding tasks (CPU-bound, 1-2s each) starve scheduled workflows | Use separate Celery queues: `celery -Q embeddings` and `celery -Q workflows` with dedicated workers | 10+ concurrent embedding tasks |
 | Loading FlagModel in every Celery task | Model load takes 5-10s, happens on every new worker process | Pre-load model in `worker_init` signal, use `--concurrency=1` for embedding workers | Any scale -- this is always slow |
+| bge-m3 loaded in uvicorn process (current state) | Cold start time 10-15s for first request; 1.3GB RAM per uvicorn worker | Extract to embedding sidecar | Breaks at first cold start; worsens with multiple uvicorn workers (`--workers N`) |
+| ILIKE search on skills catalog (current state) | `/admin/skills?search=email` is slow | Add GIN index on tsvector column | Breaks at ~500 rows in skills table |
+| HNSW index bloat after memory fact deletions | pgvector cosine_distance queries slow down over weeks | `REINDEX CONCURRENTLY idx_memory_facts_embedding` weekly | Degrades gradually; noticeable at ~10K memory facts per user |
+
+---
 
 ## Security Mistakes
 
@@ -275,6 +537,12 @@ Domain-specific security issues beyond general web security.
 | Storing AES-256 encryption key in the same database as encrypted credentials | A database breach exposes both the encrypted data and the key to decrypt it | Store the encryption key in an environment variable or file mount separate from the database volume; rotate periodically |
 | LLM prompt containing system instructions about credential handling | Attacker can extract system prompt via prompt injection, learning the credential access pattern | System prompts should describe WHAT tools do, not HOW credentials are resolved; credential resolution is an implementation detail invisible to the LLM |
 | Embedding inversion attacks on pgvector data | Attacker with database read access can reconstruct original text from embedding vectors | Restrict database access with RLS; embeddings of sensitive facts should use the same user isolation as the text content |
+| Treating Next.js middleware as the auth gate | CVE-2025-29927 allows complete bypass via `x-middleware-subrequest` header | Middleware is UX only — backend 3-gate security is authoritative; upgrade Next.js to ≥15.2.3 |
+| Skipping `x-middleware-subrequest` header stripping at reverse proxy | Any attacker who knows the header bypasses middleware entirely | Add `proxy_set_header x-middleware-subrequest ""` to Nginx/Caddy config |
+| Trusting agentskills.io imported skill names without sanitization | Skill names with path traversal could write files outside the skill directory | Validate skill names against spec regex; use `pathlib.Path.resolve()` to verify destination is within allowed skill root |
+| SecurityScanner runs only on import, not on locally-built skills | Malicious prompt injections added via admin builder after import bypass scanner | Run SecurityScanner on both imported skills AND locally built skills before activation |
+
+---
 
 ## UX Pitfalls
 
@@ -288,6 +556,12 @@ Common user experience mistakes in this domain.
 | Agent says "I'll check your calendar" but takes 8 seconds (Ollama latency) | User thinks the system is frozen | Show typing indicator immediately; if response takes > 3s, send an interim "Working on it..." message; for external channels (Telegram), use platform-specific typing actions |
 | Error messages expose internal details ("PostgresSaver connection refused") | Users see infrastructure errors they cannot act on | Catch infrastructure errors at the API boundary and return user-friendly messages ("Something went wrong, please try again"); log details server-side |
 | Multi-channel users lose conversation context when switching platforms | User asks about project status on Telegram, switches to web -- agent does not remember | Use `conversation_id` from `channel_sessions` to maintain continuity; when a new session starts on a different channel, the agent should load the user's recent episodes from memory |
+| Nav rail added but no back-navigation state | Users in admin wizard lose progress when clicking nav rail items | Implement route guard in nav rail items: "You have unsaved changes — leave?" confirmation dialog |
+| Profile page added without preference persistence | User sets "dark mode" preference, refreshes, preference is gone | Persist user preferences to DB (`user_preferences` table or `system_config` keyed by user_id); not just localStorage |
+| Keycloak optional but login page shows SSO button when Keycloak is disabled | Confusing UI; users try SSO and get error | Read `keycloak_enabled` from backend `/api/auth/providers` endpoint on login page load; render only available options |
+| Embedding sidecar cold start delays first memory search | User sends first message, waits 10-15s, response feels broken | Pre-warm sidecar via health check at Docker Compose startup; show "memory loading..." state in chat |
+
+---
 
 ## "Looks Done But Isn't" Checklist
 
@@ -303,6 +577,18 @@ Things that appear complete but are missing critical pieces.
 - [ ] **Docker Sandbox:** Often missing the timeout-based container cleanup -- verify that a sandbox container running past its timeout is force-killed and removed, not left dangling
 - [ ] **LiteLLM Fallback:** Often missing cost attribution -- verify that when a request falls back from Ollama to Claude, the cost is logged and attributed to the correct user/workflow
 - [ ] **A2UI Rendering:** Often missing error boundary -- verify that malformed A2UI JSONL (e.g., invalid JSON) does not crash the entire chat panel, but shows a graceful fallback
+- [ ] **Next.js middleware (v1.3):** Verify it runs in `middleware.ts` (not `_middleware.ts`); check matcher excludes `/api/`, `/_next/`, `/login`
+- [ ] **CVE-2025-29927 (v1.3):** Run `next --version` — must be ≥ 15.2.3. Add to CI/CD version gate
+- [ ] **Keycloak optional (v1.3):** Test backend startup with `KEYCLOAK_URL` removed from `.env` — must start in local-auth-only mode without any validation errors
+- [ ] **Embedding sidecar (v1.3):** Verify `bge_m3_model_loaded` does NOT appear in backend uvicorn logs after sidecar extraction
+- [ ] **tsvector index (v1.3):** Run `EXPLAIN ANALYZE` on skill search query — must show "Bitmap Index Scan", not "Seq Scan"
+- [ ] **agentskills.io compliance (v1.3):** Run `skills-ref validate` on at least 3 exported skill zips — must pass all checks
+- [ ] **HITL drain before topology change (v1.3):** Check `workflow_runs` for `status='pending_hitl'` rows before deploying LangGraph graph changes
+- [ ] **Navigation rail exclusions (v1.3):** Visit `/login` — must NOT show nav components. `curl /api/copilotkit` — must return JSON, not HTML
+- [ ] **Local user + Keycloak workflow (v1.3):** Create workflow as local user, schedule it, run it — must complete without Keycloak errors in Celery logs
+- [ ] **SecurityScanner on builder output (v1.3):** Create skill via admin builder with prompt injection attempt — verify SecurityScanner runs and quarantines it
+
+---
 
 ## Recovery Strategies
 
@@ -319,6 +605,15 @@ When pitfalls occur despite prevention, how to recover.
 | MCP server connection lost silently | LOW | Restart the MCP server container, backend will reconnect on next call if retry logic is implemented; if not, restart backend too |
 | HITL workflow stuck indefinitely | LOW | Query LangGraph checkpoints for workflows with `hitl_pending=True` older than the timeout, programmatically approve/reject them, notify the user |
 | Checkpoint table bloat in PostgreSQL | MEDIUM | Run `DELETE FROM checkpoints WHERE created_at < now() - interval '30 days'`; add a periodic Celery task to clean up; consider partitioning the checkpoints table by date |
+| Middleware infinite redirect loop (v1.3) | LOW | Fix matcher to exclude destination route; use `NextResponse.next()` for authenticated users; remove per-page redirect logic |
+| CVE-2025-29927 middleware bypass (v1.3) | LOW | `pnpm add next@latest`; add reverse proxy header stripping; redeploy |
+| Keycloak optional boot failure (v1.3) | MEDIUM | Change `keycloak_url: str = ""` with conditional validator; redeploy; no data migration needed |
+| bge-m3 dual-load in FastAPI + sidecar (v1.3) | LOW | Remove `BGE_M3Provider` import from `master_agent.py`; update `_load_memory_node` to HTTP sidecar call; restart |
+| tsvector wrong language index (v1.3) | LOW | `DROP INDEX idx_skills_fts; CREATE INDEX ... USING GIN (to_tsvector('simple', ...)); UPDATE skills SET tsv = ...` |
+| HITL checkpoint corruption after topology change (v1.3) | HIGH | Identify affected thread_ids in checkpoint tables; mark `workflow_runs` as failed; users must re-trigger workflows manually |
+| agentskills.io non-compliant export (v1.3) | LOW | Add name normalizer function; re-export affected skills; no DB migration needed |
+
+---
 
 ## Pitfall-to-Phase Mapping
 
@@ -338,6 +633,18 @@ How roadmap phases should address these pitfalls.
 | HITL deadlock / timeout | Phase 3 (timeout) + Phase 4 (notification) | Create a HITL workflow, do NOT approve within timeout; verify auto-action fires and user is notified |
 | Checkpoint table growth | Phase 5 | After running 1000 workflow steps, verify checkpoint cleanup task runs and table size is bounded |
 | Docker sandbox resource leak | Phase 5 | Run a sandbox tool that exceeds its timeout; verify container is killed and removed within 10s |
+| Next.js middleware redirect loop (v1.3) | v1.3 Session & Auth Hardening | Automated test: visit /dashboard authenticated, assert no redirect chain > 1 hop |
+| CVE-2025-29927 bypass (v1.3) | v1.3 Session & Auth Hardening | CI version gate: `next --version` ≥ 15.2.3; nginx header stripping in docker-compose |
+| Keycloak optional boot failure (v1.3) | v1.3 Keycloak Runtime Config | Integration test: start backend with `KEYCLOAK_URL=""`, assert 200 on `/health` |
+| bge-m3 dual-load after sidecar (v1.3) | v1.3 Performance & Embedding Sidecar | Log assertion: `bge_m3_model_loaded` absent from backend logs after sidecar active |
+| tsvector language mismatch (v1.3) | v1.3 Performance & Embedding Sidecar | `EXPLAIN ANALYZE` on skills search query in CI |
+| LangGraph topology + HITL checkpoints (v1.3) | v1.3 Skill & Security Builder | Pre-deployment checklist; drain HITL runs; E2E test for interrupted workflow after topology change |
+| Navigation on login/API routes (v1.3) | v1.3 Navigation & UX Overhaul | Smoke test: `curl /api/copilotkit` returns JSON; Playwright: /login has no nav rail |
+| agentskills.io compliance (v1.3) | v1.3 Skill Platform Compliance | `skills-ref validate` in CI on sample export |
+| Local user + Keycloak workflow failure (v1.3) | v1.3 Keycloak Runtime Config | Test: schedule workflow as local user, assert Celery completes without 404 errors |
+| SecurityScanner gap on builder output (v1.3) | v1.3 Skill & Security Builder | Unit test: builder pipeline includes SecurityScanner step before activation |
+
+---
 
 ## Sources
 
@@ -347,29 +654,21 @@ How roadmap phases should address these pitfalls.
 - [LangGraph Persistence and Checkpointing documentation](https://docs.langchain.com/oss/python/langgraph/persistence)
 - [LangGraph Checkpoint Best Practices 2025](https://sparkco.ai/blog/mastering-langgraph-checkpointing-best-practices-for-2025)
 - [OWASP LLM Top 10 Vulnerabilities 2025](https://deepstrike.io/blog/owasp-llm-top-10-vulnerabilities-2025)
-- [LLM Security Risks 2026 - Sombra](https://sombrainc.com/blog/llm-security-risks-2026)
-- [LLM Security Risks and Mitigation - USCS Institute](https://www.uscsinstitute.org/cybersecurity-insights/blog/what-are-llm-security-risks-and-mitigation-plan-for-2026)
 - [pgvector production guide - Instaclustr 2026](https://www.instaclustr.com/education/vector-database/pgvector-key-features-tutorial-and-pros-and-cons-2026-guide/)
-- [pgvector for AI Memory in Production - Ivan Turkovic](https://www.ivanturkovic.com/2025/11/16/pgvector-for-ai-memory-in-production-applications/)
 - [BAAI/bge-m3 Memory Requirements - HuggingFace](https://huggingface.co/BAAI/bge-m3/discussions/64)
-- [BAAI/bge-m3 OOM on 8GB GPU - HuggingFace](https://huggingface.co/BAAI/bge-m3/discussions/2)
-- [BAAI/bge-m3 Inference Speed Optimization - HuggingFace](https://huggingface.co/BAAI/bge-m3/discussions/9)
 - [LiteLLM Budgets and Rate Limits documentation](https://docs.litellm.ai/docs/proxy/users)
-- [LiteLLM Fallbacks documentation](https://docs.litellm.ai/docs/proxy/reliability)
-- [LiteLLM Review 2026 - TrueFoundry](https://www.truefoundry.com/blog/a-detailed-litellm-review-features-pricing-pros-and-cons-2026)
 - [MCP Specification November 2025](https://modelcontextprotocol.io/specification/2025-11-25)
-- [MCP Transport Future - Blog](http://blog.modelcontextprotocol.io/posts/2025-12-19-mcp-transport-future/)
-- [MCP Enterprise Adoption Guide 2025](https://guptadeepak.com/the-complete-guide-to-model-context-protocol-mcp-enterprise-adoption-market-trends-and-implementation-strategies/)
-- [CopilotKit Human-in-the-Loop documentation](https://docs.copilotkit.ai/human-in-the-loop)
-- [CopilotKit + LangGraph.js HITL Integration Guide](https://chanmeng666.medium.com/copilotkit-langgraph-js-hitl-integration-guide-964468f1ed5c)
 - [React Flow v12 Migration Guide](https://reactflow.dev/learn/troubleshooting/migrate-to-v12)
-- [Ollama Docker Integration - Arsturn](https://www.arsturn.com/blog/integrating-ollama-with-docker-overcoming-common-challenges)
-- [Ollama FAQ - Official](https://docs.ollama.com/faq)
-- [Docker Networking Guide 2026](https://www.testleaf.com/blog/docker-networking-real-world-container-communication-2026/)
-- [Celery Security Documentation](https://docs.celeryq.dev/en/stable/userguide/security.html)
-- [Keycloak JWT Guide - Inteca](https://inteca.com/blog/identity-access-management/exploring-keycloak-jwt-a-comprehensive-guide/)
-- [PostgresSaver row_factory requirement - LangGraph docs](https://fast.io/resources/langgraph-persistence/)
+- [CVE-2025-29927 Technical Analysis — ProjectDiscovery](https://projectdiscovery.io/blog/nextjs-middleware-authorization-bypass) — HIGH confidence
+- [Vercel Postmortem on Next.js Middleware Bypass](https://vercel.com/blog/postmortem-on-next-js-middleware-bypass) — HIGH confidence
+- [Next.js Middleware Redirect Causes Infinite Loop — GitHub Issue #62547](https://github.com/vercel/next.js/issues/62547) — HIGH confidence
+- [CVE-2025-64439 — LangGraph JsonPlusSerializer RCE](https://github.com/advisories/GHSA-wwqv-p2pp-99h5) — HIGH confidence
+- [agentskills.io/specification](https://agentskills.io/specification) — HIGH confidence (fetched directly)
+- [Optimizing Full Text Search with PostgreSQL tsvector — Thoughtbot](https://thoughtbot.com/blog/optimizing-full-text-search-with-postgres-tsvector-columns-and-triggers) — MEDIUM confidence
+- [PostgreSQL tsvector documentation](https://www.postgresql.org/docs/current/textsearch-tables.html) — HIGH confidence
+- [Auth Migration Hell — Security Boulevard](https://securityboulevard.com/2025/09/auth-migration-hell-why-your-next-identity-project-might-keep-you-up-at-night/) — MEDIUM confidence
+- Code inspection: `backend/security/jwt.py`, `backend/core/config.py`, `backend/agents/master_agent.py`, `backend/security/keycloak_client.py`, `backend/memory/embeddings.py` — HIGH confidence (direct source)
 
 ---
-*Pitfalls research for: Blitz AgentOS -- Enterprise Agentic OS Platform*
-*Researched: 2026-02-24*
+*Pitfalls research for: Blitz AgentOS -- Enterprise Agentic OS Platform (v1.0 original + v1.3 additions)*
+*Researched: 2026-02-24 | Updated: 2026-03-05*
