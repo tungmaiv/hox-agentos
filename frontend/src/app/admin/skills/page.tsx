@@ -47,6 +47,35 @@ export default function AdminSkillsPage() {
     }
   };
 
+  const handleExport = (skill: SkillDefinition) => {
+    // Trigger browser download of the skill zip.
+    // Use fetch + createObjectURL pattern to get the correct filename from
+    // the Content-Disposition header and avoid opening in a new tab.
+    fetch(`/api/admin/skills/${skill.id}/export`)
+      .then((res) => {
+        if (!res.ok) {
+          return;
+        }
+        const disposition = res.headers.get("Content-Disposition") ?? "";
+        const filenameMatch = disposition.match(/filename="?([^"]+)"?/);
+        const filename =
+          filenameMatch?.[1] ?? `${skill.name}-${skill.version}.zip`;
+        return res.blob().then((blob) => {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        });
+      })
+      .catch(() => {
+        // Silent failure — export is a convenience feature
+      });
+  };
+
   const displayItems = showPendingOnly
     ? items.filter((s) => s.status === "pending_review")
     : items;
@@ -267,6 +296,7 @@ export default function AdminSkillsPage() {
           columns={extraColumns}
           onPatchStatus={patchStatus}
           onActivateVersion={activateVersion}
+          onExport={handleExport}
         />
       ) : (
         <ArtifactCardGrid
@@ -320,6 +350,7 @@ export default function AdminSkillsPage() {
           )}
           onPatchStatus={patchStatus}
           onActivateVersion={activateVersion}
+          onExport={handleExport}
         />
       )}
     </div>

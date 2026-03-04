@@ -32,6 +32,8 @@ interface ArtifactTableProps<T extends ArtifactBase> {
     status: "active" | "disabled" | "deprecated"
   ) => void;
   onActivateVersion?: (id: string) => void;
+  /** Optional export callback — when provided, an Export button appears on each row. */
+  onExport?: (item: T) => void;
 }
 
 function StatusBadge({ status }: { status: ArtifactStatus }) {
@@ -77,6 +79,7 @@ export function ArtifactTable<T extends ArtifactBase>({
   onEdit,
   onPatchStatus,
   onActivateVersion,
+  onExport,
 }: ArtifactTableProps<T>) {
   const router = useRouter();
   const [sortField, setSortField] = useState<SortField>("name");
@@ -257,6 +260,15 @@ export function ArtifactTable<T extends ArtifactBase>({
                         className="text-xs px-2 py-1 text-purple-600 hover:bg-purple-50 rounded transition-colors"
                       >
                         Activate
+                      </button>
+                    )}
+                    {onExport && (
+                      <button
+                        onClick={() => onExport(item)}
+                        className="text-xs px-2 py-1 text-gray-600 border border-gray-200 rounded hover:bg-gray-50 transition-colors"
+                        title="Export as zip"
+                      >
+                        Export
                       </button>
                     )}
                   </div>

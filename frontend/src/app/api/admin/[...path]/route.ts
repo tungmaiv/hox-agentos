@@ -10,7 +10,7 @@
 import { auth } from "@/auth";
 import { NextRequest, NextResponse } from "next/server";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API_URL = process.env.BACKEND_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 async function proxyRequest(
   request: NextRequest,
@@ -68,13 +68,36 @@ async function proxyRequest(
 
   try {
     const backendResponse = await fetch(url.toString(), fetchInit);
-    const responseBody = await backendResponse.text();
+    const responseContentType =
+      backendResponse.headers.get("Content-Type") ?? "application/json";
 
+    // Binary responses (zip, octet-stream) must use arrayBuffer —
+    // text() corrupts binary data by re-encoding bytes as UTF-8.
+    if (
+      responseContentType.includes("application/zip") ||
+      responseContentType.includes("application/octet-stream")
+    ) {
+      const responseBody = await backendResponse.arrayBuffer();
+      const responseHeaders: Record<string, string> = {
+        "Content-Type": responseContentType,
+      };
+      const contentDisposition =
+        backendResponse.headers.get("Content-Disposition");
+      if (contentDisposition) {
+        responseHeaders["Content-Disposition"] = contentDisposition;
+      }
+      return new NextResponse(responseBody, {
+        status: backendResponse.status,
+        headers: responseHeaders,
+      });
+    }
+
+    // JSON and other text responses
+    const responseBody = await backendResponse.text();
     return new NextResponse(responseBody, {
       status: backendResponse.status,
       headers: {
-        "Content-Type":
-          backendResponse.headers.get("Content-Type") ?? "application/json",
+        "Content-Type": responseContentType,
       },
     });
   } catch {
