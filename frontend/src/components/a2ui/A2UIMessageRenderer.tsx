@@ -19,10 +19,12 @@
  */
 import {
   CalendarOutputSchema,
+  CapabilitiesOutputSchema,
   EmailSummaryOutputSchema,
   ProjectStatusResultSchema,
 } from "@/lib/a2ui-types"
 import { CalendarCard } from "./CalendarCard"
+import { CapabilitiesCard } from "./CapabilitiesCard"
 import { EmailSummaryCard } from "./EmailSummaryCard"
 import { ProjectStatusWidget } from "./ProjectStatusWidget"
 import ReactMarkdown from "react-markdown"
@@ -66,6 +68,21 @@ export function A2UIMessageRenderer({ content, role }: Props) {
         const result = ProjectStatusResultSchema.safeParse(parsed)
         if (result.success) {
           return <ProjectStatusWidget data={result.data} />
+        }
+      }
+
+      if (agentType === "capabilities") {
+        const result = CapabilitiesOutputSchema.safeParse(parsed)
+        if (result.success) {
+          return (
+            <CapabilitiesCard
+              agents={result.data.agents}
+              tools={result.data.tools}
+              skills={result.data.skills}
+              mcp_servers={result.data.mcp_servers}
+              summary={result.data.summary}
+            />
+          )
         }
       }
     }

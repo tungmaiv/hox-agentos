@@ -59,6 +59,46 @@ export const ProjectStatusResultSchema = z.object({
 })
 
 // ---------------------------------------------------------------------------
+// Capabilities
+// ---------------------------------------------------------------------------
+
+export const AgentInfoSchema = z.object({
+  name: z.string(),
+  display_name: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+  status: z.string(),
+})
+
+export const ToolInfoSchema = z.object({
+  name: z.string(),
+  display_name: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+  handler_type: z.string(),
+})
+
+export const SkillInfoSchema = z.object({
+  name: z.string(),
+  display_name: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+  slash_command: z.string().nullable().optional(),
+})
+
+export const McpServerInfoSchema = z.object({
+  name: z.string(),
+  display_name: z.string().nullable().optional(),
+  tools_count: z.number(),
+})
+
+export const CapabilitiesOutputSchema = z.object({
+  agent: z.literal("capabilities"),
+  agents: z.array(AgentInfoSchema),
+  tools: z.array(ToolInfoSchema),
+  skills: z.array(SkillInfoSchema),
+  mcp_servers: z.array(McpServerInfoSchema),
+  summary: z.string(),
+})
+
+// ---------------------------------------------------------------------------
 // TypeScript types (inferred from schemas)
 // ---------------------------------------------------------------------------
 
@@ -67,3 +107,8 @@ export type CalendarOutput = z.infer<typeof CalendarOutputSchema>
 export type EmailSummaryItem = z.infer<typeof EmailSummaryItemSchema>
 export type EmailSummaryOutput = z.infer<typeof EmailSummaryOutputSchema>
 export type ProjectStatusResult = z.infer<typeof ProjectStatusResultSchema>
+export type AgentInfo = z.infer<typeof AgentInfoSchema>
+export type ToolInfo = z.infer<typeof ToolInfoSchema>
+export type SkillInfo = z.infer<typeof SkillInfoSchema>
+export type McpServerInfo = z.infer<typeof McpServerInfoSchema>
+export type CapabilitiesOutput = z.infer<typeof CapabilitiesOutputSchema>
