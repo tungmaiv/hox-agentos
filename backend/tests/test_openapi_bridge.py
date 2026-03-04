@@ -860,3 +860,268 @@ class TestOpenAPIRoutes:
         data = response.json()
         assert "server_id" in data
         assert data["tools_created"] == 2
+
+
+# ---------------------------------------------------------------------------
+# Route dispatch tests: /api/tools/call with openapi_proxy tools
+# ---------------------------------------------------------------------------
+
+
+class TestToolsRouteOpenAPIProxy:
+    """Tests for the openapi_proxy dispatch branch in api/routes/tools.py."""
+
+    async def test_openapi_proxy_tool_is_dispatched(self, db_session: AsyncSession) -> None:
+        """Calling an openapi_proxy tool routes to call_openapi_tool(), not 501."""
+        from sqlalchemy import insert
+
+        from core.models.mcp_server import McpServer
+        from core.models.tool_definition import ToolDefinition
+        from gateway.tool_registry import _refresh_tool_cache
+
+        # Insert a McpServer with no auth_token (public API)
+        server_id = uuid.uuid4()
+        await db_session.execute(
+            insert(McpServer).values(
+                id=server_id,
+                name="test_proxy_server",
+                url="https://api.example.com",
+                auth_token=None,
+                is_active=True,
+                status="active",
+            )
+        )
+
+        # Insert an openapi_proxy ToolDefinition
+        tool_id = uuid.uuid4()
+        await db_session.execute(
+            insert(ToolDefinition).values(
+                id=tool_id,
+                name="test_proxy_server.list_items",
+                handler_type="openapi_proxy",
+                mcp_server_id=server_id,
+                is_active=True,
+                status="active",
+                config_json={
+                    "method": "GET",
+                    "path": "/items",
+                    "base_url": "https://api.example.com",
+                    "parameters": [],
+                    "auth_type": "none",
+                    "auth_header": None,
+                },
+                input_schema={"type": "object", "properties": {}},
+            )
+        )
+        await db_session.commit()
+        await _refresh_tool_cache(db_session)
+
+        # Mock call_openapi_tool to return a success dict
+        with patch("openapi_bridge.proxy.call_openapi_tool") as mock_call:
+            mock_call.return_value = {"items": [{"id": 1}]}
+
+            # Mock security gates to allow
+            with patch("security.rbac.has_permission", return_value=True), \
+                 patch("security.acl.check_tool_acl", return_value=True):
+
+                from api.routes.tools import call_tool, ToolCallRequest
+                from core.models.user import UserContext
+                import uuid as _uuid
+
+                user: UserContext = {
+                    "user_id": _uuid.uuid4(),
+                    "username": "testuser",
+                    "email": "test@example.com",
+                    "roles": ["employee"],
+                }
+                request = ToolCallRequest(tool="test_proxy_server.list_items", params={})
+                response = await call_tool(request, user=user, session=db_session)
+
+        assert response.success is True
+        assert response.error is None
+        assert response.result == {"items": [{"id": 1}]}
+
+    async def test_openapi_proxy_tool_with_encrypted_auth_token(
+        self, db_session: AsyncSession
+    ) -> None:
+        """Decrypted API key is passed to call_openapi_tool() from McpServer.auth_token."""
+        from sqlalchemy import insert
+
+        from core.models.mcp_server import McpServer
+        from core.models.tool_definition import ToolDefinition
+        from gateway.tool_registry import _refresh_tool_cache
+        from security.credentials import encrypt_token
+
+        server_id = uuid.uuid4()
+        # Encrypt a test API key
+        ciphertext, iv = encrypt_token("test-api-key-value")
+        raw_auth_token = iv + ciphertext
+
+        await db_session.execute(
+            insert(McpServer).values(
+                id=server_id,
+                name="test_proxy_auth_server",
+                url="https://api.example.com",
+                auth_token=raw_auth_token,
+                is_active=True,
+                status="active",
+            )
+        )
+
+        tool_id = uuid.uuid4()
+        await db_session.execute(
+            insert(ToolDefinition).values(
+                id=tool_id,
+                name="test_proxy_auth_server.get_data",
+                handler_type="openapi_proxy",
+                mcp_server_id=server_id,
+                is_active=True,
+                status="active",
+                config_json={
+                    "method": "GET",
+                    "path": "/data",
+                    "base_url": "https://api.example.com",
+                    "parameters": [],
+                    "auth_type": "bearer",
+                    "auth_header": None,
+                },
+                input_schema={"type": "object", "properties": {}},
+            )
+        )
+        await db_session.commit()
+        await _refresh_tool_cache(db_session)
+
+        captured_kwargs: dict = {}
+
+        async def fake_call(tool_config, arguments, api_key, auth_type=None, auth_header=None):
+            captured_kwargs["api_key"] = api_key
+            return {"data": "ok"}
+
+        with patch("openapi_bridge.proxy.call_openapi_tool", side_effect=fake_call):
+            with patch("security.rbac.has_permission", return_value=True), \
+                 patch("security.acl.check_tool_acl", return_value=True):
+
+                from api.routes.tools import call_tool, ToolCallRequest
+                from core.models.user import UserContext
+                import uuid as _uuid
+
+                user: UserContext = {
+                    "user_id": _uuid.uuid4(),
+                    "username": "testuser",
+                    "email": "test@example.com",
+                    "roles": ["employee"],
+                }
+                request = ToolCallRequest(tool="test_proxy_auth_server.get_data", params={})
+                await call_tool(request, user=user, session=db_session)
+
+        # Verify the decrypted API key was passed (not the raw bytes)
+        assert captured_kwargs.get("api_key") == "test-api-key-value"
+
+    async def test_openapi_proxy_error_result_sets_success_false(
+        self, db_session: AsyncSession
+    ) -> None:
+        """call_openapi_tool() returning {"error": True, ...} produces success=False response."""
+        from sqlalchemy import insert
+
+        from core.models.mcp_server import McpServer
+        from core.models.tool_definition import ToolDefinition
+        from gateway.tool_registry import _refresh_tool_cache
+
+        server_id = uuid.uuid4()
+        await db_session.execute(
+            insert(McpServer).values(
+                id=server_id,
+                name="test_proxy_err_server",
+                url="https://api.example.com",
+                auth_token=None,
+                is_active=True,
+                status="active",
+            )
+        )
+
+        tool_id = uuid.uuid4()
+        await db_session.execute(
+            insert(ToolDefinition).values(
+                id=tool_id,
+                name="test_proxy_err_server.get_item",
+                handler_type="openapi_proxy",
+                mcp_server_id=server_id,
+                is_active=True,
+                status="active",
+                config_json={
+                    "method": "GET",
+                    "path": "/item",
+                    "base_url": "https://api.example.com",
+                    "parameters": [],
+                    "auth_type": "none",
+                    "auth_header": None,
+                },
+                input_schema={"type": "object", "properties": {}},
+            )
+        )
+        await db_session.commit()
+        await _refresh_tool_cache(db_session)
+
+        with patch("openapi_bridge.proxy.call_openapi_tool") as mock_call:
+            mock_call.return_value = {"error": True, "status": 404, "detail": "Not found"}
+
+            with patch("security.rbac.has_permission", return_value=True), \
+                 patch("security.acl.check_tool_acl", return_value=True):
+
+                from api.routes.tools import call_tool, ToolCallRequest
+                from core.models.user import UserContext
+                import uuid as _uuid
+
+                user: UserContext = {
+                    "user_id": _uuid.uuid4(),
+                    "username": "testuser",
+                    "email": "test@example.com",
+                    "roles": ["employee"],
+                }
+                request = ToolCallRequest(tool="test_proxy_err_server.get_item", params={})
+                response = await call_tool(request, user=user, session=db_session)
+
+        assert response.success is False
+        assert response.error == "Not found"
+        assert response.result is None
+
+    async def test_non_openapi_backend_tool_still_returns_501(
+        self, db_session: AsyncSession
+    ) -> None:
+        """Tools with handler_type='backend' (not openapi_proxy) still return HTTP 501."""
+        from sqlalchemy import insert
+
+        from core.models.tool_definition import ToolDefinition
+        from gateway.tool_registry import _refresh_tool_cache
+        import pytest
+
+        tool_id = uuid.uuid4()
+        await db_session.execute(
+            insert(ToolDefinition).values(
+                id=tool_id,
+                name="backend_tool.do_something",
+                handler_type="backend",
+                is_active=True,
+                status="active",
+                input_schema={"type": "object", "properties": {}},
+            )
+        )
+        await db_session.commit()
+        await _refresh_tool_cache(db_session)
+
+        from fastapi import HTTPException
+        from api.routes.tools import call_tool, ToolCallRequest
+        from core.models.user import UserContext
+        import uuid as _uuid
+
+        user: UserContext = {
+            "user_id": _uuid.uuid4(),
+            "username": "testuser",
+            "email": "test@example.com",
+            "roles": ["employee"],
+        }
+        request = ToolCallRequest(tool="backend_tool.do_something", params={})
+
+        with pytest.raises(HTTPException) as exc_info:
+            await call_tool(request, user=user, session=db_session)
+
+        assert exc_info.value.status_code == 501
