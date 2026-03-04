@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Production Readiness & Skill Platform
 status: unknown
-last_updated: "2026-03-04T20:05:37.952Z"
+last_updated: "2026-03-04T20:51:34.860Z"
 progress:
   total_phases: 1
   completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
+  total_plans: 3
+  completed_plans: 3
 ---
 
 # Project State
@@ -18,14 +18,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-05)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates their daily work routines and lets them build custom automations without writing code — all within an enterprise-secure, on-premise environment where data never leaves the company.
-**Current focus:** v1.3 Phase 15 — Session & Auth Hardening (plan 02 complete)
+**Current focus:** v1.3 Phase 15 — Session & Auth Hardening (plan 03 complete — all UAT gaps closed)
 
 ## Current Position
 
 Phase: 15 of 23 (Session & Auth Hardening)
-Plan: 02 of 02 complete
-Status: Phase 15 complete — all 2 plans done (15-01, 15-02)
-Last activity: 2026-03-04 — Completed 15-01 (SUMMARY created): middleware route protection, jose install, cookie hardening, per-page auth check removal
+Plan: 03 of 03 complete
+Status: Phase 15 complete — all 3 plans done (15-01, 15-02, 15-03)
+Last activity: 2026-03-04 — Completed 15-03 (SUMMARY created): closed 4 UAT gaps — middleware secret, SignOutButton in sidebar, AuthErrorToasts inside SessionProvider, unauthenticated status detection
 
 Progress: [#░░░░░░░░░] ~11%
 
@@ -37,9 +37,9 @@ Progress: [#░░░░░░░░░] ~11%
 - Tests: 719 passing (at v1.2 ship)
 
 **v1.3:**
-- Plans completed: 2 (15-01, 15-02)
+- Plans completed: 3 (15-01, 15-02, 15-03)
 - Phases: 9 (15-23)
-- Phase 15 complete: AUTH-01 through AUTH-07 satisfied
+- Phase 15 complete: AUTH-01, AUTH-05, AUTH-06 satisfied (plan 03); all Phase 15 UAT gaps closed
 
 ## Accumulated Context
 
@@ -58,12 +58,15 @@ v1.3 roadmap decisions:
 - [Phase 15]: No confirmation dialog on Sign Out — instant logout for clean UX per user preference
 - [Phase 15]: Keycloak end-session uses id_token_hint — required for proper Keycloak SSO session termination
 - [Phase 15]: refetchOnWindowFocus over BroadcastChannel — built-in next-auth, simpler for 100-user scale
+- [Phase 15]: Pass explicit secret to getToken() in middleware — @auth/core 0.41.0 does not auto-detect NEXTAUTH_SECRET unlike next-auth v4
+- [Phase 15]: AuthErrorToasts must be inside SessionProvider — useSession() requires SessionProvider ancestor to detect unauthenticated status transitions
 
 ### Pending Todos
 
 - [ ] Start WhatsApp Business API verification process (takes 1-4 weeks, needed for future live testing)
 - [ ] Add CREDENTIAL_ENCRYPTION_KEY to production .env before OAuth flows (deferred to v1.4)
 - [ ] [POST-MVP] HashiCorp Vault for secret management
+- [ ] [TECH-DEBT] Fix frontend `pnpm build` failure — SWR hooks in Server Components cause prerender crash on `/settings/integrations` and `/settings/memory` pages. Root cause: `useSWR()` destructuring (`const { data } = useSWR(...)`) runs during static export where SWR context is undefined. Fix: add `"use client"` directive to affected pages, or move SWR calls into client sub-components.
 
 ### Blockers/Concerns
 
@@ -74,5 +77,5 @@ v1.3 roadmap decisions:
 ## Session Continuity
 
 Last session: 2026-03-04
-Stopped at: Completed 15-01-PLAN.md — middleware route protection with allowlist approach, per-page auth check removal, 15-01-SUMMARY.md created
+Stopped at: Completed 15-03-PLAN.md — all 4 UAT gaps closed (middleware secret, SignOutButton, AuthErrorToasts inside SessionProvider with refetchInterval, unauthenticated status detection), 15-03-SUMMARY.md created
 Resume file: N/A
