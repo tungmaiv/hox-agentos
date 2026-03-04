@@ -62,6 +62,23 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true, // Required for Docker: container binds to 0.0.0.0, not localhost
+  // AUTH-03: Explicit cookie security — ensures the Secure flag is set in production.
+  // next-auth v5 sets HttpOnly and SameSite=Lax by default; this config makes the
+  // Secure flag explicit so it is never accidentally omitted in a production build.
+  cookies: {
+    sessionToken: {
+      name:
+        process.env.NODE_ENV === "production"
+          ? "__Secure-authjs.session-token"
+          : "authjs.session-token",
+      options: {
+        httpOnly: true,
+        sameSite: "lax" as const,
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
+  },
   providers: [
     Keycloak({
       clientId: process.env.KEYCLOAK_CLIENT_ID ?? "",

@@ -5,23 +5,40 @@
  * Users are redirected here when unauthenticated, or when their session expires.
  * - SSO button: triggers Keycloak OIDC flow (existing flow unchanged)
  * - Credentials form: calls signIn("credentials") with username/password
+ *
+ * Supports:
+ * - callbackUrl: returns user to their previous page after re-login (AUTH-06)
+ * - signedOut=true: shows "You have been signed out successfully." banner (AUTH-05)
+ * - error param: shows session expired notice (existing behavior)
  */
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const urlError = searchParams.get("error");
+  const callbackUrl = searchParams.get("callbackUrl") ?? "/chat";
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showSignedOut, setShowSignedOut] = useState(
+    searchParams.get("signedOut") === "true"
+  );
 
   const sessionExpired =
     urlError === "SessionExpired" || urlError === "RefreshAccessTokenError";
+
+  // Auto-dismiss the signed-out success banner after 3 seconds
+  useEffect(() => {
+    if (showSignedOut) {
+      const timer = setTimeout(() => setShowSignedOut(false), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [showSignedOut]);
 
   async function handleCredentialsSubmit(
     e: React.FormEvent<HTMLFormElement>
@@ -40,7 +57,7 @@ function LoginForm() {
       if (result?.error) {
         setError("Invalid username or password. Please try again.");
       } else if (result?.ok) {
-        router.push("/chat");
+        router.push(callbackUrl);
       }
     } catch {
       setError("An unexpected error occurred. Please try again.");
@@ -50,7 +67,7 @@ function LoginForm() {
   }
 
   function handleSSOSignIn(): void {
-    void signIn("keycloak", { callbackUrl: "/chat" });
+    void signIn("keycloak", { callbackUrl });
   }
 
   return (
@@ -61,6 +78,13 @@ function LoginForm() {
           <h1 className="text-2xl font-bold text-gray-900">Blitz AgentOS</h1>
           <p className="mt-1 text-sm text-gray-500">Sign in to continue</p>
         </div>
+
+        {/* Signed-out success banner (auto-dismisses after 3 seconds) */}
+        {showSignedOut && (
+          <div className="mb-4 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+            You have been signed out successfully.
+          </div>
+        )}
 
         {/* Session expired notice */}
         {sessionExpired && (
