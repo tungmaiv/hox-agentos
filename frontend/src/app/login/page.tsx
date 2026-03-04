@@ -19,7 +19,9 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const urlError = searchParams.get("error");
-  const callbackUrl = searchParams.get("callbackUrl") ?? "/chat";
+  const rawCallbackUrl = searchParams.get("callbackUrl") ?? "/chat";
+  // Defense-in-depth: only allow relative paths to prevent open redirect
+  const callbackUrl = rawCallbackUrl.startsWith("/") ? rawCallbackUrl : "/chat";
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");

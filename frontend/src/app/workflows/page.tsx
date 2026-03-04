@@ -11,7 +11,7 @@ import Link from "next/link";
 import { PendingBadge } from "./_pending-badge";
 import { TemplateCard } from "@/components/canvas/TemplateCard";
 
-const BACKEND = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const BACKEND = process.env.BACKEND_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 interface WorkflowListItem {
   id: string;

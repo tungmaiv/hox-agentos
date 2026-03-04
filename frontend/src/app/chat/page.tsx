@@ -5,7 +5,7 @@ import { ChatLayout } from "@/components/chat/chat-layout";
 import type { Conversation } from "@/components/chat/chat-layout";
 
 async function fetchConversations(accessToken: string): Promise<Conversation[]> {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+  const apiUrl = process.env.BACKEND_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
   try {
     const response = await fetch(`${apiUrl}/api/conversations/?limit=20`, {
       headers: { Authorization: `Bearer ${accessToken}` },

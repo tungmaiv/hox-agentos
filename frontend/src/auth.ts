@@ -203,7 +203,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       session.realmRoles = token.realmRoles ?? [];
 
       // Pass idToken for Keycloak end-session logout (AUTH-05)
-      // idToken is the OIDC identity token used only for logout — not the access token
+      // CREDENTIAL CONTAINMENT EXCEPTION: The OIDC id_token is exposed to the client
+      // session because Keycloak's end-session endpoint requires it as a browser-side
+      // id_token_hint parameter. This is NOT the access_token — it contains only identity
+      // claims (sub, name, email) and cannot be used to call APIs. Acceptable trade-off
+      // for full SSO logout on shared enterprise machines.
       session.idToken = token.idToken;
 
       // Pass authProvider so logout component knows whether to call Keycloak end-session
