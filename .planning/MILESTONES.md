@@ -1,5 +1,29 @@
 # Milestones
 
+## v1.2 Developer Experience (Shipped: 2026-03-04)
+
+**Phases completed:** 4 phases (11, 12, 13, 14) — 11 plans
+**Timeline:** 2026-03-02 → 2026-03-04 (3 days)
+**Test suite:** 719 passed, 1 skipped
+**Commits:** ~63 v1.2-specific
+**Codebase:** 83,431 LOC (Python + TypeScript)
+
+**Delivered:** Developer experience and extensibility upgrade — unified admin desk with AI-assisted artifact creation, local user management with dual auth, platform capabilities introspection, OpenAPI-to-MCP auto-generation, and external skill repository ecosystem with agentskills.io compliance.
+
+**Key accomplishments:**
+1. Externalized all LLM prompts to `backend/prompts/*.md` with `PromptLoader` — Jinja2-style variable substitution, in-memory caching, editable without code changes
+2. Unified admin desk at `/admin` with guided artifact creation wizard — AI-assisted form fill via `fill_form` co-agent tool, starter templates, live name availability check, artifact cloning
+3. Local user/group management with dual-issuer JWT dispatch — local bcrypt auth + Keycloak SSO, identical RBAC/ACL behavior, NextAuth Credentials provider, admin Users tab with CRUD
+4. `system.capabilities` tool with CapabilitiesCard A2UI — permission-filtered registry introspection, keyword routing, collapsed sections with count badges
+5. OpenAPI-to-MCP bridge — 3-step admin wizard to parse any OpenAPI spec, select endpoints, register as `openapi_proxy` tools with runtime HTTP dispatch through full security gates
+6. External skill repository ecosystem — admin repository management, browse/search with cached index, import with SecurityScanner quarantine, agentskills.io-compliant zip export
+
+**Archive:** `.planning/milestones/v1.2-ROADMAP.md` · `.planning/milestones/v1.2-REQUIREMENTS.md` · `.planning/milestones/v1.2-MILESTONE-AUDIT.md`
+
+**Known tech debt (see audit):** 6 informational items — orphaned sub-agent prompt files (forward-compat), dead code markers (update_agent_last_seen, serverFetch), stale docstring reference, admin layout zero-roles fallback (tightened in quick-3), test RuntimeWarning (fixed in quick-3)
+
+---
+
 ## v1.0 MVP (Shipped: 2026-02-26)
 
 **Phases completed:** 5 phases (1, 2, 2.1, 3, 3.1), 17 plans
