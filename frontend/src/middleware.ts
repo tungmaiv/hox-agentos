@@ -42,7 +42,10 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
 
   // Verify the next-auth session token. getToken() decrypts the encrypted
   // session cookie using NEXTAUTH_SECRET — Edge Runtime compatible via jose.
-  const token = await getToken({ req: request });
+  const token = await getToken({
+    req: request,
+    secret: process.env.NEXTAUTH_SECRET ?? process.env.AUTH_SECRET,
+  });
 
   if (!token) {
     // No valid session — redirect to /login, preserving the intended destination

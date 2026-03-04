@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import type { Conversation } from "./chat-layout";
+import { SignOutButton } from "@/components/sign-out-button";
 
 interface ConversationSidebarProps {
   conversations: Conversation[];
@@ -165,7 +166,7 @@ export function ConversationSidebar({
         ))}
       </div>
 
-      {/* Footer with Settings link */}
+      {/* Footer with Settings link and Sign Out */}
       <div className="p-3 border-t border-gray-100">
         <Link
           href="/settings"
@@ -174,6 +175,9 @@ export function ConversationSidebar({
           <span>&#9881;</span>
           <span>Settings</span>
         </Link>
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg">
+          <SignOutButton />
+        </div>
       </div>
     </div>
   );
