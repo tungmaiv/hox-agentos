@@ -1,9 +1,9 @@
 ---
-status: diagnosed
+status: resolved
 phase: 15-session-auth-hardening
 source: [15-01-SUMMARY.md, 15-02-SUMMARY.md]
 started: 2026-03-05T10:00:00Z
-updated: 2026-03-05T10:35:00Z
+updated: 2026-03-05T12:00:00Z
 ---
 
 ## Current Test
@@ -61,7 +61,7 @@ skipped: 2
 ## Gaps
 
 - truth: "Middleware redirect to /login includes ?callbackUrl=<original-path>"
-  status: failed
+  status: resolved
   reason: "User reported: Redirect to /login works, but callbackUrl query parameter is missing from the URL — just http://localhost:3000/login"
   severity: major
   test: 1
@@ -74,7 +74,7 @@ skipped: 2
   debug_session: ".planning/debug/callbackurl-missing-middleware.md"
 
 - truth: "Sign Out button is visible and accessible in the authenticated UI"
-  status: failed
+  status: resolved
   reason: "User reported: Sign Out button is not reachable in the UI. AuthHeader component (which contains SignOutButton) is defined but never imported into any page layout."
   severity: blocker
   test: 3
@@ -91,7 +91,7 @@ skipped: 2
   debug_session: ".planning/debug/sign-out-button-unreachable.md"
 
 - truth: "Client-side session error detection shows toast and auto-redirects to /login when session expires"
-  status: failed
+  status: resolved
   reason: "User reported: After clearing session cookies and dispatching focus events, the page stays on /chat indefinitely. No toast appears, no auto-redirect."
   severity: major
   test: 5
@@ -108,7 +108,7 @@ skipped: 2
   debug_session: ".planning/debug/client-session-expiry-detection.md"
 
 - truth: "Multi-tab session sync detects logout in other tabs via refetchOnWindowFocus"
-  status: failed
+  status: resolved
   reason: "User reported: refetchOnWindowFocus does not trigger session recheck — same root cause as Test 5."
   severity: major
   test: 7
