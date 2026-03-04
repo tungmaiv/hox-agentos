@@ -40,6 +40,8 @@ from core.logging import configure_logging
 from gateway import runtime
 from openapi_bridge.routes import router as openapi_bridge_router
 from skill_export.routes import router as skill_export_router
+from skill_repos.routes import admin_router as skill_repos_admin_router
+from skill_repos.routes import user_router as skill_repos_user_router
 
 
 @asynccontextmanager
@@ -209,6 +211,12 @@ def create_app() -> FastAPI:
     # OpenAPI Bridge — admin wizard to connect REST APIs as tool definitions
     # Note: router already includes /api/admin/openapi prefix in its definition
     app.include_router(openapi_bridge_router)
+
+    # Skill Repository management — admin CRUD + user browse/import
+    # Admin: /api/admin/skill-repos (registry:manage)
+    # User:  /api/skill-repos/browse, /api/skill-repos/import (chat)
+    app.include_router(skill_repos_admin_router)
+    app.include_router(skill_repos_user_router)
 
     return app
 
