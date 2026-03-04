@@ -38,6 +38,7 @@ from api.routes.workflows import router as workflows_router
 from core.config import settings
 from core.logging import configure_logging
 from gateway import runtime
+from skill_export.routes import router as skill_export_router
 
 
 @asynccontextmanager
@@ -157,6 +158,11 @@ def create_app() -> FastAPI:
 
     # Admin tool CRUD — /api/admin/tools (registry:manage permission)
     app.include_router(admin_tools.router)
+
+    # Skill export — GET /api/admin/skills/{id}/export (registry:manage permission)
+    # MUST be registered before admin_skills.router to prevent FastAPI routing collision:
+    # the literal path segment "export" must take precedence over UUID /{skill_id}.
+    app.include_router(skill_export_router)
 
     # Admin skill CRUD — /api/admin/skills (registry:manage permission)
     app.include_router(admin_skills.router)
