@@ -68,10 +68,9 @@ export default async function AdminLayout({
 
   const hasAdminRole = allRoles.some((role) => ADMIN_ROLES.includes(role));
 
-  // If roles are not available in the session (common in next-auth default config),
-  // allow access and let the backend enforce the permission check via the proxy.
-  // This provides a graceful fallback — the backend always has the final say.
-  const allowAccess = hasAdminRole || allRoles.length === 0;
+  // Only grant access when an admin role is explicitly present.
+  // Backend RBAC (RBAC gate 2) is the final enforcement gate; this is defense-in-depth.
+  const allowAccess = hasAdminRole;
 
   if (!allowAccess) {
     return (

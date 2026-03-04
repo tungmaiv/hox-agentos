@@ -261,11 +261,8 @@ class TestExportRoute:
         async def _get_db_override():
             yield mock_session
 
-        async def _auth_override():
-            return mock_user
-
         mock_get_db.side_effect = _get_db_override
-        mock_auth.return_value = _auth_override()
+        mock_auth.side_effect = AsyncMock(return_value=mock_user)
 
         response = client.get(
             f"/api/admin/skills/{skill.id}/export",
