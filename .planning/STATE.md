@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Developer Experience
 status: unknown
-last_updated: "2026-03-03T14:15:20Z"
+last_updated: "2026-03-04T02:53:00Z"
 progress:
   total_phases: 3
   completed_phases: 2
@@ -23,11 +23,11 @@ See: .planning/PROJECT.md (updated 2026-03-02 after v1.2 roadmap)
 ## Current Position
 
 Milestone: v1.2 Developer Experience
-Phase: 14 of 14 (Ecosystem Capabilities) — Context gathered, ready for planning
-Status: Phase 14 CONTEXT.md written with decisions on capabilities card, OpenAPI wizard, Skill Store, and export UX
-Last activity: 2026-03-04 — Phase 14 discuss-phase completed
+Phase: 14 of 14 (Ecosystem Capabilities) — Plan 01 complete
+Status: Phase 14 Plan 01 complete — migration 019, capabilities tool, CapabilitiesCard A2UI component
+Last activity: 2026-03-04 — Plan 14-01 executed
 
-Progress: [███░░░░░░░░░] 25% — v1.2 Phase 14 context ready
+Progress: [████░░░░░░░░] 35% — v1.2 Phase 14 Plan 01 done
 
 ## Performance Metrics
 
@@ -76,6 +76,11 @@ Recent decisions affecting current work:
 - [Phase 13-02]: [13-02]: Credentials provider authorize() calls backend directly from server side — token proxy route is supplementary only
 - [Phase 13-02]: [13-02]: Local token expiry uses error="SessionExpired" to distinguish from Keycloak "RefreshAccessTokenError" on login page
 - [Phase 13-02]: [13-02]: Admin Users page edit dialog limited to username/email/password — group/role management kept separate (KISS)
+- [14-01]: CapabilitiesCard uses collapsed sections with count badges — sections collapsed by default per CONTEXT.md locked decision
+- [14-01]: system.capabilities seeded into tool_definitions in migration 019 — single authoritative source, no separate seeding script
+- [14-01]: Capabilities routing handled in _classify_by_keywords() before agent routing — returns 'capabilities' intent
+- [14-01]: _capabilities_node routes through delivery_router like all other nodes — consistent graph topology
+- [14-01]: Agents and MCP servers use default-allow; tools and skills use batch_check_artifact_permissions() filtering
 
 ### Pending Todos
 
@@ -96,5 +101,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-03-04
-Stopped at: Phase 14 context gathered — CONTEXT.md written with decisions on capabilities card, OpenAPI wizard, Skill Store, and export UX
-Resume file: .planning/phases/14-ecosystem-capabilities/14-CONTEXT.md
+Stopped at: Completed 14-01-PLAN.md — ecosystem capabilities foundation (migration 019, capabilities tool, CapabilitiesCard)
+Resume file: .planning/phases/14-ecosystem-capabilities/14-01-SUMMARY.md

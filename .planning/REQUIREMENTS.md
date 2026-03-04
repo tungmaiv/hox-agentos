@@ -24,7 +24,7 @@
 
 ### Ecosystem
 
-- [ ] **ECO-01**: Agent or user can query `system.capabilities` tool to list all registered agents, tools, skills, and MCP servers with descriptions
+- [x] **ECO-01**: Agent or user can query `system.capabilities` tool to list all registered agents, tools, skills, and MCP servers with descriptions
 - [ ] **ECO-02**: User can run `api-to-mcp` skill: provide an app URL, have AgentOS fetch the OpenAPI spec, select endpoints to expose, and generate + register an MCP server
 - [ ] **ECO-03**: Admin can add and remove external skill/tool repositories by URL
 - [ ] **ECO-04**: User can search and browse skills/tools from registered external repositories inside AgentOS
@@ -79,7 +79,7 @@
 | AUTH-03 | Phase 13 | Complete |
 | AUTH-04 | Phase 13 | Complete |
 | AUTH-05 | Phase 13 | Complete |
-| ECO-01 | Phase 14 | Pending |
+| ECO-01 | Phase 14 | Complete |
 | ECO-02 | Phase 14 | Pending |
 | ECO-03 | Phase 14 | Pending |
 | ECO-04 | Phase 14 | Pending |

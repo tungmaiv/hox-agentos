@@ -140,4 +140,4 @@ Plans:
 | 11. Infrastructure & Debt | 2/2 | Complete    | 2026-03-02 | - |
 | 12. Unified Admin Desk | 2/2 | Complete    | 2026-03-03 | - |
 | 13. Local Auth | 2/2 | Complete   | 2026-03-03 | - |
-| 14. Ecosystem Capabilities | v1.2 | 0/4 | Planning complete | - |
+| 14. Ecosystem Capabilities | 1/4 | In Progress|  | - |
