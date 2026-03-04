@@ -17,6 +17,7 @@ const ADMIN_TABS = [
   { label: "Config",      href: "/admin/config" },
   { label: "Credentials", href: "/admin/credentials" },
   { label: "Users",       href: "/admin/users" },
+  { label: "Skill Store", href: "/admin/skill-store" },
   { label: "AI Builder",  href: "/admin/create" },
 ] as const;
 
