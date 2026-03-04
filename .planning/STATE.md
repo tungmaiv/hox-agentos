@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-03-02 after v1.2 roadmap)
 Milestone: v1.2 Developer Experience
 Phase: 14 of 14 (Ecosystem Capabilities) — Plan 05 complete
 Status: Phase 14 Plan 05 complete — openapi_proxy dispatch branch wired, ECO-02 fully satisfied
-Last activity: 2026-03-04 — Plan 14-05 executed
+Last activity: 2026-03-04 - Completed quick task 3: fix all tech debt from v1.2 audit
 
 Progress: [████████████] 100% — v1.2 Phase 14 Plan 05 done (all plans complete)
 
@@ -104,6 +104,12 @@ Recent decisions affecting current work:
 - [ ] [POST-MVP] HashiCorp Vault for secret management — replace .env file secrets + DB AES-256 with Vault for rotation, audit trail, and zero-trust credential access
 - [ ] Add user preferences for LLM thinking mode (on/off) and response style (concise/detailed/auto) — backend API + chat UI session controls + LiteLLM extra_body passthrough
 - [ ] Add user profile and logout to UI with session expiration — profile menu, logout endpoint, auto-logout timer, configurable session timeout in settings
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 3 | Fix all tech debt from v1.2 audit | 2026-03-04 | be8f9c0 | [3-fix-all-tech-debt-from-v1-2-audit](./quick/3-fix-all-tech-debt-from-v1-2-audit/) |
 
 ### Blockers/Concerns
 
