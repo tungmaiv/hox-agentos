@@ -1,9 +1,9 @@
 ---
-status: complete
+status: diagnosed
 phase: 15-session-auth-hardening
 source: [15-01-SUMMARY.md, 15-02-SUMMARY.md]
 started: 2026-03-05T10:00:00Z
-updated: 2026-03-05T10:30:00Z
+updated: 2026-03-05T10:35:00Z
 ---
 
 ## Current Test
@@ -65,37 +65,59 @@ skipped: 2
   reason: "User reported: Redirect to /login works, but callbackUrl query parameter is missing from the URL — just http://localhost:3000/login"
   severity: major
   test: 1
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "getToken() in middleware.ts:45 missing `secret` parameter. When stale session cookie exists, getToken() throws MissingSecret instead of returning null, causing middleware to error and Next.js falls back to bare /login redirect without callbackUrl."
+  artifacts:
+    - path: "frontend/src/middleware.ts"
+      issue: "getToken({ req: request }) missing secret param at line 45"
+  missing:
+    - "Pass secret: process.env.NEXTAUTH_SECRET ?? process.env.AUTH_SECRET to getToken()"
+  debug_session: ".planning/debug/callbackurl-missing-middleware.md"
 
 - truth: "Sign Out button is visible and accessible in the authenticated UI"
   status: failed
   reason: "User reported: Sign Out button is not reachable in the UI. AuthHeader component (which contains SignOutButton) is defined but never imported into any page layout."
   severity: blocker
   test: 3
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "AuthHeader, SignOutButton, and useAuth hook are all dead code — defined but never imported into any rendered page or layout. ConversationSidebar footer (conversation-sidebar.tsx:168-177) is the natural placement."
+  artifacts:
+    - path: "frontend/src/components/auth-header.tsx"
+      issue: "Never imported into any page/layout"
+    - path: "frontend/src/components/sign-out-button.tsx"
+      issue: "Only imported by unused AuthHeader"
+    - path: "frontend/src/components/chat/conversation-sidebar.tsx"
+      issue: "Sidebar footer has Settings link but no sign-out button (lines 168-177)"
+  missing:
+    - "Import and render SignOutButton in conversation-sidebar.tsx footer"
+  debug_session: ".planning/debug/sign-out-button-unreachable.md"
 
 - truth: "Client-side session error detection shows toast and auto-redirects to /login when session expires"
   status: failed
   reason: "User reported: After clearing session cookies and dispatching focus events, the page stays on /chat indefinitely. No toast appears, no auto-redirect."
   severity: major
   test: 5
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "Three compounding issues: (1) AuthErrorToasts rendered OUTSIDE SessionProvider in layout.tsx:20 — useSession() has no context. (2) No refetchInterval on SessionProvider — only refetchOnWindowFocus which fires on visibilitychange, not focus. (3) Cookie deletion produces null session (status=unauthenticated), not session.error — AuthErrorToasts only checks session.error, misses null transition."
+  artifacts:
+    - path: "frontend/src/app/layout.tsx"
+      issue: "AuthErrorToasts is sibling of SessionProvider, not child (line 20); no refetchInterval prop (line 19)"
+    - path: "frontend/src/components/auth-error-toasts.tsx"
+      issue: "useSession() outside provider context (line 25); only checks session.error, not unauthenticated status (lines 32-35)"
+  missing:
+    - "Move AuthErrorToasts inside SessionProvider"
+    - "Add refetchInterval={300} to SessionProvider"
+    - "Detect status=unauthenticated transition in AuthErrorToasts, not just session.error"
+  debug_session: ".planning/debug/client-session-expiry-detection.md"
 
 - truth: "Multi-tab session sync detects logout in other tabs via refetchOnWindowFocus"
   status: failed
   reason: "User reported: refetchOnWindowFocus does not trigger session recheck — same root cause as Test 5."
   severity: major
   test: 7
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "Same root cause as Test 5 — AuthErrorToasts outside SessionProvider context, plus cookie deletion produces null session not session.error. refetchOnWindowFocus itself works (fires visibilitychange), but the detection component cannot see the session state change."
+  artifacts:
+    - path: "frontend/src/app/layout.tsx"
+      issue: "AuthErrorToasts outside SessionProvider"
+    - path: "frontend/src/components/auth-error-toasts.tsx"
+      issue: "Cannot detect session changes from outside provider"
+  missing:
+    - "Same fixes as Test 5 will resolve this"
+  debug_session: ".planning/debug/client-session-expiry-detection.md"
