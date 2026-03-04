@@ -4,18 +4,23 @@
  *
  * Uses the existing MCP server admin API (evolved in 06-04).
  * Shows McpStatusDot per server (colored dot based on last_seen_at).
+ *
+ * Phase 14-02: Added "Connect OpenAPI" button that opens the OpenAPIConnectWizard
+ * allowing admins to connect any OpenAPI-described REST API as callable tools.
  */
 import { useState, useEffect, useCallback } from "react";
 import type { McpServerEntry } from "@/lib/admin-types";
 import { mapArraySnakeToCamel } from "@/lib/admin-types";
 import { McpStatusDot } from "@/components/admin/mcp-status-dot";
 import { ViewToggle, useViewMode } from "@/components/admin/view-toggle";
+import { OpenAPIConnectWizard } from "@/components/admin/openapi-connect-wizard";
 
 export default function AdminMcpServersPage() {
   const [servers, setServers] = useState<McpServerEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useViewMode();
+  const [wizardOpen, setWizardOpen] = useState(false);
 
   const fetchServers = useCallback(async () => {
     setLoading(true);
@@ -79,8 +84,22 @@ export default function AdminMcpServersPage() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-gray-900">MCP Servers</h2>
-        <ViewToggle value={viewMode} onChange={setViewMode} />
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setWizardOpen(true)}
+            className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
+          >
+            + Connect OpenAPI
+          </button>
+          <ViewToggle value={viewMode} onChange={setViewMode} />
+        </div>
       </div>
+
+      <OpenAPIConnectWizard
+        open={wizardOpen}
+        onClose={() => setWizardOpen(false)}
+        onSuccess={() => void fetchServers()}
+      />
 
       {error && (
         <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-600">
