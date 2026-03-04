@@ -16,6 +16,7 @@ from core.models.memory import ConversationTurn  # noqa: F401
 from core.models.memory_long_term import MemoryEpisode, MemoryFact  # noqa: F401
 from core.models.role_permission import RolePermission  # noqa: F401
 from core.models.skill_definition import SkillDefinition  # noqa: F401
+from core.models.skill_repository import SkillRepository  # noqa: F401
 from core.models.system_config import SystemConfig  # noqa: F401
 from core.models.tool_acl import ToolAcl  # noqa: F401
 from core.models.tool_definition import ToolDefinition  # noqa: F401

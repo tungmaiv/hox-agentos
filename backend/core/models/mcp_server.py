@@ -51,6 +51,8 @@ class McpServer(Base):
     )
     # --- Phase 6 additions ---
     version: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # --- Phase 14 additions ---
+    openapi_spec_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     display_name: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(
         String(20), nullable=False, server_default=text("'active'")

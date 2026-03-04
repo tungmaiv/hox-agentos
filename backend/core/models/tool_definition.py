@@ -67,6 +67,9 @@ class ToolDefinition(Base):
     output_schema: Mapped[dict[str, Any] | None] = mapped_column(
         _JSONB, nullable=True
     )
+    config_json: Mapped[dict[str, Any] | None] = mapped_column(
+        _JSONB, nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
