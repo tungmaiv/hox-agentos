@@ -58,11 +58,21 @@ Every Blitz employee gets an intelligent, context-aware assistant that automates
 
 ### Active
 
+## Current Milestone: v1.3 Production Readiness & Skill Platform
+
+**Goal:** Transform Blitz AgentOS from a feature-complete development platform into a production-ready, extensible agentic OS with proper session management, unified navigation, configurable identity, performance optimization, and a standards-compliant skill ecosystem.
+
+**Target features:**
+- Session & auth hardening (Next.js middleware, token validation, cookie security)
+- Menu redesign (navigation rail), profile page, user preferences (LLM thinking mode, response style)
+- Performance instrumentation + 7 bottleneck fixes + embedding sidecar service
+- Keycloak as optional runtime configuration (admin UI, local-auth-first boot)
+- Skill & Tool Platform: Agent Skills standard compliance, catalog/discovery, dependency hardening, sharing/marketplace, enhanced builder with external learning and security gate
+
+**Deferred to v1.4+:**
 - [ ] Real OAuth email/calendar integration (replace mock sub-agents with live Google/Microsoft OAuth)
 - [ ] WhatsApp Business live end-to-end (pending Meta Business API verification)
 - [ ] MS Teams live end-to-end (pending Azure Bot Service registration)
-- [ ] User profile and logout with session expiration
-- [ ] User preferences for LLM thinking mode and response style
 
 ### Out of Scope
 
@@ -145,4 +155,4 @@ Every Blitz employee gets an intelligent, context-aware assistant that automates
 | Grafana + Loki + Alloy for observability | Prometheus-compatible; structured JSON logs from structlog pipe directly to Loki | ✓ Good — full stack live; Telegram spend alerting verified end-to-end; datasource UIDs stable |
 
 ---
-*Last updated: 2026-03-04 after v1.2 milestone*
+*Last updated: 2026-03-05 after v1.3 milestone start*
