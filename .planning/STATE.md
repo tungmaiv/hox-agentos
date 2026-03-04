@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Production Readiness & Skill Platform
-status: ready_to_plan
-last_updated: "2026-03-05T12:00:00Z"
+status: unknown
+last_updated: "2026-03-04T19:46:14.565Z"
 progress:
-  total_phases: 9
+  total_phases: 1
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 2
+  completed_plans: 1
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-05)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates their daily work routines and lets them build custom automations without writing code — all within an enterprise-secure, on-premise environment where data never leaves the company.
-**Current focus:** v1.3 Phase 15 — Session & Auth Hardening (ready to plan)
+**Current focus:** v1.3 Phase 15 — Session & Auth Hardening (plan 02 complete)
 
 ## Current Position
 
 Phase: 15 of 23 (Session & Auth Hardening)
-Plan: —
-Status: Ready to plan
-Last activity: 2026-03-05 — Roadmap created for v1.3 (9 phases, 53 requirements)
+Plan: 02 of 02 complete
+Status: Phase 15 complete — all 2 plans done (15-01, 15-02)
+Last activity: 2026-03-04 — Completed 15-02: session lifecycle hardening (5-min refresh buffer, Keycloak end-session, auto-redirect on expiry, callbackUrl)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [#░░░░░░░░░] ~11%
 
 ## Performance Metrics
 
@@ -37,8 +37,9 @@ Progress: [░░░░░░░░░░] 0%
 - Tests: 719 passing (at v1.2 ship)
 
 **v1.3:**
-- Plans completed: 0
+- Plans completed: 2 (15-01, 15-02)
 - Phases: 9 (15-23)
+- Phase 15 complete: AUTH-01 through AUTH-07 satisfied
 
 ## Accumulated Context
 
@@ -51,6 +52,9 @@ v1.3 roadmap decisions:
 - [roadmap]: Two-track structure — foundations (15-18) then skill platform (19-23)
 - [roadmap]: Phase 17 (performance) architecturally independent of Phase 16 — can parallelize if needed
 - [roadmap]: Phase 21 (security hardening) depends on both Phase 19 and Phase 20
+- [Phase 15]: No confirmation dialog on Sign Out — instant logout for clean UX per user preference
+- [Phase 15]: Keycloak end-session uses id_token_hint — required for proper Keycloak SSO session termination
+- [Phase 15]: refetchOnWindowFocus over BroadcastChannel — built-in next-auth, simpler for 100-user scale
 
 ### Pending Todos
 
@@ -66,6 +70,6 @@ v1.3 roadmap decisions:
 
 ## Session Continuity
 
-Last session: 2026-03-05
-Stopped at: v1.3 roadmap created — 9 phases, 53 requirements mapped, ready to plan Phase 15
+Last session: 2026-03-04
+Stopped at: Completed 15-02-PLAN.md — session lifecycle hardening (5-min token refresh, Keycloak end-session, session error detection, callbackUrl redirect)
 Resume file: N/A

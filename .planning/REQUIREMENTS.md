@@ -12,10 +12,10 @@
 - [ ] **AUTH-01**: Protected routes (`/chat`, `/admin`, `/canvas`, `/profile`, `/workflows`, `/skills`, `/settings`) redirect unauthenticated users to `/login` via Next.js `middleware.ts` using `jose` for Edge Runtime JWT verification
 - [ ] **AUTH-02**: Next.js upgraded to ≥15.2.3 before any `middleware.ts` is written (CVE-2025-29927 mitigation — CVSS 9.1 middleware bypass)
 - [ ] **AUTH-03**: Session cookie set with `HttpOnly`, `Secure` (production), `SameSite=Lax` — JWT never stored in localStorage
-- [ ] **AUTH-04**: Session silent refresh via `/api/auth/refresh` renews access token when it has <5 min remaining, using HttpOnly refresh token cookie (7d TTL)
-- [ ] **AUTH-05**: User can log out via `POST /api/auth/logout` which clears all auth cookies; Keycloak path also calls Keycloak logout endpoint
-- [ ] **AUTH-06**: Client-side `SessionProvider` wrapper detects `session.error` (`SessionExpired`, `RefreshAccessTokenError`) and auto-redirects to `/login`
-- [ ] **AUTH-07**: Chat page server component validates access token with backend on each load — if 401, triggers signOut + redirect
+- [x] **AUTH-04**: Session silent refresh via `/api/auth/refresh` renews access token when it has <5 min remaining, using HttpOnly refresh token cookie (7d TTL)
+- [x] **AUTH-05**: User can log out via `POST /api/auth/logout` which clears all auth cookies; Keycloak path also calls Keycloak logout endpoint
+- [x] **AUTH-06**: Client-side `SessionProvider` wrapper detects `session.error` (`SessionExpired`, `RefreshAccessTokenError`) and auto-redirects to `/login`
+- [x] **AUTH-07**: Chat page server component validates access token with backend on each load — if 401, triggers signOut + redirect
 
 ## Navigation & User Experience
 
@@ -134,10 +134,10 @@
 | AUTH-01 | Phase 15 | pending |
 | AUTH-02 | Phase 15 | pending |
 | AUTH-03 | Phase 15 | pending |
-| AUTH-04 | Phase 15 | pending |
-| AUTH-05 | Phase 15 | pending |
-| AUTH-06 | Phase 15 | pending |
-| AUTH-07 | Phase 15 | pending |
+| AUTH-04 | Phase 15 | Complete |
+| AUTH-05 | Phase 15 | Complete |
+| AUTH-06 | Phase 15 | Complete |
+| AUTH-07 | Phase 15 | Complete |
 | NAV-01 | Phase 16 | pending |
 | NAV-02 | Phase 16 | pending |
 | NAV-03 | Phase 16 | pending |
