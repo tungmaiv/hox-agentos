@@ -129,73 +129,72 @@
 
 ## Traceability
 
-_Populated by roadmapper after phase assignment._
-
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| AUTH-01 | — | pending |
-| AUTH-02 | — | pending |
-| AUTH-03 | — | pending |
-| AUTH-04 | — | pending |
-| AUTH-05 | — | pending |
-| AUTH-06 | — | pending |
-| AUTH-07 | — | pending |
-| NAV-01 | — | pending |
-| NAV-02 | — | pending |
-| NAV-03 | — | pending |
-| NAV-04 | — | pending |
-| NAV-05 | — | pending |
-| NAV-06 | — | pending |
-| NAV-07 | — | pending |
-| NAV-08 | — | pending |
-| NAV-09 | — | pending |
-| NAV-10 | — | pending |
-| PERF-01 | — | pending |
-| PERF-02 | — | pending |
-| PERF-03 | — | pending |
-| PERF-04 | — | pending |
-| PERF-05 | — | pending |
-| PERF-06 | — | pending |
-| PERF-07 | — | pending |
-| PERF-08 | — | pending |
-| PERF-09 | — | pending |
-| PERF-10 | — | pending |
-| PERF-11 | — | pending |
-| PERF-12 | — | pending |
-| PERF-13 | — | pending |
-| IDCFG-01 | — | pending |
-| IDCFG-02 | — | pending |
-| IDCFG-03 | — | pending |
-| IDCFG-04 | — | pending |
-| IDCFG-05 | — | pending |
-| IDCFG-06 | — | pending |
-| IDCFG-07 | — | pending |
-| IDCFG-08 | — | pending |
-| SKSTD-01 | — | pending |
-| SKSTD-02 | — | pending |
-| SKSTD-03 | — | pending |
-| SKSTD-04 | — | pending |
-| SKSTD-05 | — | pending |
-| SKCAT-01 | — | pending |
-| SKCAT-02 | — | pending |
-| SKCAT-03 | — | pending |
-| SKCAT-04 | — | pending |
-| SKCAT-05 | — | pending |
-| SKSEC-01 | — | pending |
-| SKSEC-02 | — | pending |
-| SKSEC-03 | — | pending |
-| SKSEC-04 | — | pending |
-| SKMKT-01 | — | pending |
-| SKMKT-02 | — | pending |
-| SKMKT-03 | — | pending |
-| SKBLD-01 | — | pending |
-| SKBLD-02 | — | pending |
-| SKBLD-03 | — | pending |
-| SKBLD-04 | — | pending |
-| SKBLD-05 | — | pending |
-| SKBLD-06 | — | pending |
-| SKBLD-07 | — | pending |
-| SKBLD-08 | — | pending |
+| AUTH-01 | Phase 15 | pending |
+| AUTH-02 | Phase 15 | pending |
+| AUTH-03 | Phase 15 | pending |
+| AUTH-04 | Phase 15 | pending |
+| AUTH-05 | Phase 15 | pending |
+| AUTH-06 | Phase 15 | pending |
+| AUTH-07 | Phase 15 | pending |
+| NAV-01 | Phase 16 | pending |
+| NAV-02 | Phase 16 | pending |
+| NAV-03 | Phase 16 | pending |
+| NAV-04 | Phase 16 | pending |
+| NAV-05 | Phase 16 | pending |
+| NAV-06 | Phase 16 | pending |
+| NAV-07 | Phase 16 | pending |
+| NAV-08 | Phase 16 | pending |
+| NAV-09 | Phase 16 | pending |
+| NAV-10 | Phase 16 | pending |
+| PERF-01 | Phase 17 | pending |
+| PERF-02 | Phase 17 | pending |
+| PERF-03 | Phase 17 | pending |
+| PERF-04 | Phase 17 | pending |
+| PERF-05 | Phase 17 | pending |
+| PERF-06 | Phase 17 | pending |
+| PERF-07 | Phase 17 | pending |
+| PERF-08 | Phase 17 | pending |
+| PERF-09 | Phase 17 | pending |
+| PERF-10 | Phase 17 | pending |
+| PERF-11 | Phase 17 | pending |
+| PERF-12 | Phase 17 | pending |
+| PERF-13 | Phase 17 | pending |
+| IDCFG-01 | Phase 18 | pending |
+| IDCFG-02 | Phase 18 | pending |
+| IDCFG-03 | Phase 18 | pending |
+| IDCFG-04 | Phase 18 | pending |
+| IDCFG-05 | Phase 18 | pending |
+| IDCFG-06 | Phase 18 | pending |
+| IDCFG-07 | Phase 18 | pending |
+| IDCFG-08 | Phase 18 | pending |
+| SKSTD-01 | Phase 19 | pending |
+| SKSTD-02 | Phase 19 | pending |
+| SKSTD-03 | Phase 19 | pending |
+| SKSTD-04 | Phase 19 | pending |
+| SKSTD-05 | Phase 19 | pending |
+| SKCAT-01 | Phase 20 | pending |
+| SKCAT-02 | Phase 20 | pending |
+| SKCAT-03 | Phase 20 | pending |
+| SKCAT-04 | Phase 20 | pending |
+| SKCAT-05 | Phase 20 | pending |
+| SKSEC-01 | Phase 21 | pending |
+| SKSEC-02 | Phase 21 | pending |
+| SKSEC-03 | Phase 21 | pending |
+| SKSEC-04 | Phase 21 | pending |
+| SKMKT-01 | Phase 22 | pending |
+| SKMKT-02 | Phase 22 | pending |
+| SKMKT-03 | Phase 22 | pending |
+| SKBLD-01 | Phase 23 | pending |
+| SKBLD-02 | Phase 23 | pending |
+| SKBLD-03 | Phase 23 | pending |
+| SKBLD-04 | Phase 23 | pending |
+| SKBLD-05 | Phase 23 | pending |
+| SKBLD-06 | Phase 23 | pending |
+| SKBLD-07 | Phase 23 | pending |
+| SKBLD-08 | Phase 23 | pending |
 
 ---
 *Generated: 2026-03-05 from approved v1.3 design and research*
+*Traceability updated: 2026-03-05 by roadmapper — 53/53 requirements mapped to phases*
