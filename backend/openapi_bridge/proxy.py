@@ -13,6 +13,7 @@ Security note: api_key is decrypted inside the tool executor and passed
 here — it never appears in logs or error responses.
 """
 import base64
+import re
 import time
 from typing import Any
 
@@ -35,6 +36,19 @@ def _build_url(base_url: str, path_template: str, path_params: dict[str, str]) -
     path = path_template
     for key, value in path_params.items():
         path = path.replace(f"{{{key}}}", str(value))
+
+    # Validate no unresolved placeholders remain
+    unresolved = re.findall(r"\{(\w+)\}", path)
+    if unresolved:
+        logger.warning(
+            "openapi_unresolved_path_params",
+            path_template=path_template,
+            unresolved=unresolved,
+        )
+        raise ValueError(
+            f"Unresolved path parameters: {', '.join(unresolved)} in '{path_template}'"
+        )
+
     # Avoid double slash between base_url and path
     base = base_url.rstrip("/")
     return f"{base}{path}"
@@ -175,8 +189,11 @@ async def call_openapi_tool(
         arguments, parameters, method
     )
 
-    # Build full URL
-    url = _build_url(base_url, path_template, path_params)
+    # Build full URL (validates all path placeholders are resolved)
+    try:
+        url = _build_url(base_url, path_template, path_params)
+    except ValueError as exc:
+        return {"error": True, "status": 0, "detail": str(exc)}
 
     # Build auth headers (never log api_key value)
     auth_headers = _build_auth_headers(effective_auth_type, api_key, effective_auth_header)
@@ -213,7 +230,11 @@ async def call_openapi_tool(
             content_type = response.headers.get("content-type", "")
             if "application/json" in content_type:
                 try:
-                    return dict(response.json())
+                    data = response.json()
+                    if isinstance(data, dict):
+                        return data
+                    # Wrap non-dict JSON (arrays, primitives) for consistent return type
+                    return {"items": data}
                 except Exception:
                     return {"text": response.text}
             else:

@@ -21,30 +21,17 @@ from openapi_bridge.schemas import (
     RegisterResponse,
 )
 from openapi_bridge.service import register_openapi_endpoints
-from security.deps import get_current_user
-from security.rbac import has_permission
+from security.deps import require_registry_manager
 
 logger = structlog.get_logger(__name__)
 
 router = APIRouter(prefix="/api/admin/openapi", tags=["admin-openapi"])
 
 
-async def _require_registry_manager(
-    user: UserContext = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db),
-) -> UserContext:
-    """Gate 2 dependency: require registry:manage permission."""
-    if not await has_permission(user, "registry:manage", session):
-        raise HTTPException(
-            status_code=403, detail="Registry manage permission required"
-        )
-    return user
-
-
 @router.post("/parse")
 async def parse_openapi_spec(
     body: ParseRequest,
-    user: UserContext = Depends(_require_registry_manager),
+    user: UserContext = Depends(require_registry_manager),
 ) -> ParseResponse:
     """
     Fetch and parse an OpenAPI spec from a URL.
@@ -83,7 +70,7 @@ async def parse_openapi_spec(
 @router.post("/register")
 async def register_openapi_server(
     body: RegisterRequest,
-    user: UserContext = Depends(_require_registry_manager),
+    user: UserContext = Depends(require_registry_manager),
     session: AsyncSession = Depends(get_db),
 ) -> RegisterResponse:
     """

@@ -35,9 +35,46 @@ clean:
 logs *service:
     docker compose logs -f {{service}}
 
-# Show status of all services
+# Show clean status of all docker services with summary
 ps:
-    docker compose ps
+    #!/usr/bin/env bash
+    echo ""
+    echo "🐳 Docker Compose Status"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    
+    # Get all container info and parse
+    ALL_CONTAINERS=$(docker compose ps -a --format "table {{"{{"}}.Service{{"}}"}}|{{"{{"}}.State{{"}}"}}|{{"{{"}}.Status{{"}}"}}|{{"{{"}}.Ports{{"}}"}}")
+    
+    # Counts (use wc -l to avoid issues with grep -c on multiline output)
+    RUNNING=$(echo "$ALL_CONTAINERS" | grep "|running|" | wc -l)
+    EXITED=$(echo "$ALL_CONTAINERS" | grep "|exited|" | wc -l)
+    TOTAL=$(echo "$ALL_CONTAINERS" | grep -v "^$" | wc -l)
+    
+    # Summary
+    echo ""
+    echo "  📊 Summary: $RUNNING running | $EXITED stopped | $TOTAL total"
+    echo ""
+    
+    # Running services
+    if [ "$RUNNING" -gt 0 ]; then
+        echo "  ✅ RUNNING:"
+        echo "$ALL_CONTAINERS" | grep "|running|" | while IFS='|' read -r service state status ports; do
+            printf "     %-20s | %s\n" "$service" "$status"
+        done
+        echo ""
+    fi
+    
+    # Stopped services
+    if [ "$EXITED" -gt 0 ]; then
+        echo "  ⏹️  STOPPED:"
+        echo "$ALL_CONTAINERS" | grep "|exited|" | while IFS='|' read -r service state status ports; do
+            printf "     %-20s | %s\n" "$service" "$status"
+        done
+        echo ""
+    fi
+    
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
 
 # Restart all services
 restart:
@@ -122,12 +159,23 @@ backend-stop:
         pkill -f "uvicorn main:app" 2>/dev/null && echo "Backend stopped" || echo "No backend process found"; \
     fi
 
-# Kill any uvicorn process on port 8000 (force)
+# Kill any uvicorn process on port 8000 (force) - includes Docker container
 backend-kill:
     #!/usr/bin/env bash
+    set -e
+    echo "Stopping Docker backend container..."
+    docker compose stop backend 2>/dev/null || true
+    echo "Killing local backend processes..."
     pkill -9 -f "uvicorn main:app" 2>/dev/null || true
+    pkill -9 -f "python.*main:app" 2>/dev/null || true
     fuser -k 8000/tcp 2>/dev/null || true
+    rm -f .backend.pid 2>/dev/null || true
     echo "Backend killed"
+
+# Rebuild and restart backend Docker container
+backend-rebuild:
+    docker compose build backend && docker compose up -d --no-deps backend
+    @echo "Backend rebuilt and started in Docker"
 
 # Show backend logs (tail -f on last run, only works with background mode)
 backend-log:
@@ -153,12 +201,29 @@ frontend-stop:
         pkill -f "next dev" 2>/dev/null && echo "Frontend stopped" || echo "No frontend process found"; \
     fi
 
-# Kill any Next.js dev process (force)
+# Kill any Next.js dev process (force) - includes Docker container
 frontend-kill:
     #!/usr/bin/env bash
+    set -e
+    echo "Stopping Docker frontend container..."
+    docker compose stop frontend 2>/dev/null || true
+    echo "Killing local frontend processes..."
+    # Kill various Next.js process patterns
     pkill -9 -f "next dev" 2>/dev/null || true
-    fuser -k 3000/tcp 2>/dev/null || true
+    pkill -9 -f "next-server" 2>/dev/null || true
+    pkill -9 -f "node.*next" 2>/dev/null || true
+    # Kill common Next.js ports
+    for port in 3000 3001 3002 3003 3004 3005; do
+        fuser -k "${port}/tcp" 2>/dev/null || true
+    done
+    # Clean up PID file if exists
+    rm -f .frontend.pid 2>/dev/null || true
     echo "Frontend killed"
+
+# Rebuild and restart frontend Docker container
+frontend-rebuild:
+    docker compose build frontend && docker compose up -d --no-deps frontend
+    @echo "Frontend rebuilt and started in Docker"
 
 # ── Shortcuts ─────────────────────────────────────────────────────────────────
 # Stop both backend and frontend

@@ -18,7 +18,7 @@ export async function GET() {
     .accessToken as string | undefined;
   if (!accessToken) return NextResponse.json([]);
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+  const apiUrl = process.env.BACKEND_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
   try {
     const response = await fetch(`${apiUrl}/api/skills`, {
       headers: { Authorization: `Bearer ${accessToken}` },

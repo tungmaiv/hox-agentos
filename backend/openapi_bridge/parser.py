@@ -27,6 +27,36 @@ logger = structlog.get_logger(__name__)
 _HTTP_METHODS = {"get", "post", "put", "delete", "patch", "head", "options", "trace"}
 
 
+def _resolve_ref(spec: dict[str, Any], obj: Any) -> Any:
+    """
+    Resolve a $ref pointer within the spec.
+
+    Handles local JSON Pointer references (e.g. '#/components/schemas/User').
+    Returns the resolved object, or the original if it's not a $ref.
+    Non-local refs (URLs) are returned as-is since they require external fetching.
+    """
+    if not isinstance(obj, dict) or "$ref" not in obj:
+        return obj
+
+    ref = obj["$ref"]
+    if not isinstance(ref, str) or not ref.startswith("#/"):
+        return obj
+
+    parts = ref[2:].split("/")
+    resolved: Any = spec
+    for part in parts:
+        # Handle JSON Pointer escaping: ~1 → /, ~0 → ~
+        part = part.replace("~1", "/").replace("~0", "~")
+        if isinstance(resolved, dict):
+            resolved = resolved.get(part)
+        else:
+            return obj  # Can't resolve further — return original
+        if resolved is None:
+            return obj
+
+    return resolved
+
+
 def _detect_and_parse_spec(text: str) -> dict[str, Any]:
     """
     Auto-detect JSON or YAML and parse spec text.
@@ -69,13 +99,22 @@ def _extract_parameter_type(schema: dict[str, Any] | None) -> str:
 
 def _extract_parameters(
     raw_params: list[dict[str, Any]] | None,
+    spec: dict[str, Any] | None = None,
 ) -> list[ParameterInfo]:
-    """Parse an OpenAPI parameters list into ParameterInfo objects."""
+    """Parse an OpenAPI parameters list into ParameterInfo objects.
+
+    Resolves $ref pointers when spec is provided.
+    """
     if not raw_params:
         return []
 
     params: list[ParameterInfo] = []
     for p in raw_params:
+        if not isinstance(p, dict):
+            continue
+        # Resolve $ref if present (e.g. {"$ref": "#/components/parameters/UserId"})
+        if spec is not None:
+            p = _resolve_ref(spec, p)
         if not isinstance(p, dict):
             continue
         location = p.get("in", "query")
@@ -96,20 +135,34 @@ def _extract_parameters(
 
 def _extract_request_body_schema(
     request_body: dict[str, Any] | None,
+    spec: dict[str, Any] | None = None,
 ) -> dict[str, Any] | None:
-    """Extract the JSON schema from requestBody.content.application/json.schema."""
+    """Extract the JSON schema from requestBody.content.application/json.schema.
+
+    Resolves $ref pointers on both the requestBody and schema levels when spec is provided.
+    """
     if not request_body:
+        return None
+    # Resolve $ref on the requestBody itself
+    if spec is not None:
+        request_body = _resolve_ref(spec, request_body)
+    if not isinstance(request_body, dict):
         return None
     content = request_body.get("content", {})
     json_content = content.get("application/json", {})
     schema = json_content.get("schema")
     if schema and isinstance(schema, dict):
-        return schema
+        # Resolve $ref on the schema (e.g. {"$ref": "#/components/schemas/CreateUser"})
+        if spec is not None:
+            schema = _resolve_ref(spec, schema)
+        if isinstance(schema, dict):
+            return schema
     return None
 
 
 def _parse_paths(
     paths: dict[str, Any],
+    spec: dict[str, Any] | None = None,
 ) -> tuple[list[EndpointInfo], dict[str, list[int]]]:
     """
     Parse the OpenAPI 'paths' object into EndpointInfo list + tag_groups.
@@ -135,9 +188,9 @@ def _parse_paths(
             if operation.get("deprecated", False):
                 continue
 
-            parameters = _extract_parameters(operation.get("parameters", []))
+            parameters = _extract_parameters(operation.get("parameters", []), spec)
             request_body_schema = _extract_request_body_schema(
-                operation.get("requestBody")
+                operation.get("requestBody"), spec
             )
             tags: list[str] = operation.get("tags") or []
 
@@ -202,7 +255,7 @@ async def fetch_and_parse_openapi(url: str) -> ParseResponse:
     version: str | None = info.get("version")
 
     paths = spec.get("paths", {})
-    endpoints, tag_groups = _parse_paths(paths)
+    endpoints, tag_groups = _parse_paths(paths, spec)
 
     logger.info(
         "openapi_spec_parsed",

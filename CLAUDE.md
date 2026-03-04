@@ -164,10 +164,10 @@ Scan this before writing any code. Details are in the sections below.
 
 | Alias | Use Case | Backend |
 |-------|----------|---------|
-| `blitz/master` | Master agent, complex reasoning | Ollama/Qwen2.5:72b → Claude Sonnet 4.6 |
-| `blitz/fast` | Simple sub-tasks, classification | Ollama/Llama3.2:3b → gpt-4o-mini |
-| `blitz/coder` | Code generation, debugging | OpenRouter/Kimi k1.5 → Claude Sonnet 4.6 |
-| `blitz/summarizer` | Memory summarization | Ollama/Llama3.2:3b → gpt-4o-mini |
+| `blitz/master` | Master agent, complex reasoning | Ollama/qwen3.5:cloud (~1.4s) |
+| `blitz/fast` | Simple sub-tasks, classification | Ollama/qwen3.5:cloud (~1.4s) |
+| `blitz/coder` | Code generation, debugging | Ollama/qwen3.5:cloud (~1.4s) |
+| `blitz/summarizer` | Memory summarization | Ollama/qwen3.5:cloud (~1.4s) |
 | `blitz/embedder` | Not via LiteLLM — direct bge-m3 FlagModel | Local only |
 
 > **Ollama runs on the host machine, not in Docker.**

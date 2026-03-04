@@ -22,8 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.db import get_db
 from core.models.skill_definition import SkillDefinition
 from core.models.user import UserContext
-from security.deps import get_current_user
-from security.rbac import has_permission
+from security.deps import require_registry_manager
 from skill_export.exporter import build_skill_zip
 
 logger = structlog.get_logger(__name__)
@@ -31,20 +30,10 @@ logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/api/admin/skills", tags=["admin-skills-export"])
 
 
-async def _require_registry_manager(
-    user: UserContext = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db),
-) -> UserContext:
-    """Gate 2 dependency: require registry:manage permission."""
-    if not await has_permission(user, "registry:manage", session):
-        raise HTTPException(status_code=403, detail="Registry manage permission required")
-    return user
-
-
 @router.get("/{skill_id}/export")
 async def export_skill(
     skill_id: UUID,
-    user: UserContext = Depends(_require_registry_manager),
+    user: UserContext = Depends(require_registry_manager),
     session: AsyncSession = Depends(get_db),
 ) -> StreamingResponse:
     """

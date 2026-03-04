@@ -739,8 +739,6 @@ class TestOpenAPIRoutes:
     @pytest.fixture
     def app_client(self, admin_user: dict):
         """Test client with admin auth overridden."""
-        import json
-
         from fastapi import FastAPI
 
         # Build minimal app with just the openapi_bridge router
@@ -749,18 +747,13 @@ class TestOpenAPIRoutes:
         app = FastAPI()
         app.include_router(openapi_router)
 
-        from security.deps import get_current_user
-        from security.rbac import has_permission
+        from security.deps import get_current_user, require_registry_manager
 
         app.dependency_overrides[get_current_user] = lambda: admin_user
+        app.dependency_overrides[require_registry_manager] = lambda: admin_user
 
-        # Mock has_permission to always return True
-        async def mock_has_permission(*args, **kwargs) -> bool:
-            return True
-
-        with patch("openapi_bridge.routes.has_permission", mock_has_permission):
-            with TestClient(app) as client:
-                yield client
+        with TestClient(app) as client:
+            yield client
 
     async def test_parse_endpoint_returns_endpoint_list(self, admin_user: dict) -> None:
         """POST /api/admin/openapi/parse returns parsed endpoint list."""
@@ -774,9 +767,10 @@ class TestOpenAPIRoutes:
         app = FastAPI()
         app.include_router(openapi_router)
 
-        from security.deps import get_current_user
+        from security.deps import get_current_user, require_registry_manager
 
         app.dependency_overrides[get_current_user] = lambda: admin_user
+        app.dependency_overrides[require_registry_manager] = lambda: admin_user
 
         spec_json = json.dumps(SAMPLE_OPENAPI_3_0_JSON)
         mock_response = MagicMock()
@@ -784,19 +778,18 @@ class TestOpenAPIRoutes:
         mock_response.text = spec_json
         mock_response.raise_for_status = MagicMock()
 
-        with patch("openapi_bridge.routes.has_permission", return_value=True):
-            with patch("httpx.AsyncClient") as mock_client_cls:
-                mock_client = AsyncMock()
-                mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-                mock_client.__aexit__ = AsyncMock(return_value=None)
-                mock_client.get = AsyncMock(return_value=mock_response)
-                mock_client_cls.return_value = mock_client
+        with patch("httpx.AsyncClient") as mock_client_cls:
+            mock_client = AsyncMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.get = AsyncMock(return_value=mock_response)
+            mock_client_cls.return_value = mock_client
 
-                with TestClient(app) as client:
-                    response = client.post(
-                        "/api/admin/openapi/parse",
-                        json={"url": "https://api.example.com/openapi.json"},
-                    )
+            with TestClient(app) as client:
+                response = client.post(
+                    "/api/admin/openapi/parse",
+                    json={"url": "https://api.example.com/openapi.json"},
+                )
 
         assert response.status_code == 200
         data = response.json()
@@ -816,45 +809,45 @@ class TestOpenAPIRoutes:
         app = FastAPI()
         app.include_router(openapi_router)
 
-        from security.deps import get_current_user
+        from security.deps import get_current_user, require_registry_manager
 
         app.dependency_overrides[get_current_user] = lambda: admin_user
+        app.dependency_overrides[require_registry_manager] = lambda: admin_user
 
         mock_register_result = RegisterResponse(
             server_id=str(uuid.uuid4()), tools_created=2
         )
 
-        with patch("openapi_bridge.routes.has_permission", return_value=True):
-            with patch(
-                "openapi_bridge.routes.register_openapi_endpoints",
-                AsyncMock(return_value=mock_register_result),
-            ):
-                with patch("openapi_bridge.routes.get_db"):
-                    with TestClient(app) as client:
-                        response = client.post(
-                            "/api/admin/openapi/register",
-                            json={
-                                "server_name": "my_api",
-                                "base_url": "https://api.example.com/v1",
-                                "spec_url": "https://api.example.com/openapi.json",
-                                "selected_endpoints": [
-                                    {
-                                        "operation_id": "get_user",
-                                        "method": "GET",
-                                        "path": "/users/{userId}",
-                                        "summary": "Get user",
-                                        "description": None,
-                                        "tags": ["users"],
-                                        "parameters": [],
-                                        "request_body_schema": None,
-                                        "deprecated": False,
-                                    }
-                                ],
-                                "auth_type": "bearer",
-                                "auth_value": "token",
-                                "auth_header": None,
-                            },
-                        )
+        with patch(
+            "openapi_bridge.routes.register_openapi_endpoints",
+            AsyncMock(return_value=mock_register_result),
+        ):
+            with patch("openapi_bridge.routes.get_db"):
+                with TestClient(app) as client:
+                    response = client.post(
+                        "/api/admin/openapi/register",
+                        json={
+                            "server_name": "my_api",
+                            "base_url": "https://api.example.com/v1",
+                            "spec_url": "https://api.example.com/openapi.json",
+                            "selected_endpoints": [
+                                {
+                                    "operation_id": "get_user",
+                                    "method": "GET",
+                                    "path": "/users/{userId}",
+                                    "summary": "Get user",
+                                    "description": None,
+                                    "tags": ["users"],
+                                    "parameters": [],
+                                    "request_body_schema": None,
+                                    "deprecated": False,
+                                }
+                            ],
+                            "auth_type": "bearer",
+                            "auth_value": "token",
+                            "auth_header": None,
+                        },
+                    )
 
         assert response.status_code == 200
         data = response.json()
@@ -916,12 +909,12 @@ class TestToolsRouteOpenAPIProxy:
         await _refresh_tool_cache(db_session)
 
         # Mock call_openapi_tool to return a success dict
-        with patch("openapi_bridge.proxy.call_openapi_tool") as mock_call:
+        with patch("api.routes.tools.call_openapi_tool") as mock_call:
             mock_call.return_value = {"items": [{"id": 1}]}
 
             # Mock security gates to allow
-            with patch("security.rbac.has_permission", return_value=True), \
-                 patch("security.acl.check_tool_acl", return_value=True):
+            with patch("api.routes.tools.has_permission", return_value=True), \
+                 patch("api.routes.tools.check_tool_acl", return_value=True):
 
                 from api.routes.tools import call_tool, ToolCallRequest
                 from core.models.user import UserContext
@@ -996,9 +989,9 @@ class TestToolsRouteOpenAPIProxy:
             captured_kwargs["api_key"] = api_key
             return {"data": "ok"}
 
-        with patch("openapi_bridge.proxy.call_openapi_tool", side_effect=fake_call):
-            with patch("security.rbac.has_permission", return_value=True), \
-                 patch("security.acl.check_tool_acl", return_value=True):
+        with patch("api.routes.tools.call_openapi_tool", side_effect=fake_call):
+            with patch("api.routes.tools.has_permission", return_value=True), \
+                 patch("api.routes.tools.check_tool_acl", return_value=True):
 
                 from api.routes.tools import call_tool, ToolCallRequest
                 from core.models.user import UserContext
@@ -1061,11 +1054,11 @@ class TestToolsRouteOpenAPIProxy:
         await db_session.commit()
         await _refresh_tool_cache(db_session)
 
-        with patch("openapi_bridge.proxy.call_openapi_tool") as mock_call:
+        with patch("api.routes.tools.call_openapi_tool") as mock_call:
             mock_call.return_value = {"error": True, "status": 404, "detail": "Not found"}
 
-            with patch("security.rbac.has_permission", return_value=True), \
-                 patch("security.acl.check_tool_acl", return_value=True):
+            with patch("api.routes.tools.has_permission", return_value=True), \
+                 patch("api.routes.tools.check_tool_acl", return_value=True):
 
                 from api.routes.tools import call_tool, ToolCallRequest
                 from core.models.user import UserContext

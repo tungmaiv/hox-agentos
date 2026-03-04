@@ -19,14 +19,15 @@ import zipfile
 from datetime import datetime, timezone
 from typing import Any
 
+import structlog
 import yaml
 
-import structlog
+from core.models.skill_definition import SkillDefinition
 
 logger = structlog.get_logger(__name__)
 
 
-def build_skill_zip(skill: Any) -> io.BytesIO:
+def build_skill_zip(skill: SkillDefinition) -> io.BytesIO:
     """
     Build an in-memory zip archive for the given SkillDefinition.
 
@@ -76,7 +77,7 @@ def build_skill_zip(skill: Any) -> io.BytesIO:
     return buf
 
 
-def _build_skill_md(skill: Any) -> str:
+def _build_skill_md(skill: SkillDefinition) -> str:
     """
     Build the SKILL.md content with agentskills.io-compliant YAML frontmatter.
 

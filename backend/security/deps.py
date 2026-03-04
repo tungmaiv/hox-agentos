@@ -30,6 +30,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.db import get_db, set_rls_user_id
 from core.models.user import UserContext
 from security.jwt import validate_token
+from security.rbac import has_permission
 
 _bearer = HTTPBearer(auto_error=False)
 
@@ -91,3 +92,18 @@ async def get_user_db(
     """
     await set_rls_user_id(session, user["user_id"])
     yield session
+
+
+async def require_registry_manager(
+    user: UserContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> UserContext:
+    """Gate 2 dependency: require registry:manage permission.
+
+    Shared by all admin routes that manage the tool/skill/MCP registry.
+    """
+    if not await has_permission(user, "registry:manage", session):
+        raise HTTPException(
+            status_code=403, detail="Registry manage permission required"
+        )
+    return user

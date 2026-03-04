@@ -415,6 +415,18 @@ _agent_enabled_cache: dict[str, bool] = {}
 _agent_enabled_cache_timestamp: float = 0.0
 _AGENT_ENABLED_CACHE_TTL: float = 60.0
 
+_CAPABILITIES_PHRASES: list[str] = [
+    "what can you do",
+    "what are your capabilities",
+    "list capabilities",
+    "show capabilities",
+    "available tools",
+    "available skills",
+    "show me your capabilities",
+    "what capabilities",
+    "list your capabilities",
+]
+
 _FALLBACK_KEYWORD_MAP: dict[str, str] = {
     # email
     "email": "email_agent", "emails": "email_agent", "inbox": "email_agent",
@@ -453,17 +465,6 @@ def _classify_by_keywords(text: str) -> str:
     words = set(re.findall(r"\w+", lowered))
 
     # Phase 14: Capabilities intent detection (checked before agent routing)
-    _CAPABILITIES_PHRASES = [
-        "what can you do",
-        "what are your capabilities",
-        "list capabilities",
-        "show capabilities",
-        "available tools",
-        "available skills",
-        "show me your capabilities",
-        "what capabilities",
-        "list your capabilities",
-    ]
     for phrase in _CAPABILITIES_PHRASES:
         if phrase in lowered:
             return "capabilities"
@@ -746,8 +747,7 @@ async def _capabilities_node(state: BlitzState) -> dict[str, list[BaseMessage]]:
         }
 
     try:
-        from core.db import async_session as _async_session
-        async with _async_session() as session:
+        async with async_session() as session:
             async with session.begin():
                 result = await system_capabilities(user_id=user_id, session=session)
 

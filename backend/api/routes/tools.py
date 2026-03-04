@@ -4,15 +4,26 @@ Enforces all 3 security gates (JWT via Depends, RBAC, Tool ACL).
 Executes tool via mcp.registry.call_mcp_tool() for MCP tools — no LangGraph, no SSE streaming.
 This is the backend counterpart of the useMcpTool frontend hook.
 """
+import time
+import uuid as _uuid
 from typing import Any
 
+import structlog
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from sqlalchemy import select as _select
 from sqlalchemy.ext.asyncio import AsyncSession
-import structlog
 
+from core.logging import get_audit_logger
+from core.models.mcp_server import McpServer
 from core.models.user import UserContext
+from gateway.tool_registry import get_tool, update_tool_last_seen
+from mcp.registry import call_mcp_tool
+from openapi_bridge.proxy import call_openapi_tool
+from security.acl import check_tool_acl
+from security.credentials import decrypt_token
 from security.deps import get_current_user, get_user_db
+from security.rbac import has_permission
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/api/tools", tags=["tools"])
@@ -44,9 +55,6 @@ async def call_tool(
     Only MCP tools are supported in Phase 3. Backend tool direct execution
     is not yet implemented (returns 501).
     """
-    from gateway.tool_registry import get_tool
-    from mcp.registry import call_mcp_tool
-
     tool_def = await get_tool(body.tool, session)
     if tool_def is None:
         raise HTTPException(
@@ -71,24 +79,13 @@ async def call_tool(
     elif tool_def.get("handler_type") == "openapi_proxy":
         # OpenAPI proxy tool: dispatch to external HTTP API via call_openapi_tool()
         # Gates 2+3 applied here (same pattern as call_mcp_tool does internally for MCP tools)
-        import time as _time
-        import uuid as _uuid
-
-        from core.logging import get_audit_logger
-        from core.models.mcp_server import McpServer
-        from openapi_bridge.proxy import call_openapi_tool
-        from security.acl import check_tool_acl
-        from security.credentials import decrypt_token
-        from security.rbac import has_permission
-        from sqlalchemy import select as _select
-
         audit_logger = get_audit_logger()
-        start_ms = int(_time.monotonic() * 1000)
+        start_ms = int(time.monotonic() * 1000)
 
         # Gate 2: RBAC — check each required permission
         for permission in tool_def.get("required_permissions", []):
             if not await has_permission(user, permission, session):
-                elapsed = int(_time.monotonic() * 1000) - start_ms
+                elapsed = int(time.monotonic() * 1000) - start_ms
                 audit_logger.info(
                     "tool_call",
                     tool=body.tool,
@@ -103,7 +100,7 @@ async def call_tool(
 
         # Gate 3: ACL — check tool-level ACL for this user
         allowed = await check_tool_acl(user["user_id"], body.tool, session)
-        elapsed = int(_time.monotonic() * 1000) - start_ms
+        elapsed = int(time.monotonic() * 1000) - start_ms
         audit_logger.info(
             "tool_call",
             tool=body.tool,
@@ -141,7 +138,6 @@ async def call_tool(
 
         # Update last_seen_at (best-effort — don't fail the request on registry error)
         try:
-            from gateway.tool_registry import update_tool_last_seen
             await update_tool_last_seen(body.tool, session)
         except Exception:
             pass

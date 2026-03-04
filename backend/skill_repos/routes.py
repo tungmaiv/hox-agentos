@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.db import get_db
 from core.models.user import UserContext
-from security.deps import get_current_user
+from security.deps import get_current_user, require_registry_manager
 from security.rbac import has_permission
 from skill_repos.schemas import (
     ImportRequest,
@@ -46,21 +46,9 @@ logger = structlog.get_logger(__name__)
 admin_router = APIRouter(prefix="/api/admin/skill-repos", tags=["admin-skill-repos"])
 
 
-async def _require_registry_manager(
-    user: UserContext = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db),
-) -> UserContext:
-    """Gate 2 dependency: require registry:manage permission."""
-    if not await has_permission(user, "registry:manage", session):
-        raise HTTPException(
-            status_code=403, detail="Registry manage permission required"
-        )
-    return user
-
-
 @admin_router.get("", response_model=list[RepoInfo])
 async def list_repos_route(
-    user: UserContext = Depends(_require_registry_manager),
+    user: UserContext = Depends(require_registry_manager),
     session: AsyncSession = Depends(get_db),
 ) -> list[RepoInfo]:
     """List all registered external skill repositories."""
@@ -72,7 +60,7 @@ async def list_repos_route(
 @admin_router.post("", response_model=RepoInfo, status_code=201)
 async def add_repo_route(
     body: RepoCreate,
-    user: UserContext = Depends(_require_registry_manager),
+    user: UserContext = Depends(require_registry_manager),
     session: AsyncSession = Depends(get_db),
 ) -> RepoInfo:
     """Register a new external skill repository by URL.
@@ -96,7 +84,7 @@ async def add_repo_route(
 @admin_router.delete("/{repo_id}", status_code=204)
 async def remove_repo_route(
     repo_id: UUID,
-    user: UserContext = Depends(_require_registry_manager),
+    user: UserContext = Depends(require_registry_manager),
     session: AsyncSession = Depends(get_db),
 ) -> None:
     """Remove a registered repository.
@@ -115,7 +103,7 @@ async def remove_repo_route(
 @admin_router.post("/{repo_id}/sync", response_model=RepoInfo)
 async def sync_repo_route(
     repo_id: UUID,
-    user: UserContext = Depends(_require_registry_manager),
+    user: UserContext = Depends(require_registry_manager),
     session: AsyncSession = Depends(get_db),
 ) -> RepoInfo:
     """Re-sync a repository by re-fetching its agentskills-index.json."""
