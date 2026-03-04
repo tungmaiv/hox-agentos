@@ -68,8 +68,92 @@ async def call_tool(
             success=result.get("success", True),
             error=result.get("error"),
         )
+    elif tool_def.get("handler_type") == "openapi_proxy":
+        # OpenAPI proxy tool: dispatch to external HTTP API via call_openapi_tool()
+        # Gates 2+3 applied here (same pattern as call_mcp_tool does internally for MCP tools)
+        import time as _time
+        import uuid as _uuid
+
+        from core.logging import get_audit_logger
+        from core.models.mcp_server import McpServer
+        from openapi_bridge.proxy import call_openapi_tool
+        from security.acl import check_tool_acl
+        from security.credentials import decrypt_token
+        from security.rbac import has_permission
+        from sqlalchemy import select as _select
+
+        audit_logger = get_audit_logger()
+        start_ms = int(_time.monotonic() * 1000)
+
+        # Gate 2: RBAC — check each required permission
+        for permission in tool_def.get("required_permissions", []):
+            if not await has_permission(user, permission, session):
+                elapsed = int(_time.monotonic() * 1000) - start_ms
+                audit_logger.info(
+                    "tool_call",
+                    tool=body.tool,
+                    user_id=str(user["user_id"]),
+                    allowed=False,
+                    duration_ms=elapsed,
+                    gate="rbac",
+                )
+                raise HTTPException(
+                    status_code=403, detail=f"Missing permission: {permission}"
+                )
+
+        # Gate 3: ACL — check tool-level ACL for this user
+        allowed = await check_tool_acl(user["user_id"], body.tool, session)
+        elapsed = int(_time.monotonic() * 1000) - start_ms
+        audit_logger.info(
+            "tool_call",
+            tool=body.tool,
+            user_id=str(user["user_id"]),
+            allowed=allowed,
+            duration_ms=elapsed,
+            gate="acl",
+        )
+        if not allowed:
+            raise HTTPException(status_code=403, detail="Tool call denied by ACL")
+
+        # Load and decrypt API key from the associated McpServer
+        config_json = tool_def.get("config_json") or {}
+        api_key: str | None = None
+
+        mcp_server_id = tool_def.get("mcp_server_id")
+        if mcp_server_id is not None:
+            server_result = await session.execute(
+                _select(McpServer).where(
+                    McpServer.id == _uuid.UUID(mcp_server_id)
+                )
+            )
+            server_row = server_result.scalar_one_or_none()
+            if server_row is not None and server_row.auth_token:
+                raw = server_row.auth_token
+                iv = raw[:12]
+                ciphertext = raw[12:]
+                api_key = decrypt_token(ciphertext, iv)
+
+        result = await call_openapi_tool(
+            tool_config=config_json,
+            arguments=body.params,
+            api_key=api_key,
+        )
+
+        # Update last_seen_at (best-effort — don't fail the request on registry error)
+        try:
+            from gateway.tool_registry import update_tool_last_seen
+            await update_tool_last_seen(body.tool, session)
+        except Exception:
+            pass
+
+        is_error = result.get("error") is True
+        return ToolCallResponse(
+            result=result if not is_error else None,
+            success=not is_error,
+            error=result.get("detail") if is_error else None,
+        )
     else:
-        # Backend tool direct execution — not yet implemented in Phase 3
+        # Backend tool direct execution — not yet implemented for other handler types
         raise HTTPException(
             status_code=501,
             detail="Backend tool direct execution not yet implemented",
