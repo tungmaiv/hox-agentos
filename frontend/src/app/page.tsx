@@ -1,11 +1,8 @@
-import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 
-export default async function Home() {
-  const session = await auth();
-  if (session) {
-    redirect("/chat");
-  } else {
-    redirect("/login");
-  }
+// Middleware handles unauthenticated users: they are redirected to /login
+// before this page renders. Authenticated users are sent directly to /chat.
+export default function Home() {
+  redirect("/chat");
 }
+

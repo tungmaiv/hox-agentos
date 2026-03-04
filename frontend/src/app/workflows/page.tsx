@@ -7,7 +7,6 @@
  * Route: /workflows
  */
 import { auth } from "@/auth";
-import { redirect } from "next/navigation";
 import Link from "next/link";
 import { PendingBadge } from "./_pending-badge";
 import { TemplateCard } from "@/components/canvas/TemplateCard";
@@ -45,18 +44,20 @@ async function fetchJson<T>(
 }
 
 export default async function WorkflowsPage() {
+  // Middleware guarantees only authenticated users reach this page.
   const session = await auth();
-  if (!session) redirect("/login");
 
   const accessToken = (session as unknown as Record<string, unknown>)
     ?.accessToken as string | undefined;
-  if (!accessToken) redirect("/login");
 
+  // Middleware guarantees accessToken exists; fallback to empty string for TypeScript.
+  // If token is missing, backend returns 401 and fetchJson returns the fallback [].
+  const token = accessToken ?? "";
   const [workflows, templates] = await Promise.all([
-    fetchJson<WorkflowListItem[]>(`${BACKEND}/api/workflows`, accessToken, []),
+    fetchJson<WorkflowListItem[]>(`${BACKEND}/api/workflows`, token, []),
     fetchJson<WorkflowTemplate[]>(
       `${BACKEND}/api/workflows/templates`,
-      accessToken,
+      token,
       []
     ),
   ]);

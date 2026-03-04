@@ -1,6 +1,5 @@
 // frontend/src/app/chat/page.tsx
 import { auth } from "@/auth";
-import { redirect } from "next/navigation";
 import { ChatLayout } from "@/components/chat/chat-layout";
 import type { Conversation } from "@/components/chat/chat-layout";
 
@@ -19,8 +18,8 @@ async function fetchConversations(accessToken: string): Promise<Conversation[]> 
 }
 
 export default async function ChatPage() {
+  // Middleware guarantees only authenticated users reach this page.
   const session = await auth();
-  if (!session) redirect("/login");
 
   const accessToken = (session as unknown as Record<string, unknown>)
     .accessToken as string | undefined;
@@ -31,7 +30,7 @@ export default async function ChatPage() {
   return (
     <ChatLayout
       initialConversations={conversations}
-      userEmail={session.user?.email ?? ""}
+      userEmail={session?.user?.email ?? ""}
     />
   );
 }

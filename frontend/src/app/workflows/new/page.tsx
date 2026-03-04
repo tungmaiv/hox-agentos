@@ -15,12 +15,14 @@ import { redirect } from "next/navigation";
 const BACKEND = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export default async function NewWorkflowPage() {
+  // Middleware guarantees only authenticated users reach this page.
   const session = await auth();
-  if (!session) redirect("/login");
 
   const accessToken = (session as unknown as Record<string, unknown>)
     ?.accessToken as string | undefined;
-  if (!accessToken) redirect("/login");
+
+  // If session exists but token is missing, redirect back gracefully
+  if (!accessToken) redirect("/workflows");
 
   const res = await fetch(`${BACKEND}/api/workflows`, {
     method: "POST",

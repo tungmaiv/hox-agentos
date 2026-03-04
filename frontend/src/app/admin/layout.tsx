@@ -29,26 +29,10 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // Middleware guarantees only authenticated users reach this layout.
+  // The session will always be non-null here; null-safe access is kept
+  // for TypeScript satisfaction only.
   const session = await auth();
-
-  if (!session) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="text-center p-8">
-          <h1 className="text-2xl font-semibold text-gray-900 mb-2">
-            Authentication Required
-          </h1>
-          <p className="text-gray-500">Please sign in to access the admin dashboard.</p>
-          <Link
-            href="/login"
-            className="mt-4 inline-block px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
-          >
-            Sign In
-          </Link>
-        </div>
-      </div>
-    );
-  }
 
   // Check for admin/developer roles in the session token.
   // Keycloak realm roles are stored in the JWT; next-auth exposes them
@@ -113,7 +97,7 @@ export default async function AdminLayout({
             </h1>
           </div>
           <div className="text-sm text-gray-500">
-            {session.user?.email ?? "Admin"}
+            {session?.user?.email ?? "Admin"}
           </div>
         </div>
       </header>
