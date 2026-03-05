@@ -100,6 +100,20 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             "sandbox_cleanup_startup_failed", error=str(exc)
         )
 
+    # Validate embedding sidecar dimension at startup.
+    # Non-fatal: backend still starts when sidecar isn't running (fallback to BGE_M3Provider).
+    try:
+        from memory.embeddings import SidecarEmbeddingProvider
+
+        sidecar = SidecarEmbeddingProvider()
+        await sidecar.validate_dimension()
+    except Exception as exc:
+        import structlog as _structlog
+
+        _structlog.get_logger(__name__).warning(
+            "embedding_sidecar_startup_check_failed", error=str(exc)
+        )
+
     yield
     # Shutdown cleanup (nothing needed for MVP)
 
