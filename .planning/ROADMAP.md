@@ -100,12 +100,12 @@ Plans:
   3. User can view their profile at `/profile` showing name, email, auth provider (SSO or Local), roles, and current session expiry — local users can change their password from this page
   4. User can set LLM thinking mode (on/off) and response style (concise/detailed/conversational) from the profile page — preferences are reflected in the next agent conversation
   5. The `/login` page and API routes are excluded from the navigation rail layout
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 16-01: TBD
-- [ ] 16-02: TBD
-- [ ] 16-03: TBD
+- [ ] 16-01-PLAN.md — Backend user_preferences model, migration 020, and GET/PUT API endpoints
+- [ ] 16-02-PLAN.md — Navigation rail, mobile tab bar, and (authenticated) route group restructuring
+- [ ] 16-03-PLAN.md — Profile page with account info, password change, custom instructions, LLM preferences, and agent prompt injection
 
 ### Phase 17: Performance & Embedding Sidecar
 **Goal**: Memory search and agent invocations are fast by default — embedding runs in a dedicated sidecar, critical paths are instrumented, and known bottlenecks are eliminated
@@ -240,8 +240,8 @@ Plans:
 | 12. Unified Admin Desk | v1.2 | 2/2 | ✅ Complete | 2026-03-03 |
 | 13. Local Auth | v1.2 | 2/2 | ✅ Complete | 2026-03-03 |
 | 14. Ecosystem Capabilities | v1.2 | 5/5 | ✅ Complete | 2026-03-04 |
-| 15. Session & Auth Hardening | 3/3 | Complete   | 2026-03-04 | - |
-| 16. Navigation & UX | v1.3 | 0/TBD | Not started | - |
+| 15. Session & Auth Hardening | v1.3 | 3/3 | ✅ Complete | 2026-03-05 |
+| 16. Navigation & UX | v1.3 | 0/3 | Not started | - |
 | 17. Performance & Embedding Sidecar | v1.3 | 0/TBD | Not started | - |
 | 18. Identity Configuration | v1.3 | 0/TBD | Not started | - |
 | 19. Skill Platform A — Standards | v1.3 | 0/TBD | Not started | - |
