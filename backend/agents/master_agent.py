@@ -47,7 +47,7 @@ from core.db import async_session
 from core.models.memory import ConversationTurn
 from memory.embeddings import BGE_M3Provider
 from memory.long_term import search_facts
-from memory.medium_term import load_recent_episodes
+from memory.medium_term import get_episode_threshold_cached, load_recent_episodes
 from memory.short_term import load_recent_turns, save_turn
 from scheduler.tasks.embedding import embed_and_store, summarize_episode
 
@@ -301,31 +301,6 @@ async def _master_node(state: BlitzState) -> dict[str, list[BaseMessage]]:
     return {"messages": [response]}
 
 
-async def _get_episode_threshold() -> int:
-    """
-    Read episode summarization threshold from system_config DB.
-
-    Falls back to settings.episode_turn_threshold (default 10) if the key is not set
-    or DB read fails. This allows runtime configuration via admin API without a redeploy.
-    """
-    from core.models.system_config import SystemConfig
-
-    try:
-        async with async_session() as s:
-            async with s.begin():
-                result = await s.execute(
-                    select(SystemConfig).where(
-                        SystemConfig.key == "memory.episode_turn_threshold"
-                    )
-                )
-                row = result.scalar_one_or_none()
-                if row is not None:
-                    return int(row.value)
-    except Exception:
-        pass
-    return settings.episode_turn_threshold  # fallback to 10
-
-
 async def _save_memory_node(state: BlitzState) -> dict:
     """
     Persist only the newly-added turns from this graph invocation.
@@ -423,9 +398,10 @@ async def _save_memory_node(state: BlitzState) -> dict:
             embed_and_store.delay(str(msg.content), str(user_id), "fact")
 
     # Trigger episode summarization at configurable threshold.
-    # Read threshold from system_config DB first; fall back to settings default.
+    # Read threshold via cached helper — avoids a DB query on every save_memory call.
     total_after = existing_count + len(new_messages)
-    threshold = await _get_episode_threshold()
+    async with async_session() as threshold_session:
+        threshold = await get_episode_threshold_cached(user_id, threshold_session)
     if total_after > 0 and total_after % threshold == 0:
         summarize_episode.delay(str(conversation_id), str(user_id))
         logger.info(

@@ -12,6 +12,7 @@ import uuid
 from uuid import UUID
 
 import structlog
+from cachetools import TTLCache
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 from sqlalchemy import select
@@ -27,6 +28,9 @@ router = APIRouter(prefix="/user/instructions", tags=["user"])
 
 MAX_INSTRUCTIONS_LENGTH = 4000  # ~1000 tokens
 
+# User instructions cache — 60s TTL, max 200 entries (one per user).
+_instructions_cache: TTLCache = TTLCache(maxsize=200, ttl=60)
+
 
 class UserInstructionsRequest(BaseModel):
     instructions: str = Field(
@@ -41,21 +45,38 @@ class UserInstructionsResponse(BaseModel):
     updated_at: str  # ISO timestamp
 
 
-async def get_user_instructions(
+async def get_user_instructions_db(
     user_id: UUID,
     session: AsyncSession,
 ) -> str:
-    """
-    Retrieve custom instructions for a user_id (internal helper for agents).
-
-    Returns empty string if no instructions set.
-    Call this from master_agent to inject into system prompt.
-    """
+    """Raw DB fetch of custom instructions — no caching."""
     result = await session.execute(
         select(UserInstructions).where(UserInstructions.user_id == user_id)
     )
     row = result.scalar_one_or_none()
     return row.instructions if row else ""
+
+
+async def get_user_instructions_cached(
+    user_id: UUID,
+    session: AsyncSession,
+) -> str:
+    """User instructions with 60s TTL cache keyed by user_id."""
+    if user_id in _instructions_cache:
+        return _instructions_cache[user_id]
+    value = await get_user_instructions_db(user_id, session)
+    _instructions_cache[user_id] = value
+    return value
+
+
+# Keep backward-compatible alias used by master_agent.py
+async def get_user_instructions(user_id: UUID, session: AsyncSession) -> str:
+    return await get_user_instructions_cached(user_id, session)
+
+
+def clear_instructions_cache() -> None:
+    """Clear instructions cache. Used in tests."""
+    _instructions_cache.clear()
 
 
 @router.get("/", response_model=UserInstructionsResponse)
@@ -105,6 +126,8 @@ async def update_instructions(
         await session.commit()
         await session.refresh(row)
 
+    # Invalidate cache so the next read picks up the updated instructions.
+    _instructions_cache.pop(user["user_id"], None)
     logger.info(
         "user_instructions_updated",
         user_id=str(user["user_id"]),

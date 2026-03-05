@@ -179,7 +179,7 @@ async def test_save_memory_node_dispatches_embed_task_for_ai_turns():
         patch("agents.master_agent.async_session") as mock_session_factory,
         patch("agents.master_agent.current_user_ctx") as mock_ctx,
         patch("agents.master_agent.current_conversation_id_ctx") as mock_conv_ctx,
-        patch("agents.master_agent._get_episode_threshold", new_callable=AsyncMock) as mock_threshold,
+        patch("agents.master_agent.get_episode_threshold_cached", new_callable=AsyncMock) as mock_threshold,
     ):
         # Simulate: 0 existing turns in DB → both messages are new
         mock_count_result = MagicMock()
@@ -242,7 +242,7 @@ async def test_save_memory_node_triggers_summarize_at_threshold():
         patch("agents.master_agent.async_session") as mock_session_factory,
         patch("agents.master_agent.current_user_ctx") as mock_ctx,
         patch("agents.master_agent.current_conversation_id_ctx") as mock_conv_ctx,
-        patch("agents.master_agent._get_episode_threshold", new_callable=AsyncMock) as mock_threshold,
+        patch("agents.master_agent.get_episode_threshold_cached", new_callable=AsyncMock) as mock_threshold,
     ):
         # 9 existing turns in DB → only the 10th (index 9) is new
         mock_count_result = MagicMock()
@@ -300,7 +300,7 @@ async def test_save_memory_node_no_summarize_below_threshold():
         patch("agents.master_agent.async_session") as mock_session_factory,
         patch("agents.master_agent.current_user_ctx") as mock_ctx,
         patch("agents.master_agent.current_conversation_id_ctx") as mock_conv_ctx,
-        patch("agents.master_agent._get_episode_threshold", new_callable=AsyncMock) as mock_threshold,
+        patch("agents.master_agent.get_episode_threshold_cached", new_callable=AsyncMock) as mock_threshold,
     ):
         # 3 existing turns in DB → messages[3:] = 2 new → total = 5 (below threshold 10)
         mock_count_result = MagicMock()
@@ -335,7 +335,7 @@ async def test_save_memory_node_no_summarize_below_threshold():
 
 @pytest.mark.asyncio
 async def test_get_episode_threshold_returns_db_value():
-    """_get_episode_threshold() reads from system_config DB key when available."""
+    """get_episode_threshold_db() reads from system_config DB key when available."""
     from core.models.system_config import SystemConfig
 
     mock_row = MagicMock(spec=SystemConfig)
@@ -344,52 +344,30 @@ async def test_get_episode_threshold_returns_db_value():
     mock_result = MagicMock()
     mock_result.scalar_one_or_none.return_value = mock_row
 
-    mock_begin_ctx = AsyncMock()
-    mock_begin_ctx.__aenter__ = AsyncMock(return_value=None)
-    mock_begin_ctx.__aexit__ = AsyncMock(return_value=None)
-
     mock_session = AsyncMock()
     mock_session.execute = AsyncMock(return_value=mock_result)
-    mock_session.begin = MagicMock(return_value=mock_begin_ctx)
 
-    mock_session_ctx = AsyncMock()
-    mock_session_ctx.__aenter__ = AsyncMock(return_value=mock_session)
-    mock_session_ctx.__aexit__ = AsyncMock(return_value=None)
+    from memory.medium_term import get_episode_threshold_db
+    import uuid as _uuid
 
-    with patch("agents.master_agent.async_session") as mock_sf:
-        mock_sf.return_value = mock_session_ctx
-
-        from agents.master_agent import _get_episode_threshold
-
-        threshold = await _get_episode_threshold()
+    threshold = await get_episode_threshold_db(_uuid.uuid4(), mock_session)
 
     assert threshold == 20
 
 
 @pytest.mark.asyncio
 async def test_get_episode_threshold_falls_back_to_settings():
-    """_get_episode_threshold() uses settings.episode_turn_threshold when DB key is absent."""
+    """get_episode_threshold_db() uses settings.episode_turn_threshold when DB key is absent."""
     mock_result = MagicMock()
     mock_result.scalar_one_or_none.return_value = None  # key not in system_config
 
-    mock_begin_ctx = AsyncMock()
-    mock_begin_ctx.__aenter__ = AsyncMock(return_value=None)
-    mock_begin_ctx.__aexit__ = AsyncMock(return_value=None)
-
     mock_session = AsyncMock()
     mock_session.execute = AsyncMock(return_value=mock_result)
-    mock_session.begin = MagicMock(return_value=mock_begin_ctx)
 
-    mock_session_ctx = AsyncMock()
-    mock_session_ctx.__aenter__ = AsyncMock(return_value=mock_session)
-    mock_session_ctx.__aexit__ = AsyncMock(return_value=None)
+    from memory.medium_term import get_episode_threshold_db
+    import uuid as _uuid
 
-    with patch("agents.master_agent.async_session") as mock_sf:
-        mock_sf.return_value = mock_session_ctx
-
-        from agents.master_agent import _get_episode_threshold
-
-        threshold = await _get_episode_threshold()
+    threshold = await get_episode_threshold_db(_uuid.uuid4(), mock_session)
 
     # Default from settings.episode_turn_threshold
     assert threshold == 10
