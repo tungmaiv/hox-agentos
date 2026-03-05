@@ -8,19 +8,30 @@ ARCHITECTURE:
   - Multilingual: Vietnamese + English natively
   - CPU-bound: ALWAYS called from Celery workers, NEVER from FastAPI request handlers.
   - Model loaded lazily on first call, cached at class level (one instance per worker process).
+- SidecarEmbeddingProvider: Calls infinity-emb HTTP sidecar (POST /embeddings).
+  - Primary path for FastAPI request handlers — non-blocking HTTP call.
+  - Falls back to BGE_M3Provider if sidecar is unreachable.
 
 USAGE:
     from memory.embeddings import BGE_M3Provider
     provider = BGE_M3Provider()
     vectors = await provider.embed(["User prefers dark mode", "Người dùng thích chế độ tối"])
     # vectors: list of 1024-float lists
+
+    from memory.embeddings import SidecarEmbeddingProvider
+    provider = SidecarEmbeddingProvider()
+    vectors = await provider.embed(["hello world"])
+    # vectors: list of 1024-float lists (from sidecar or fallback)
 """
 
 import asyncio
 import threading
 from typing import Protocol, runtime_checkable
 
+import httpx
 import structlog
+
+from core.config import settings
 
 logger = structlog.get_logger(__name__)
 
@@ -92,3 +103,70 @@ class BGE_M3Provider:
         )
         logger.debug("embeddings_generated", count=len(texts))
         return result
+
+
+class SidecarEmbeddingProvider:
+    """
+    Embedding provider backed by an infinity-emb HTTP sidecar.
+
+    Primary path: POST {sidecar_url}/embeddings (OpenAI-compat format).
+    Fallback path: BGE_M3Provider (Celery worker, in-process) if sidecar unreachable.
+
+    Dimension: 1024 (bge-m3). Validated on startup via validate_dimension().
+    """
+
+    dimension: int = 1024
+
+    def __init__(self, sidecar_url: str | None = None) -> None:
+        self._sidecar_url = sidecar_url or settings.embedding_sidecar_url
+        self._model_name = settings.embedding_model_path
+
+    async def embed(self, texts: list[str]) -> list[list[float]]:
+        """
+        Embed texts via sidecar HTTP. Falls back to BGE_M3Provider on ConnectError.
+        """
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(
+                    f"{self._sidecar_url}/embeddings",
+                    json={"input": texts, "model": self._model_name},
+                    timeout=30.0,
+                )
+                resp.raise_for_status()
+                data = resp.json()
+                # OpenAI-compat: {"data": [{"embedding": [...], "index": N}, ...]}
+                sorted_items = sorted(data["data"], key=lambda x: x["index"])
+                result: list[list[float]] = [item["embedding"] for item in sorted_items]
+                logger.debug("sidecar_embeddings_generated", count=len(texts))
+                return result
+        except httpx.ConnectError:
+            logger.warning(
+                "embedding_sidecar_unreachable",
+                url=self._sidecar_url,
+                fallback="BGE_M3Provider",
+            )
+            fallback = BGE_M3Provider()
+            return await fallback.embed(texts)
+
+    async def validate_dimension(self) -> None:
+        """
+        Check sidecar /health and verify dimension == 1024.
+
+        Raises RuntimeError on mismatch. Called once at backend startup.
+        """
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(f"{self._sidecar_url}/health", timeout=10.0)
+            resp.raise_for_status()
+            data = resp.json()
+            reported_dim = data.get("dimensions") or data.get("dim")
+            if reported_dim is not None and reported_dim != self.dimension:
+                raise RuntimeError(
+                    f"Embedding sidecar dimension mismatch: "
+                    f"expected {self.dimension}, got {reported_dim}. "
+                    f"Ensure EMBEDDING_MODEL=BAAI/bge-m3 in sidecar config."
+                )
+            logger.info(
+                "embedding_sidecar_validated",
+                url=self._sidecar_url,
+                dimension=self.dimension,
+            )
