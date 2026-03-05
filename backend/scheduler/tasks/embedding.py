@@ -111,6 +111,74 @@ def embed_and_store(
         raise self.retry(exc=exc)
 
 
+@celery_app.task(name="blitz.reindex_memory")
+def reindex_memory_task() -> None:
+    """
+    Re-embed all memory facts and episodes from source text.
+
+    WARNING: Overwrites all embedding vectors before re-embedding.
+    Run only when called explicitly via POST /api/admin/memory/reindex with confirm=true.
+    """
+
+    async def _run() -> None:
+        from core.db import async_session
+        from core.models.memory_long_term import MemoryEpisode, MemoryFact
+        from memory.embeddings import SidecarEmbeddingProvider
+        from sqlalchemy import select, update
+
+        provider = SidecarEmbeddingProvider()
+        logger.info("memory_reindex_started")
+
+        async with async_session() as session:
+            # Fetch all facts with source text
+            result = await session.execute(
+                select(MemoryFact.id, MemoryFact.content)
+            )
+            facts = result.all()
+
+        batch_size = 32
+        async with async_session() as session:
+            for i in range(0, len(facts), batch_size):
+                batch = facts[i : i + batch_size]
+                texts = [row.content for row in batch]
+                vectors = await provider.embed(texts)
+                async with session.begin():
+                    for row, vector in zip(batch, vectors, strict=True):
+                        await session.execute(
+                            update(MemoryFact)
+                            .where(MemoryFact.id == row.id)
+                            .values(embedding=vector)
+                        )
+
+        async with async_session() as session:
+            # Fetch all episodes
+            result = await session.execute(
+                select(MemoryEpisode.id, MemoryEpisode.summary)
+            )
+            episodes = result.all()
+
+        async with async_session() as session:
+            for i in range(0, len(episodes), batch_size):
+                batch = episodes[i : i + batch_size]
+                texts = [row.summary for row in batch]
+                vectors = await provider.embed(texts)
+                async with session.begin():
+                    for row, vector in zip(batch, vectors, strict=True):
+                        await session.execute(
+                            update(MemoryEpisode)
+                            .where(MemoryEpisode.id == row.id)
+                            .values(embedding=vector)
+                        )
+
+        logger.info(
+            "memory_reindex_complete",
+            facts=len(facts),
+            episodes=len(episodes),
+        )
+
+    asyncio.run(_run())
+
+
 @celery_app.task(
     queue="default",
     bind=True,
