@@ -22,4 +22,5 @@ from core.models.tool_acl import ToolAcl  # noqa: F401
 from core.models.tool_definition import ToolDefinition  # noqa: F401
 from core.models.user_artifact_permission import UserArtifactPermission  # noqa: F401
 from core.models.user_instructions import UserInstructions  # noqa: F401
+from core.models.user_preferences import UserPreferences  # noqa: F401
 from core.models.workflow import Workflow, WorkflowRun, WorkflowTrigger  # noqa: F401
