@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Production Readiness & Skill Platform
 status: unknown
-last_updated: "2026-03-05T13:01:51.344Z"
+last_updated: "2026-03-05T13:03:05.900Z"
 progress:
   total_phases: 3
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 13
-  completed_plans: 12
+  completed_plans: 13
 ---
 
 # Project State
@@ -24,8 +24,8 @@ See: .planning/PROJECT.md (updated 2026-03-05)
 
 Phase: 17 of 23 (Performance & Embedding Sidecar) — COMPLETE
 Plan: 07 of 07 complete
-Status: Plan 17-04 done — Admin Memory Reindex UI (PERF-05 frontend): Next.js proxy route, Memory tab in admin nav, AdminMemoryPage with confirmation dialog, 743 tests passing
-Last activity: 2026-03-05 - Completed 17-04: Admin Memory Reindex UI, PERF-05 frontend satisfied. Phase 17 complete.
+Status: Plan 17-07 done — JWKS asyncio.Lock thundering herd prevention (PERF-12) + useSkills() hoisted above CopilotKit key boundary (PERF-13): 743 tests passing, frontend build clean
+Last activity: 2026-03-05 - Completed 17-07: PERF-12 and PERF-13 satisfied. Phase 17 fully complete.
 
 Progress: [#######░░░] ~50%
 
@@ -84,6 +84,8 @@ v1.3 roadmap decisions:
 - [Phase 17]: [17-06]: get_session() asynccontextmanager yields contextvar session when set, falls through to async_session() otherwise — single session per HTTP request via RequestSessionMiddleware
 - [Phase 17]: [17-06]: Celery scheduler tasks explicitly excluded from migration — they manage own session lifecycle outside HTTP request context
 - [Phase 17]: [17-04]: Admin Memory page uses proxy route pattern matching copilotkit/route.ts — auth() from @/auth, accessToken via Record<string,unknown> cast, BACKEND_URL env precedence
+- [Phase 17]: [17-07]: asyncio.Lock at module level — matches module-level cache globals it protects; double-checked locking avoids contention on warm cache fast path
+- [Phase 17]: [17-07]: useSkills() hoisted to ChatPanel (not layout) — ChatPanel is the correct boundary owning the CopilotKit key= prop and null conversationId early-return
 
 ### Pending Todos
 
@@ -107,6 +109,7 @@ v1.3 roadmap decisions:
 | Phase 17 P05 | 5 | 5 tasks | 6 files |
 | Phase 17 P06 | 6 | 5 tasks | 15 files |
 | Phase 17 P04 | 3 | 3 tasks | 3 files |
+| Phase 17 P07 | 3 | 4 tasks | 3 files |
 
 ## Session Continuity
 

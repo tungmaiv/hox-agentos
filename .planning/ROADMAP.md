@@ -63,7 +63,7 @@ Full phase details: `.planning/milestones/v1.2-ROADMAP.md`
 
 - [x] **Phase 15: Session & Auth Hardening** — Protected routes, secure cookies, session lifecycle, CVE mitigation (completed 2026-03-05)
 - [x] **Phase 16: Navigation & User Experience** — Nav rail, profile page, user preferences, settings reorg (completed 2026-03-05)
-- [ ] **Phase 17: Performance & Embedding Sidecar** — Embedding sidecar extraction, instrumentation, bottleneck fixes
+- [x] **Phase 17: Performance & Embedding Sidecar** — Embedding sidecar extraction, instrumentation, bottleneck fixes (completed 2026-03-05)
 - [ ] **Phase 18: Identity Configuration** — Keycloak-optional boot, admin runtime config, connection testing
 - [ ] **Phase 19: Skill Platform A — Standards Compliance** — Agent Skills spec compliance, schema extension, import/export
 - [ ] **Phase 20: Skill Platform B — Discovery & Catalog** — FTS catalog, tool search, external registry browse, one-click import
@@ -243,7 +243,7 @@ Plans:
 | 14. Ecosystem Capabilities | v1.2 | 5/5 | ✅ Complete | 2026-03-04 |
 | 15. Session & Auth Hardening | v1.3 | 3/3 | ✅ Complete | 2026-03-05 |
 | 16. Navigation & UX | 3/3 | Complete    | 2026-03-05 | - |
-| 17. Performance & Embedding Sidecar | 6/7 | In Progress|  | - |
+| 17. Performance & Embedding Sidecar | 7/7 | Complete   | 2026-03-05 | - |
 | 18. Identity Configuration | v1.3 | 0/TBD | Not started | - |
 | 19. Skill Platform A — Standards | v1.3 | 0/TBD | Not started | - |
 | 20. Skill Platform B — Catalog | v1.3 | 0/TBD | Not started | - |

@@ -43,8 +43,8 @@
 - [x] **PERF-09**: Tool ACL query results cached with 60s TTL per user
 - [x] **PERF-10**: Episode threshold check cached with 60s TTL
 - [x] **PERF-11**: User instructions cached per-user with LRU and 60s TTL
-- [ ] **PERF-12**: JWKS refresh uses `asyncio.Lock` to prevent thundering herd on concurrent requests
-- [ ] **PERF-13**: `useSkills()` hook hoisted above CopilotKit key boundary to prevent re-mount on every agent response
+- [x] **PERF-12**: JWKS refresh uses `asyncio.Lock` to prevent thundering herd on concurrent requests
+- [x] **PERF-13**: `useSkills()` hook hoisted above CopilotKit key boundary to prevent re-mount on every agent response
 
 ## Identity Configuration (Keycloak Runtime)
 
@@ -159,8 +159,8 @@
 | PERF-09 | Phase 17 | Complete |
 | PERF-10 | Phase 17 | Complete |
 | PERF-11 | Phase 17 | Complete |
-| PERF-12 | Phase 17 | pending |
-| PERF-13 | Phase 17 | pending |
+| PERF-12 | Phase 17 | Complete |
+| PERF-13 | Phase 17 | Complete |
 | IDCFG-01 | Phase 18 | pending |
 | IDCFG-02 | Phase 18 | pending |
 | IDCFG-03 | Phase 18 | pending |
