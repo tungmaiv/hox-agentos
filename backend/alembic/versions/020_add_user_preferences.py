@@ -30,8 +30,6 @@ def upgrade() -> None:
             "user_id",
             postgresql.UUID(as_uuid=True),
             nullable=False,
-            unique=True,
-            index=True,
         ),
         sa.Column(
             "preferences",
