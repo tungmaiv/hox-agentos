@@ -27,6 +27,7 @@ from api.routes import (
     system_config,
     tools,
     user_instructions,
+    user_preferences,
     user_skills,
     user_tools,
 )
@@ -147,6 +148,9 @@ def create_app() -> FastAPI:
 
     # Custom instructions — GET/PUT /api/user/instructions/
     app.include_router(user_instructions.router, prefix="/api")
+
+    # User LLM preferences — GET/PUT /api/users/me/preferences/
+    app.include_router(user_preferences.router, prefix="/api")
 
     # Admin config — GET/PUT /api/admin/config (admin-only, Gate 2 RBAC)
     # Note: router already includes /api prefix in its definition
