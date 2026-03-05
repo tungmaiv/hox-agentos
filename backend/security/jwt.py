@@ -18,6 +18,7 @@ Security invariants (never break):
   - The issuer peek (get_unverified_claims) is intentionally unverified — the
     actual signature and claims are verified by the dispatched validator.
 """
+import asyncio
 import time
 from typing import Any
 from uuid import UUID
@@ -42,6 +43,7 @@ JWKS_TTL_SECONDS: float = 300.0  # 5 minutes
 
 _JWKS_CACHE: dict[str, Any] = {}  # populated with JWKS dict on first fetch
 _jwks_fetched_at: float = 0.0  # monotonic clock timestamp of last fetch
+_jwks_refresh_lock: asyncio.Lock = asyncio.Lock()  # prevents thundering herd on concurrent expiry
 
 
 # ---------------------------------------------------------------------------
@@ -82,17 +84,30 @@ async def _get_jwks() -> dict[str, Any]:
     Cache TTL: JWKS_TTL_SECONDS (default 300 s).  On first call or after TTL
     expiry, _fetch_jwks_from_remote() is called; subsequent calls within the
     TTL window return the cached dict without any I/O.
+
+    Thundering herd prevention: when multiple coroutines race on an expired
+    cache, _jwks_refresh_lock ensures only one HTTP request fires.  All other
+    waiters pick up the freshly-populated cache after the lock is released
+    (double-checked locking pattern).
     """
     global _jwks_fetched_at, _JWKS_CACHE
 
     now = time.monotonic()
+    # Fast path: cache valid — no lock needed
     if _JWKS_CACHE and (now - _jwks_fetched_at) < JWKS_TTL_SECONDS:
         return _JWKS_CACHE
 
-    jwks = await _fetch_jwks_from_remote()
-    _JWKS_CACHE = jwks
-    _jwks_fetched_at = now
-    return _JWKS_CACHE
+    # Slow path: acquire lock to prevent thundering herd on concurrent expiry
+    async with _jwks_refresh_lock:
+        # Double-check after acquiring lock — another coroutine may have refreshed
+        now = time.monotonic()
+        if _JWKS_CACHE and (now - _jwks_fetched_at) < JWKS_TTL_SECONDS:
+            return _JWKS_CACHE
+
+        jwks = await _fetch_jwks_from_remote()
+        _JWKS_CACHE = jwks
+        _jwks_fetched_at = now
+        return _JWKS_CACHE
 
 
 async def _validate_keycloak_token(token: str) -> UserContext:
