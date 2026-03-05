@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-05)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates their daily work routines and lets them build custom automations without writing code — all within an enterprise-secure, on-premise environment where data never leaves the company.
-**Current focus:** v1.3 Phase 17 — Performance & Embedding Sidecar (In Progress — 2/7 plans done)
+**Current focus:** v1.3 Phase 17 — Performance & Embedding Sidecar (In Progress — 3/7 plans done)
 
 ## Current Position
 
 Phase: 17 of 23 (Performance & Embedding Sidecar) — IN PROGRESS
-Plan: 02 of 07 complete
-Status: Plan 17-02 done — timed() context manager + 7 critical path instrumentation, 732 tests passing
-Last activity: 2026-03-05 - Completed 17-02: timed() logging for memory_search, llm_call, workflow_run, tool_execution, canvas_compile, mcp_call, channel_delivery
+Plan: 03 of 07 complete
+Status: Plan 17-03 done — 60s TTL caches for Tool ACL, episode threshold, user instructions (PERF-09, PERF-10, PERF-11), 737 tests passing
+Last activity: 2026-03-05 - Completed 17-03: cachetools TTLCache for 3 hot DB paths, _get_episode_threshold removed, 5 new tests
 
-Progress: [###░░░░░░░] ~21%
+Progress: [####░░░░░░] ~29%
 
 ## Performance Metrics
 
@@ -75,6 +75,9 @@ v1.3 roadmap decisions:
 - [Phase 17]: [17-02]: timed() uses finally block — fires even when wrapped block raises, capturing latency up to exception point
 - [Phase 17]: [17-02]: canvas_compile wraps builder.set_entry_point() in graphs.py (uncompiled builder is the contract; actual .compile() is caller's job)
 - [Phase 17]: [17-02]: channel_delivery wraps per-attempt HTTP send (not retry loop) — captures actual delivery latency not retry overhead
+- [Phase 17]: [17-03]: cachetools TTLCache chosen over Redis — in-process cache sufficient at ~100 user scale, no network hop
+- [Phase 17]: [17-03]: patch target for get_episode_threshold_cached tests is agents.master_agent.get_episode_threshold_cached (import site), not memory.medium_term (definition site)
+- [Phase 17]: [17-03]: _get_episode_threshold() private function removed from master_agent.py — superseded by get_episode_threshold_cached() in memory.medium_term with caching built in
 
 ### Pending Todos
 
@@ -99,5 +102,5 @@ v1.3 roadmap decisions:
 ## Session Continuity
 
 Last session: 2026-03-05
-Stopped at: Completed 17-02-PLAN.md (timed() context manager + 7 critical path instrumentation)
-Resume file: .planning/phases/17-performance-embedding-sidecar/17-02-SUMMARY.md
+Stopped at: Completed 17-03-PLAN.md (cachetools TTLCache for Tool ACL, episode threshold, user instructions)
+Resume file: .planning/phases/17-performance-embedding-sidecar/17-03-SUMMARY.md
