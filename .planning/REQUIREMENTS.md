@@ -32,10 +32,10 @@
 
 ## Performance & Embedding Sidecar
 
-- [ ] **PERF-01**: Embedding sidecar service (`infinity-emb` or equivalent) runs as a Docker Compose service, loads embedding model at startup, and exposes `POST /embed` and `POST /embed/batch` HTTP endpoints
-- [ ] **PERF-02**: Embedding model is configurable via `EMBEDDING_MODEL` env var (default: `BAAI/bge-m3`); sidecar health endpoint reports model name, dimension, and status
-- [ ] **PERF-03**: Backend `memory/embeddings.py` calls sidecar HTTP first; falls back to Celery path if sidecar is unreachable
-- [ ] **PERF-04**: In-process FlagEmbedding (`BGE_M3Provider`) is removed from backend — no dual-load of bge-m3 in uvicorn and sidecar simultaneously
+- [x] **PERF-01**: Embedding sidecar service (`infinity-emb` or equivalent) runs as a Docker Compose service, loads embedding model at startup, and exposes `POST /embed` and `POST /embed/batch` HTTP endpoints
+- [x] **PERF-02**: Embedding model is configurable via `EMBEDDING_MODEL` env var (default: `BAAI/bge-m3`); sidecar health endpoint reports model name, dimension, and status
+- [x] **PERF-03**: Backend `memory/embeddings.py` calls sidecar HTTP first; falls back to Celery path if sidecar is unreachable
+- [x] **PERF-04**: In-process FlagEmbedding (`BGE_M3Provider`) is removed from backend — no dual-load of bge-m3 in uvicorn and sidecar simultaneously
 - [ ] **PERF-05**: Admin can trigger memory reindex via `POST /api/admin/memory/reindex` with `confirm=true` — deletes all vectors and re-embeds from source text (with warning about data loss)
 - [ ] **PERF-06**: Backend validates sidecar model dimension matches pgvector column dimension on startup — blocks embedding operations with clear error on mismatch
 - [ ] **PERF-07**: `duration_ms` is logged via structlog for 7 critical paths: memory search, tool execution, LLM call, canvas compile, MCP call, channel delivery, workflow run
@@ -148,10 +148,10 @@
 | NAV-08 | Phase 16 | Complete |
 | NAV-09 | Phase 16 | Complete |
 | NAV-10 | Phase 16 | Complete |
-| PERF-01 | Phase 17 | pending |
-| PERF-02 | Phase 17 | pending |
-| PERF-03 | Phase 17 | pending |
-| PERF-04 | Phase 17 | pending |
+| PERF-01 | Phase 17 | Complete |
+| PERF-02 | Phase 17 | Complete |
+| PERF-03 | Phase 17 | Complete |
+| PERF-04 | Phase 17 | Complete |
 | PERF-05 | Phase 17 | pending |
 | PERF-06 | Phase 17 | pending |
 | PERF-07 | Phase 17 | pending |

@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Production Readiness & Skill Platform
 status: unknown
-last_updated: "2026-03-05T05:38:18.441Z"
+last_updated: "2026-03-05T12:24:49.398Z"
 progress:
-  total_phases: 2
+  total_phases: 3
   completed_phases: 2
-  total_plans: 6
-  completed_plans: 6
+  total_plans: 13
+  completed_plans: 7
 ---
 
 # Project State
@@ -18,14 +18,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-05)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates their daily work routines and lets them build custom automations without writing code — all within an enterprise-secure, on-premise environment where data never leaves the company.
-**Current focus:** v1.3 Phase 16 — Navigation & User Experience (COMPLETE — all 3 plans done)
+**Current focus:** v1.3 Phase 17 — Performance & Embedding Sidecar (In Progress — 1/7 plans done)
 
 ## Current Position
 
-Phase: 16 of 23 (Navigation & User Experience) — COMPLETE
-Plan: 03 of 03 complete
-Status: Phase 16 complete — all 3 plans done (16-01 backend prefs, 16-02 NavRail, 16-03 profile page)
-Last activity: 2026-03-05 - Completed quick task 4: fix avatar dropdown z-index in nav-rail.tsx (z-40 → z-50)
+Phase: 17 of 23 (Performance & Embedding Sidecar) — IN PROGRESS
+Plan: 01 of 07 complete
+Status: Plan 17-01 done — embedding-sidecar Docker service, SidecarEmbeddingProvider, 729 tests passing
+Last activity: 2026-03-05 - Completed 17-01: embedding sidecar service + SidecarEmbeddingProvider with fallback
 
 Progress: [###░░░░░░░] ~21%
 
@@ -37,7 +37,7 @@ Progress: [###░░░░░░░] ~21%
 - Tests: 719 passing (at v1.2 ship)
 
 **v1.3:**
-- Plans completed: 6 (15-01, 15-02, 15-03, 16-01, 16-02, 16-03)
+- Plans completed: 7 (15-01, 15-02, 15-03, 16-01, 16-02, 16-03, 17-01)
 - Phases: 9 (15-23)
 - Phase 15 complete: AUTH-01, AUTH-05, AUTH-06 satisfied (plan 03); all Phase 15 UAT gaps closed
 - Phase 16 complete: 16-01 (user preferences backend: NAV-07, NAV-08, NAV-10); 16-02 (NavRail + route group: NAV-01, NAV-02, NAV-03, NAV-04); 16-03 (profile page + agent injection: NAV-05, NAV-06, NAV-09)
@@ -69,6 +69,9 @@ v1.3 roadmap decisions:
 - [16-03]: Backend change-password endpoint added (auth_local_password.py) — was missing from auth_local.py, required by PasswordChangeCard
 - [16-03]: user_prefs loaded in same async_session block as custom_instructions in _master_node — no extra DB round-trip
 - [16-03]: concise response style gets no extra directive — base master_agent prompt is already concise
+- [Phase 17]: [17-01]: SidecarEmbeddingProvider falls back to BGE_M3Provider on ConnectError — preserves correctness when sidecar not yet warm
+- [Phase 17]: [17-01]: validate_dimension() checks /health at startup — catches EMBEDDING_MODEL misconfiguration early
+- [Phase 17]: [17-01]: embedding_model_cache named volume persists bge-m3 download across container restarts
 
 ### Pending Todos
 
@@ -93,5 +96,5 @@ v1.3 roadmap decisions:
 ## Session Continuity
 
 Last session: 2026-03-05
-Stopped at: Completed 16-03-PLAN.md (Profile page + settings slimdown + agent preference injection)
-Resume file: .planning/phases/16-navigation-user-experience/16-CONTEXT.md
+Stopped at: Completed 17-01-PLAN.md (Embedding sidecar Docker service + SidecarEmbeddingProvider)
+Resume file: .planning/phases/17-performance-embedding-sidecar/17-01-SUMMARY.md
