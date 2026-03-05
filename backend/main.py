@@ -33,6 +33,7 @@ from api.routes import (
 )
 from api.routes.admin_local_users import router as admin_local_users_router
 from api.routes.auth_local import router as auth_local_router
+from api.routes.auth_local_password import router as auth_local_password_router
 from api.routes.channels import router as channels_router
 from api.routes.webhooks import router as webhooks_router
 from api.routes.workflows import router as workflows_router
@@ -133,6 +134,9 @@ def create_app() -> FastAPI:
 
     # Local auth — POST /api/auth/local/token (no auth required — it IS the auth)
     app.include_router(auth_local_router)
+
+    # Local auth password change — POST /api/auth/local/change-password (JWT required)
+    app.include_router(auth_local_password_router)
 
     # Admin CRUD for local users and groups — /api/admin/local/users + groups (registry:manage)
     app.include_router(admin_local_users_router)
