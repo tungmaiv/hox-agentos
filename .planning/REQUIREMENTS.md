@@ -38,7 +38,7 @@
 - [x] **PERF-04**: In-process FlagEmbedding (`BGE_M3Provider`) is removed from backend — no dual-load of bge-m3 in uvicorn and sidecar simultaneously
 - [ ] **PERF-05**: Admin can trigger memory reindex via `POST /api/admin/memory/reindex` with `confirm=true` — deletes all vectors and re-embeds from source text (with warning about data loss)
 - [ ] **PERF-06**: Backend validates sidecar model dimension matches pgvector column dimension on startup — blocks embedding operations with clear error on mismatch
-- [ ] **PERF-07**: `duration_ms` is logged via structlog for 7 critical paths: memory search, tool execution, LLM call, canvas compile, MCP call, channel delivery, workflow run
+- [x] **PERF-07**: `duration_ms` is logged via structlog for 7 critical paths: memory search, tool execution, LLM call, canvas compile, MCP call, channel delivery, workflow run
 - [ ] **PERF-08**: Single DB session per request via contextvar replaces 6-9 separate session opens
 - [ ] **PERF-09**: Tool ACL query results cached with 60s TTL per user
 - [ ] **PERF-10**: Episode threshold check cached with 60s TTL
@@ -154,7 +154,7 @@
 | PERF-04 | Phase 17 | Complete |
 | PERF-05 | Phase 17 | pending |
 | PERF-06 | Phase 17 | pending |
-| PERF-07 | Phase 17 | pending |
+| PERF-07 | Phase 17 | Complete |
 | PERF-08 | Phase 17 | pending |
 | PERF-09 | Phase 17 | pending |
 | PERF-10 | Phase 17 | pending |

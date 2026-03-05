@@ -18,14 +18,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-05)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates their daily work routines and lets them build custom automations without writing code — all within an enterprise-secure, on-premise environment where data never leaves the company.
-**Current focus:** v1.3 Phase 17 — Performance & Embedding Sidecar (In Progress — 1/7 plans done)
+**Current focus:** v1.3 Phase 17 — Performance & Embedding Sidecar (In Progress — 2/7 plans done)
 
 ## Current Position
 
 Phase: 17 of 23 (Performance & Embedding Sidecar) — IN PROGRESS
-Plan: 01 of 07 complete
-Status: Plan 17-01 done — embedding-sidecar Docker service, SidecarEmbeddingProvider, 729 tests passing
-Last activity: 2026-03-05 - Completed 17-01: embedding sidecar service + SidecarEmbeddingProvider with fallback
+Plan: 02 of 07 complete
+Status: Plan 17-02 done — timed() context manager + 7 critical path instrumentation, 732 tests passing
+Last activity: 2026-03-05 - Completed 17-02: timed() logging for memory_search, llm_call, workflow_run, tool_execution, canvas_compile, mcp_call, channel_delivery
 
 Progress: [###░░░░░░░] ~21%
 
@@ -72,6 +72,9 @@ v1.3 roadmap decisions:
 - [Phase 17]: [17-01]: SidecarEmbeddingProvider falls back to BGE_M3Provider on ConnectError — preserves correctness when sidecar not yet warm
 - [Phase 17]: [17-01]: validate_dimension() checks /health at startup — catches EMBEDDING_MODEL misconfiguration early
 - [Phase 17]: [17-01]: embedding_model_cache named volume persists bge-m3 download across container restarts
+- [Phase 17]: [17-02]: timed() uses finally block — fires even when wrapped block raises, capturing latency up to exception point
+- [Phase 17]: [17-02]: canvas_compile wraps builder.set_entry_point() in graphs.py (uncompiled builder is the contract; actual .compile() is caller's job)
+- [Phase 17]: [17-02]: channel_delivery wraps per-attempt HTTP send (not retry loop) — captures actual delivery latency not retry overhead
 
 ### Pending Todos
 
@@ -96,5 +99,5 @@ v1.3 roadmap decisions:
 ## Session Continuity
 
 Last session: 2026-03-05
-Stopped at: Completed 17-01-PLAN.md (Embedding sidecar Docker service + SidecarEmbeddingProvider)
-Resume file: .planning/phases/17-performance-embedding-sidecar/17-01-SUMMARY.md
+Stopped at: Completed 17-02-PLAN.md (timed() context manager + 7 critical path instrumentation)
+Resume file: .planning/phases/17-performance-embedding-sidecar/17-02-SUMMARY.md
