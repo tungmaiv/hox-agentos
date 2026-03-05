@@ -39,6 +39,7 @@ from api.routes.channels import router as channels_router
 from api.routes.webhooks import router as webhooks_router
 from api.routes.workflows import router as workflows_router
 from core.config import settings
+from core.db import RequestSessionMiddleware
 from core.logging import configure_logging
 from gateway import runtime
 from openapi_bridge.routes import router as openapi_bridge_router
@@ -139,6 +140,9 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    # Single DB session per HTTP request — must be added after CORSMiddleware so the
+    # session is available when route handlers run (middleware executes in reverse order).
+    app.add_middleware(RequestSessionMiddleware)
 
     # Expose GET /metrics — no auth, blitz-net internal only (no host port exposure).
     # prometheus.yml scrape target 'backend' hits this endpoint.
