@@ -25,10 +25,10 @@
 - [ ] **NAV-04**: Authenticated pages use `app/(authenticated)/layout.tsx` route group — `/login` and API routes are excluded from nav rail
 - [ ] **NAV-05**: User can view their profile at `/profile` showing name, email, auth provider badge (SSO/Local), roles, current session expiry, and logout button
 - [ ] **NAV-06**: Local users can change their password from the profile page
-- [ ] **NAV-07**: User can set LLM thinking mode preference (on/off) from profile page, persisted in `user_preferences` table (JSONB)
-- [ ] **NAV-08**: User can set response style preference (concise/detailed/conversational) from profile page, persisted in `user_preferences` table
+- [x] **NAV-07**: User can set LLM thinking mode preference (on/off) from profile page, persisted in `user_preferences` table (JSONB)
+- [x] **NAV-08**: User can set response style preference (concise/detailed/conversational) from profile page, persisted in `user_preferences` table
 - [ ] **NAV-09**: User preferences are injected into agent system prompt via PromptLoader on each invocation
-- [ ] **NAV-10**: Backend exposes `GET /api/users/me/preferences` and `PUT /api/users/me/preferences` endpoints with JWT-based user identification
+- [x] **NAV-10**: Backend exposes `GET /api/users/me/preferences` and `PUT /api/users/me/preferences` endpoints with JWT-based user identification
 
 ## Performance & Embedding Sidecar
 
@@ -144,10 +144,10 @@
 | NAV-04 | Phase 16 | pending |
 | NAV-05 | Phase 16 | pending |
 | NAV-06 | Phase 16 | pending |
-| NAV-07 | Phase 16 | pending |
-| NAV-08 | Phase 16 | pending |
+| NAV-07 | Phase 16 | Complete |
+| NAV-08 | Phase 16 | Complete |
 | NAV-09 | Phase 16 | pending |
-| NAV-10 | Phase 16 | pending |
+| NAV-10 | Phase 16 | Complete |
 | PERF-01 | Phase 17 | pending |
 | PERF-02 | Phase 17 | pending |
 | PERF-03 | Phase 17 | pending |
