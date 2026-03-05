@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Production Readiness & Skill Platform
 status: unknown
-last_updated: "2026-03-05T12:57:02.008Z"
+last_updated: "2026-03-05T13:01:51.344Z"
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 13
-  completed_plans: 11
+  completed_plans: 12
 ---
 
 # Project State
@@ -18,14 +18,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-05)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates their daily work routines and lets them build custom automations without writing code — all within an enterprise-secure, on-premise environment where data never leaves the company.
-**Current focus:** v1.3 Phase 17 — Performance & Embedding Sidecar (In Progress — 6/7 plans done)
+**Current focus:** v1.3 Phase 17 — Performance & Embedding Sidecar (COMPLETE — 7/7 plans done)
 
 ## Current Position
 
-Phase: 17 of 23 (Performance & Embedding Sidecar) — IN PROGRESS
-Plan: 06 of 07 complete
-Status: Plan 17-06 done — DB session optimization via contextvar (PERF-08): get_session(), RequestSessionMiddleware, migrated 5 files with 12+ async_session() callers, 742 tests passing
-Last activity: 2026-03-05 - Completed 17-06: single-session-per-request, PERF-08 satisfied
+Phase: 17 of 23 (Performance & Embedding Sidecar) — COMPLETE
+Plan: 07 of 07 complete
+Status: Plan 17-04 done — Admin Memory Reindex UI (PERF-05 frontend): Next.js proxy route, Memory tab in admin nav, AdminMemoryPage with confirmation dialog, 743 tests passing
+Last activity: 2026-03-05 - Completed 17-04: Admin Memory Reindex UI, PERF-05 frontend satisfied. Phase 17 complete.
 
 Progress: [#######░░░] ~50%
 
@@ -83,6 +83,7 @@ v1.3 roadmap decisions:
 - [Phase 17]: [17-05]: Startup sidecar check is non-fatal in main.py lifespan — backend starts even when sidecar not warm
 - [Phase 17]: [17-06]: get_session() asynccontextmanager yields contextvar session when set, falls through to async_session() otherwise — single session per HTTP request via RequestSessionMiddleware
 - [Phase 17]: [17-06]: Celery scheduler tasks explicitly excluded from migration — they manage own session lifecycle outside HTTP request context
+- [Phase 17]: [17-04]: Admin Memory page uses proxy route pattern matching copilotkit/route.ts — auth() from @/auth, accessToken via Record<string,unknown> cast, BACKEND_URL env precedence
 
 ### Pending Todos
 
@@ -105,9 +106,10 @@ v1.3 roadmap decisions:
 | 4 | fix avatar dropdown z-index in nav-rail.tsx (z-40 → z-50) | 2026-03-05 | 8a45435 | [4-fix-avatar-dropdown-z-index-in-nav-rail-](./quick/4-fix-avatar-dropdown-z-index-in-nav-rail-/) |
 | Phase 17 P05 | 5 | 5 tasks | 6 files |
 | Phase 17 P06 | 6 | 5 tasks | 15 files |
+| Phase 17 P04 | 3 | 3 tasks | 3 files |
 
 ## Session Continuity
 
 Last session: 2026-03-05
-Stopped at: Completed 17-05-PLAN.md (embedding sidecar migration, startup validation, admin reindex endpoint)
-Resume file: .planning/phases/17-performance-embedding-sidecar/17-05-SUMMARY.md
+Stopped at: Completed 17-04-PLAN.md (Admin Memory Reindex UI, PERF-05 frontend) — Phase 17 complete
+Resume file: .planning/phases/17-performance-embedding-sidecar/17-04-SUMMARY.md
