@@ -23,11 +23,11 @@
 - [x] **NAV-02**: Admin nav item is visible only to users with `admin`, `developer`, or `it-admin` roles
 - [x] **NAV-03**: Active nav item is visually highlighted; clicking avatar opens dropdown with Profile and Sign Out
 - [x] **NAV-04**: Authenticated pages use `app/(authenticated)/layout.tsx` route group — `/login` and API routes are excluded from nav rail
-- [ ] **NAV-05**: User can view their profile at `/profile` showing name, email, auth provider badge (SSO/Local), roles, current session expiry, and logout button
-- [ ] **NAV-06**: Local users can change their password from the profile page
+- [x] **NAV-05**: User can view their profile at `/profile` showing name, email, auth provider badge (SSO/Local), roles, current session expiry, and logout button
+- [x] **NAV-06**: Local users can change their password from the profile page
 - [x] **NAV-07**: User can set LLM thinking mode preference (on/off) from profile page, persisted in `user_preferences` table (JSONB)
 - [x] **NAV-08**: User can set response style preference (concise/detailed/conversational) from profile page, persisted in `user_preferences` table
-- [ ] **NAV-09**: User preferences are injected into agent system prompt via PromptLoader on each invocation
+- [x] **NAV-09**: User preferences are injected into agent system prompt via PromptLoader on each invocation
 - [x] **NAV-10**: Backend exposes `GET /api/users/me/preferences` and `PUT /api/users/me/preferences` endpoints with JWT-based user identification
 
 ## Performance & Embedding Sidecar
@@ -142,11 +142,11 @@
 | NAV-02 | Phase 16 | Complete |
 | NAV-03 | Phase 16 | Complete |
 | NAV-04 | Phase 16 | Complete |
-| NAV-05 | Phase 16 | pending |
-| NAV-06 | Phase 16 | pending |
+| NAV-05 | Phase 16 | Complete |
+| NAV-06 | Phase 16 | Complete |
 | NAV-07 | Phase 16 | Complete |
 | NAV-08 | Phase 16 | Complete |
-| NAV-09 | Phase 16 | pending |
+| NAV-09 | Phase 16 | Complete |
 | NAV-10 | Phase 16 | Complete |
 | PERF-01 | Phase 17 | pending |
 | PERF-02 | Phase 17 | pending |

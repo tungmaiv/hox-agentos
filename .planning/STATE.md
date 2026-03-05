@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Production Readiness & Skill Platform
 status: unknown
-last_updated: "2026-03-05T05:24:22.186Z"
+last_updated: "2026-03-05T05:31:00.000Z"
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 6
-  completed_plans: 5
+  completed_plans: 6
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-05)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates their daily work routines and lets them build custom automations without writing code — all within an enterprise-secure, on-premise environment where data never leaves the company.
-**Current focus:** v1.3 Phase 16 — Navigation & User Experience (plan 02 complete)
+**Current focus:** v1.3 Phase 16 — Navigation & User Experience (COMPLETE — all 3 plans done)
 
 ## Current Position
 
-Phase: 16 of 23 (Navigation & User Experience)
-Plan: 02 of 03 complete
-Status: In progress — 16-01 and 16-02 done; 16-03 (profile page) pending
-Last activity: 2026-03-05 — Completed 16-02 (SUMMARY created): NavRail + MobileTabBar + (authenticated) route group + /skills and /profile placeholders
+Phase: 16 of 23 (Navigation & User Experience) — COMPLETE
+Plan: 03 of 03 complete
+Status: Phase 16 complete — all 3 plans done (16-01 backend prefs, 16-02 NavRail, 16-03 profile page)
+Last activity: 2026-03-05 — Completed 16-03 (SUMMARY created): Profile page with 4 card sections, settings slimdown, agent preference injection
 
-Progress: [##░░░░░░░░] ~14%
+Progress: [###░░░░░░░] ~21%
 
 ## Performance Metrics
 
@@ -37,10 +37,10 @@ Progress: [##░░░░░░░░] ~14%
 - Tests: 719 passing (at v1.2 ship)
 
 **v1.3:**
-- Plans completed: 5 (15-01, 15-02, 15-03, 16-01, 16-02)
+- Plans completed: 6 (15-01, 15-02, 15-03, 16-01, 16-02, 16-03)
 - Phases: 9 (15-23)
 - Phase 15 complete: AUTH-01, AUTH-05, AUTH-06 satisfied (plan 03); all Phase 15 UAT gaps closed
-- Phase 16 in progress: 16-01 complete (user preferences backend: NAV-07, NAV-08, NAV-10 satisfied); 16-02 complete (NavRail + route group: NAV-01, NAV-02, NAV-03, NAV-04 satisfied)
+- Phase 16 complete: 16-01 (user preferences backend: NAV-07, NAV-08, NAV-10); 16-02 (NavRail + route group: NAV-01, NAV-02, NAV-03, NAV-04); 16-03 (profile page + agent injection: NAV-05, NAV-06, NAV-09)
 
 ## Accumulated Context
 
@@ -66,6 +66,9 @@ v1.3 roadmap decisions:
 - [Phase 16]: [16-01]: Router prefix /users/me/preferences (plural, RESTful) distinct from legacy /user/instructions
 - [Phase 16]: NavRail uses useSession() client-side for role check — avoids prop drilling from server layout
 - [Phase 16]: (authenticated) route group layout excludes /login and /api routes — URLs unchanged for all authenticated pages
+- [16-03]: Backend change-password endpoint added (auth_local_password.py) — was missing from auth_local.py, required by PasswordChangeCard
+- [16-03]: user_prefs loaded in same async_session block as custom_instructions in _master_node — no extra DB round-trip
+- [16-03]: concise response style gets no extra directive — base master_agent prompt is already concise
 
 ### Pending Todos
 
@@ -84,5 +87,5 @@ v1.3 roadmap decisions:
 ## Session Continuity
 
 Last session: 2026-03-05
-Stopped at: Completed 16-02-PLAN.md (NavRail + MobileTabBar + authenticated route group)
+Stopped at: Completed 16-03-PLAN.md (Profile page + settings slimdown + agent preference injection)
 Resume file: .planning/phases/16-navigation-user-experience/16-CONTEXT.md
