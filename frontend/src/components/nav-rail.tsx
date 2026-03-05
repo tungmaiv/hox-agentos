@@ -93,7 +93,7 @@ export function NavRail() {
 
   return (
     <nav
-      className="hidden md:flex flex-col fixed left-0 top-0 h-screen w-16 z-40"
+      className="hidden md:flex flex-col fixed left-0 top-0 h-screen w-16 z-50"
       style={{ backgroundColor: "#1e1e2e" }}
       aria-label="Main navigation"
     >
