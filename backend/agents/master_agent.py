@@ -38,6 +38,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from agents.state.types import BlitzState
 from api.routes.user_instructions import get_user_instructions
+from api.routes.user_preferences import get_user_preference_values
 from core.config import get_llm, settings
 from core.prompts import load_prompt
 from core.context import current_conversation_id_ctx, current_user_ctx
@@ -207,15 +208,18 @@ async def _master_node(state: BlitzState) -> dict[str, list[BaseMessage]]:
     """
     llm = get_llm("blitz/master")
 
-    # Load custom instructions and user context (empty if not set or no user context)
+    # Load custom instructions, user preferences, and user context
+    # (empty/defaults if not set or no user context)
     custom_instructions = ""
     user_context_str = ""
+    user_prefs: dict = {}
     try:
         user = current_user_ctx.get()
         user_context_str = f"User: {user.get('username', 'unknown')} ({user.get('email', '')})"
         async with async_session() as session:
             async with session.begin():
                 custom_instructions = await get_user_instructions(user["user_id"], session)
+                user_prefs = await get_user_preference_values(user["user_id"], session)
     except LookupError:
         pass  # No user context in tests or isolated runs — skip
     except Exception:
@@ -251,6 +255,35 @@ async def _master_node(state: BlitzState) -> dict[str, list[BaseMessage]]:
             f"\n\nAdditional user instructions (follow these for all responses):\n\n"
             f"{custom_instructions}"
         )
+
+    # Inject user preference directives (thinking mode, response style)
+    if user_prefs:
+        pref_directives: list[str] = []
+        if user_prefs.get("thinking_mode"):
+            pref_directives.append(
+                "The user has enabled thinking mode. Before answering, briefly show "
+                "your reasoning process in a <thinking> block, then provide the answer."
+            )
+
+        style = user_prefs.get("response_style", "concise")
+        if style == "detailed":
+            pref_directives.append(
+                "The user prefers detailed responses. Provide thorough explanations "
+                "with examples and context. Use structured formatting (headings, lists) "
+                "for complex answers."
+            )
+        elif style == "conversational":
+            pref_directives.append(
+                "The user prefers a conversational style. Be friendly and engaging, "
+                "use natural language, and feel free to ask follow-up questions."
+            )
+        # "concise" is the default — no extra directive needed (base prompt is already concise)
+
+        if pref_directives:
+            system_content += "\n\nUser preferences:\n" + "\n".join(
+                f"- {d}" for d in pref_directives
+            )
+
     messages = [SystemMessage(content=system_content)] + messages
 
     response = await llm.ainvoke(messages)
