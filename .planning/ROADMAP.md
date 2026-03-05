@@ -117,12 +117,13 @@ Plans:
   3. `duration_ms` is logged for all 7 critical paths (memory search, tool execution, LLM call, canvas compile, MCP call, channel delivery, workflow run) and visible in structured logs
   4. Admin can trigger a full memory reindex via `POST /api/admin/memory/reindex` with confirmation — the operation re-embeds all facts and episodes from source text
   5. A single DB session per request replaces the previous 6-9 separate session opens, and Tool ACL / episode threshold / user instructions queries are cached with TTL
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 17-01: TBD
-- [ ] 17-02: TBD
-- [ ] 17-03: TBD
+- [ ] 17-01-PLAN.md — Embedding sidecar Docker service, SidecarEmbeddingProvider, BGE_M3 uvicorn removal, dimension validation, reindex API endpoint
+- [ ] 17-02-PLAN.md — timed() context manager for 7 critical paths, RequestSessionMiddleware single DB session per request
+- [ ] 17-03-PLAN.md — TTL caches for Tool ACL, episode threshold, user instructions; JWKS asyncio.Lock; useSkills() hoist
+- [ ] 17-04-PLAN.md — Admin Memory tab UI with reindex button and confirmation dialog (PERF-05 frontend)
 
 ### Phase 18: Identity Configuration
 **Goal**: Keycloak is an optional, runtime-configurable identity provider — the platform boots and works with local auth alone, and admins can enable/disable SSO from the UI without restarts
