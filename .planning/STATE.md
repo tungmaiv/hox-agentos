@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-03-05)
 Phase: 16 of 23 (Navigation & User Experience) — COMPLETE
 Plan: 03 of 03 complete
 Status: Phase 16 complete — all 3 plans done (16-01 backend prefs, 16-02 NavRail, 16-03 profile page)
-Last activity: 2026-03-05 — Completed 16-03 (SUMMARY created): Profile page with 4 card sections, settings slimdown, agent preference injection
+Last activity: 2026-03-05 - Completed quick task 4: fix avatar dropdown z-index in nav-rail.tsx (z-40 → z-50)
 
 Progress: [###░░░░░░░] ~21%
 
@@ -83,6 +83,12 @@ v1.3 roadmap decisions:
 - CVE-2025-29927: Next.js must be confirmed at 15.2.3+ before any middleware.ts is written (Phase 15)
 - Embedding sidecar dual-load risk: FlagEmbedding removal must be atomic with sidecar addition (Phase 17)
 - Keycloak optional boot: config.py validation must handle missing keycloak_url gracefully (Phase 18)
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 4 | fix avatar dropdown z-index in nav-rail.tsx (z-40 → z-50) | 2026-03-05 | 8a45435 | [4-fix-avatar-dropdown-z-index-in-nav-rail-](./quick/4-fix-avatar-dropdown-z-index-in-nav-rail-/) |
 
 ## Session Continuity
 
