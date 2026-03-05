@@ -7,6 +7,9 @@ Never log credential values (access_token, refresh_token, password).
 """
 import logging
 import sys
+import time
+from collections.abc import Generator
+from contextlib import contextmanager
 from pathlib import Path
 
 import structlog
@@ -55,3 +58,26 @@ def get_audit_logger() -> structlog.stdlib.BoundLogger:
         logger.info("tool_call", tool="email.fetch", user_id=str(user_id), allowed=True)
     """
     return structlog.get_logger("audit")
+
+
+@contextmanager
+def timed(logger: structlog.stdlib.BoundLogger, event: str, **ctx: object) -> Generator[None, None, None]:
+    """
+    Context manager that logs `event` with `duration_ms` after the block exits.
+
+    Logs even if the block raises an exception (duration up to the raise point).
+
+    Usage:
+        with timed(logger, "memory_search", user_id=str(user_id)):
+            results = await search_facts(...)
+
+    Args:
+        logger: structlog logger (from structlog.get_logger(__name__))
+        event: Log event name (e.g. "memory_search", "tool_execution")
+        **ctx: Extra key-value pairs to include in the log entry
+    """
+    t0 = time.monotonic()
+    try:
+        yield
+    finally:
+        logger.info(event, duration_ms=round((time.monotonic() - t0) * 1000), **ctx)
