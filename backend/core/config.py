@@ -71,6 +71,9 @@ class Settings(BaseSettings):
     # Embedding
     embedding_model_path: str = "BAAI/bge-m3"  # Locked — 1024 dim; changing requires full reindex
 
+    # Embedding sidecar
+    embedding_sidecar_url: str = "http://embedding-sidecar:7997"
+
     # Memory
     # Fallback when system_config DB key 'memory.episode_turn_threshold' is not set.
     # If total conversation turns reaches a multiple of this threshold, summarize_episode is triggered.
