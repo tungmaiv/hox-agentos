@@ -56,6 +56,24 @@ services:
     networks:
       - blitz-net
 
+  embedding-sidecar:
+    image: michaelf34/infinity:latest
+    environment:
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-BAAI/bge-m3}
+    volumes:
+      - embedding_model_cache:/app/.cache
+    ports:
+      - "7997:7997"
+    command: v2 --model-name-or-path ${EMBEDDING_MODEL:-BAAI/bge-m3} --port 7997
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:7997/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    networks:
+      - blitz-net
+
   backend:
     build: ./backend
     ports:
@@ -318,6 +336,7 @@ volumes:
   prometheus_data:
   grafana_data:
   loki_data:
+  embedding_model_cache:
 
 networks:
   blitz-net:
