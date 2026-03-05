@@ -12,13 +12,24 @@ FastAPI dependency:
 RLS helper:
     await set_rls_user_id(session, user_id)
     # Call before any user-scoped query to populate app.user_id for RLS policies.
+
+Single-session-per-request:
+    Use get_session() instead of async_session() in route handlers and agents.
+    RequestSessionMiddleware opens one session per HTTP request and stores it in
+    _request_session_ctx. get_session() returns that session when set, or opens
+    a new one (for Celery tasks, startup code, and test contexts).
 """
 from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+from contextvars import ContextVar
 from uuid import UUID
 
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from starlette.responses import Response
 
 from core.config import settings
 
@@ -32,6 +43,59 @@ async_session: async_sessionmaker[AsyncSession] = async_sessionmaker(
     engine,
     expire_on_commit=False,
 )
+
+# Single-session-per-request contextvar.
+# Set by RequestSessionMiddleware at the start of each HTTP request.
+# get_session() returns this session when set, or opens a new one.
+_request_session_ctx: ContextVar[AsyncSession | None] = ContextVar(
+    "_request_session_ctx", default=None
+)
+
+
+@asynccontextmanager
+async def get_session():
+    """
+    Return the request-scoped DB session if available, else open a new one.
+
+    Use this instead of `async with async_session()` in route handlers and
+    business logic called from route handlers. Celery tasks and startup code
+    that don't run inside an HTTP request will fall through to open a new session.
+
+    Usage:
+        async with get_session() as session:
+            result = await session.execute(...)
+    """
+    existing = _request_session_ctx.get()
+    if existing is not None:
+        yield existing
+    else:
+        async with async_session() as session:
+            yield session
+
+
+class RequestSessionMiddleware(BaseHTTPMiddleware):
+    """
+    Opens one AsyncSession per HTTP request and stores it in _request_session_ctx.
+
+    All code within that request can call get_session() to retrieve the shared
+    session — eliminating 6-9 separate session opens per agent invocation.
+
+    The session is committed on success or rolled back on exception, then closed
+    in the finally block regardless of outcome.
+    """
+
+    async def dispatch(self, request: Request, call_next) -> Response:
+        async with async_session() as session:
+            token = _request_session_ctx.set(session)
+            try:
+                response = await call_next(request)
+                await session.commit()
+                return response
+            except Exception:
+                await session.rollback()
+                raise
+            finally:
+                _request_session_ctx.reset(token)
 
 
 class Base(DeclarativeBase):
