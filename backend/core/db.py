@@ -61,6 +61,14 @@ async def get_session():
     business logic called from route handlers. Celery tasks and startup code
     that don't run inside an HTTP request will fall through to open a new session.
 
+    Lifecycle contract:
+    - Request context: yields the shared middleware session. Commit/rollback is
+      handled by RequestSessionMiddleware after the response returns. Callers
+      MUST NOT call session.commit() or session.rollback() on this session.
+    - Standalone context (Celery, startup, tests): opens a new session, commits
+      on clean exit, and rolls back on exception. Callers do not need to manage
+      the transaction lifecycle.
+
     Usage:
         async with get_session() as session:
             result = await session.execute(...)
@@ -70,7 +78,12 @@ async def get_session():
         yield existing
     else:
         async with async_session() as session:
-            yield session
+            try:
+                yield session
+                await session.commit()
+            except Exception:
+                await session.rollback()
+                raise
 
 
 class RequestSessionMiddleware(BaseHTTPMiddleware):

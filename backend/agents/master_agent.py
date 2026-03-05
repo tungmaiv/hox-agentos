@@ -351,42 +351,38 @@ async def _save_memory_node(state: BlitzState) -> dict:
     # initial_message_count (never set by LangGraphAGUIAgent) can't be trusted.
     # Instead, count existing turns in DB — anything beyond that is new.
     async with get_session() as session:
-        try:
-            count_result = await session.execute(
-                select(func.count()).where(
-                    ConversationTurn.user_id == user_id,
-                    ConversationTurn.conversation_id == conversation_id,
-                )
+        count_result = await session.execute(
+            select(func.count()).where(
+                ConversationTurn.user_id == user_id,
+                ConversationTurn.conversation_id == conversation_id,
             )
-            existing_count = count_result.scalar_one()
-            new_messages = messages[existing_count:]
+        )
+        existing_count = count_result.scalar_one()
+        new_messages = messages[existing_count:]
 
-            if not new_messages:
-                return {}
+        if not new_messages:
+            return {}
 
-            for msg in new_messages:
-                if isinstance(msg, HumanMessage):
-                    await save_turn(
-                        session,
-                        user_id=user_id,
-                        conversation_id=conversation_id,
-                        role="user",
-                        content=str(msg.content),
-                    )
-                elif isinstance(msg, AIMessage):
-                    await save_turn(
-                        session,
-                        user_id=user_id,
-                        conversation_id=conversation_id,
-                        role="assistant",
-                        content=str(msg.content),
-                    )
-            # Single commit after the loop — all turns saved atomically.
-            # save_turn() no longer commits internally; the session owner commits.
-            await session.commit()
-        except Exception:
-            await session.rollback()
-            raise
+        for msg in new_messages:
+            if isinstance(msg, HumanMessage):
+                await save_turn(
+                    session,
+                    user_id=user_id,
+                    conversation_id=conversation_id,
+                    role="user",
+                    content=str(msg.content),
+                )
+            elif isinstance(msg, AIMessage):
+                await save_turn(
+                    session,
+                    user_id=user_id,
+                    conversation_id=conversation_id,
+                    role="assistant",
+                    content=str(msg.content),
+                )
+        # Commit is handled by the caller:
+        # - In HTTP requests: RequestSessionMiddleware commits after the response.
+        # - In standalone contexts (tests, Celery): get_session() auto-commits on exit.
 
     logger.debug("memory_saved", new_turns=len(new_messages), conversation_id=str(conversation_id))
 
@@ -695,11 +691,8 @@ async def _skill_executor_node(state: BlitzState) -> dict[str, list[BaseMessage]
 
         executor = SkillExecutor()
         async with get_session() as session:
-            try:
-                skill_result = await executor.run(skill, user_context, session)
-            except Exception:
-                await session.rollback()
-                raise
+            skill_result = await executor.run(skill, user_context, session)
+            # Commit/rollback handled by get_session() lifecycle (see core/db.py).
 
         logger.info(
             "skill_executor_completed",
