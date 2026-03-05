@@ -230,7 +230,7 @@ async def test_pre_route_routes_email_keyword() -> None:
 
     state = {"messages": [HumanMessage(content="show me my unread emails")]}
 
-    with patch("agents.master_agent.async_session") as mock_session:
+    with patch("agents.master_agent.get_session") as mock_session:
         mock_cm = AsyncMock()
         mock_cm.__aenter__ = AsyncMock(return_value=MagicMock(
             execute=AsyncMock(return_value=MagicMock(

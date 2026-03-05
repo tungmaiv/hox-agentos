@@ -27,7 +27,7 @@ async def test_project_agent_calls_mcp_tool() -> None:
     with (
         patch("agents.subagents.project_agent.call_mcp_tool", new_callable=AsyncMock) as mock_call,
         patch("agents.subagents.project_agent.current_user_ctx") as mock_ctx,
-        patch("agents.subagents.project_agent.async_session", return_value=mock_session),
+        patch("agents.subagents.project_agent.get_session", return_value=mock_session),
     ):
         mock_ctx.get.return_value = user
         mock_call.return_value = {
@@ -71,7 +71,7 @@ async def test_project_agent_returns_structured_output() -> None:
     with (
         patch("agents.subagents.project_agent.call_mcp_tool", new_callable=AsyncMock) as mock_call,
         patch("agents.subagents.project_agent.current_user_ctx") as mock_ctx,
-        patch("agents.subagents.project_agent.async_session", return_value=mock_session),
+        patch("agents.subagents.project_agent.get_session", return_value=mock_session),
     ):
         mock_ctx.get.return_value = user
         mock_call.return_value = {
@@ -112,7 +112,7 @@ async def test_project_agent_returns_friendly_message_on_mcp_failure() -> None:
     with (
         patch("agents.subagents.project_agent.call_mcp_tool", new_callable=AsyncMock) as mock_call,
         patch("agents.subagents.project_agent.current_user_ctx") as mock_ctx,
-        patch("agents.subagents.project_agent.async_session", return_value=mock_session),
+        patch("agents.subagents.project_agent.get_session", return_value=mock_session),
     ):
         mock_ctx.get.return_value = user
         mock_call.side_effect = HTTPException(

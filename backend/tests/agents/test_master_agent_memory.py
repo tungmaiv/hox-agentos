@@ -34,7 +34,7 @@ async def test_load_memory_node_injects_facts_as_system_message():
         patch("agents.master_agent.search_facts", new_callable=AsyncMock) as mock_search,
         patch("agents.master_agent.SidecarEmbeddingProvider") as mock_provider_cls,
         patch("agents.master_agent.load_recent_turns", new_callable=AsyncMock) as mock_turns,
-        patch("agents.master_agent.async_session") as mock_session_factory,
+        patch("agents.master_agent.get_session") as mock_session_factory,
         patch("agents.master_agent.current_user_ctx") as mock_ctx,
         patch("agents.master_agent.current_conversation_id_ctx") as mock_conv_ctx,
     ):
@@ -44,7 +44,7 @@ async def test_load_memory_node_injects_facts_as_system_message():
         mock_provider_cls.return_value = mock_provider
         mock_turns.return_value = []
 
-        # Mock async context manager for async_session
+        # Mock async context manager for get_session
         mock_session = AsyncMock()
         mock_begin_ctx = AsyncMock()
         mock_begin_ctx.__aenter__ = AsyncMock(return_value=None)
@@ -83,7 +83,7 @@ async def test_load_memory_node_no_facts_no_system_message():
         patch("agents.master_agent.search_facts", new_callable=AsyncMock) as mock_search,
         patch("agents.master_agent.SidecarEmbeddingProvider") as mock_provider_cls,
         patch("agents.master_agent.load_recent_turns", new_callable=AsyncMock) as mock_turns,
-        patch("agents.master_agent.async_session") as mock_session_factory,
+        patch("agents.master_agent.get_session") as mock_session_factory,
         patch("agents.master_agent.current_user_ctx") as mock_ctx,
         patch("agents.master_agent.current_conversation_id_ctx") as mock_conv_ctx,
     ):
@@ -128,7 +128,7 @@ async def test_load_memory_node_gracefully_handles_embedding_failure():
     with (
         patch("agents.master_agent.SidecarEmbeddingProvider") as mock_provider_cls,
         patch("agents.master_agent.load_recent_turns", new_callable=AsyncMock) as mock_turns,
-        patch("agents.master_agent.async_session") as mock_session_factory,
+        patch("agents.master_agent.get_session") as mock_session_factory,
         patch("agents.master_agent.current_user_ctx") as mock_ctx,
         patch("agents.master_agent.current_conversation_id_ctx") as mock_conv_ctx,
     ):
@@ -176,7 +176,7 @@ async def test_save_memory_node_dispatches_embed_task_for_ai_turns():
         patch("agents.master_agent.embed_and_store") as mock_embed_task,
         patch("agents.master_agent.summarize_episode") as mock_summarize_task,
         patch("agents.master_agent.save_turn", new_callable=AsyncMock),
-        patch("agents.master_agent.async_session") as mock_session_factory,
+        patch("agents.master_agent.get_session") as mock_session_factory,
         patch("agents.master_agent.current_user_ctx") as mock_ctx,
         patch("agents.master_agent.current_conversation_id_ctx") as mock_conv_ctx,
         patch("agents.master_agent.get_episode_threshold_cached", new_callable=AsyncMock) as mock_threshold,
@@ -239,7 +239,7 @@ async def test_save_memory_node_triggers_summarize_at_threshold():
         patch("agents.master_agent.embed_and_store") as mock_embed_task,
         patch("agents.master_agent.summarize_episode") as mock_summarize_task,
         patch("agents.master_agent.save_turn", new_callable=AsyncMock),
-        patch("agents.master_agent.async_session") as mock_session_factory,
+        patch("agents.master_agent.get_session") as mock_session_factory,
         patch("agents.master_agent.current_user_ctx") as mock_ctx,
         patch("agents.master_agent.current_conversation_id_ctx") as mock_conv_ctx,
         patch("agents.master_agent.get_episode_threshold_cached", new_callable=AsyncMock) as mock_threshold,
@@ -297,7 +297,7 @@ async def test_save_memory_node_no_summarize_below_threshold():
         patch("agents.master_agent.embed_and_store") as mock_embed_task,
         patch("agents.master_agent.summarize_episode") as mock_summarize_task,
         patch("agents.master_agent.save_turn", new_callable=AsyncMock),
-        patch("agents.master_agent.async_session") as mock_session_factory,
+        patch("agents.master_agent.get_session") as mock_session_factory,
         patch("agents.master_agent.current_user_ctx") as mock_ctx,
         patch("agents.master_agent.current_conversation_id_ctx") as mock_conv_ctx,
         patch("agents.master_agent.get_episode_threshold_cached", new_callable=AsyncMock) as mock_threshold,
@@ -394,7 +394,7 @@ async def test_load_memory_node_injects_episodes_as_system_message():
         patch("agents.master_agent.SidecarEmbeddingProvider") as mock_provider_cls,
         patch("agents.master_agent.load_recent_turns", new_callable=AsyncMock) as mock_turns,
         patch("agents.master_agent.load_recent_episodes", new_callable=AsyncMock) as mock_episodes,
-        patch("agents.master_agent.async_session") as mock_session_factory,
+        patch("agents.master_agent.get_session") as mock_session_factory,
         patch("agents.master_agent.current_user_ctx") as mock_ctx,
         patch("agents.master_agent.current_conversation_id_ctx") as mock_conv_ctx,
     ):
@@ -407,7 +407,7 @@ async def test_load_memory_node_injects_episodes_as_system_message():
         mock_turns.return_value = []
         mock_episodes.return_value = [mock_episode]
 
-        # Mock async context manager for async_session
+        # Mock async context manager for get_session
         mock_session = AsyncMock()
         mock_begin_ctx = AsyncMock()
         mock_begin_ctx.__aenter__ = AsyncMock(return_value=None)
@@ -454,7 +454,7 @@ async def test_load_memory_node_gracefully_handles_episode_failure():
         patch("agents.master_agent.SidecarEmbeddingProvider") as mock_provider_cls,
         patch("agents.master_agent.load_recent_turns", new_callable=AsyncMock) as mock_turns,
         patch("agents.master_agent.load_recent_episodes", new_callable=AsyncMock) as mock_episodes,
-        patch("agents.master_agent.async_session") as mock_session_factory,
+        patch("agents.master_agent.get_session") as mock_session_factory,
         patch("agents.master_agent.current_user_ctx") as mock_ctx,
         patch("agents.master_agent.current_conversation_id_ctx") as mock_conv_ctx,
     ):

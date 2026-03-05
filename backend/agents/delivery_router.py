@@ -32,11 +32,11 @@ async def _resolve_channel_account(
     Returns (external_user_id, external_chat_id) or ("", None) if not found.
     For DMs, external_chat_id == external_user_id.
     """
-    from core.db import async_session
+    from core.db import get_session
     from core.models.channel import ChannelAccount
     from sqlalchemy import and_, select
 
-    async with async_session() as session:
+    async with get_session() as session:
         async with session.begin():
             result = await session.execute(
                 select(ChannelAccount).where(

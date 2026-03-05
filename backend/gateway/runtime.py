@@ -54,7 +54,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from agents.artifact_builder import create_artifact_builder_graph
 from agents.master_agent import create_master_graph
 from core.context import current_conversation_id_ctx, current_user_ctx
-from core.db import async_session
+from core.db import get_session
 from core.models.user import UserContext
 from memory.short_term import load_recent_turns
 from security.acl import check_tool_acl, check_tool_acl_cached, log_tool_call
@@ -116,7 +116,7 @@ async def _check_gates(user: UserContext, start_ms: int) -> None:
         user: Authenticated UserContext from Gate 1 (get_current_user dependency).
         start_ms: Monotonic milliseconds at request start for duration tracking.
     """
-    async with async_session() as session:
+    async with get_session() as session:
         async with session.begin():
             # Gate 2: RBAC — user must have 'chat' permission
             if not await has_permission(user, "chat", session):
@@ -221,7 +221,7 @@ async def copilotkit_endpoint(
                 logger.warning("connect_invalid_thread_id", thread_id=thread_id)
             else:
                 # DB errors propagate — only the UUID parse is expected to fail
-                async with async_session() as db:
+                async with get_session() as db:
                     async with db.begin():
                         turns = await load_recent_turns(
                             db,
@@ -259,7 +259,7 @@ async def copilotkit_endpoint(
 
         # artifact_builder requires registry:manage permission (not just chat)
         if agent_id == "artifact_builder":
-            async with async_session() as session:
+            async with get_session() as session:
                 async with session.begin():
                     if not await has_permission(user, "registry:manage", session):
                         raise HTTPException(

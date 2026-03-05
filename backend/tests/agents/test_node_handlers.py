@@ -129,7 +129,7 @@ async def test_channel_output_node_telegram_delivery():
     mock_gateway = MagicMock()
     mock_gateway.send_outbound = AsyncMock()
 
-    with patch("agents.node_handlers.async_session") as mock_sf, \
+    with patch("agents.node_handlers.get_session") as mock_sf, \
          patch("api.routes.channels.get_channel_gateway", return_value=mock_gateway):
         mock_sf.return_value.__aenter__ = AsyncMock(return_value=mock_session)
         mock_sf.return_value.__aexit__ = AsyncMock(return_value=False)
@@ -171,7 +171,7 @@ async def test_channel_output_node_no_linked_account():
     mock_begin_ctx.__aexit__ = AsyncMock(return_value=None)
     mock_session.begin = MagicMock(return_value=mock_begin_ctx)
 
-    with patch("agents.node_handlers.async_session") as mock_sf:
+    with patch("agents.node_handlers.get_session") as mock_sf:
         mock_sf.return_value.__aenter__ = AsyncMock(return_value=mock_session)
         mock_sf.return_value.__aexit__ = AsyncMock(return_value=False)
 

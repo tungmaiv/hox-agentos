@@ -24,7 +24,7 @@ async def test_pre_route_email_skips_master_llm() -> None:
     from agents.master_agent import _pre_route
 
     state = {"messages": [HumanMessage(content="summarize my unread emails")]}
-    with patch("agents.master_agent.async_session") as mock_session:
+    with patch("agents.master_agent.get_session") as mock_session:
         mock_cm = AsyncMock()
         mock_cm.__aenter__ = AsyncMock(return_value=MagicMock(
             execute=AsyncMock(return_value=MagicMock(scalar_one_or_none=MagicMock(return_value=None)))

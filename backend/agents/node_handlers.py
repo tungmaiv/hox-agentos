@@ -26,7 +26,7 @@ import structlog
 
 from agents.condition_evaluator import evaluate_condition
 from agents.workflow_state import WorkflowState
-from core.db import async_session
+from core.db import get_session
 from core.logging import timed
 from gateway.tool_registry import get_tool
 from mcp.registry import call_mcp_tool
@@ -141,7 +141,7 @@ async def _handle_tool_node(config: dict[str, Any], state: WorkflowState) -> Any
     # Passing an active session bypasses the 60s stale cache — critical for
     # sandbox routing decisions where a revoked sandbox permission must take
     # effect immediately rather than up to 60 seconds later.
-    async with async_session() as session:
+    async with get_session() as session:
         async with session.begin():
             tool_meta = await get_tool(tool_name, session=session)
         if tool_meta is None:
@@ -314,7 +314,7 @@ async def _handle_channel_output_node(config: dict[str, Any], state: WorkflowSta
         raise ValueError("No user_id in workflow context")
 
     uid = uuid.UUID(str(owner_user_id))
-    async with async_session() as session:
+    async with get_session() as session:
         async with session.begin():
             result = await session.execute(
                 select(ChannelAccount).where(

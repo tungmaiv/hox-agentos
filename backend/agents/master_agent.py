@@ -43,7 +43,7 @@ from core.config import get_llm, settings
 from core.logging import timed
 from core.prompts import load_prompt
 from core.context import current_conversation_id_ctx, current_user_ctx
-from core.db import async_session
+from core.db import get_session
 from core.models.memory import ConversationTurn
 from memory.embeddings import SidecarEmbeddingProvider
 from memory.long_term import search_facts
@@ -100,7 +100,7 @@ async def _load_memory_node(state: BlitzState) -> dict:
         history: list[BaseMessage] = list(state.get("messages", []))
         skip_short_term = True
     else:
-        async with async_session() as session:
+        async with get_session() as session:
             async with session.begin():
                 turns = await load_recent_turns(session, user_id=user_id, conversation_id=conversation_id, n=20)
 
@@ -128,7 +128,7 @@ async def _load_memory_node(state: BlitzState) -> dict:
         try:
             provider = SidecarEmbeddingProvider()
             query_embedding = (await provider.embed([str(last_user_message)]))[0]
-            async with async_session() as session:
+            async with get_session() as session:
                 async with session.begin():
                     with timed(logger, "memory_search", user_id=str(user_id)):
                         facts = await search_facts(
@@ -160,7 +160,7 @@ async def _load_memory_node(state: BlitzState) -> dict:
     # Loaded unconditionally on user_id — not query-dependent like long-term facts.
     if user_id:
         try:
-            async with async_session() as session:
+            async with get_session() as session:
                 async with session.begin():
                     episodes = await load_recent_episodes(session, user_id=user_id, n=3)
             if episodes:
@@ -218,7 +218,7 @@ async def _master_node(state: BlitzState) -> dict[str, list[BaseMessage]]:
     try:
         user = current_user_ctx.get()
         user_context_str = f"User: {user.get('username', 'unknown')} ({user.get('email', '')})"
-        async with async_session() as session:
+        async with get_session() as session:
             async with session.begin():
                 custom_instructions = await get_user_instructions(user["user_id"], session)
                 user_prefs = await get_user_preference_values(user["user_id"], session)
@@ -230,7 +230,7 @@ async def _master_node(state: BlitzState) -> dict[str, list[BaseMessage]]:
     # Load available tools from registry for context injection
     available_tools_str = ""
     try:
-        async with async_session() as session:
+        async with get_session() as session:
             async with session.begin():
                 from gateway.tool_registry import list_tools
                 tool_names = await list_tools(session)
@@ -350,7 +350,7 @@ async def _save_memory_node(state: BlitzState) -> dict:
     # CopilotKit sends the full message history on every agent/run, so
     # initial_message_count (never set by LangGraphAGUIAgent) can't be trusted.
     # Instead, count existing turns in DB — anything beyond that is new.
-    async with async_session() as session:
+    async with get_session() as session:
         try:
             count_result = await session.execute(
                 select(func.count()).where(
@@ -400,7 +400,7 @@ async def _save_memory_node(state: BlitzState) -> dict:
     # Trigger episode summarization at configurable threshold.
     # Read threshold via cached helper — avoids a DB query on every save_memory call.
     total_after = existing_count + len(new_messages)
-    async with async_session() as threshold_session:
+    async with get_session() as threshold_session:
         threshold = await get_episode_threshold_cached(user_id, threshold_session)
     if total_after > 0 and total_after % threshold == 0:
         summarize_episode.delay(str(conversation_id), str(user_id))
@@ -573,7 +573,7 @@ async def _refresh_slash_cache() -> None:
     from core.models.skill_definition import SkillDefinition as _SkillDef
 
     try:
-        async with async_session() as session:
+        async with get_session() as session:
             async with session.begin():
                 result = await session.execute(
                     select(_SkillDef.slash_command, _SkillDef.name).where(
@@ -604,7 +604,7 @@ async def _refresh_agent_enabled_cache() -> None:
     from core.models.system_config import SystemConfig
 
     try:
-        async with async_session() as session:
+        async with get_session() as session:
             async with session.begin():
                 result = await session.execute(
                     select(SystemConfig).where(
@@ -652,7 +652,7 @@ async def _skill_executor_node(state: BlitzState) -> dict[str, list[BaseMessage]
     command = str(last_user_msg).strip().split()[0]  # e.g., "/morning_digest"
 
     try:
-        async with async_session() as session:
+        async with get_session() as session:
             async with session.begin():
                 result = await session.execute(
                     select(_SkillDef).where(
@@ -694,7 +694,7 @@ async def _skill_executor_node(state: BlitzState) -> dict[str, list[BaseMessage]
         }
 
         executor = SkillExecutor()
-        async with async_session() as session:
+        async with get_session() as session:
             try:
                 skill_result = await executor.run(skill, user_context, session)
             except Exception:
@@ -766,7 +766,7 @@ async def _capabilities_node(state: BlitzState) -> dict[str, list[BaseMessage]]:
         }
 
     try:
-        async with async_session() as session:
+        async with get_session() as session:
             async with session.begin():
                 result = await system_capabilities(user_id=user_id, session=session)
 

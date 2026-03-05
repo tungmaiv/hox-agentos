@@ -9,7 +9,7 @@ from langchain_core.messages import AIMessage, HumanMessage
 
 from agents.state.types import BlitzState
 from core.context import current_user_ctx
-from core.db import async_session
+from core.db import get_session
 from core.schemas.agent_outputs import ProjectStatusResult
 from mcp.registry import call_mcp_tool
 
@@ -40,7 +40,7 @@ async def project_agent_node(state: BlitzState) -> dict:
         return {"messages": [ai_message]}
 
     try:
-        async with async_session() as session:
+        async with get_session() as session:
             try:
                 result = await call_mcp_tool(
                     "crm.get_project_status",

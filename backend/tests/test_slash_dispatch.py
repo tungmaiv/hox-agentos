@@ -104,7 +104,7 @@ async def test_pre_route_detects_slash_command(skill_db) -> None:
         "delivery_targets": [],
     }
 
-    with patch("agents.master_agent.async_session", MockContextManager):
+    with patch("agents.master_agent.get_session", MockContextManager):
         result = await _pre_route(state)
 
     assert result == "skill_executor"
@@ -159,7 +159,7 @@ async def test_pre_route_unknown_slash_command(skill_db) -> None:
         "delivery_targets": [],
     }
 
-    with patch("agents.master_agent.async_session", MockContextManager):
+    with patch("agents.master_agent.get_session", MockContextManager):
         result = await _pre_route(state)
 
     # Unknown command falls through to master_agent (no keyword match)

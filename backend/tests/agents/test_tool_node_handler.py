@@ -37,7 +37,7 @@ async def test_tool_node_returns_error_for_unknown_tool():
     handler = get_handler("tool_node")
     state = _make_state()
 
-    with patch("agents.node_handlers.async_session") as mock_session_factory, \
+    with patch("agents.node_handlers.get_session") as mock_session_factory, \
          patch("agents.node_handlers.get_tool", new_callable=AsyncMock) as mock_get_tool:
 
         mock_session = AsyncMock()
@@ -73,7 +73,7 @@ async def test_tool_node_calls_mcp_for_known_tool():
     }
 
     with patch("agents.node_handlers.call_mcp_tool", new_callable=AsyncMock) as mock_call, \
-         patch("agents.node_handlers.async_session") as mock_session_factory, \
+         patch("agents.node_handlers.get_session") as mock_session_factory, \
          patch("agents.node_handlers.get_tool", new_callable=AsyncMock) as mock_get_tool:
 
         mock_session = AsyncMock()
@@ -117,7 +117,7 @@ async def test_tool_node_returns_error_on_acl_denial():
     }
 
     with patch("agents.node_handlers.call_mcp_tool", new_callable=AsyncMock) as mock_call, \
-         patch("agents.node_handlers.async_session") as mock_session_factory, \
+         patch("agents.node_handlers.get_session") as mock_session_factory, \
          patch("agents.node_handlers.get_tool", new_callable=AsyncMock) as mock_get_tool:
 
         mock_session = AsyncMock()
