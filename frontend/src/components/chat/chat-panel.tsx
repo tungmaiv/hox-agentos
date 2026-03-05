@@ -332,15 +332,17 @@ function TypingIndicator() {
 // ---------------------------------------------------------------------------
 interface ChatPanelInnerProps {
   conversationId: string;
+  /** Skills list hoisted from ChatPanel (above the CopilotKit key boundary)
+   *  to prevent useSkills() from re-fetching on every conversation switch. */
+  skills: SkillItem[];
   onSidebarToggle: () => void;
   onNewConversation: () => void;
   onConversationUpdate?: () => void;
 }
 
-function ChatPanelInner({ conversationId, onSidebarToggle, onNewConversation, onConversationUpdate }: ChatPanelInnerProps) {
+function ChatPanelInner({ conversationId, skills, onSidebarToggle, onNewConversation, onConversationUpdate }: ChatPanelInnerProps) {
   const { messages, reset } = useCopilotChatInternal();
   const [isProcessing, setIsProcessing] = useState(false);
-  const { skills } = useSkills();
 
   // History is restored via agent/connect StateSnapshot (runtime.py loads turns
   // from DB and returns them in the snapshot). No client-side fetch needed.
@@ -513,6 +515,12 @@ export function ChatPanel({
   onNewConversation,
   onConversationUpdate,
 }: ChatPanelProps) {
+  // Hoist useSkills() above the CopilotKit key boundary so that conversation
+  // switches (which remount everything inside <CopilotKit key=conversationId>)
+  // do NOT trigger a re-fetch of skills.  Skills are stable across conversations
+  // and only need to be fetched once per session load.
+  const { skills } = useSkills();
+
   if (!conversationId) {
     return (
       <div className="flex-1 flex items-center justify-center text-gray-400">
@@ -535,6 +543,7 @@ export function ChatPanel({
     >
       <ChatPanelInner
         conversationId={conversationId}
+        skills={skills}
         onSidebarToggle={onSidebarToggle}
         onNewConversation={onNewConversation}
         onConversationUpdate={onConversationUpdate}
