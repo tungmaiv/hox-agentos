@@ -35,6 +35,7 @@ from sqlalchemy import select
 from agents.graphs import compile_workflow_to_stategraph
 from core.config import get_settings
 from core.db import async_session
+from core.logging import timed
 from core.models.workflow import Workflow, WorkflowRun
 from scheduler.celery_app import celery_app
 from security.keycloak_client import fetch_user_realm_roles
@@ -172,26 +173,30 @@ async def _execute_workflow_inner(run_id_str: str, hitl_result: str | None = Non
             input_state = initial_state
 
         try:
-            async for event in compiled.astream_events(input_state, config=config, version="v1"):
-                event_type: str = event.get("event", "")
-                node_name: str = event.get("name", "")
+            # NOTE: timed() wraps the full async streaming loop — duration_ms captures
+            # the complete streaming time from first token to final event. This is
+            # intentional: we want end-to-end workflow run latency, not just LLM latency.
+            with timed(logger, "workflow_run", workflow_id=run_id_str):
+                async for event in compiled.astream_events(input_state, config=config, version="v1"):
+                    event_type: str = event.get("event", "")
+                    node_name: str = event.get("name", "")
 
-                # Only emit events for our workflow nodes (filter LangGraph internals)
-                if node_name not in known_node_ids:
-                    continue
+                    # Only emit events for our workflow nodes (filter LangGraph internals)
+                    if node_name not in known_node_ids:
+                        continue
 
-                if event_type == "on_chain_start":
-                    publish_event(run_id_str, {"event": "node_started", "node_id": node_name})
+                    if event_type == "on_chain_start":
+                        publish_event(run_id_str, {"event": "node_started", "node_id": node_name})
 
-                elif event_type == "on_chain_end":
-                    output = event.get("data", {}).get("output", {})
-                    current = output.get("current_output") if isinstance(output, dict) else output
-                    final_output = current
-                    publish_event(run_id_str, {
-                        "event": "node_completed",
-                        "node_id": node_name,
-                        "output": current,
-                    })
+                    elif event_type == "on_chain_end":
+                        output = event.get("data", {}).get("output", {})
+                        current = output.get("current_output") if isinstance(output, dict) else output
+                        final_output = current
+                        publish_event(run_id_str, {
+                            "event": "node_completed",
+                            "node_id": node_name,
+                            "output": current,
+                        })
 
         except Exception as exc:
             # Genuine error — GraphInterrupt is suppressed by LangGraph 1.0 and

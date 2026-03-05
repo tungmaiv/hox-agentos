@@ -26,6 +26,7 @@ from langgraph.graph import END, StateGraph
 
 from agents.node_handlers import get_handler
 from agents.workflow_state import WorkflowState
+from core.logging import timed
 
 logger = structlog.get_logger(__name__)
 
@@ -108,6 +109,7 @@ def compile_workflow_to_stategraph(
     for node in nodes:
         get_handler(node["type"])  # raises ValueError for unknown types
 
+    workflow_id: str = str(definition_json.get("workflow_id", "unknown"))
     sorted_nodes = _topological_sort(nodes, edges)
 
     # Build adjacency: source_node_id → list of outgoing edges
@@ -184,8 +186,10 @@ def compile_workflow_to_stategraph(
             for edge in plain_edges:
                 builder.add_edge(node_id, edge["target"])
 
-    # Entry point: first node in topological order
-    builder.set_entry_point(sorted_nodes[0]["id"])
+    # Entry point + compile timing: first node in topological order.
+    # timed() captures the full builder finalization step.
+    with timed(logger, "canvas_compile", workflow_id=workflow_id):
+        builder.set_entry_point(sorted_nodes[0]["id"])
 
     logger.info(
         "workflow_compiled",

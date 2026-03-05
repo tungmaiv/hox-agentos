@@ -26,6 +26,7 @@ from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from channels.models import InternalMessage
+from core.logging import timed
 from core.models.channel import ChannelAccount, ChannelSession
 
 logger = structlog.get_logger(__name__)
@@ -337,12 +338,14 @@ class ChannelGateway:
 
         for attempt, delay in enumerate(backoff_delays, start=1):
             try:
-                async with httpx.AsyncClient(timeout=10.0) as client:
-                    resp = await client.post(
-                        send_url,
-                        json=msg.model_dump(mode="json"),
-                    )
-                    resp.raise_for_status()
+                user_id_str = str(msg.user_id) if msg.user_id else ""
+                with timed(logger, "channel_delivery", channel=msg.channel, user_id=user_id_str):
+                    async with httpx.AsyncClient(timeout=10.0) as client:
+                        resp = await client.post(
+                            send_url,
+                            json=msg.model_dump(mode="json"),
+                        )
+                        resp.raise_for_status()
                 logger.info(
                     "outbound_sent",
                     channel=msg.channel,

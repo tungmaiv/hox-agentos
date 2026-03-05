@@ -27,6 +27,7 @@ import structlog
 from agents.condition_evaluator import evaluate_condition
 from agents.workflow_state import WorkflowState
 from core.db import async_session
+from core.logging import timed
 from gateway.tool_registry import get_tool
 from mcp.registry import call_mcp_tool
 from sandbox.executor import SandboxExecutor
@@ -192,12 +193,13 @@ async def _handle_tool_node(config: dict[str, Any], state: WorkflowState) -> Any
         }
 
         try:
-            result = await call_mcp_tool(
-                tool_name=tool_name,
-                arguments=params,
-                user=user_ctx,
-                db_session=session,
-            )
+            with timed(logger, "tool_execution", tool=tool_name, user_id=str(user_uuid)):
+                result = await call_mcp_tool(
+                    tool_name=tool_name,
+                    arguments=params,
+                    user=user_ctx,
+                    db_session=session,
+                )
             logger.info("tool_node_success", tool=tool_name, user_id=str(user_uuid))
             return result
         except HTTPException as exc:

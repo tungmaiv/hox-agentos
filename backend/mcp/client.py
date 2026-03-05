@@ -13,6 +13,8 @@ from typing import Any
 import httpx
 import structlog
 
+from core.logging import timed
+
 logger = structlog.get_logger(__name__)
 
 
@@ -43,22 +45,24 @@ class MCPClient:
         self, tool_name: str, arguments: dict[str, Any]
     ) -> dict[str, Any]:
         """Call tools/call JSON-RPC. Returns structured result."""
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(
-                f"{self._base_url}/sse",
-                json={
-                    "jsonrpc": "2.0",
-                    "method": "tools/call",
-                    "params": {"name": tool_name, "arguments": arguments},
-                    "id": 2,
-                },
-                headers=self._headers,
-            )
-            response.raise_for_status()
-            result = response.json()
-            if "error" in result:
-                logger.warning(
-                    "mcp_tool_error", tool=tool_name, error=result["error"]
+        server_name = self._base_url.split("://")[-1].split("/")[0]
+        with timed(logger, "mcp_call", tool=tool_name, server=server_name):
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(
+                    f"{self._base_url}/sse",
+                    json={
+                        "jsonrpc": "2.0",
+                        "method": "tools/call",
+                        "params": {"name": tool_name, "arguments": arguments},
+                        "id": 2,
+                    },
+                    headers=self._headers,
                 )
-                return {"error": result["error"]["message"], "success": False}
-            return {"result": result.get("result"), "success": True}
+                response.raise_for_status()
+                result = response.json()
+                if "error" in result:
+                    logger.warning(
+                        "mcp_tool_error", tool=tool_name, error=result["error"]
+                    )
+                    return {"error": result["error"]["message"], "success": False}
+                return {"result": result.get("result"), "success": True}

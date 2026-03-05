@@ -40,6 +40,7 @@ from agents.state.types import BlitzState
 from api.routes.user_instructions import get_user_instructions
 from api.routes.user_preferences import get_user_preference_values
 from core.config import get_llm, settings
+from core.logging import timed
 from core.prompts import load_prompt
 from core.context import current_conversation_id_ctx, current_user_ctx
 from core.db import async_session
@@ -129,12 +130,13 @@ async def _load_memory_node(state: BlitzState) -> dict:
             query_embedding = (await provider.embed([str(last_user_message)]))[0]
             async with async_session() as session:
                 async with session.begin():
-                    facts = await search_facts(
-                        session,
-                        user_id=user_id,
-                        query_embedding=query_embedding,
-                        k=5,
-                    )
+                    with timed(logger, "memory_search", user_id=str(user_id)):
+                        facts = await search_facts(
+                            session,
+                            user_id=user_id,
+                            query_embedding=query_embedding,
+                            k=5,
+                        )
             loaded_facts = [f.content for f in facts]
             if loaded_facts:
                 facts_context = "\n".join(f"- {fact}" for fact in loaded_facts)
@@ -286,7 +288,15 @@ async def _master_node(state: BlitzState) -> dict[str, list[BaseMessage]]:
 
     messages = [SystemMessage(content=system_content)] + messages
 
-    response = await llm.ainvoke(messages)
+    user_id_for_log = ""
+    try:
+        _ctx_user = current_user_ctx.get()
+        user_id_for_log = str(_ctx_user.get("user_id", ""))
+    except LookupError:
+        pass
+
+    with timed(logger, "llm_call", user_id=user_id_for_log):
+        response = await llm.ainvoke(messages)
     logger.info("master_agent_response", content_length=len(str(response.content)))
     return {"messages": [response]}
 
