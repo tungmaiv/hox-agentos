@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Production Readiness & Skill Platform
 status: unknown
-last_updated: "2026-03-05T12:47:52.444Z"
+last_updated: "2026-03-05T12:57:02.008Z"
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 13
-  completed_plans: 10
+  completed_plans: 11
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-05)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates their daily work routines and lets them build custom automations without writing code — all within an enterprise-secure, on-premise environment where data never leaves the company.
-**Current focus:** v1.3 Phase 17 — Performance & Embedding Sidecar (In Progress — 5/7 plans done)
+**Current focus:** v1.3 Phase 17 — Performance & Embedding Sidecar (In Progress — 6/7 plans done)
 
 ## Current Position
 
 Phase: 17 of 23 (Performance & Embedding Sidecar) — IN PROGRESS
-Plan: 05 of 07 complete
-Status: Plan 17-05 done — SidecarEmbeddingProvider in master_agent, startup validation, POST /api/admin/memory/reindex (PERF-01, PERF-05, PERF-06), 740 tests passing
-Last activity: 2026-03-05 - Completed 17-05: SidecarEmbeddingProvider migration, non-fatal startup sidecar check, admin reindex endpoint+task
+Plan: 06 of 07 complete
+Status: Plan 17-06 done — DB session optimization via contextvar (PERF-08): get_session(), RequestSessionMiddleware, migrated 5 files with 12+ async_session() callers, 742 tests passing
+Last activity: 2026-03-05 - Completed 17-06: single-session-per-request, PERF-08 satisfied
 
-Progress: [######░░░░] ~43%
+Progress: [#######░░░] ~50%
 
 ## Performance Metrics
 
@@ -81,6 +81,8 @@ v1.3 roadmap decisions:
 - [Phase 17]: [17-05]: Admin memory reindex uses tool:admin permission — consistent with system_config.py pattern for system-wide admin ops
 - [Phase 17]: [17-05]: reindex_memory_task uses separate async_session() per read/write batch — avoids holding transactions during slow embedding calls
 - [Phase 17]: [17-05]: Startup sidecar check is non-fatal in main.py lifespan — backend starts even when sidecar not warm
+- [Phase 17]: [17-06]: get_session() asynccontextmanager yields contextvar session when set, falls through to async_session() otherwise — single session per HTTP request via RequestSessionMiddleware
+- [Phase 17]: [17-06]: Celery scheduler tasks explicitly excluded from migration — they manage own session lifecycle outside HTTP request context
 
 ### Pending Todos
 
@@ -102,6 +104,7 @@ v1.3 roadmap decisions:
 |---|-------------|------|--------|-----------|
 | 4 | fix avatar dropdown z-index in nav-rail.tsx (z-40 → z-50) | 2026-03-05 | 8a45435 | [4-fix-avatar-dropdown-z-index-in-nav-rail-](./quick/4-fix-avatar-dropdown-z-index-in-nav-rail-/) |
 | Phase 17 P05 | 5 | 5 tasks | 6 files |
+| Phase 17 P06 | 6 | 5 tasks | 15 files |
 
 ## Session Continuity
 

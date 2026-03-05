@@ -36,10 +36,10 @@
 - [x] **PERF-02**: Embedding model is configurable via `EMBEDDING_MODEL` env var (default: `BAAI/bge-m3`); sidecar health endpoint reports model name, dimension, and status
 - [x] **PERF-03**: Backend `memory/embeddings.py` calls sidecar HTTP first; falls back to Celery path if sidecar is unreachable
 - [x] **PERF-04**: In-process FlagEmbedding (`BGE_M3Provider`) is removed from backend — no dual-load of bge-m3 in uvicorn and sidecar simultaneously
-- [ ] **PERF-05**: Admin can trigger memory reindex via `POST /api/admin/memory/reindex` with `confirm=true` — deletes all vectors and re-embeds from source text (with warning about data loss)
-- [ ] **PERF-06**: Backend validates sidecar model dimension matches pgvector column dimension on startup — blocks embedding operations with clear error on mismatch
+- [x] **PERF-05**: Admin can trigger memory reindex via `POST /api/admin/memory/reindex` with `confirm=true` — deletes all vectors and re-embeds from source text (with warning about data loss)
+- [x] **PERF-06**: Backend validates sidecar model dimension matches pgvector column dimension on startup — blocks embedding operations with clear error on mismatch
 - [x] **PERF-07**: `duration_ms` is logged via structlog for 7 critical paths: memory search, tool execution, LLM call, canvas compile, MCP call, channel delivery, workflow run
-- [ ] **PERF-08**: Single DB session per request via contextvar replaces 6-9 separate session opens
+- [x] **PERF-08**: Single DB session per request via contextvar replaces 6-9 separate session opens
 - [x] **PERF-09**: Tool ACL query results cached with 60s TTL per user
 - [x] **PERF-10**: Episode threshold check cached with 60s TTL
 - [x] **PERF-11**: User instructions cached per-user with LRU and 60s TTL
@@ -152,10 +152,10 @@
 | PERF-02 | Phase 17 | Complete |
 | PERF-03 | Phase 17 | Complete |
 | PERF-04 | Phase 17 | Complete |
-| PERF-05 | Phase 17 | pending |
-| PERF-06 | Phase 17 | pending |
+| PERF-05 | Phase 17 | Complete |
+| PERF-06 | Phase 17 | Complete |
 | PERF-07 | Phase 17 | Complete |
-| PERF-08 | Phase 17 | pending |
+| PERF-08 | Phase 17 | Complete |
 | PERF-09 | Phase 17 | Complete |
 | PERF-10 | Phase 17 | Complete |
 | PERF-11 | Phase 17 | Complete |

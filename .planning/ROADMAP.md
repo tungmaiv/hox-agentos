@@ -243,7 +243,7 @@ Plans:
 | 14. Ecosystem Capabilities | v1.2 | 5/5 | ✅ Complete | 2026-03-04 |
 | 15. Session & Auth Hardening | v1.3 | 3/3 | ✅ Complete | 2026-03-05 |
 | 16. Navigation & UX | 3/3 | Complete    | 2026-03-05 | - |
-| 17. Performance & Embedding Sidecar | 4/7 | In Progress|  | - |
+| 17. Performance & Embedding Sidecar | 5/7 | In Progress|  | - |
 | 18. Identity Configuration | v1.3 | 0/TBD | Not started | - |
 | 19. Skill Platform A — Standards | v1.3 | 0/TBD | Not started | - |
 | 20. Skill Platform B — Catalog | v1.3 | 0/TBD | Not started | - |
