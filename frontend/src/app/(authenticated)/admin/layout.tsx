@@ -15,6 +15,7 @@ const ADMIN_TABS = [
   { label: "MCP Servers", href: "/admin/mcp-servers" },
   { label: "Permissions", href: "/admin/permissions" },
   { label: "Config",      href: "/admin/config" },
+  { label: "Memory",      href: "/admin/memory" },
   { label: "Credentials", href: "/admin/credentials" },
   { label: "Users",       href: "/admin/users" },
   { label: "Skill Store", href: "/admin/skill-store" },
