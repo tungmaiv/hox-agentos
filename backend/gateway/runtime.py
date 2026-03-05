@@ -57,7 +57,7 @@ from core.context import current_conversation_id_ctx, current_user_ctx
 from core.db import async_session
 from core.models.user import UserContext
 from memory.short_term import load_recent_turns
-from security.acl import check_tool_acl, log_tool_call
+from security.acl import check_tool_acl, check_tool_acl_cached, log_tool_call
 from security.deps import get_current_user
 from security.rbac import has_permission
 
@@ -124,8 +124,8 @@ async def _check_gates(user: UserContext, start_ms: int) -> None:
                 await log_tool_call(user["user_id"], "agents.chat", False, elapsed)
                 raise HTTPException(status_code=403, detail="Permission denied")
 
-            # Gate 3: Tool ACL — check per-user tool allowlist
-            allowed = await check_tool_acl(user["user_id"], "agents.chat", session)
+            # Gate 3: Tool ACL — check per-user tool allowlist (cached 60s)
+            allowed = await check_tool_acl_cached(user["user_id"], "agents.chat", session)
     elapsed = int(time.monotonic() * 1000) - start_ms
     await log_tool_call(user["user_id"], "agents.chat", allowed, elapsed)
 

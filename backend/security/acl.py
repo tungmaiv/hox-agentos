@@ -28,6 +28,7 @@ import time
 from uuid import UUID
 
 import structlog
+from cachetools import TTLCache
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -68,6 +69,35 @@ async def check_tool_acl(
     if row is None:
         return True  # default allow — no explicit policy set
     return row.allowed
+
+
+# Tool ACL result cache — 60s TTL, max 500 entries.
+# Key: (user_id, tool_name). Safe: user_id from JWT, never from request body.
+_acl_cache: TTLCache = TTLCache(maxsize=500, ttl=60)
+
+
+async def check_tool_acl_cached(
+    user_id: UUID,
+    tool_name: str,
+    session: AsyncSession,
+) -> bool:
+    """
+    Gate 3 with TTL cache: avoids a DB query on every tool call for the same user.
+
+    Cache TTL: 60 seconds. Cache is per-process (not shared across workers).
+    Call clear_acl_cache() in tests to reset state between test cases.
+    """
+    cache_key = (user_id, tool_name)
+    if cache_key in _acl_cache:
+        return _acl_cache[cache_key]
+    result = await check_tool_acl(user_id, tool_name, session)
+    _acl_cache[cache_key] = result
+    return result
+
+
+def clear_acl_cache() -> None:
+    """Clear the ACL TTL cache. Used in tests."""
+    _acl_cache.clear()
 
 
 async def log_tool_call(
