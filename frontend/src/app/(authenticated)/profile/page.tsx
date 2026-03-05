@@ -28,7 +28,11 @@ const ADMIN_ROLES = ["admin", "developer", "it-admin"];
 export default async function ProfilePage() {
   const session = await auth();
   const token = session as unknown as Record<string, unknown> | null;
-  const realmRoles = (token?.realmRoles ?? []) as string[];
+  const realmRoles = (
+    ((token?.realmRoles ?? token?.realm_roles ?? []) as string[]).concat(
+      ((token?.realm_access as { roles?: string[] } | undefined)?.roles ?? [])
+    )
+  );
   const showAdminLink = realmRoles.some((r) => ADMIN_ROLES.includes(r));
 
   return (

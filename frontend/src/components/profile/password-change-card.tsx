@@ -61,6 +61,21 @@ export function PasswordChangeCard() {
       return;
     }
 
+    if (!/[A-Z]/.test(newPassword)) {
+      setError("New password must contain at least one uppercase letter");
+      return;
+    }
+
+    if (!/[a-z]/.test(newPassword)) {
+      setError("New password must contain at least one lowercase letter");
+      return;
+    }
+
+    if (!/\d/.test(newPassword)) {
+      setError("New password must contain at least one digit");
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await fetch("/api/auth/local/change-password", {

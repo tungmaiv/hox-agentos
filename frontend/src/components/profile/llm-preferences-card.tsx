@@ -11,7 +11,7 @@
  * Backend API (Plan 16-01): GET/PUT /api/users/me/preferences
  * Proxy route: /api/users/me/preferences (Plan 16-03, created alongside this card)
  */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface Preferences {
   thinking_mode: boolean;
@@ -47,9 +47,15 @@ export function LLMPreferencesCard() {
   });
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
-  const [saveTimer, setSaveTimer] = useState<ReturnType<
-    typeof setTimeout
-  > | null>(null);
+  const [saveError, setSaveError] = useState(false);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     fetch("/api/users/me/preferences", { cache: "no-store" })
@@ -61,26 +67,36 @@ export function LLMPreferencesCard() {
       .catch(() => setLoading(false));
   }, []);
 
-  function showSavedIndicator() {
-    setSaved(true);
-    if (saveTimer) clearTimeout(saveTimer);
-    const timer = setTimeout(() => setSaved(false), 1500);
-    setSaveTimer(timer);
+  function showIndicator(ok: boolean) {
+    setSaved(ok);
+    setSaveError(!ok);
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      setSaved(false);
+      setSaveError(false);
+    }, 1500);
   }
 
   async function updatePrefs(partial: Partial<Preferences>) {
+    const previous = prefs;
     const updated = { ...prefs, ...partial };
     setPrefs(updated);
 
     try {
-      await fetch("/api/users/me/preferences", {
+      const res = await fetch("/api/users/me/preferences", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(partial),
       });
-      showSavedIndicator();
+      if (res.ok) {
+        showIndicator(true);
+      } else {
+        setPrefs(previous);
+        showIndicator(false);
+      }
     } catch {
-      // Silent failure — UI state already updated optimistically
+      setPrefs(previous);
+      showIndicator(false);
     }
   }
 
@@ -91,7 +107,7 @@ export function LLMPreferencesCard() {
           AI Preferences
         </h2>
         {saved && (
-          <span className="text-xs text-green-600 font-medium flex items-center gap-1 transition-opacity">
+          <span className="text-xs text-green-600 font-medium flex items-center gap-1">
             <svg
               className="w-3 h-3"
               fill="none"
@@ -106,6 +122,24 @@ export function LLMPreferencesCard() {
               />
             </svg>
             Saved
+          </span>
+        )}
+        {saveError && (
+          <span className="text-xs text-red-600 font-medium flex items-center gap-1">
+            <svg
+              className="w-3 h-3"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2.5}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+            Not saved
           </span>
         )}
       </div>

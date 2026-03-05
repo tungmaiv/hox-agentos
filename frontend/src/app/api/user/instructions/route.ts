@@ -3,16 +3,10 @@
  * Server-side proxy for GET/PUT /api/user/instructions/.
  * Injects the server-side Bearer token — credentials never touch the browser.
  */
-import { auth } from "@/auth";
+import { getAccessToken } from "@/lib/server-auth";
 import { NextResponse } from "next/server";
 
 const API_URL = process.env.BACKEND_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-
-async function getAccessToken(): Promise<string | undefined> {
-  const session = await auth();
-  return (session as unknown as Record<string, unknown>)
-    ?.accessToken as string | undefined;
-}
 
 export async function GET() {
   const accessToken = await getAccessToken();

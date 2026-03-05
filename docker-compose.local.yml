@@ -35,6 +35,8 @@ services:
       - ./backend/scheduler:/app/scheduler
       - ./backend/security:/app/security
       - ./backend/skills:/app/skills
+      - ./backend/skill_export:/app/skill_export
+      - ./backend/skill_repos:/app/skill_repos
       - /var/run/docker.sock:/var/run/docker.sock  # sandbox executor needs Docker
       - ./frontend/certs:/app/certs:ro  # Keycloak CA cert for TLS verification
     environment:
@@ -75,6 +77,45 @@ services:
       NEXT_PUBLIC_API_URL: http://backend:8000
     extra_hosts:
       - "keycloak.blitz.local:172.16.155.115"  # remote Keycloak server
+
+  # ── Celery workers: mount source so code changes don't need rebuild ──
+  # Workers don't hot-reload (no --autoreload); restart to pick up changes:
+  #   docker compose -f docker-compose.yml -f docker-compose.local.yml restart celery-worker celery-worker-default
+  celery-worker:
+    volumes:
+      - ./logs:/app/logs
+      - ./backend/agents:/app/agents
+      - ./backend/api:/app/api
+      - ./backend/channels:/app/channels
+      - ./backend/core:/app/core
+      - ./backend/gateway:/app/gateway
+      - ./backend/memory:/app/memory
+      - ./backend/mcp:/app/mcp
+      - ./backend/prompts:/app/prompts
+      - ./backend/sandbox:/app/sandbox
+      - ./backend/scheduler:/app/scheduler
+      - ./backend/security:/app/security
+      - ./backend/skills:/app/skills
+      - ./backend/skill_export:/app/skill_export
+      - ./backend/skill_repos:/app/skill_repos
+
+  celery-worker-default:
+    volumes:
+      - ./logs:/app/logs
+      - ./backend/agents:/app/agents
+      - ./backend/api:/app/api
+      - ./backend/channels:/app/channels
+      - ./backend/core:/app/core
+      - ./backend/gateway:/app/gateway
+      - ./backend/memory:/app/memory
+      - ./backend/mcp:/app/mcp
+      - ./backend/prompts:/app/prompts
+      - ./backend/sandbox:/app/sandbox
+      - ./backend/scheduler:/app/scheduler
+      - ./backend/security:/app/security
+      - ./backend/skills:/app/skills
+      - ./backend/skill_export:/app/skill_export
+      - ./backend/skill_repos:/app/skill_repos
 
   # ── Gateways: reach backend via Docker service name ──────────
   telegram-gateway:
