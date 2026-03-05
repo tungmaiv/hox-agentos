@@ -45,7 +45,7 @@ from core.prompts import load_prompt
 from core.context import current_conversation_id_ctx, current_user_ctx
 from core.db import async_session
 from core.models.memory import ConversationTurn
-from memory.embeddings import BGE_M3Provider
+from memory.embeddings import SidecarEmbeddingProvider
 from memory.long_term import search_facts
 from memory.medium_term import get_episode_threshold_cached, load_recent_episodes
 from memory.short_term import load_recent_turns, save_turn
@@ -59,7 +59,7 @@ async def _load_memory_node(state: BlitzState) -> dict:
     Load last 20 turns from memory_conversations and inject long-term facts.
 
     Phase 3 additions:
-    - Embeds the last user message using BGE_M3Provider (run_in_executor, non-blocking).
+    - Embeds the last user message using SidecarEmbeddingProvider (HTTP sidecar, non-blocking).
     - Performs cosine semantic search over memory_facts (top 5, user-scoped).
     - Injects matching facts as a SystemMessage prefix before the conversation history.
     - Returns loaded_facts list for audit trail.
@@ -118,7 +118,7 @@ async def _load_memory_node(state: BlitzState) -> dict:
 
     # Long-term memory: semantic search for relevant facts about this user.
     # Embed the last user message and search memory_facts using pgvector cosine distance.
-    # BGE_M3Provider.embed() uses run_in_executor internally — non-blocking in FastAPI.
+    # SidecarEmbeddingProvider.embed() calls infinity-emb HTTP sidecar — non-blocking in FastAPI.
     last_user_message = next(
         (m.content for m in reversed(state.get("messages", [])) if isinstance(m, HumanMessage)),
         None,
@@ -126,7 +126,7 @@ async def _load_memory_node(state: BlitzState) -> dict:
     loaded_facts: list[str] = []
     if last_user_message and user_id:
         try:
-            provider = BGE_M3Provider()
+            provider = SidecarEmbeddingProvider()
             query_embedding = (await provider.embed([str(last_user_message)]))[0]
             async with async_session() as session:
                 async with session.begin():

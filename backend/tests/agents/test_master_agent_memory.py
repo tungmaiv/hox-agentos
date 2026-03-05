@@ -32,7 +32,7 @@ async def test_load_memory_node_injects_facts_as_system_message():
 
     with (
         patch("agents.master_agent.search_facts", new_callable=AsyncMock) as mock_search,
-        patch("agents.master_agent.BGE_M3Provider") as mock_provider_cls,
+        patch("agents.master_agent.SidecarEmbeddingProvider") as mock_provider_cls,
         patch("agents.master_agent.load_recent_turns", new_callable=AsyncMock) as mock_turns,
         patch("agents.master_agent.async_session") as mock_session_factory,
         patch("agents.master_agent.current_user_ctx") as mock_ctx,
@@ -81,7 +81,7 @@ async def test_load_memory_node_no_facts_no_system_message():
 
     with (
         patch("agents.master_agent.search_facts", new_callable=AsyncMock) as mock_search,
-        patch("agents.master_agent.BGE_M3Provider") as mock_provider_cls,
+        patch("agents.master_agent.SidecarEmbeddingProvider") as mock_provider_cls,
         patch("agents.master_agent.load_recent_turns", new_callable=AsyncMock) as mock_turns,
         patch("agents.master_agent.async_session") as mock_session_factory,
         patch("agents.master_agent.current_user_ctx") as mock_ctx,
@@ -120,13 +120,13 @@ async def test_load_memory_node_no_facts_no_system_message():
 @pytest.mark.asyncio
 async def test_load_memory_node_gracefully_handles_embedding_failure():
     """
-    If BGE_M3Provider.embed() raises, _load_memory_node must not propagate the
+    If SidecarEmbeddingProvider.embed() raises, _load_memory_node must not propagate the
     exception — graceful degradation means agent still works without long-term memory.
     """
     user_id = uuid.uuid4()
 
     with (
-        patch("agents.master_agent.BGE_M3Provider") as mock_provider_cls,
+        patch("agents.master_agent.SidecarEmbeddingProvider") as mock_provider_cls,
         patch("agents.master_agent.load_recent_turns", new_callable=AsyncMock) as mock_turns,
         patch("agents.master_agent.async_session") as mock_session_factory,
         patch("agents.master_agent.current_user_ctx") as mock_ctx,
@@ -391,7 +391,7 @@ async def test_load_memory_node_injects_episodes_as_system_message():
 
     with (
         patch("agents.master_agent.search_facts", new_callable=AsyncMock) as mock_search,
-        patch("agents.master_agent.BGE_M3Provider") as mock_provider_cls,
+        patch("agents.master_agent.SidecarEmbeddingProvider") as mock_provider_cls,
         patch("agents.master_agent.load_recent_turns", new_callable=AsyncMock) as mock_turns,
         patch("agents.master_agent.load_recent_episodes", new_callable=AsyncMock) as mock_episodes,
         patch("agents.master_agent.async_session") as mock_session_factory,
@@ -451,7 +451,7 @@ async def test_load_memory_node_gracefully_handles_episode_failure():
 
     with (
         patch("agents.master_agent.search_facts", new_callable=AsyncMock) as mock_search,
-        patch("agents.master_agent.BGE_M3Provider") as mock_provider_cls,
+        patch("agents.master_agent.SidecarEmbeddingProvider") as mock_provider_cls,
         patch("agents.master_agent.load_recent_turns", new_callable=AsyncMock) as mock_turns,
         patch("agents.master_agent.load_recent_episodes", new_callable=AsyncMock) as mock_episodes,
         patch("agents.master_agent.async_session") as mock_session_factory,
