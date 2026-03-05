@@ -19,10 +19,10 @@
 
 ## Navigation & User Experience
 
-- [ ] **NAV-01**: Vertical navigation rail (56px) with icon items (Chat, Workflows, Skills, Settings, Admin, Profile) is visible on all authenticated pages
-- [ ] **NAV-02**: Admin nav item is visible only to users with `admin`, `developer`, or `it-admin` roles
-- [ ] **NAV-03**: Active nav item is visually highlighted; clicking avatar opens dropdown with Profile and Sign Out
-- [ ] **NAV-04**: Authenticated pages use `app/(authenticated)/layout.tsx` route group — `/login` and API routes are excluded from nav rail
+- [x] **NAV-01**: Vertical navigation rail (56px) with icon items (Chat, Workflows, Skills, Settings, Admin, Profile) is visible on all authenticated pages
+- [x] **NAV-02**: Admin nav item is visible only to users with `admin`, `developer`, or `it-admin` roles
+- [x] **NAV-03**: Active nav item is visually highlighted; clicking avatar opens dropdown with Profile and Sign Out
+- [x] **NAV-04**: Authenticated pages use `app/(authenticated)/layout.tsx` route group — `/login` and API routes are excluded from nav rail
 - [ ] **NAV-05**: User can view their profile at `/profile` showing name, email, auth provider badge (SSO/Local), roles, current session expiry, and logout button
 - [ ] **NAV-06**: Local users can change their password from the profile page
 - [x] **NAV-07**: User can set LLM thinking mode preference (on/off) from profile page, persisted in `user_preferences` table (JSONB)
@@ -138,10 +138,10 @@
 | AUTH-05 | Phase 15 | Complete |
 | AUTH-06 | Phase 15 | Complete |
 | AUTH-07 | Phase 15 | Complete |
-| NAV-01 | Phase 16 | pending |
-| NAV-02 | Phase 16 | pending |
-| NAV-03 | Phase 16 | pending |
-| NAV-04 | Phase 16 | pending |
+| NAV-01 | Phase 16 | Complete |
+| NAV-02 | Phase 16 | Complete |
+| NAV-03 | Phase 16 | Complete |
+| NAV-04 | Phase 16 | Complete |
 | NAV-05 | Phase 16 | pending |
 | NAV-06 | Phase 16 | pending |
 | NAV-07 | Phase 16 | Complete |

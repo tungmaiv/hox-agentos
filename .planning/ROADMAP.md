@@ -241,7 +241,7 @@ Plans:
 | 13. Local Auth | v1.2 | 2/2 | ✅ Complete | 2026-03-03 |
 | 14. Ecosystem Capabilities | v1.2 | 5/5 | ✅ Complete | 2026-03-04 |
 | 15. Session & Auth Hardening | v1.3 | 3/3 | ✅ Complete | 2026-03-05 |
-| 16. Navigation & UX | 1/3 | In Progress|  | - |
+| 16. Navigation & UX | 2/3 | In Progress|  | - |
 | 17. Performance & Embedding Sidecar | v1.3 | 0/TBD | Not started | - |
 | 18. Identity Configuration | v1.3 | 0/TBD | Not started | - |
 | 19. Skill Platform A — Standards | v1.3 | 0/TBD | Not started | - |

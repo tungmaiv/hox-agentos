@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Production Readiness & Skill Platform
 status: unknown
-last_updated: "2026-03-05T05:22:24.530Z"
+last_updated: "2026-03-05T05:24:22.186Z"
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 6
-  completed_plans: 4
+  completed_plans: 5
 ---
 
 # Project State
@@ -18,14 +18,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-05)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates their daily work routines and lets them build custom automations without writing code — all within an enterprise-secure, on-premise environment where data never leaves the company.
-**Current focus:** v1.3 Phase 16 — Navigation & User Experience (plan 01 complete)
+**Current focus:** v1.3 Phase 16 — Navigation & User Experience (plan 02 complete)
 
 ## Current Position
 
 Phase: 16 of 23 (Navigation & User Experience)
-Plan: 01 of 03 complete
-Status: In progress — 16-01 done (user preferences backend); 16-02, 16-03 pending
-Last activity: 2026-03-05 — Completed 16-01 (SUMMARY created): UserPreferences model, migration 020, GET/PUT /api/users/me/preferences, 7 tests (725 total passing)
+Plan: 02 of 03 complete
+Status: In progress — 16-01 and 16-02 done; 16-03 (profile page) pending
+Last activity: 2026-03-05 — Completed 16-02 (SUMMARY created): NavRail + MobileTabBar + (authenticated) route group + /skills and /profile placeholders
 
 Progress: [##░░░░░░░░] ~14%
 
@@ -37,10 +37,10 @@ Progress: [##░░░░░░░░] ~14%
 - Tests: 719 passing (at v1.2 ship)
 
 **v1.3:**
-- Plans completed: 4 (15-01, 15-02, 15-03, 16-01)
+- Plans completed: 5 (15-01, 15-02, 15-03, 16-01, 16-02)
 - Phases: 9 (15-23)
 - Phase 15 complete: AUTH-01, AUTH-05, AUTH-06 satisfied (plan 03); all Phase 15 UAT gaps closed
-- Phase 16 in progress: 16-01 complete (user preferences backend: NAV-07, NAV-08, NAV-10 satisfied)
+- Phase 16 in progress: 16-01 complete (user preferences backend: NAV-07, NAV-08, NAV-10 satisfied); 16-02 complete (NavRail + route group: NAV-01, NAV-02, NAV-03, NAV-04 satisfied)
 
 ## Accumulated Context
 
@@ -64,6 +64,8 @@ v1.3 roadmap decisions:
 - [Phase 16]: [16-01]: JSONB column uses JSON().with_variant(JSONB(), 'postgresql') for SQLite test compat
 - [Phase 16]: [16-01]: get_user_preference_values() helper exported from route module for Plan 03 agent prompt injection
 - [Phase 16]: [16-01]: Router prefix /users/me/preferences (plural, RESTful) distinct from legacy /user/instructions
+- [Phase 16]: NavRail uses useSession() client-side for role check — avoids prop drilling from server layout
+- [Phase 16]: (authenticated) route group layout excludes /login and /api routes — URLs unchanged for all authenticated pages
 
 ### Pending Todos
 
@@ -82,5 +84,5 @@ v1.3 roadmap decisions:
 ## Session Continuity
 
 Last session: 2026-03-05
-Stopped at: Completed 16-01-PLAN.md (user preferences backend)
+Stopped at: Completed 16-02-PLAN.md (NavRail + MobileTabBar + authenticated route group)
 Resume file: .planning/phases/16-navigation-user-experience/16-CONTEXT.md
