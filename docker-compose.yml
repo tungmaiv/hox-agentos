@@ -134,6 +134,7 @@ services:
     environment:
       # Override for server-side calls inside Docker (NEXT_PUBLIC_ baked value is localhost:8000 for browser)
       BACKEND_URL: "http://backend:8000"
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
     networks:
       - blitz-net
 
