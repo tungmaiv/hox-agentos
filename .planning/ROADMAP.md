@@ -244,7 +244,7 @@ Plans:
 | 15. Session & Auth Hardening | v1.3 | 3/3 | ✅ Complete | 2026-03-05 |
 | 16. Navigation & UX | 3/3 | Complete    | 2026-03-05 | - |
 | 17. Performance & Embedding Sidecar | 7/7 | Complete    | 2026-03-05 | - |
-| 18. Identity Configuration | 1/3 | In Progress|  | - |
+| 18. Identity Configuration | 2/3 | In Progress|  | - |
 | 19. Skill Platform A — Standards | v1.3 | 0/TBD | Not started | - |
 | 20. Skill Platform B — Catalog | v1.3 | 0/TBD | Not started | - |
 | 21. Skill Platform C — Security | v1.3 | 0/TBD | Not started | - |

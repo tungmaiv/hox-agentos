@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Production Readiness & Skill Platform
 status: unknown
-last_updated: "2026-03-06T08:47:37.276Z"
+last_updated: "2026-03-06T09:01:29.561Z"
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 16
-  completed_plans: 14
+  completed_plans: 15
 ---
 
 # Project State
@@ -18,14 +18,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-05)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates their daily work routines and lets them build custom automations without writing code — all within an enterprise-secure, on-premise environment where data never leaves the company.
-**Current focus:** v1.3 Phase 18 — Identity Configuration (In Progress — 1/3 plans done)
+**Current focus:** v1.3 Phase 18 — Identity Configuration (In Progress — 2/3 plans done)
 
 ## Current Position
 
 Phase: 18 of 23 (Identity Configuration) — In Progress
-Plan: 01 of 03 complete
-Status: Plan 18-01 done — Keycloak-optional boot + KeycloakConfigResolver + platform_config table (IDCFG-01/02/03/06/07): 752 tests passing
-Last activity: 2026-03-06 - Completed 18-01: IDCFG-01, IDCFG-02, IDCFG-03, IDCFG-06, IDCFG-07 satisfied.
+Plan: 02 of 03 complete
+Status: Plan 18-02 done — Admin Keycloak Config API + AES-256-GCM secret storage + cache invalidation + Docker restart + internal provider-config endpoint (IDCFG-04/05/06/08): 766 tests passing
+Last activity: 2026-03-06 - Completed 18-02: IDCFG-04, IDCFG-05, IDCFG-06, IDCFG-08 satisfied.
 
 Progress: [########░░] ~55%
 
@@ -89,6 +89,9 @@ v1.3 roadmap decisions:
 - [Phase 18]: IDCFG-06: platform_config typed columns over system_config key/value — type safety, simpler queries, explicit migration path
 - [Phase 18]: [18-01]: KeycloakConfigResolver 60s TTL (vs JWKS 300s) — admin config changes propagate within 1 minute; resolver returns None on DB error (safe local-only fallback)
 - [Phase 18]: [18-01]: client_secret encrypted as JSON string (not JSONB) in platform_config — avoids JSONB variant issues across SQLite tests + PostgreSQL prod
+- [Phase 18]: [18-02]: GET config returns has_secret: bool only — never raw or masked client_secret string
+- [Phase 18]: [18-02]: Internal provider-config endpoint uses X-Internal-Key header (not JWT) — Next.js server-side can't authenticate via JWT before it has credentials
+- [Phase 18]: [18-02]: asyncio.to_thread(_restart_frontend_container) — Docker SDK is synchronous, must run in thread to avoid blocking async event loop
 
 ### Pending Todos
 
@@ -114,9 +117,10 @@ v1.3 roadmap decisions:
 | Phase 17 P04 | 3 | 3 tasks | 3 files |
 | Phase 17 P07 | 3 | 4 tasks | 3 files |
 | Phase 18 P01 | 27 | 4 tasks | 14 files |
+| Phase 18 P02 | 10 | 4 tasks | 4 files |
 
 ## Session Continuity
 
-Last session: 2026-03-05
-Stopped at: Completed 17-04-PLAN.md (Admin Memory Reindex UI, PERF-05 frontend) — Phase 17 complete
-Resume file: .planning/phases/17-performance-embedding-sidecar/17-04-SUMMARY.md
+Last session: 2026-03-06
+Stopped at: Completed 18-02-PLAN.md (Admin Keycloak Config API, IDCFG-04, IDCFG-05, IDCFG-06, IDCFG-08)
+Resume file: .planning/phases/18-identity-configuration/18-02-SUMMARY.md
