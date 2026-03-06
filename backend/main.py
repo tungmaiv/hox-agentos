@@ -31,6 +31,7 @@ from api.routes import (
     user_skills,
     user_tools,
 )
+from api.routes.admin_keycloak import router as admin_keycloak_router
 from api.routes.admin_local_users import router as admin_local_users_router
 from api.routes.admin_memory import router as admin_memory_router
 from api.routes.auth_local import router as auth_local_router
@@ -209,6 +210,10 @@ def create_app() -> FastAPI:
 
     # Admin memory reindex — POST /api/admin/memory/reindex (tool:admin permission)
     app.include_router(admin_memory_router)
+
+    # Admin Keycloak identity config — GET/POST /api/admin/keycloak/* (tool:admin permission)
+    # Internal provider config — GET /api/internal/keycloak/provider-config (X-Internal-Key)
+    app.include_router(admin_keycloak_router)
 
     # User skill listing and execution — GET /api/skills, POST /api/skills/{name}/run
     # Note: router already includes /api prefix in its definition
