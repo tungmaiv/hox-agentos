@@ -50,6 +50,10 @@ class Settings(BaseSettings):
     local_jwt_secret: str = ""
     local_jwt_expires_hours: int = 8  # 8-hour workday — user logs in each morning
 
+    # Internal API key — shared secret for Next.js→backend internal calls (provider-config endpoint)
+    # Generate with: python -c "import secrets; print(secrets.token_hex(32))"
+    internal_api_key: str = ""
+
     @field_validator("local_jwt_secret")
     @classmethod
     def validate_local_jwt_secret(cls, v: str) -> str:
