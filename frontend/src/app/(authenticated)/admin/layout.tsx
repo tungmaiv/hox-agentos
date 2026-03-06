@@ -14,6 +14,7 @@ const ADMIN_TABS = [
   { label: "Skills",      href: "/admin/skills" },
   { label: "MCP Servers", href: "/admin/mcp-servers" },
   { label: "Permissions", href: "/admin/permissions" },
+  { label: "Identity",    href: "/admin/identity" },   // between Permissions and Config (IDCFG-04)
   { label: "Config",      href: "/admin/config" },
   { label: "Memory",      href: "/admin/memory" },
   { label: "Credentials", href: "/admin/credentials" },
