@@ -23,18 +23,16 @@ class Settings(BaseSettings):
     database_url: str
     redis_url: str
 
-    # Keycloak
-    keycloak_url: str
-    keycloak_realm: str
-    keycloak_client_id: str
-    keycloak_client_secret: str
+    # Keycloak — optional (empty = local-only mode; populated by runtime config resolver)
+    keycloak_url: str = ""
+    keycloak_realm: str = ""
+    keycloak_client_id: str = ""
+    keycloak_client_secret: str = ""
     keycloak_jwks_url: str = ""
     keycloak_issuer: str = ""
     # Path to CA cert for self-signed Keycloak TLS (local dev only).
-    # Set this when Keycloak uses a self-signed cert not in the system trust store.
     keycloak_ca_cert: str = ""
     # Admin credentials for master realm — used by keycloak_client to fetch user roles
-    # via admin API (avoids client_credentials token mapper issues).
     keycloak_admin_username: str = "admin"
     keycloak_admin_password: str = ""
 
@@ -86,7 +84,11 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def derive_keycloak_urls(self) -> "Settings":
-        """Derive JWKS and issuer URLs from keycloak_url and keycloak_realm."""
+        """Derive JWKS and issuer URLs from keycloak_url and keycloak_realm.
+        Skipped when keycloak_url is empty (local-only mode).
+        """
+        if not self.keycloak_url:
+            return self
         base = f"{self.keycloak_url}/realms/{self.keycloak_realm}"
         if not self.keycloak_jwks_url:
             self.keycloak_jwks_url = f"{base}/protocol/openid-connect/certs"
