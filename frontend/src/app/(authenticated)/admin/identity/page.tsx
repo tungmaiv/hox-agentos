@@ -176,15 +176,10 @@ export default function AdminIdentityPage() {
         ca_cert_path: caCertPath,
       });
       setSaveState(ok ? "saved" : "error");
-      if (ok) {
-        const cfg = await fetchConfig();
-        if (cfg) {
-          setConfig(cfg);
-          // Reset secret toggle after successful save
-          setShowChangeSecret(!cfg.has_secret);
-          setNewClientSecret("");
-        }
-      }
+      // Do NOT fetchConfig after save — the backend triggers a frontend container
+      // restart as a BackgroundTask. Fetching immediately races with the restart
+      // and causes "Failed to fetch", overwriting the "saved" notice with an error.
+      // The frontend will restart and reload fresh config automatically.
     } catch {
       setSaveState("error");
     }
@@ -196,8 +191,10 @@ export default function AdminIdentityPage() {
       const ok = await disableSSO();
       if (ok) {
         setShowDisableConfirm(false);
-        const cfg = await fetchConfig();
-        if (cfg) setConfig(cfg);
+        // Update state optimistically — do NOT fetchConfig here. The backend triggers
+        // a frontend container restart as a BackgroundTask immediately after responding.
+        // Any fetch right after would race with the restart and fail.
+        if (config) setConfig({ ...config, enabled: false });
       }
     } finally {
       setDisabling(false);
