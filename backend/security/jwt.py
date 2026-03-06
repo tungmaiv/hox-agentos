@@ -8,6 +8,7 @@ Responsibilities:
 
 Public API:
   validate_token(token: str) -> UserContext   — raises HTTPException on any error
+  invalidate_jwks_cache()                     — force JWKS re-fetch after config change
   JWKSCache (module-level state)              — exposed for testing/reset
 
 Security invariants (never break):
@@ -30,8 +31,8 @@ from jose import ExpiredSignatureError, JWTError
 from jose import jwt as jose_jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.config import settings
 from core.models.user import UserContext
+from security.keycloak_config import KeycloakConfig, get_keycloak_config
 
 logger = structlog.get_logger(__name__)
 
@@ -51,33 +52,35 @@ _jwks_refresh_lock: asyncio.Lock = asyncio.Lock()  # prevents thundering herd on
 # ---------------------------------------------------------------------------
 
 
-async def _fetch_jwks_from_remote() -> dict[str, Any]:
+async def _fetch_jwks_from_remote(config: KeycloakConfig) -> dict[str, Any]:
     """
     Make the actual HTTP request to Keycloak's JWKS endpoint.
 
     Separated from _get_jwks() so that tests can mock this function alone
     while the in-process cache logic continues to run and be tested.
 
+    Uses config.ca_cert_path for self-signed TLS (local dev).
+
     Raises:
         HTTPException(503) if the Keycloak endpoint is unreachable.
     """
-    # Use the project CA cert for self-signed Keycloak TLS (local dev).
-    # Falls back to system default trust store when keycloak_ca_cert is not set.
-    ssl_verify: str | bool = settings.keycloak_ca_cert or True
+    # Use the config CA cert for self-signed Keycloak TLS (local dev).
+    # Falls back to system default trust store when ca_cert_path is not set.
+    ssl_verify: str | bool = config.ca_cert_path or True
     try:
         async with httpx.AsyncClient(verify=ssl_verify) as client:
-            resp = await client.get(settings.keycloak_jwks_url, timeout=10.0)
+            resp = await client.get(config.jwks_url, timeout=10.0)
             resp.raise_for_status()
             return resp.json()
     except httpx.HTTPError as exc:
-        logger.error("jwks_fetch_failed", url=settings.keycloak_jwks_url, error=str(exc))
+        logger.error("jwks_fetch_failed", url=config.jwks_url, error=str(exc))
         raise HTTPException(
             status_code=503,
             detail="Authentication service unavailable — JWKS fetch failed",
         ) from exc
 
 
-async def _get_jwks() -> dict[str, Any]:
+async def _get_jwks(config: KeycloakConfig) -> dict[str, Any]:
     """
     Return the Keycloak JWKS, using the in-process cache when still valid.
 
@@ -104,23 +107,28 @@ async def _get_jwks() -> dict[str, Any]:
         if _JWKS_CACHE and (now - _jwks_fetched_at) < JWKS_TTL_SECONDS:
             return _JWKS_CACHE
 
-        jwks = await _fetch_jwks_from_remote()
+        jwks = await _fetch_jwks_from_remote(config)
         _JWKS_CACHE = jwks
         _jwks_fetched_at = now
         return _JWKS_CACHE
 
 
-async def _validate_keycloak_token(token: str) -> UserContext:
+def invalidate_jwks_cache() -> None:
+    """Force JWKS re-fetch on next Keycloak token validation. Call after config change."""
+    global _jwks_fetched_at, _JWKS_CACHE
+    _JWKS_CACHE = {}
+    _jwks_fetched_at = 0.0
+    logger.info("jwks_cache_invalidated")
+
+
+async def _validate_keycloak_token(token: str, config: KeycloakConfig) -> UserContext:
     """
     Validate a Keycloak RS256 Bearer token.
-
-    This is the original validate_token() body extracted into a private function.
-    Zero behavior change from the pre-refactor implementation.
 
     Checks:
       - Signature (RS256, against JWKS public key)
       - Expiry (exp claim)
-      - Issuer (iss must equal settings.keycloak_issuer)
+      - Issuer (iss must equal config.issuer_url)
       - Audience: skipped — blitz-portal tokens carry no aud claim
 
     Returns:
@@ -131,7 +139,7 @@ async def _validate_keycloak_token(token: str) -> UserContext:
         HTTPException(401, "Invalid token")       — any other JWT error
         HTTPException(503, ...)                   — JWKS endpoint unreachable
     """
-    jwks = await _get_jwks()
+    jwks = await _get_jwks(config)
     try:
         payload: dict[str, Any] = jose_jwt.decode(
             token,
@@ -141,7 +149,7 @@ async def _validate_keycloak_token(token: str) -> UserContext:
             # aud claim (Keycloak default for this realm config).  Signature (RS256)
             # and issuer are still validated so tokens from other issuers are rejected.
             options={"verify_aud": False},
-            issuer=settings.keycloak_issuer,
+            issuer=config.issuer_url,
         )
     except ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token has expired")
@@ -176,13 +184,11 @@ async def validate_token(
     Validate a Bearer token, routing to the correct validator by issuer.
 
     Dispatch logic:
-      1. Peek at `iss` claim WITHOUT signature verification (fast, safe peek).
-      2. `iss == settings.keycloak_issuer` → _validate_keycloak_token() (RS256+JWKS)
-      3. `iss == "blitz-local"`            → validate_local_token() (HS256+LOCAL_JWT_SECRET)
-      4. Anything else                     → HTTPException(401, "Unknown token issuer")
-
-    The peek step is intentionally unverified — the actual signature is verified
-    by the dispatched validator, which raises 401 on any tampered token.
+      1. Load current Keycloak config from resolver.
+      2. Peek at `iss` claim WITHOUT signature verification.
+      3. `iss == config.issuer_url` AND config.enabled → _validate_keycloak_token()
+      4. `iss == "blitz-local"` → validate_local_token()
+      5. Anything else → HTTPException(401, "Unknown token issuer")
 
     Args:
         token:   The raw JWT string (no "Bearer " prefix).
@@ -208,8 +214,11 @@ async def validate_token(
 
     issuer = unverified.get("iss", "")
 
-    if issuer == settings.keycloak_issuer:
-        return await _validate_keycloak_token(token)
+    # Load config once per call (cached, cheap after warmup)
+    kc_config = await get_keycloak_config()
+
+    if kc_config is not None and kc_config.enabled and issuer == kc_config.issuer_url:
+        return await _validate_keycloak_token(token, kc_config)
     elif issuer == "blitz-local":
         # Import here to avoid circular import: local_auth imports from core.models,
         # and some modules may import from security.jwt first.

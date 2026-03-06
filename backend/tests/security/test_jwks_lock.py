@@ -3,6 +3,18 @@ import asyncio
 import pytest
 from unittest.mock import AsyncMock, patch
 
+from security.keycloak_config import KeycloakConfig
+
+# Minimal config for JWKS lock tests — only ca_cert_path and jwks_url matter here
+_TEST_CONFIG = KeycloakConfig(
+    issuer_url="https://kc.test/realms/test",
+    client_id="test-client",
+    client_secret="test-secret",
+    realm="test",
+    ca_cert_path="",
+    enabled=True,
+)
+
 
 @pytest.mark.asyncio
 async def test_concurrent_jwks_refresh_calls_remote_once():
@@ -14,7 +26,7 @@ async def test_concurrent_jwks_refresh_calls_remote_once():
 
     call_count = 0
 
-    async def slow_fetch():
+    async def slow_fetch(config: KeycloakConfig):
         nonlocal call_count
         call_count += 1
         await asyncio.sleep(0.05)  # simulate network delay
@@ -22,7 +34,7 @@ async def test_concurrent_jwks_refresh_calls_remote_once():
 
     with patch("security.jwt._fetch_jwks_from_remote", side_effect=slow_fetch):
         # Fire 5 concurrent requests
-        results = await asyncio.gather(*[jwt_module._get_jwks() for _ in range(5)])
+        results = await asyncio.gather(*[jwt_module._get_jwks(_TEST_CONFIG) for _ in range(5)])
 
     # All 5 should get a result, but only 1 remote fetch should have happened
     assert len(results) == 5

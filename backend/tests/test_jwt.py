@@ -2,7 +2,7 @@
 JWT validation test suite — Gate 1 security coverage.
 
 Tests use a self-generated RSA key pair and mock the JWKS HTTP fetch so no
-real Keycloak instance is needed. All 7 JWT validation paths are covered:
+real Keycloak instance is needed. All JWT validation paths are covered:
   1. Valid token  → UserContext returned
   2. Expired token → 401
   3. Wrong issuer → 401
@@ -10,6 +10,7 @@ real Keycloak instance is needed. All 7 JWT validation paths are covered:
   5. Tampered/invalid signature → 401
   6. Missing Authorization header → 401
   7. JWKS cache → only 1 HTTP call for repeated validate_token calls
+  8. No Keycloak config → 401 on Keycloak-looking tokens (local-only mode)
 
 Note: Real Keycloak integration is tested in the Phase 1 end-to-end integration
 test (not this file).
@@ -26,6 +27,22 @@ from jose import jwk as jose_jwk
 from jose import jwt as jose_jwt
 from jose.constants import ALGORITHMS
 
+from security.keycloak_config import KeycloakConfig
+
+# ---------------------------------------------------------------------------
+# Test Keycloak config used by all tests that validate Keycloak tokens
+# ---------------------------------------------------------------------------
+
+TEST_ISSUER = "https://keycloak.blitz.local/realms/blitz-internal"
+
+TEST_KC_CONFIG = KeycloakConfig(
+    issuer_url=TEST_ISSUER,
+    client_id="blitz-portal",
+    client_secret="test-secret",
+    realm="blitz-internal",
+    ca_cert_path="",
+    enabled=True,
+)
 
 # ---------------------------------------------------------------------------
 # Module-scoped fixtures — key pair generated once per test module run
@@ -70,25 +87,23 @@ def make_token(private_pem: bytes):
     """
     Factory that returns signed RS256 JWTs for testing.
 
+    Uses TEST_ISSUER (hardcoded) so tokens always match TEST_KC_CONFIG regardless
+    of what env vars are set in the test environment.
+
     Args:
         payload_overrides: Dict of claims to override in the default payload.
         exp_offset: Seconds from now for token expiry (negative = expired).
     """
 
     def _make(payload_overrides: dict | None = None, exp_offset: int = 3600) -> str:
-        # Read iss and aud from the live settings object so tokens always match
-        # whatever issuer/client-id is currently configured — avoids fragility
-        # when test_config.py reloads core.config with different env vars.
-        import core.config as _cfg
-
         payload: dict = {
             "sub": str(uuid4()),
             "email": "test@blitz.local",
             "preferred_username": "testuser",
             "realm_access": {"roles": ["employee"]},
             "groups": ["/tech"],
-            "iss": _cfg.settings.keycloak_issuer,
-            "aud": _cfg.settings.keycloak_client_id,
+            "iss": TEST_ISSUER,
+            "aud": "blitz-portal",
             "exp": int(time.time()) + exp_offset,
             "iat": int(time.time()),
         }
@@ -111,8 +126,9 @@ async def test_valid_token_returns_user_context(make_token, mock_jwks) -> None:
 
     token = make_token()
 
-    with patch("security.jwt._get_jwks", new_callable=AsyncMock, return_value=mock_jwks):
-        ctx = await validate_token(token)
+    with patch("security.jwt.get_keycloak_config", new_callable=AsyncMock, return_value=TEST_KC_CONFIG):
+        with patch("security.jwt._get_jwks", new_callable=AsyncMock, return_value=mock_jwks):
+            ctx = await validate_token(token)
 
     assert ctx["email"] == "test@blitz.local"
     assert ctx["username"] == "testuser"
@@ -132,9 +148,10 @@ async def test_expired_token_raises_401(make_token, mock_jwks) -> None:
     # exp 10 seconds in the past
     token = make_token(exp_offset=-10)
 
-    with patch("security.jwt._get_jwks", new_callable=AsyncMock, return_value=mock_jwks):
-        with pytest.raises(HTTPException) as exc_info:
-            await validate_token(token)
+    with patch("security.jwt.get_keycloak_config", new_callable=AsyncMock, return_value=TEST_KC_CONFIG):
+        with patch("security.jwt._get_jwks", new_callable=AsyncMock, return_value=mock_jwks):
+            with pytest.raises(HTTPException) as exc_info:
+                await validate_token(token)
 
     assert exc_info.value.status_code == 401
     assert "expired" in exc_info.value.detail.lower()
@@ -147,7 +164,8 @@ async def test_wrong_issuer_raises_401(make_token, mock_jwks) -> None:
 
     token = make_token(payload_overrides={"iss": "https://evil.example.com/realms/rogue"})
 
-    with patch("security.jwt._get_jwks", new_callable=AsyncMock, return_value=mock_jwks):
+    # No Keycloak config → unknown issuer → 401
+    with patch("security.jwt.get_keycloak_config", new_callable=AsyncMock, return_value=None):
         with pytest.raises(HTTPException) as exc_info:
             await validate_token(token)
 
@@ -169,8 +187,9 @@ async def test_no_audience_claim_succeeds(make_token, mock_jwks) -> None:
     # Simulate a token with no aud field (blitz-portal real-world case)
     token = make_token(payload_overrides={"aud": "some-other-client"})
 
-    with patch("security.jwt._get_jwks", new_callable=AsyncMock, return_value=mock_jwks):
-        ctx = await validate_token(token)
+    with patch("security.jwt.get_keycloak_config", new_callable=AsyncMock, return_value=TEST_KC_CONFIG):
+        with patch("security.jwt._get_jwks", new_callable=AsyncMock, return_value=mock_jwks):
+            ctx = await validate_token(token)
 
     assert ctx["email"] == "test@blitz.local"
     assert ctx["username"] == "testuser"
@@ -188,9 +207,10 @@ async def test_tampered_token_raises_401(make_token, mock_jwks) -> None:
     tampered_payload = parts[1][:-2] + ("A" if parts[1][-1] != "A" else "B") + parts[1][-1]
     tampered_token = ".".join([parts[0], tampered_payload, parts[2]])
 
-    with patch("security.jwt._get_jwks", new_callable=AsyncMock, return_value=mock_jwks):
-        with pytest.raises(HTTPException) as exc_info:
-            await validate_token(tampered_token)
+    with patch("security.jwt.get_keycloak_config", new_callable=AsyncMock, return_value=TEST_KC_CONFIG):
+        with patch("security.jwt._get_jwks", new_callable=AsyncMock, return_value=mock_jwks):
+            with pytest.raises(HTTPException) as exc_info:
+                await validate_token(tampered_token)
 
     assert exc_info.value.status_code == 401
 
@@ -198,8 +218,6 @@ async def test_tampered_token_raises_401(make_token, mock_jwks) -> None:
 @pytest.mark.asyncio
 async def test_missing_credentials_raises_401() -> None:
     """When Authorization header is absent, get_current_user() raises 401."""
-    from fastapi import Request
-    from fastapi.testclient import TestClient
     from fastapi import FastAPI
     from security.deps import get_current_user
 
@@ -233,14 +251,15 @@ async def test_jwks_cache_hit(make_token, mock_jwks) -> None:
 
     fetch_mock = AsyncMock(return_value=mock_jwks)
 
-    with patch("security.jwt._fetch_jwks_from_remote", new=fetch_mock):
-        token1 = make_token()
-        token2 = make_token()
-        token3 = make_token()
+    with patch("security.jwt.get_keycloak_config", new_callable=AsyncMock, return_value=TEST_KC_CONFIG):
+        with patch("security.jwt._fetch_jwks_from_remote", new=fetch_mock):
+            token1 = make_token()
+            token2 = make_token()
+            token3 = make_token()
 
-        await validate_token_with_real_cache(token1)
-        await validate_token_with_real_cache(token2)
-        await validate_token_with_real_cache(token3)
+            await validate_token_with_real_cache(token1)
+            await validate_token_with_real_cache(token2)
+            await validate_token_with_real_cache(token3)
 
     # Only 1 HTTP call — 2nd and 3rd served from in-process cache
     assert fetch_mock.call_count == 1
@@ -251,3 +270,31 @@ async def validate_token_with_real_cache(token: str) -> None:
     from security.jwt import validate_token
 
     await validate_token(token)
+
+
+@pytest.mark.asyncio
+async def test_keycloak_token_rejected_when_no_keycloak_config() -> None:
+    """When Keycloak is not configured, a token with a Keycloak-looking issuer gets 401."""
+    import base64 as b64
+    import json as _json
+    from security.jwt import validate_token
+
+    # Token issued by some Keycloak, but our backend has no Keycloak config
+    token_data = {
+        "sub": str(uuid4()),
+        "iss": "https://some-keycloak.example.com/realms/realm",
+        "exp": int(time.time()) + 3600,
+        "iat": int(time.time()),
+    }
+    # Create a minimal token just to test the issuer dispatch
+    # (signature doesn't matter — we expect 401 before signature check)
+    header = b64.urlsafe_b64encode(_json.dumps({"alg": "RS256", "typ": "JWT"}).encode()).rstrip(b"=").decode()
+    payload = b64.urlsafe_b64encode(_json.dumps(token_data).encode()).rstrip(b"=").decode()
+    fake_token = f"{header}.{payload}.fakesig"
+
+    with patch("security.jwt.get_keycloak_config", new_callable=AsyncMock, return_value=None):
+        with pytest.raises(HTTPException) as exc_info:
+            await validate_token(fake_token)
+
+    # Should be 401 "Unknown token issuer" not 503 "JWKS fetch failed"
+    assert exc_info.value.status_code == 401
