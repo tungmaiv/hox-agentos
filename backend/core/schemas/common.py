@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 class HealthResponse(BaseModel):
     status: str
+    auth: str = "local-only"  # "local-only" or "local+keycloak"
 
 
 class ErrorResponse(BaseModel):

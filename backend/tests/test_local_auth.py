@@ -205,6 +205,17 @@ async def test_validate_token_routes_keycloak_issuer() -> None:
     from unittest.mock import AsyncMock, patch
 
     from security.jwt import validate_token
+    from security.keycloak_config import KeycloakConfig
+
+    TEST_ISSUER = "https://keycloak.blitz.local/realms/blitz-internal"
+    mock_kc_config = KeycloakConfig(
+        issuer_url=TEST_ISSUER,
+        client_id="blitz-portal",
+        client_secret="test-secret",
+        realm="blitz-internal",
+        ca_cert_path="",
+        enabled=True,
+    )
 
     mock_ctx = UserContext(
         user_id=uuid4(),
@@ -213,23 +224,24 @@ async def test_validate_token_routes_keycloak_issuer() -> None:
         roles=["employee"],
         groups=[],
     )
-    with patch("security.jwt._validate_keycloak_token", new_callable=AsyncMock, return_value=mock_ctx) as mock_kc:
-        from core.config import settings
-        from jose import jwt as jose_jwt
+    with patch("security.jwt.get_keycloak_config", new_callable=AsyncMock, return_value=mock_kc_config):
+        with patch("security.jwt._validate_keycloak_token", new_callable=AsyncMock, return_value=mock_ctx) as mock_kc:
+            from jose import jwt as jose_jwt
 
-        # Build a token that claims Keycloak issuer (signature doesn't matter for dispatch peek)
-        # We just need a valid JWT structure — actual validation is mocked
-        fake_payload = {
-            "sub": str(uuid4()),
-            "iss": settings.keycloak_issuer,
-            "exp": int(time.time()) + 3600,
-            "iat": int(time.time()),
-        }
-        # Use HS256 just to create a valid JWT structure — mock will intercept before RS256 verify
-        token = jose_jwt.encode(fake_payload, "anysecret", algorithm="HS256")
-        ctx = await validate_token(token)
+            # Build a token that claims Keycloak issuer (signature doesn't matter for dispatch peek)
+            # We just need a valid JWT structure — actual validation is mocked
+            fake_payload = {
+                "sub": str(uuid4()),
+                "iss": TEST_ISSUER,
+                "exp": int(time.time()) + 3600,
+                "iat": int(time.time()),
+            }
+            # Use HS256 just to create a valid JWT structure — mock will intercept before RS256 verify
+            token = jose_jwt.encode(fake_payload, "anysecret", algorithm="HS256")
+            ctx = await validate_token(token)
 
-    mock_kc.assert_called_once_with(token)
+    # _validate_keycloak_token is now called with (token, config)
+    mock_kc.assert_called_once_with(token, mock_kc_config)
     assert ctx["email"] == "kc@example.com"
 
 
