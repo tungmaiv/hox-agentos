@@ -25,7 +25,7 @@ from typing import Any
 
 import httpx
 import structlog
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -318,6 +318,7 @@ async def get_admin_keycloak_config(
 @router.post("/api/admin/keycloak/config", response_model=SaveConfigResponse)
 async def save_keycloak_config(
     body: KeycloakConfigInput,
+    background_tasks: BackgroundTasks,
     user: UserContext = Depends(_require_admin),
 ) -> SaveConfigResponse:
     """
@@ -334,8 +335,10 @@ async def save_keycloak_config(
     invalidate_keycloak_config_cache()
     invalidate_jwks_cache()
 
-    # Restart frontend asynchronously (non-blocking for the HTTP response)
-    await asyncio.to_thread(_restart_frontend_container)
+    # Restart frontend AFTER response is sent — BackgroundTasks fires post-response.
+    # Do NOT await here: the frontend container is the one making this request,
+    # so killing it before returning would drop the connection → "Failed to fetch".
+    background_tasks.add_task(_restart_frontend_container)
 
     logger.info(
         "keycloak_config_saved",
@@ -369,6 +372,7 @@ async def test_keycloak_connection(
 
 @router.post("/api/admin/keycloak/disable", response_model=DisableResponse)
 async def disable_sso(
+    background_tasks: BackgroundTasks,
     user: UserContext = Depends(_require_admin),
 ) -> DisableResponse:
     """
@@ -380,7 +384,7 @@ async def disable_sso(
     await _set_keycloak_enabled(False)
     invalidate_keycloak_config_cache()
     invalidate_jwks_cache()
-    await asyncio.to_thread(_restart_frontend_container)
+    background_tasks.add_task(_restart_frontend_container)
 
     logger.info("keycloak_sso_disabled", admin_user=str(user["user_id"]))
     return DisableResponse(disabled=True, frontend_restarting=True)
