@@ -12,7 +12,9 @@
  *   so the client can redirect to /login.
  *
  * Auth providers:
- * - "keycloak" — Keycloak OIDC (SSO); RS256 verified by backend
+ * - "keycloak" — Keycloak OIDC (SSO); RS256 verified by backend.
+ *   Conditionally included based on backend DB config (IDCFG-03).
+ *   Fetched once at module init via fetchKeycloakProviderConfig().
  * - "credentials" — local username/password; HS256 JWT issued by backend local auth
  */
 import NextAuth from "next-auth";
@@ -20,17 +22,66 @@ import type { JWT } from "next-auth/jwt";
 import Keycloak from "next-auth/providers/keycloak";
 import Credentials from "next-auth/providers/credentials";
 
+// ---------------------------------------------------------------------------
+// Keycloak provider config fetcher (called once at Next.js startup)
+// ---------------------------------------------------------------------------
+
+interface KeycloakProviderConfig {
+  enabled: boolean;
+  client_id?: string;
+  client_secret?: string;
+  issuer?: string;
+}
+
+async function fetchKeycloakProviderConfig(): Promise<KeycloakProviderConfig> {
+  const backendUrl =
+    process.env.BACKEND_URL ??
+    process.env.NEXT_PUBLIC_API_URL ??
+    "http://localhost:8000";
+  const internalKey = process.env.INTERNAL_API_KEY ?? "";
+
+  if (!internalKey) {
+    // No internal key configured — Keycloak provider not available
+    return { enabled: false };
+  }
+
+  try {
+    const res = await fetch(
+      `${backendUrl}/api/internal/keycloak/provider-config`,
+      {
+        headers: { "X-Internal-Key": internalKey },
+        // No caching — called once at startup only
+        cache: "no-store",
+      }
+    );
+    if (!res.ok) return { enabled: false };
+    return (await res.json()) as KeycloakProviderConfig;
+  } catch {
+    // Backend not reachable at startup — fall back to local-only
+    return { enabled: false };
+  }
+}
+
+// Fetch Keycloak config once at module initialization (Next.js startup).
+// Falls back gracefully if backend is unavailable.
+const keycloakProviderConfig: KeycloakProviderConfig =
+  await fetchKeycloakProviderConfig();
+
+// ---------------------------------------------------------------------------
+// Token refresh helper (uses keycloakProviderConfig fetched above)
+// ---------------------------------------------------------------------------
+
 async function refreshAccessToken(token: JWT): Promise<JWT> {
   try {
-    const issuer = process.env.KEYCLOAK_ISSUER ?? "";
+    const issuer = keycloakProviderConfig.issuer ?? "";
     const tokenUrl = `${issuer}/protocol/openid-connect/token`;
 
     const response = await fetch(tokenUrl, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
-        client_id: process.env.KEYCLOAK_CLIENT_ID ?? "",
-        client_secret: process.env.KEYCLOAK_CLIENT_SECRET ?? "",
+        client_id: keycloakProviderConfig.client_id ?? "",
+        client_secret: keycloakProviderConfig.client_secret ?? "",
         grant_type: "refresh_token",
         refresh_token: token.refreshToken as string,
       }),
@@ -60,6 +111,74 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Build providers list — Keycloak only included when backend reports enabled.
+// ---------------------------------------------------------------------------
+
+const providers = [
+  ...(keycloakProviderConfig.enabled
+    ? [
+        Keycloak({
+          clientId: keycloakProviderConfig.client_id ?? "",
+          clientSecret: keycloakProviderConfig.client_secret ?? "",
+          issuer: keycloakProviderConfig.issuer ?? "",
+        }),
+      ]
+    : []),
+  Credentials({
+    credentials: {
+      username: { label: "Username", type: "text" },
+      password: { label: "Password", type: "password" },
+    },
+    async authorize(credentials) {
+      if (!credentials?.username || !credentials?.password) return null;
+      // BACKEND_URL is set in Docker (http://backend:8000).
+      // Falls back to NEXT_PUBLIC_API_URL for local dev server.
+      const backendUrl =
+        process.env.BACKEND_URL ??
+        process.env.NEXT_PUBLIC_API_URL ??
+        "http://localhost:8000";
+      try {
+        const res = await fetch(`${backendUrl}/api/auth/local/token`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            username: credentials.username,
+            password: credentials.password,
+          }),
+        });
+        if (!res.ok) return null;
+        const { access_token } = (await res.json()) as {
+          access_token: string;
+        };
+        // Decode JWT payload (no verification — backend already verified)
+        const payloadPart = access_token.split(".")[1] ?? "";
+        const payload = JSON.parse(
+          Buffer.from(payloadPart, "base64url").toString()
+        ) as {
+          sub?: string;
+          preferred_username?: string;
+          email?: string;
+          realm_roles?: string[];
+        };
+        return {
+          id: payload.sub ?? "",
+          name: payload.preferred_username ?? "",
+          email: payload.email ?? "",
+          accessToken: access_token,
+          realmRoles: payload.realm_roles ?? [],
+        };
+      } catch {
+        return null;
+      }
+    },
+  }),
+];
+
+// ---------------------------------------------------------------------------
+// NextAuth configuration
+// ---------------------------------------------------------------------------
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true, // Required for Docker: container binds to 0.0.0.0, not localhost
   // AUTH-03: Explicit cookie security — ensures the Secure flag is set in production.
@@ -79,61 +198,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     },
   },
-  providers: [
-    Keycloak({
-      clientId: process.env.KEYCLOAK_CLIENT_ID ?? "",
-      clientSecret: process.env.KEYCLOAK_CLIENT_SECRET ?? "",
-      issuer: process.env.KEYCLOAK_ISSUER,
-    }),
-    Credentials({
-      credentials: {
-        username: { label: "Username", type: "text" },
-        password: { label: "Password", type: "password" },
-      },
-      async authorize(credentials) {
-        if (!credentials?.username || !credentials?.password) return null;
-        // BACKEND_URL is set in Docker (http://backend:8000).
-        // Falls back to NEXT_PUBLIC_API_URL for local dev server.
-        const backendUrl =
-          process.env.BACKEND_URL ??
-          process.env.NEXT_PUBLIC_API_URL ??
-          "http://localhost:8000";
-        try {
-          const res = await fetch(`${backendUrl}/api/auth/local/token`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              username: credentials.username,
-              password: credentials.password,
-            }),
-          });
-          if (!res.ok) return null;
-          const { access_token } = (await res.json()) as {
-            access_token: string;
-          };
-          // Decode JWT payload (no verification — backend already verified)
-          const payloadPart = access_token.split(".")[1] ?? "";
-          const payload = JSON.parse(
-            Buffer.from(payloadPart, "base64url").toString()
-          ) as {
-            sub?: string;
-            preferred_username?: string;
-            email?: string;
-            realm_roles?: string[];
-          };
-          return {
-            id: payload.sub ?? "",
-            name: payload.preferred_username ?? "",
-            email: payload.email ?? "",
-            accessToken: access_token,
-            realmRoles: payload.realm_roles ?? [],
-          };
-        } catch {
-          return null;
-        }
-      },
-    }),
-  ],
+  providers,
   pages: {
     signIn: "/login", // Use our custom login page instead of Auth.js default
   },
