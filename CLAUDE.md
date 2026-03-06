@@ -231,6 +231,12 @@ gh repo clone                   # clone repo
 Use `just` (project-root `justfile`) as the primary task runner. Run `just` with no args to list all recipes.
 
 ```bash
+# ── Dev mode (Docker only — backend and frontend run in containers) ──
+just dev-local-build       # build dev images (run once, or after dep changes)
+just dev-local             # start full stack with hot reload
+just dev-local-down        # stop full stack
+just dev-local-restart-workers  # restart Celery workers after code changes
+
 # ── Docker services ───────────────────────────────────────────
 just up                    # start all Docker services (detached)
 just up-svc postgres redis # start specific service(s)
@@ -239,22 +245,11 @@ just down-v                # stop + wipe volumes (destructive)
 just logs postgres         # tail logs for one service
 just ps                    # service status
 
-# ── Backend (FastAPI / uvicorn) ───────────────────────────────
-just backend               # start backend dev server (port 8000, hot reload)
-just backend-bg            # start in background (writes .backend.pid)
-just backend-stop          # graceful stop
-just backend-kill          # force kill + free port 8000
+# ── Rebuild individual services ───────────────────────────────
+just backend-rebuild       # rebuild + restart backend container
+just frontend-rebuild      # rebuild + restart frontend container
 
-# ── Frontend (Next.js / pnpm) ─────────────────────────────────
-just frontend              # start frontend dev server (port 3000)
-just frontend-bg           # start in background (writes .frontend.pid)
-just frontend-stop         # graceful stop
-just frontend-kill         # force kill + free port 3000
-
-# ── Shortcuts ─────────────────────────────────────────────────
-just stop                  # stop both backend and frontend
-just kill                  # force kill both
-just dev                   # tmux: infra + backend + frontend in split panes
+# ── Database ──────────────────────────────────────────────────
 just migrate               # run Alembic migrations
 just db                    # open psql shell
 
@@ -270,9 +265,9 @@ pnpm add <pkg>             # add JS dep (run from frontend/)
 > back — it causes `just`'s dotenv parser to mangle JSON list values like
 > `CORS_ORIGINS=["http://..."]` → `[` → pydantic-settings `JSONDecodeError`.
 >
-> **Gotcha — kill recipes:** `*-kill` recipes use `#!/usr/bin/env bash` shebang.
-> Without it, `sh -c 'pkill -9 -f "next dev"...'` has the pattern in its own cmdline
-> and pkill kills the shell (and `just`) before the target process dies.
+> **Gotcha — container-only dev:** Backend and frontend run EXCLUSIVELY in Docker containers.
+> Do NOT start them on the host with uvicorn or pnpm. Use `just dev-local` for the full stack.
+> Running host processes causes container→host URL resolution failures and port conflicts.
 
 ### Environment Variables
 

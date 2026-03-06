@@ -276,6 +276,7 @@ Tools are called via the backend MCPClient — never directly from frontend.
 
 | Situation | Wrong | Correct |
 |-----------|-------|---------|
+| Running backend/frontend | `just backend` / `just frontend` (host process) | `just dev-local` — both run in Docker containers only; no host processes |
 | Backend calling Ollama | `http://ollama:11434` | `http://host.docker.internal:11434` |
 | Browser calling backend | `http://backend:8000` | `http://localhost:8000` |
 | Backend calling Keycloak | `http://localhost:8080` | `http://keycloak:8080` |
@@ -315,3 +316,4 @@ Tools are called via the backend MCPClient — never directly from frontend.
 | 2026-02-26 | CopilotKit protocol: 3 methods — info, agent/run, agent/connect; connect is called on component mount to restore thread state, same RunAgentInput body/SSE response as run | claude |
 | 2026-02-28 | Phase 6 endpoints: user-facing GET /api/skills, POST /api/skills/{name}/run, GET /api/tools; admin CRUD for agents/tools/skills/permissions at /api/admin/*; skill slash commands detected in master agent _pre_route | claude |
 | 2026-03-02 | [Phase 11]: Added Cloudflare Tunnel documentation (172.16.155.118, external machine, INFRA-01/02 satisfied) | claude |
+| 2026-03-06 | Backend and frontend run in Docker containers ONLY (dev-local mode). No host processes. Removed host-mode justfile recipes (backend, backend-bg, backend-stop, backend-kill, frontend, frontend-bg, frontend-stop, frontend-kill, stop, kill, stack, dev). Use `just dev-local` for full stack. | claude |
