@@ -50,11 +50,10 @@ async def list_all_credentials(
     session: AsyncSession = Depends(get_db),
 ) -> list[AdminCredentialView]:
     """List all users' OAuth connections. Never returns token values."""
-    async with session.begin():
-        result = await session.execute(
-            select(UserCredential).order_by(UserCredential.user_id, UserCredential.provider)
-        )
-        rows = result.scalars().all()
+    result = await session.execute(
+        select(UserCredential).order_by(UserCredential.user_id, UserCredential.provider)
+    )
+    rows = result.scalars().all()
     logger.info("admin_credentials_listed", user_id=str(user["user_id"]), count=len(rows))
     return [
         AdminCredentialView(
@@ -74,17 +73,17 @@ async def admin_revoke_credential(
     session: AsyncSession = Depends(get_db),
 ) -> None:
     """Admin force-revoke a credential for any user. Returns 404 if not found."""
-    async with session.begin():
-        result = await session.execute(
-            select(UserCredential).where(
-                UserCredential.user_id == user_id,
-                UserCredential.provider == provider,
-            )
+    result = await session.execute(
+        select(UserCredential).where(
+            UserCredential.user_id == user_id,
+            UserCredential.provider == provider,
         )
-        cred = result.scalar_one_or_none()
-        if cred is None:
-            raise HTTPException(status_code=404, detail="Credential not found")
-        await session.delete(cred)
+    )
+    cred = result.scalar_one_or_none()
+    if cred is None:
+        raise HTTPException(status_code=404, detail="Credential not found")
+    await session.delete(cred)
+    await session.commit()
     logger.info(
         "admin_credential_revoked",
         target_user_id=str(user_id),
