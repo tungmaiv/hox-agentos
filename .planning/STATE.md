@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Production Readiness & Skill Platform
 status: unknown
-last_updated: "2026-03-05T15:10:28.736Z"
+last_updated: "2026-03-06T08:47:37.276Z"
 progress:
-  total_phases: 3
+  total_phases: 4
   completed_phases: 3
-  total_plans: 13
-  completed_plans: 13
+  total_plans: 16
+  completed_plans: 14
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-05)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates their daily work routines and lets them build custom automations without writing code — all within an enterprise-secure, on-premise environment where data never leaves the company.
-**Current focus:** v1.3 Phase 17 — Performance & Embedding Sidecar (COMPLETE — 7/7 plans done)
+**Current focus:** v1.3 Phase 18 — Identity Configuration (In Progress — 1/3 plans done)
 
 ## Current Position
 
-Phase: 17 of 23 (Performance & Embedding Sidecar) — COMPLETE
-Plan: 07 of 07 complete
-Status: Plan 17-07 done — JWKS asyncio.Lock thundering herd prevention (PERF-12) + useSkills() hoisted above CopilotKit key boundary (PERF-13): 743 tests passing, frontend build clean
-Last activity: 2026-03-05 - Completed 17-07: PERF-12 and PERF-13 satisfied. Phase 17 fully complete.
+Phase: 18 of 23 (Identity Configuration) — In Progress
+Plan: 01 of 03 complete
+Status: Plan 18-01 done — Keycloak-optional boot + KeycloakConfigResolver + platform_config table (IDCFG-01/02/03/06/07): 752 tests passing
+Last activity: 2026-03-06 - Completed 18-01: IDCFG-01, IDCFG-02, IDCFG-03, IDCFG-06, IDCFG-07 satisfied.
 
-Progress: [#######░░░] ~50%
+Progress: [########░░] ~55%
 
 ## Performance Metrics
 
@@ -86,6 +86,9 @@ v1.3 roadmap decisions:
 - [Phase 17]: [17-04]: Admin Memory page uses proxy route pattern matching copilotkit/route.ts — auth() from @/auth, accessToken via Record<string,unknown> cast, BACKEND_URL env precedence
 - [Phase 17]: [17-07]: asyncio.Lock at module level — matches module-level cache globals it protects; double-checked locking avoids contention on warm cache fast path
 - [Phase 17]: [17-07]: useSkills() hoisted to ChatPanel (not layout) — ChatPanel is the correct boundary owning the CopilotKit key= prop and null conversationId early-return
+- [Phase 18]: IDCFG-06: platform_config typed columns over system_config key/value — type safety, simpler queries, explicit migration path
+- [Phase 18]: [18-01]: KeycloakConfigResolver 60s TTL (vs JWKS 300s) — admin config changes propagate within 1 minute; resolver returns None on DB error (safe local-only fallback)
+- [Phase 18]: [18-01]: client_secret encrypted as JSON string (not JSONB) in platform_config — avoids JSONB variant issues across SQLite tests + PostgreSQL prod
 
 ### Pending Todos
 
@@ -110,6 +113,7 @@ v1.3 roadmap decisions:
 | Phase 17 P06 | 6 | 5 tasks | 15 files |
 | Phase 17 P04 | 3 | 3 tasks | 3 files |
 | Phase 17 P07 | 3 | 4 tasks | 3 files |
+| Phase 18 P01 | 27 | 4 tasks | 14 files |
 
 ## Session Continuity
 

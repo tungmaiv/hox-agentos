@@ -48,13 +48,13 @@
 
 ## Identity Configuration (Keycloak Runtime)
 
-- [ ] **IDCFG-01**: Backend boots with local auth only when no Keycloak config exists — Keycloak is not a required boot dependency
-- [ ] **IDCFG-02**: Health endpoint reports auth mode: `{"auth": "local-only"}` or `{"auth": "local+keycloak"}`
-- [ ] **IDCFG-03**: Login page conditionally renders "Sign in with SSO" button based on `GET /api/auth/config` response
+- [x] **IDCFG-01**: Backend boots with local auth only when no Keycloak config exists — Keycloak is not a required boot dependency
+- [x] **IDCFG-02**: Health endpoint reports auth mode: `{"auth": "local-only"}` or `{"auth": "local+keycloak"}`
+- [x] **IDCFG-03**: Login page conditionally renders "Sign in with SSO" button based on `GET /api/auth/config` response
 - [ ] **IDCFG-04**: Admin can configure Keycloak connection (Issuer URL, Client ID, Client Secret, Realm, CA cert path) via admin UI Identity tab
 - [ ] **IDCFG-05**: Admin can test Keycloak connection before saving — `POST /api/admin/keycloak/test-connection` validates JWKS endpoint reachability
-- [ ] **IDCFG-06**: Keycloak config stored in `platform_config` DB table with sensitive fields encrypted; backend reloads JWKS on save without restart
-- [ ] **IDCFG-07**: Config resolution: DB `platform_config` (priority) → env vars (fallback) → not configured (local-only mode)
+- [x] **IDCFG-06**: Keycloak config stored in `platform_config` DB table with sensitive fields encrypted; backend reloads JWKS on save without restart
+- [x] **IDCFG-07**: Config resolution: DB `platform_config` (priority) → env vars (fallback) → not configured (local-only mode)
 - [ ] **IDCFG-08**: Admin can disable SSO via "Disable SSO" button with confirmation — reverts to local-only auth
 
 ## Skill Platform — Standards Compliance
@@ -161,13 +161,13 @@
 | PERF-11 | Phase 17 | Complete |
 | PERF-12 | Phase 17 | Complete |
 | PERF-13 | Phase 17 | Complete |
-| IDCFG-01 | Phase 18 | pending |
-| IDCFG-02 | Phase 18 | pending |
-| IDCFG-03 | Phase 18 | pending |
+| IDCFG-01 | Phase 18 | Complete |
+| IDCFG-02 | Phase 18 | Complete |
+| IDCFG-03 | Phase 18 | Complete |
 | IDCFG-04 | Phase 18 | pending |
 | IDCFG-05 | Phase 18 | pending |
-| IDCFG-06 | Phase 18 | pending |
-| IDCFG-07 | Phase 18 | pending |
+| IDCFG-06 | Phase 18 | Complete |
+| IDCFG-07 | Phase 18 | Complete |
 | IDCFG-08 | Phase 18 | pending |
 | SKSTD-01 | Phase 19 | pending |
 | SKSTD-02 | Phase 19 | pending |
