@@ -291,6 +291,90 @@ def test_internal_provider_config_no_keycloak() -> None:
     assert resp.json()["enabled"] is False
 
 
+# ---------------------------------------------------------------------------
+# Encryption roundtrip
+# ---------------------------------------------------------------------------
+
+
+def test_encrypt_secret_roundtrip() -> None:
+    """Encrypted client_secret can be decrypted back to original value."""
+    import json
+    import os
+
+    # Use a test key (64 hex chars = 32 bytes)
+    test_key = "a" * 64
+
+    # Patch both settings.credential_encryption_key (used by _encrypt_secret via settings)
+    # AND the env var (used by _decrypt_client_secret via os.environ.get).
+    with patch("api.routes.admin_keycloak.settings") as mock_enc_settings, \
+         patch.dict(os.environ, {"CREDENTIAL_ENCRYPTION_KEY": test_key}):
+        mock_enc_settings.credential_encryption_key = test_key
+
+        from api.routes.admin_keycloak import _encrypt_secret
+        from security.keycloak_config import _decrypt_client_secret
+
+        original = "my-super-secret-keycloak-client-secret"
+        encrypted_json = _encrypt_secret(original)
+
+        # _encrypt_secret returns a JSON string; parse it before passing to _decrypt_client_secret
+        encrypted_dict = json.loads(encrypted_json)
+        assert "iv_b64" in encrypted_dict
+        assert "ct_b64" in encrypted_dict
+
+        decrypted = _decrypt_client_secret(encrypted_dict)
+        assert decrypted == original
+
+
+@pytest.mark.asyncio
+async def test_post_keycloak_config_keeps_existing_secret_when_empty_sent() -> None:
+    """
+    POST config with client_secret='' and an existing row that has a secret
+    must NOT overwrite keycloak_client_secret_encrypted.
+
+    This covers the frontend 'Keep current secret' path where the toggle is
+    not expanded and an empty string is sent to the backend.
+    """
+    from unittest.mock import AsyncMock, MagicMock, patch, call
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    # Simulate an existing platform_config row that already has an encrypted secret
+    existing_row = MagicMock()
+    existing_row.keycloak_client_secret_encrypted = '{"iv_b64": "abc", "ct_b64": "def"}'
+    existing_row.keycloak_url = "https://old.example.com"
+    existing_row.keycloak_realm = "old-realm"
+    existing_row.keycloak_client_id = "old-client"
+    existing_row.enabled = True
+
+    mock_result = MagicMock()
+    mock_result.scalar_one_or_none.return_value = existing_row
+
+    mock_session = AsyncMock(spec=AsyncSession)
+    mock_session.execute = AsyncMock(return_value=mock_result)
+    mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+    mock_session.__aexit__ = AsyncMock(return_value=False)
+    mock_session.begin = MagicMock(return_value=AsyncMock(
+        __aenter__=AsyncMock(return_value=None),
+        __aexit__=AsyncMock(return_value=False),
+    ))
+
+    with patch("api.routes.admin_keycloak.async_session", return_value=mock_session):
+        from api.routes.admin_keycloak import _save_keycloak_config_to_db, KeycloakConfigInput
+
+        config = KeycloakConfigInput(
+            issuer_url="https://new.example.com/realms/new-realm",
+            client_id="new-client",
+            client_secret="",   # Empty string → should keep existing secret
+            realm="new-realm",
+            ca_cert_path="",
+        )
+        await _save_keycloak_config_to_db(config)
+
+    # The existing encrypted secret must not have been overwritten
+    assert existing_row.keycloak_client_secret_encrypted == '{"iv_b64": "abc", "ct_b64": "def"}'
+    # Other fields should have been updated
+    assert existing_row.keycloak_client_id == "new-client"
+
+
 def test_internal_provider_config_returns_credentials() -> None:
     """Returns credentials when Keycloak is configured and enabled."""
     from security.keycloak_config import KeycloakConfig
