@@ -170,6 +170,34 @@ def test_get_keycloak_config_forbidden_for_non_admin(employee_client: TestClient
     assert resp.status_code == 403
 
 
+def test_post_keycloak_config_forbidden_for_non_admin(employee_client: TestClient) -> None:
+    """POST config returns 403 for non-admin users."""
+    payload = {
+        "issuer_url": "https://kc.example.com/realms/test",
+        "client_id": "blitz-portal",
+        "client_secret": "secret",
+        "realm": "test",
+        "ca_cert_path": "",
+    }
+    resp = employee_client.post("/api/admin/keycloak/config", json=payload)
+    assert resp.status_code == 403
+
+
+def test_disable_sso_forbidden_for_non_admin(employee_client: TestClient) -> None:
+    """POST disable returns 403 for non-admin users."""
+    resp = employee_client.post("/api/admin/keycloak/disable")
+    assert resp.status_code == 403
+
+
+def test_test_connection_forbidden_for_non_admin(employee_client: TestClient) -> None:
+    """POST test-connection returns 403 for non-admin users."""
+    resp = employee_client.post(
+        "/api/admin/keycloak/test-connection",
+        json={"issuer_url": "https://kc.example.com/realms/test", "ca_cert_path": ""},
+    )
+    assert resp.status_code == 403
+
+
 # ---------------------------------------------------------------------------
 # POST /api/admin/keycloak/config
 # ---------------------------------------------------------------------------
@@ -299,16 +327,17 @@ def test_internal_provider_config_no_keycloak() -> None:
 def test_encrypt_secret_roundtrip() -> None:
     """Encrypted client_secret can be decrypted back to original value."""
     import json
-    import os
 
     # Use a test key (64 hex chars = 32 bytes)
     test_key = "a" * 64
 
-    # Patch both settings.credential_encryption_key (used by _encrypt_secret via settings)
-    # AND the env var (used by _decrypt_client_secret via os.environ.get).
+    # Patch settings at both call sites:
+    #   _encrypt_secret        → api.routes.admin_keycloak.settings
+    #   _decrypt_client_secret → security.keycloak_config.settings
     with patch("api.routes.admin_keycloak.settings") as mock_enc_settings, \
-         patch.dict(os.environ, {"CREDENTIAL_ENCRYPTION_KEY": test_key}):
+         patch("security.keycloak_config.settings") as mock_dec_settings:
         mock_enc_settings.credential_encryption_key = test_key
+        mock_dec_settings.credential_encryption_key = test_key
 
         from api.routes.admin_keycloak import _encrypt_secret
         from security.keycloak_config import _decrypt_client_secret

@@ -31,6 +31,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.config import settings
 from core.db import async_session, get_db
+from core.logging import get_audit_logger
 from core.models.platform_config import PlatformConfig
 from core.models.user import UserContext
 from security.deps import get_current_user
@@ -39,6 +40,7 @@ from security.keycloak_config import get_keycloak_config, invalidate_keycloak_co
 from security.rbac import has_permission
 
 logger = structlog.get_logger(__name__)
+audit_logger = get_audit_logger()
 router = APIRouter(tags=["admin-keycloak"])
 
 # ---------------------------------------------------------------------------
@@ -204,7 +206,8 @@ async def _save_keycloak_config_to_db(config: KeycloakConfigInput) -> None:
                     existing.keycloak_client_secret_encrypted = encrypted_secret
                 # else: leave existing.keycloak_client_secret_encrypted unchanged
                 existing.keycloak_ca_cert = config.ca_cert_path or None
-                existing.enabled = True
+                # Do NOT touch existing.enabled — preserve whatever the admin last set.
+                # Use POST /api/admin/keycloak/disable to change the enabled state.
             else:
                 session.add(PlatformConfig(
                     id=1,
@@ -240,7 +243,14 @@ async def _set_keycloak_enabled(enabled: bool) -> None:
 
 
 async def _test_jwks_endpoint(issuer_url: str, ca_cert_path: str) -> dict[str, Any]:
-    """Attempt to fetch JWKS from the given issuer. Returns dict with reachable/keys_found/error."""
+    """
+    Attempt to fetch JWKS from the given issuer. Returns dict with reachable/keys_found/error.
+
+    Security note: issuer_url is validated to be an https:// URL before use.
+    Only it-admin role can reach this code path (enforced by _require_admin dependency).
+    """
+    if not issuer_url.startswith("https://"):
+        return {"reachable": False, "keys_found": 0, "error": "issuer_url must use https://"}
     jwks_url = f"{issuer_url}/protocol/openid-connect/certs"
     ssl_verify: str | bool = ca_cert_path or True
     try:
@@ -340,7 +350,7 @@ async def save_keycloak_config(
     # so killing it before returning would drop the connection → "Failed to fetch".
     background_tasks.add_task(_restart_frontend_container)
 
-    logger.info(
+    audit_logger.info(
         "keycloak_config_saved",
         issuer_url=body.issuer_url,
         client_id=body.client_id,
@@ -361,7 +371,7 @@ async def test_keycloak_connection(
     Returns reachable=true/false so admin can verify before saving.
     """
     result = await _test_jwks_endpoint(body.issuer_url, body.ca_cert_path)
-    logger.info(
+    audit_logger.info(
         "keycloak_connection_test",
         issuer_url=body.issuer_url,
         reachable=result["reachable"],
@@ -386,7 +396,7 @@ async def disable_sso(
     invalidate_jwks_cache()
     background_tasks.add_task(_restart_frontend_container)
 
-    logger.info("keycloak_sso_disabled", admin_user=str(user["user_id"]))
+    audit_logger.info("keycloak_sso_disabled", admin_user=str(user["user_id"]))
     return DisableResponse(disabled=True, frontend_restarting=True)
 
 

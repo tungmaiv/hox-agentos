@@ -15,12 +15,14 @@ Security invariants:
   - client_secret is NEVER logged.
   - The resolver never raises — returns None on any read failure (safe fallback).
 """
+import asyncio
 import base64
 import json
 import time
 from dataclasses import dataclass
 
 import structlog
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 from core.config import settings
 
@@ -36,6 +38,7 @@ _kc_config_cache: "KeycloakConfig | None" = None
 _kc_config_fetched_at: float = 0.0
 # Sentinel to distinguish "not yet fetched" from "fetched and got None"
 _kc_config_resolved: bool = False
+_kc_config_refresh_lock: asyncio.Lock = asyncio.Lock()  # thundering herd guard
 
 
 # ---------------------------------------------------------------------------
@@ -115,9 +118,6 @@ async def _load_from_db() -> "KeycloakConfig | None":
 
 def _decrypt_client_secret(enc: object) -> str:
     """Decrypt AES-256-GCM encrypted client secret from platform_config value."""
-    import os
-    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-
     if not isinstance(enc, dict):
         raise ValueError(f"Expected dict for encrypted secret, got {type(enc)}")
 
@@ -126,10 +126,7 @@ def _decrypt_client_secret(enc: object) -> str:
     if not iv_b64 or not ct_b64:
         raise ValueError("Missing iv_b64 or ct_b64 in encrypted secret")
 
-    hex_key = os.environ.get("CREDENTIAL_ENCRYPTION_KEY", "")
-    if not hex_key:
-        from core.config import settings as _settings
-        hex_key = _settings.credential_encryption_key
+    hex_key = settings.credential_encryption_key
     if not hex_key:
         raise RuntimeError("CREDENTIAL_ENCRYPTION_KEY not set — cannot decrypt Keycloak client secret")
 
@@ -156,40 +153,48 @@ async def get_keycloak_config() -> "KeycloakConfig | None":
     global _kc_config_cache, _kc_config_fetched_at, _kc_config_resolved
 
     now = time.monotonic()
+    # Fast path: cache valid — no lock needed
     if _kc_config_resolved and (now - _kc_config_fetched_at) < KC_CONFIG_TTL_SECONDS:
         return _kc_config_cache
 
-    # Try DB first
-    db_config = await _load_from_db()
-    if db_config is not None:
-        _kc_config_cache = db_config
+    # Slow path: acquire lock to prevent thundering herd on concurrent cache expiry
+    async with _kc_config_refresh_lock:
+        # Double-check after acquiring lock — another coroutine may have refreshed
+        now = time.monotonic()
+        if _kc_config_resolved and (now - _kc_config_fetched_at) < KC_CONFIG_TTL_SECONDS:
+            return _kc_config_cache
+
+        # Try DB first
+        db_config = await _load_from_db()
+        if db_config is not None:
+            _kc_config_cache = db_config
+            _kc_config_fetched_at = now
+            _kc_config_resolved = True
+            logger.debug("keycloak_config_loaded_from_db", issuer_url=db_config.issuer_url)
+            return db_config
+
+        # Fallback: env vars / settings
+        if settings.keycloak_url and settings.keycloak_client_id:
+            env_config = KeycloakConfig(
+                issuer_url=settings.keycloak_issuer or f"{settings.keycloak_url}/realms/{settings.keycloak_realm}",
+                client_id=settings.keycloak_client_id,
+                client_secret=settings.keycloak_client_secret,
+                realm=settings.keycloak_realm,
+                ca_cert_path=settings.keycloak_ca_cert,
+                enabled=True,
+            )
+            _kc_config_cache = env_config
+            _kc_config_fetched_at = now
+            _kc_config_resolved = True
+            logger.debug("keycloak_config_loaded_from_env", issuer_url=env_config.issuer_url)
+            return env_config
+
+        # No config → local-only mode
+        _kc_config_cache = None
         _kc_config_fetched_at = now
         _kc_config_resolved = True
-        logger.debug("keycloak_config_loaded_from_db", issuer_url=db_config.issuer_url)
-        return db_config
-
-    # Fallback: env vars / settings
-    if settings.keycloak_url and settings.keycloak_client_id:
-        env_config = KeycloakConfig(
-            issuer_url=settings.keycloak_issuer or f"{settings.keycloak_url}/realms/{settings.keycloak_realm}",
-            client_id=settings.keycloak_client_id,
-            client_secret=settings.keycloak_client_secret,
-            realm=settings.keycloak_realm,
-            ca_cert_path=settings.keycloak_ca_cert,
-            enabled=True,
-        )
-        _kc_config_cache = env_config
-        _kc_config_fetched_at = now
-        _kc_config_resolved = True
-        logger.debug("keycloak_config_loaded_from_env", issuer_url=env_config.issuer_url)
-        return env_config
-
-    # No config → local-only mode
-    _kc_config_cache = None
-    _kc_config_fetched_at = now
-    _kc_config_resolved = True
-    logger.debug("keycloak_config_none_local_only")
-    return None
+        logger.debug("keycloak_config_none_local_only")
+        return None
 
 
 def invalidate_keycloak_config_cache() -> None:
