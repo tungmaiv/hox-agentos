@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Production Readiness & Skill Platform
 status: unknown
-last_updated: "2026-03-06T09:01:29.561Z"
+last_updated: "2026-03-06T09:20:08.965Z"
 progress:
   total_phases: 4
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 16
-  completed_plans: 15
+  completed_plans: 16
 ---
 
 # Project State
@@ -18,14 +18,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-05)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates their daily work routines and lets them build custom automations without writing code — all within an enterprise-secure, on-premise environment where data never leaves the company.
-**Current focus:** v1.3 Phase 18 — Identity Configuration (In Progress — 2/3 plans done)
+**Current focus:** v1.3 Phase 18 — Identity Configuration (Complete — 3/3 plans done)
 
 ## Current Position
 
-Phase: 18 of 23 (Identity Configuration) — In Progress
-Plan: 02 of 03 complete
-Status: Plan 18-02 done — Admin Keycloak Config API + AES-256-GCM secret storage + cache invalidation + Docker restart + internal provider-config endpoint (IDCFG-04/05/06/08): 766 tests passing
-Last activity: 2026-03-06 - Completed 18-02: IDCFG-04, IDCFG-05, IDCFG-06, IDCFG-08 satisfied.
+Phase: 18 of 23 (Identity Configuration) — Complete
+Plan: 03 of 03 complete
+Status: Plan 18-03 done — Frontend auth.ts dynamic Keycloak provider + login SSO button + admin Identity tab (IDCFG-03, IDCFG-04, IDCFG-05, IDCFG-08): pnpm build passes
+Last activity: 2026-03-06 - Completed 18-03: IDCFG-03, IDCFG-04, IDCFG-05, IDCFG-08 satisfied. Phase 18 complete.
 
 Progress: [########░░] ~55%
 
@@ -92,6 +92,8 @@ v1.3 roadmap decisions:
 - [Phase 18]: [18-02]: GET config returns has_secret: bool only — never raw or masked client_secret string
 - [Phase 18]: [18-02]: Internal provider-config endpoint uses X-Internal-Key header (not JWT) — Next.js server-side can't authenticate via JWT before it has credentials
 - [Phase 18]: [18-02]: asyncio.to_thread(_restart_frontend_container) — Docker SDK is synchronous, must run in thread to avoid blocking async event loop
+- [Phase 18]: [18-03]: Remove explicit providers type annotation from auth.ts — let TypeScript infer, avoids Parameters<typeof NextAuth>[0]['providers'] resolution failure
+- [Phase 18]: [18-03]: Identity tab placed between Permissions and Config in ADMIN_TABS — locked by CONTEXT.md decision (IDCFG-04)
 
 ### Pending Todos
 
@@ -118,9 +120,10 @@ v1.3 roadmap decisions:
 | Phase 17 P07 | 3 | 4 tasks | 3 files |
 | Phase 18 P01 | 27 | 4 tasks | 14 files |
 | Phase 18 P02 | 10 | 4 tasks | 4 files |
+| Phase 18 P03 | 16 | 4 tasks | 7 files |
 
 ## Session Continuity
 
 Last session: 2026-03-06
-Stopped at: Completed 18-02-PLAN.md (Admin Keycloak Config API, IDCFG-04, IDCFG-05, IDCFG-06, IDCFG-08)
-Resume file: .planning/phases/18-identity-configuration/18-02-SUMMARY.md
+Stopped at: Completed 18-03-PLAN.md (Frontend auth.ts dynamic Keycloak + admin Identity tab, IDCFG-03, IDCFG-04, IDCFG-05, IDCFG-08) — Phase 18 complete
+Resume file: .planning/phases/18-identity-configuration/18-03-SUMMARY.md
