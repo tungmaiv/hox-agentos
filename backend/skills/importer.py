@@ -143,6 +143,8 @@ class SkillImporter:
             )
         if "category" in frontmatter:
             skill_data["category"] = frontmatter["category"]
+        if "source_url" in frontmatter:
+            skill_data["source_url"] = frontmatter["source_url"]
 
         logger.info(
             "skill_md_parsed",

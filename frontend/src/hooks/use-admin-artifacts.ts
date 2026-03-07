@@ -88,9 +88,18 @@ export function useAdminArtifacts<T>(
             string,
             unknown
           >;
-          throw new Error(
-            (body.detail as string | undefined) ?? `HTTP ${res.status}`
-          );
+          const detail = body.detail;
+          let message: string;
+          if (Array.isArray(detail) && detail.length > 0) {
+            const first = detail[0] as Record<string, unknown>;
+            message =
+              typeof first.msg === "string" ? first.msg : `HTTP ${res.status}`;
+          } else if (typeof detail === "string") {
+            message = detail;
+          } else {
+            message = `HTTP ${res.status}`;
+          }
+          throw new Error(message);
         }
         const created = (await res.json()) as Record<string, unknown>;
         refetch();

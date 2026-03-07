@@ -57,11 +57,17 @@ async function proxyRequest(
 
   // Forward body for methods that have one (including DELETE with body)
   if (["POST", "PUT", "PATCH", "DELETE"].includes(request.method)) {
-    const bodyText = await request.text();
-    if (bodyText) {
-      fetchInit.body = bodyText;
-      if (!headers["Content-Type"]) {
-        headers["Content-Type"] = "application/json";
+    if (contentType?.includes("multipart/form-data")) {
+      // Binary multipart — must NOT read as text (corrupts binary payloads).
+      // Forward the raw bytes; do NOT set Content-Type (browser boundary must be preserved).
+      fetchInit.body = await request.arrayBuffer();
+    } else {
+      const bodyText = await request.text();
+      if (bodyText) {
+        fetchInit.body = bodyText;
+        if (!headers["Content-Type"]) {
+          headers["Content-Type"] = "application/json";
+        }
       }
     }
   }

@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-05)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates their daily work routines and lets them build custom automations without writing code — all within an enterprise-secure, on-premise environment where data never leaves the company.
-**Current focus:** v1.3 Phase 18 — Identity Configuration (Complete — 3/3 plans done)
+**Current focus:** v1.3 Phase 19 — Skill Platform A Standards Compliance (Complete — 1/1 plans done)
 
 ## Current Position
 
-Phase: 18 of 23 (Identity Configuration) — Complete
-Plan: 03 of 03 complete
-Status: Plan 18-03 done — Frontend auth.ts dynamic Keycloak provider + login SSO button + admin Identity tab (IDCFG-03, IDCFG-04, IDCFG-05, IDCFG-08): pnpm build passes
-Last activity: 2026-03-06 - Completed 18-03: IDCFG-03, IDCFG-04, IDCFG-05, IDCFG-08 satisfied. Phase 18 complete.
+Phase: 19 of 23 (Skill Platform A — Standards Compliance) — Complete
+Plan: 01 of 01 complete
+Status: Phase 19 done — 7 metadata columns, name validation, SKILL.md import/export, ZIP bundle import/export, admin UI metadata panel. All 5 UAT criteria pass. 794 backend tests passing.
+Last activity: 2026-03-07 - Completed 19-01: SKSTD-01 through SKSTD-05 satisfied. Phase 19 complete.
 
-Progress: [########░░] ~55%
+Progress: [#########░] ~61%
 
 ## Performance Metrics
 
@@ -94,6 +94,11 @@ v1.3 roadmap decisions:
 - [Phase 18]: [18-02]: asyncio.to_thread(_restart_frontend_container) — Docker SDK is synchronous, must run in thread to avoid blocking async event loop
 - [Phase 18]: [18-03]: Remove explicit providers type annotation from auth.ts — let TypeScript infer, avoids Parameters<typeof NextAuth>[0]['providers'] resolution failure
 - [Phase 18]: [18-03]: Identity tab placed between Permissions and Config in ADMIN_TABS — locked by CONTEXT.md decision (IDCFG-04)
+- [Phase 19]: Migration 022 not auto-applied in running container — must `docker cp` new migration files then run `alembic upgrade head` inside container after container-only deploys
+- [Phase 19]: source_url not parsed from SKILL.md frontmatter initially — gap found in UAT, fixed with one-line addition; ZIP MANIFEST.json and URL import already worked
+- [Phase 19]: Next.js catch-all admin proxy used request.text() for all body types — corrupts binary multipart; fixed to use request.arrayBuffer() when Content-Type is multipart/form-data
+- [Phase 19]: SkillMetadataPanel only renders in card grid view (not table view) — deliberate: table rows are too narrow for metadata display
+- [Phase 19]: Pydantic 422 detail is an array of objects, not a string — use-admin-artifacts.ts create() must extract detail[0].msg, not cast detail to string
 
 ### Pending Todos
 
@@ -124,6 +129,6 @@ v1.3 roadmap decisions:
 
 ## Session Continuity
 
-Last session: 2026-03-06
-Stopped at: Completed 18-03-PLAN.md (Frontend auth.ts dynamic Keycloak + admin Identity tab, IDCFG-03, IDCFG-04, IDCFG-05, IDCFG-08) — Phase 18 complete
-Resume file: .planning/phases/18-identity-configuration/18-03-SUMMARY.md
+Last session: 2026-03-07
+Stopped at: Completed Phase 19 — all 5 UAT criteria pass, post-UAT fixes applied (source_url frontmatter, proxy multipart, error display, migration applied). GSD artifacts backfilled.
+Resume file: .planning/phases/19-skill-standards-compliance/19-01-SUMMARY.md

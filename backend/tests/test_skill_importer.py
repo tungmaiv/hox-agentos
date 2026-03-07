@@ -236,6 +236,18 @@ class TestExtendedFrontmatterParsing:
         result = importer.parse_skill_md(_EXTENDED_SKILL_MD)
         assert result["metadata_json"] == {"author": "test-user", "custom_field": "value"}
 
+    def test_source_url_parsed_from_frontmatter(self, importer: SkillImporter) -> None:
+        md = """---
+name: test-skill
+description: A test skill.
+skill_type: instructional
+source_url: https://github.com/example/test-skill
+---
+Instructions here.
+"""
+        result = importer.parse_skill_md(md)
+        assert result["source_url"] == "https://github.com/example/test-skill"
+
     def test_missing_standard_fields_are_absent(self, importer: SkillImporter) -> None:
         """Fields not in frontmatter should not appear in skill_data."""
         result = importer.parse_skill_md(_VALID_SKILL_MD)

@@ -65,7 +65,7 @@ Full phase details: `.planning/milestones/v1.2-ROADMAP.md`
 - [x] **Phase 16: Navigation & User Experience** — Nav rail, profile page, user preferences, settings reorg (completed 2026-03-05)
 - [x] **Phase 17: Performance & Embedding Sidecar** — Embedding sidecar extraction, instrumentation, bottleneck fixes (completed 2026-03-05)
 - [x] **Phase 18: Identity Configuration** — Keycloak-optional boot, admin runtime config, connection testing (completed 2026-03-06)
-- [ ] **Phase 19: Skill Platform A — Standards Compliance** — Agent Skills spec compliance, schema extension, import/export
+- [x] **Phase 19: Skill Platform A — Standards Compliance** — Agent Skills spec compliance, schema extension, import/export (completed 2026-03-07)
 - [ ] **Phase 20: Skill Platform B — Discovery & Catalog** — FTS catalog, tool search, external registry browse, one-click import
 - [ ] **Phase 21: Skill Platform C — Dependency & Security Hardening** — Dependency enforcement, allowed-tools gate, update checker, scanner enhancement
 - [ ] **Phase 22: Skill Platform D — Sharing & Marketplace** — Promoted skills, export download, user-to-user sharing
@@ -154,8 +154,7 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 19-01: TBD
-- [ ] 19-02: TBD
+- [x] 19-01: Standards Compliance — 7 metadata columns, name validation, SKILL.md import/export, ZIP bundle, admin UI metadata panel
 
 ### Phase 20: Skill Platform B — Discovery & Catalog
 **Goal**: Users and admins can discover skills through a searchable catalog with full-text search, category filtering, and one-click import from external registries
@@ -245,7 +244,7 @@ Plans:
 | 16. Navigation & UX | 3/3 | Complete    | 2026-03-05 | - |
 | 17. Performance & Embedding Sidecar | 7/7 | Complete    | 2026-03-05 | - |
 | 18. Identity Configuration | 3/3 | Complete    | 2026-03-06 | - |
-| 19. Skill Platform A — Standards | v1.3 | 0/TBD | Not started | - |
+| 19. Skill Platform A — Standards | v1.3 | 1/1 | ✅ Complete | 2026-03-07 |
 | 20. Skill Platform B — Catalog | v1.3 | 0/TBD | Not started | - |
 | 21. Skill Platform C — Security | v1.3 | 0/TBD | Not started | - |
 | 22. Skill Platform D — Sharing | v1.3 | 0/TBD | Not started | - |
