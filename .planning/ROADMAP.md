@@ -165,11 +165,13 @@ Plans:
   2. Tool catalog search and filtering by handler_type, status, and name works from the admin UI
   3. Admin can browse external skill registries from configured registry URLs with paginated results and see skill details before importing
   4. One-click import from external registry triggers the existing SecurityScanner + quarantine flow — imported skills appear in `pending_review` status
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 20-01: TBD
-- [ ] 20-02: TBD
+- [ ] 20-01-PLAN.md — DB migration 023: usage_count column + tsvector GIN index on skill_definitions
+- [ ] 20-02-PLAN.md — Backend FTS + filter + sort params on admin_skills, user_skills, admin_tools; limit + cursor pagination on browse
+- [ ] 20-03-PLAN.md — User /skills catalog page + admin skills FTS filter bar + admin tools name/handler_type filter bar
+- [ ] 20-04-PLAN.md — SkillStoreBrowse detail drawer + Load More pagination + usage_count increment on skill run
 
 ### Phase 21: Skill Platform C — Dependency & Security Hardening
 **Goal**: Skills with scripts declare their dependencies explicitly, tool access is restricted to declared permissions, and imported skills are monitored for upstream changes
@@ -245,7 +247,7 @@ Plans:
 | 17. Performance & Embedding Sidecar | 7/7 | Complete    | 2026-03-05 | - |
 | 18. Identity Configuration | 3/3 | Complete    | 2026-03-06 | - |
 | 19. Skill Platform A — Standards | v1.3 | 1/1 | ✅ Complete | 2026-03-07 |
-| 20. Skill Platform B — Catalog | v1.3 | 0/TBD | Not started | - |
+| 20. Skill Platform B — Catalog | v1.3 | 0/4 | Not started | - |
 | 21. Skill Platform C — Security | v1.3 | 0/TBD | Not started | - |
 | 22. Skill Platform D — Sharing | v1.3 | 0/TBD | Not started | - |
 | 23. Skill Platform E — Builder | v1.3 | 0/TBD | Not started | - |
