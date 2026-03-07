@@ -52,6 +52,8 @@ async def _require_registry_manager(
 async def list_tools(
     status: str | None = Query(None, description="Filter by status"),
     version: str | None = Query(None, description="Filter by version"),
+    name: str | None = Query(None, description="Filter by name substring (case-insensitive)"),
+    handler_type: str | None = Query(None, description="Filter by handler_type: backend, mcp, sandbox"),
     user: UserContext = Depends(_require_registry_manager),
     session: AsyncSession = Depends(get_db),
 ) -> list[ToolDefinitionResponse]:
@@ -61,6 +63,10 @@ async def list_tools(
         stmt = stmt.where(ToolDefinition.status == status)
     if version is not None:
         stmt = stmt.where(ToolDefinition.version == version)
+    if name is not None:
+        stmt = stmt.where(ToolDefinition.name.ilike(f"%{name}%"))
+    if handler_type is not None:
+        stmt = stmt.where(ToolDefinition.handler_type == handler_type)
     result = await session.execute(stmt)
     tools = result.scalars().all()
     logger.info("admin_tools_listed", user_id=str(user["user_id"]), count=len(tools))

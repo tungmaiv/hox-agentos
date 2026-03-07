@@ -39,7 +39,13 @@ class SkillBrowseItem(BaseModel):
     version: str | None
     repository_name: str
     repository_id: str
-    metadata: dict[str, Any] | None  # author, license, etc.
+    metadata: dict[str, Any] | None  # author, license, category, tags, source_url
+    # Convenience fields extracted from metadata for easy display
+    category: str | None = None
+    tags: list[str] | None = None
+    license: str | None = None
+    author: str | None = None
+    source_url: str | None = None
 
 
 class ImportRequest(BaseModel):

@@ -136,15 +136,19 @@ async def _require_chat(
 @user_router.get("/browse", response_model=list[SkillBrowseItem])
 async def browse_skills_route(
     q: str | None = Query(None, description="Search query — filters by name and description"),
+    limit: int = Query(20, ge=1, le=100, description="Page size (default 20)"),
+    cursor: int = Query(0, ge=0, description="Offset cursor for Load More pagination"),
     user: UserContext = Depends(_require_chat),
     session: AsyncSession = Depends(get_db),
 ) -> list[SkillBrowseItem]:
     """Browse skills from all active registered repositories with optional search."""
-    items = await browse_skills(q, session)
+    items = await browse_skills(q, session, limit=limit, cursor=cursor)
     logger.info(
         "skill_repos_browse",
         user_id=str(user["user_id"]),
         query=q,
+        limit=limit,
+        cursor=cursor,
         result_count=len(items),
     )
     return items

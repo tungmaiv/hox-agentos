@@ -207,6 +207,8 @@ async def list_repos(session: AsyncSession) -> list[RepoInfo]:
 async def browse_skills(
     query: str | None,
     session: AsyncSession,
+    limit: int = 20,
+    cursor: int = 0,
 ) -> list[SkillBrowseItem]:
     """Aggregate skills from all active repositories with optional search filter.
 
@@ -216,9 +218,11 @@ async def browse_skills(
         query: Optional search string — case-insensitive substring match
                on skill name OR description.
         session: Async DB session.
+        limit: Maximum number of items to return (default 20).
+        cursor: Offset into the full result set for Load More pagination (default 0).
 
     Returns:
-        List of SkillBrowseItem aggregated from all active repos.
+        List of SkillBrowseItem aggregated from all active repos, paginated.
     """
     result = await session.execute(
         select(SkillRepository).where(SkillRepository.is_active == True)  # noqa: E712
@@ -241,6 +245,7 @@ async def browse_skills(
                 if not name_match and not desc_match:
                     continue
 
+            meta = skill.get("metadata") or {}
             items.append(
                 SkillBrowseItem(
                     name=name,
@@ -248,11 +253,16 @@ async def browse_skills(
                     version=skill.get("version"),
                     repository_name=repo.name,
                     repository_id=str(repo.id),
-                    metadata=skill.get("metadata"),
+                    metadata=meta or None,
+                    category=meta.get("category"),
+                    tags=meta.get("tags") if isinstance(meta.get("tags"), list) else None,
+                    license=meta.get("license"),
+                    author=meta.get("author"),
+                    source_url=meta.get("source_url"),
                 )
             )
 
-    return items
+    return items[cursor : cursor + limit]
 
 
 async def import_from_repo(
