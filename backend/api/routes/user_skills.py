@@ -15,7 +15,7 @@ from typing import Any
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import asc, desc, func, select, text
+from sqlalchemy import asc, desc, func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.models.skill_definition import SkillDefinition
@@ -150,6 +150,16 @@ async def run_user_skill(
             success=result_obj.success,
             user_id=str(user["user_id"]),
         )
+        # Fire-and-forget usage_count increment — non-fatal if fails
+        try:
+            await session.execute(
+                update(SkillDefinition)
+                .where(SkillDefinition.id == skill.id)
+                .values(usage_count=SkillDefinition.usage_count + 1)
+            )
+            await session.commit()
+        except Exception:
+            logger.warning("usage_count_increment_failed", skill_id=str(skill.id))
         return SkillRunResponse(
             success=result_obj.success,
             output=result_obj.output,
@@ -166,6 +176,16 @@ async def run_user_skill(
             success=True,
             user_id=str(user["user_id"]),
         )
+        # Fire-and-forget usage_count increment — non-fatal if fails
+        try:
+            await session.execute(
+                update(SkillDefinition)
+                .where(SkillDefinition.id == skill.id)
+                .values(usage_count=SkillDefinition.usage_count + 1)
+            )
+            await session.commit()
+        except Exception:
+            logger.warning("usage_count_increment_failed", skill_id=str(skill.id))
         return SkillRunResponse(success=True, output=output)
 
     else:
