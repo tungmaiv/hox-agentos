@@ -4,6 +4,7 @@
  *
  * Additional columns for skill_type, slash_command, security_score.
  * Includes "Pending Review" filter shortcut and review actions.
+ * Shows agentskills.io standard metadata fields (read-only) in detail panel.
  */
 import { useState } from "react";
 import { useAdminArtifacts } from "@/hooks/use-admin-artifacts";
@@ -11,6 +12,83 @@ import type { SkillDefinition, SkillDefinitionCreate } from "@/lib/admin-types";
 import { ArtifactTable } from "@/components/admin/artifact-table";
 import { ArtifactCardGrid } from "@/components/admin/artifact-card-grid";
 import { ViewToggle, useViewMode } from "@/components/admin/view-toggle";
+
+/** Read-only metadata section shown when a skill has any of the 7 new fields. */
+function SkillMetadataPanel({ skill }: { skill: SkillDefinition }) {
+  const hasMetadata =
+    skill.license ||
+    skill.compatibility ||
+    skill.category ||
+    skill.sourceUrl ||
+    (skill.allowedTools && skill.allowedTools.length > 0) ||
+    (skill.tags && skill.tags.length > 0);
+
+  if (!hasMetadata) return null;
+
+  return (
+    <div className="mt-3 pt-3 border-t border-gray-100">
+      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+        Metadata
+      </p>
+      <dl className="space-y-1">
+        {skill.license && (
+          <div className="flex gap-2 text-xs">
+            <dt className="text-gray-500 w-24 shrink-0">License</dt>
+            <dd className="text-gray-800 font-mono">{skill.license}</dd>
+          </div>
+        )}
+        {skill.category && (
+          <div className="flex gap-2 text-xs">
+            <dt className="text-gray-500 w-24 shrink-0">Category</dt>
+            <dd className="text-gray-800">{skill.category}</dd>
+          </div>
+        )}
+        {skill.tags && skill.tags.length > 0 && (
+          <div className="flex gap-2 text-xs">
+            <dt className="text-gray-500 w-24 shrink-0">Tags</dt>
+            <dd className="flex flex-wrap gap-1">
+              {skill.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-xs"
+                >
+                  {tag}
+                </span>
+              ))}
+            </dd>
+          </div>
+        )}
+        {skill.allowedTools && skill.allowedTools.length > 0 && (
+          <div className="flex gap-2 text-xs">
+            <dt className="text-gray-500 w-24 shrink-0">Allowed Tools</dt>
+            <dd className="flex flex-wrap gap-1">
+              {skill.allowedTools.map((tool) => (
+                <span
+                  key={tool}
+                  className="px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded text-xs font-mono"
+                >
+                  {tool}
+                </span>
+              ))}
+            </dd>
+          </div>
+        )}
+        {skill.compatibility && (
+          <div className="flex gap-2 text-xs">
+            <dt className="text-gray-500 w-24 shrink-0">Compat.</dt>
+            <dd className="text-gray-700">{skill.compatibility}</dd>
+          </div>
+        )}
+        {skill.sourceUrl && (
+          <div className="flex gap-2 text-xs">
+            <dt className="text-gray-500 w-24 shrink-0">Source URL</dt>
+            <dd className="text-blue-600 truncate max-w-xs">{skill.sourceUrl}</dd>
+          </div>
+        )}
+      </dl>
+    </div>
+  );
+}
 
 export default function AdminSkillsPage() {
   const { items, loading, error, create, patchStatus, activateVersion, refetch } =
@@ -302,50 +380,53 @@ export default function AdminSkillsPage() {
         <ArtifactCardGrid
           items={displayItems}
           renderExtra={(item) => (
-            <div className="flex items-center gap-2 flex-wrap">
-              <span
-                className={`px-1.5 py-0.5 rounded ${
-                  item.skillType === "procedural"
-                    ? "bg-blue-100 text-blue-700"
-                    : "bg-purple-100 text-purple-700"
-                }`}
-              >
-                {item.skillType}
-              </span>
-              {item.slashCommand && (
-                <span className="font-mono text-gray-600">
-                  {item.slashCommand}
-                </span>
-              )}
-              {item.securityScore !== null && (
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
                 <span
-                  className={`font-medium ${
-                    item.securityScore >= 70
-                      ? "text-green-600"
-                      : item.securityScore >= 40
-                        ? "text-yellow-600"
-                        : "text-red-600"
+                  className={`px-1.5 py-0.5 rounded ${
+                    item.skillType === "procedural"
+                      ? "bg-blue-100 text-blue-700"
+                      : "bg-purple-100 text-purple-700"
                   }`}
                 >
-                  Score: {item.securityScore}
+                  {item.skillType}
                 </span>
-              )}
-              {item.securityScore !== null && item.securityScore < 70 && (
-                <div className="flex gap-1 ml-auto">
-                  <button
-                    onClick={() => handleReview(item.id, "approve")}
-                    className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded hover:bg-green-200"
+                {item.slashCommand && (
+                  <span className="font-mono text-gray-600">
+                    {item.slashCommand}
+                  </span>
+                )}
+                {item.securityScore !== null && (
+                  <span
+                    className={`font-medium ${
+                      item.securityScore >= 70
+                        ? "text-green-600"
+                        : item.securityScore >= 40
+                          ? "text-yellow-600"
+                          : "text-red-600"
+                    }`}
                   >
-                    Approve
-                  </button>
-                  <button
-                    onClick={() => handleReview(item.id, "reject")}
-                    className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded hover:bg-red-200"
-                  >
-                    Reject
-                  </button>
-                </div>
-              )}
+                    Score: {item.securityScore}
+                  </span>
+                )}
+                {item.securityScore !== null && item.securityScore < 70 && (
+                  <div className="flex gap-1 ml-auto">
+                    <button
+                      onClick={() => handleReview(item.id, "approve")}
+                      className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded hover:bg-green-200"
+                    >
+                      Approve
+                    </button>
+                    <button
+                      onClick={() => handleReview(item.id, "reject")}
+                      className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded hover:bg-red-200"
+                    >
+                      Reject
+                    </button>
+                  </div>
+                )}
+              </div>
+              <SkillMetadataPanel skill={item as SkillDefinition} />
             </div>
           )}
           onPatchStatus={patchStatus}

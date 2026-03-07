@@ -39,6 +39,14 @@ def _make_skill(
     slash_command: str | None = None,
     source_type: str = "user_created",
     status: str = "active",
+    license: str | None = None,
+    compatibility: str | None = None,
+    metadata_json: dict[str, Any] | None = None,
+    allowed_tools: list[str] | None = None,
+    tags: list[str] | None = None,
+    category: str | None = None,
+    source_url: str | None = None,
+    security_score: int | None = None,
 ) -> MagicMock:
     """Create a mock SkillDefinition for testing."""
     skill = MagicMock()
@@ -54,6 +62,15 @@ def _make_skill(
     skill.slash_command = slash_command
     skill.source_type = source_type
     skill.status = status
+    # agentskills.io standard fields
+    skill.license = license
+    skill.compatibility = compatibility
+    skill.metadata_json = metadata_json
+    skill.allowed_tools = allowed_tools
+    skill.tags = tags
+    skill.category = category
+    skill.source_url = source_url
+    skill.security_score = security_score
     return skill
 
 
@@ -283,6 +300,135 @@ class TestExportRoute:
         )
         # With invalid token, expect 401. Key check: route is registered.
         assert response.status_code in (401, 403, 404, 422)
+
+
+class TestManifestJson:
+    """Tests for MANIFEST.json generation."""
+
+    def test_manifest_json_present_in_zip(self) -> None:
+        skill = _make_skill()
+        result = build_skill_zip(skill)
+
+        result.seek(0)
+        with zipfile.ZipFile(result, "r") as zf:
+            names = zf.namelist()
+        assert f"{skill.name}/MANIFEST.json" in names
+
+    def test_manifest_json_schema_version(self) -> None:
+        skill = _make_skill()
+        result = build_skill_zip(skill)
+
+        result.seek(0)
+        with zipfile.ZipFile(result, "r") as zf:
+            raw = zf.read(f"{skill.name}/MANIFEST.json")
+        manifest = json.loads(raw)
+        assert manifest["schema_version"] == "1.0"
+
+    def test_manifest_json_contains_all_fields(self) -> None:
+        skill = _make_skill(
+            name="morning-digest",
+            version="2.0.0",
+            license="Apache-2.0",
+            compatibility="Requires email tools",
+            allowed_tools=["email.fetch", "calendar.list"],
+            tags=["productivity"],
+            category="communication",
+            source_url="https://example.com/skill",
+        )
+        result = build_skill_zip(skill)
+
+        result.seek(0)
+        with zipfile.ZipFile(result, "r") as zf:
+            raw = zf.read(f"{skill.name}/MANIFEST.json")
+        manifest = json.loads(raw)
+
+        assert manifest["name"] == "morning-digest"
+        assert manifest["version"] == "2.0.0"
+        assert manifest["license"] == "Apache-2.0"
+        assert manifest["compatibility"] == "Requires email tools"
+        assert manifest["allowed_tools"] == ["email.fetch", "calendar.list"]
+        assert manifest["tags"] == ["productivity"]
+        assert manifest["category"] == "communication"
+        assert manifest["source_url"] == "https://example.com/skill"
+        assert "exported_at" in manifest
+
+    def test_manifest_json_null_fields_present(self) -> None:
+        """Null fields are serialized as null in MANIFEST.json."""
+        skill = _make_skill()
+        result = build_skill_zip(skill)
+
+        result.seek(0)
+        with zipfile.ZipFile(result, "r") as zf:
+            raw = zf.read(f"{skill.name}/MANIFEST.json")
+        manifest = json.loads(raw)
+
+        assert "license" in manifest
+        assert manifest["license"] is None
+
+
+class TestAssetsDir:
+    """Tests for assets/ placeholder directory in ZIP."""
+
+    def test_assets_dir_present_in_zip(self) -> None:
+        skill = _make_skill()
+        result = build_skill_zip(skill)
+
+        result.seek(0)
+        with zipfile.ZipFile(result, "r") as zf:
+            names = zf.namelist()
+        assert any(n.startswith(f"{skill.name}/assets/") for n in names)
+
+
+class TestSkillMdNewFields:
+    """Tests for new agentskills.io fields in SKILL.md frontmatter."""
+
+    def test_skill_md_includes_license(self) -> None:
+        skill = _make_skill(license="MIT")
+        result = build_skill_zip(skill)
+
+        result.seek(0)
+        with zipfile.ZipFile(result, "r") as zf:
+            content = zf.read(f"{skill.name}/SKILL.md").decode("utf-8")
+        parts = content.split("---\n", 2)
+        frontmatter = yaml.safe_load(parts[1])
+        assert frontmatter["license"] == "MIT"
+
+    def test_skill_md_allowed_tools_space_delimited(self) -> None:
+        skill = _make_skill(allowed_tools=["email.fetch", "calendar.list"])
+        result = build_skill_zip(skill)
+
+        result.seek(0)
+        with zipfile.ZipFile(result, "r") as zf:
+            content = zf.read(f"{skill.name}/SKILL.md").decode("utf-8")
+        parts = content.split("---\n", 2)
+        frontmatter = yaml.safe_load(parts[1])
+        # Should be a space-delimited string per spec
+        assert frontmatter["allowed-tools"] == "email.fetch calendar.list"
+
+    def test_skill_md_tags_list(self) -> None:
+        skill = _make_skill(tags=["productivity", "morning"])
+        result = build_skill_zip(skill)
+
+        result.seek(0)
+        with zipfile.ZipFile(result, "r") as zf:
+            content = zf.read(f"{skill.name}/SKILL.md").decode("utf-8")
+        parts = content.split("---\n", 2)
+        frontmatter = yaml.safe_load(parts[1])
+        assert frontmatter["tags"] == ["productivity", "morning"]
+
+    def test_skill_md_omits_null_standard_fields(self) -> None:
+        """Null standard fields are not written to SKILL.md frontmatter."""
+        skill = _make_skill()  # all standard fields = None
+        result = build_skill_zip(skill)
+
+        result.seek(0)
+        with zipfile.ZipFile(result, "r") as zf:
+            content = zf.read(f"{skill.name}/SKILL.md").decode("utf-8")
+        parts = content.split("---\n", 2)
+        frontmatter = yaml.safe_load(parts[1])
+        assert "license" not in frontmatter
+        assert "allowed-tools" not in frontmatter
+        assert "tags" not in frontmatter
 
 
 class TestBuildSkillZipEdgeCases:

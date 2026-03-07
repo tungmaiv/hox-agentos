@@ -6,11 +6,18 @@ permission models. SkillDefinitionCreate includes cross-field validation:
 instructional skills require instruction_markdown, procedural skills require
 procedure_json.
 """
+import re
 import uuid
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
+
+_SKILL_NAME_RE = re.compile(r"^[a-z][a-z0-9-]*$")
+_SKILL_NAME_MSG = (
+    "Skill name must be kebab-case (lowercase, hyphens only), "
+    "1-64 characters, no consecutive hyphens"
+)
 
 
 # ---------------------------------------------------------------------------
@@ -144,6 +151,27 @@ class SkillDefinitionCreate(BaseModel):
     procedure_json: dict[str, Any] | None = None
     input_schema: dict[str, Any] | None = None
     output_schema: dict[str, Any] | None = None
+    # agentskills.io standard fields
+    license: str | None = None
+    compatibility: str | None = None
+    metadata_json: dict[str, Any] | None = None
+    allowed_tools: list[str] | None = None
+    tags: list[str] | None = None
+    category: str | None = None
+    source_url: str | None = None
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, v: str) -> str:
+        if len(v) > 64:
+            raise ValueError(_SKILL_NAME_MSG)
+        if "--" in v:
+            raise ValueError(_SKILL_NAME_MSG)
+        if not _SKILL_NAME_RE.match(v):
+            raise ValueError(_SKILL_NAME_MSG)
+        if v.endswith("-"):
+            raise ValueError(_SKILL_NAME_MSG)
+        return v
 
     @model_validator(mode="after")
     def validate_skill_content(self) -> "SkillDefinitionCreate":
@@ -170,6 +198,14 @@ class SkillDefinitionUpdate(BaseModel):
     procedure_json: dict[str, Any] | None = None
     input_schema: dict[str, Any] | None = None
     output_schema: dict[str, Any] | None = None
+    # agentskills.io standard fields
+    license: str | None = None
+    compatibility: str | None = None
+    metadata_json: dict[str, Any] | None = None
+    allowed_tools: list[str] | None = None
+    tags: list[str] | None = None
+    category: str | None = None
+    source_url: str | None = None
 
 
 class SkillDefinitionResponse(BaseModel):
@@ -188,6 +224,14 @@ class SkillDefinitionResponse(BaseModel):
     procedure_json: dict[str, Any] | None
     input_schema: dict[str, Any] | None
     output_schema: dict[str, Any] | None
+    # agentskills.io standard fields
+    license: str | None
+    compatibility: str | None
+    metadata_json: dict[str, Any] | None
+    allowed_tools: list[str] | None
+    tags: list[str] | None
+    category: str | None
+    source_url: str | None
     security_score: int | None
     security_report: dict[str, Any] | None
     reviewed_by: uuid.UUID | None

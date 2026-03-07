@@ -115,7 +115,7 @@ def test_skill_lifecycle(integration_db) -> None:
     create_resp = admin_client.post(
         "/api/admin/skills",
         json={
-            "name": "integration_skill",
+            "name": "integration-skill",
             "display_name": "Integration Test Skill",
             "description": "A skill for integration testing",
             "skill_type": "procedural",
@@ -131,7 +131,7 @@ def test_skill_lifecycle(integration_db) -> None:
     assert create_resp.status_code == 201, f"Create failed: {create_resp.text}"
     skill = create_resp.json()
     skill_id = skill["id"]
-    assert skill["name"] == "integration_skill"
+    assert skill["name"] == "integration-skill"
     assert skill["status"] == "active"
     assert skill["is_active"] is True
 
@@ -142,7 +142,7 @@ def test_skill_lifecycle(integration_db) -> None:
     list_resp = emp_client.get("/api/skills")
     assert list_resp.status_code == 200
     names = [s["name"] for s in list_resp.json()]
-    assert "integration_skill" in names
+    assert "integration-skill" in names
 
     # Step 3: Employee executes the skill (mocked tool execution)
     mock_result = MagicMock()
@@ -155,7 +155,7 @@ def test_skill_lifecycle(integration_db) -> None:
         instance = MockExecutor.return_value
         instance.run = AsyncMock(return_value=mock_result)
 
-        run_resp = emp_client.post("/api/skills/integration_skill/run")
+        run_resp = emp_client.post("/api/skills/integration-skill/run")
 
     assert run_resp.status_code == 200
     run_data = run_resp.json()
@@ -180,10 +180,10 @@ def test_skill_lifecycle(integration_db) -> None:
     list_resp2 = emp_client2.get("/api/skills")
     assert list_resp2.status_code == 200
     names2 = [s["name"] for s in list_resp2.json()]
-    assert "integration_skill" not in names2
+    assert "integration-skill" not in names2
 
     # Step 6: Employee cannot execute it (404)
-    run_resp2 = emp_client2.post("/api/skills/integration_skill/run")
+    run_resp2 = emp_client2.post("/api/skills/integration-skill/run")
     assert run_resp2.status_code == 404
 
     # Cleanup
@@ -311,7 +311,7 @@ def test_instructional_skill_execution(integration_db) -> None:
     create_resp = admin_client.post(
         "/api/admin/skills",
         json={
-            "name": "inst_integration",
+            "name": "inst-integration",
             "display_name": "Instructional Integration",
             "skill_type": "instructional",
             "instruction_markdown": "# Instructions\n\nFollow these steps:\n1. Check email\n2. Review calendar",
@@ -323,7 +323,7 @@ def test_instructional_skill_execution(integration_db) -> None:
     app.dependency_overrides[get_current_user] = make_employee_ctx
     emp_client = TestClient(app, raise_server_exceptions=False)
 
-    run_resp = emp_client.post("/api/skills/inst_integration/run")
+    run_resp = emp_client.post("/api/skills/inst-integration/run")
     assert run_resp.status_code == 200
     data = run_resp.json()
     assert data["success"] is True
@@ -354,7 +354,7 @@ def test_uat_12_admin_create_skill(integration_db) -> None:
     create_resp = admin_client.post(
         "/api/admin/skills",
         json={
-            "name": "uat12_skill",
+            "name": "uat12-skill",
             "display_name": "UAT 12 Test Skill",
             "description": "Created for UAT test 12",
             "skill_type": "instructional",
@@ -365,14 +365,14 @@ def test_uat_12_admin_create_skill(integration_db) -> None:
     body = create_resp.json()
     assert "id" in body, f"Response body missing 'id' field: {body}"
     skill_id = body["id"]
-    assert body["name"] == "uat12_skill"
+    assert body["name"] == "uat12-skill"
     assert body["status"] == "active"
 
     # Step 2: Skill is retrievable via GET /api/admin/skills/{id}
     get_resp = admin_client.get(f"/api/admin/skills/{skill_id}")
     assert get_resp.status_code == 200, f"Expected 200, got {get_resp.status_code}: {get_resp.text}"
     get_body = get_resp.json()
-    assert get_body["name"] == "uat12_skill"
+    assert get_body["name"] == "uat12-skill"
     assert get_body["id"] == skill_id
 
     # Step 3: Employee (non-admin) cannot create a skill

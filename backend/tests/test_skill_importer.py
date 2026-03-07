@@ -1,9 +1,21 @@
-"""Tests for SkillImporter -- SKILL.md parsing and URL import."""
+"""Tests for SkillImporter -- SKILL.md parsing, URL import, and ZIP bundle import."""
+import io
+import json
+import zipfile
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from skills.importer import SkillImportError, SkillImporter
+
+
+def _make_zip(files: dict[str, str]) -> bytes:
+    """Build an in-memory ZIP archive from a dict of {path: content}."""
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        for path, content in files.items():
+            zf.writestr(path, content)
+    return buf.getvalue()
 
 
 @pytest.fixture
@@ -108,7 +120,7 @@ description: [invalid: yaml: content
 ---
 Body.
 """
-        with pytest.raises(SkillImportError, match="Invalid YAML"):
+        with pytest.raises(SkillImportError, match="frontmatter parse error"):
             importer.parse_skill_md(md)
 
     def test_non_dict_frontmatter_raises(
@@ -134,6 +146,8 @@ class TestImportFromUrl:
 
         mock_response = MagicMock(spec=httpx.Response)
         mock_response.text = _VALID_SKILL_MD
+        mock_response.content = _VALID_SKILL_MD.encode()
+        mock_response.headers = {"content-type": "text/plain"}
         mock_response.raise_for_status = MagicMock()
 
         mock_client = AsyncMock(spec=httpx.AsyncClient)
@@ -164,3 +178,136 @@ class TestImportFromUrl:
         with patch("httpx.AsyncClient", return_value=mock_client):
             with pytest.raises(SkillImportError, match="Failed to fetch"):
                 await importer.import_from_url("https://bad-url.com/skill")
+
+
+_EXTENDED_SKILL_MD = """---
+name: morning-digest
+description: Morning productivity digest
+version: 2.0.0
+license: Apache-2.0
+compatibility: Requires email and calendar tools
+allowed-tools: "email.fetch calendar.list"
+tags:
+  - productivity
+  - morning
+category: communication
+metadata:
+  author: test-user
+  custom_field: value
+---
+Run your morning digest.
+"""
+
+_MANIFEST_JSON = {
+    "schema_version": "1.0",
+    "name": "morning-digest",
+    "description": "Morning productivity digest",
+    "license": "MIT",  # should be overridden by SKILL.md's Apache-2.0
+    "category": "automation",  # should be overridden by SKILL.md's "communication"
+    "tags": ["automation"],  # should be overridden by SKILL.md's tags
+    "source_url": "https://example.com/morning-digest",  # fallback — SKILL.md has no source_url
+}
+
+
+class TestExtendedFrontmatterParsing:
+    """Tests for parsing of 7 new agentskills.io standard fields."""
+
+    def test_license_parsed(self, importer: SkillImporter) -> None:
+        result = importer.parse_skill_md(_EXTENDED_SKILL_MD)
+        assert result["license"] == "Apache-2.0"
+
+    def test_compatibility_parsed(self, importer: SkillImporter) -> None:
+        result = importer.parse_skill_md(_EXTENDED_SKILL_MD)
+        assert result["compatibility"] == "Requires email and calendar tools"
+
+    def test_allowed_tools_space_delimited(self, importer: SkillImporter) -> None:
+        result = importer.parse_skill_md(_EXTENDED_SKILL_MD)
+        assert result["allowed_tools"] == ["email.fetch", "calendar.list"]
+
+    def test_tags_list(self, importer: SkillImporter) -> None:
+        result = importer.parse_skill_md(_EXTENDED_SKILL_MD)
+        assert result["tags"] == ["productivity", "morning"]
+
+    def test_category_parsed(self, importer: SkillImporter) -> None:
+        result = importer.parse_skill_md(_EXTENDED_SKILL_MD)
+        assert result["category"] == "communication"
+
+    def test_metadata_dict(self, importer: SkillImporter) -> None:
+        result = importer.parse_skill_md(_EXTENDED_SKILL_MD)
+        assert result["metadata_json"] == {"author": "test-user", "custom_field": "value"}
+
+    def test_missing_standard_fields_are_absent(self, importer: SkillImporter) -> None:
+        """Fields not in frontmatter should not appear in skill_data."""
+        result = importer.parse_skill_md(_VALID_SKILL_MD)
+        assert "license" not in result
+        assert "compatibility" not in result
+        assert "tags" not in result
+
+
+class TestZipImport:
+    """Tests for import_from_zip()."""
+
+    def test_valid_zip_with_root_skill_md(self, importer: SkillImporter) -> None:
+        zip_bytes = _make_zip({"SKILL.md": _VALID_SKILL_MD})
+        result = importer.import_from_zip(zip_bytes)
+        assert result["name"] == "email_digest"
+        assert result["skill_type"] == "instructional"
+
+    def test_valid_zip_with_subdirectory_skill_md(self, importer: SkillImporter) -> None:
+        zip_bytes = _make_zip({"email-digest/SKILL.md": _VALID_SKILL_MD})
+        result = importer.import_from_zip(zip_bytes)
+        assert result["name"] == "email_digest"
+
+    def test_corrupt_zip_raises(self, importer: SkillImporter) -> None:
+        with pytest.raises(SkillImportError, match="Invalid ZIP"):
+            importer.import_from_zip(b"this is not a zip file")
+
+    def test_zip_without_skill_md_raises(self, importer: SkillImporter) -> None:
+        zip_bytes = _make_zip({"README.md": "# Hello"})
+        with pytest.raises(SkillImportError, match="ZIP must contain SKILL.md"):
+            importer.import_from_zip(zip_bytes)
+
+    def test_zip_with_manifest_merges_fallback_fields(
+        self, importer: SkillImporter
+    ) -> None:
+        """MANIFEST.json provides source_url as fallback since SKILL.md doesn't have it."""
+        zip_bytes = _make_zip({
+            "morning-digest/SKILL.md": _EXTENDED_SKILL_MD,
+            "morning-digest/MANIFEST.json": json.dumps(_MANIFEST_JSON),
+        })
+        result = importer.import_from_zip(zip_bytes)
+        # SKILL.md takes precedence for license/category/tags
+        assert result["license"] == "Apache-2.0"
+        assert result["category"] == "communication"
+        assert result["tags"] == ["productivity", "morning"]
+        # MANIFEST provides source_url (not in SKILL.md)
+        assert result["source_url"] == "https://example.com/morning-digest"
+
+    def test_zip_with_invalid_manifest_json_still_imports(
+        self, importer: SkillImporter
+    ) -> None:
+        """Invalid MANIFEST.json is tolerated; skill still imports from SKILL.md."""
+        zip_bytes = _make_zip({
+            "SKILL.md": _VALID_SKILL_MD,
+            "MANIFEST.json": "not valid json {{{",
+        })
+        result = importer.import_from_zip(zip_bytes)
+        assert result["name"] == "email_digest"
+
+    def test_zip_with_assets_dir_is_ignored(self, importer: SkillImporter) -> None:
+        """assets/ directory in ZIP is silently ignored."""
+        zip_bytes = _make_zip({
+            "SKILL.md": _VALID_SKILL_MD,
+            "assets/.gitkeep": "",
+        })
+        result = importer.import_from_zip(zip_bytes)
+        assert result["name"] == "email_digest"
+
+    def test_zip_extended_frontmatter_fields_parsed(
+        self, importer: SkillImporter
+    ) -> None:
+        zip_bytes = _make_zip({"SKILL.md": _EXTENDED_SKILL_MD})
+        result = importer.import_from_zip(zip_bytes)
+        assert result["license"] == "Apache-2.0"
+        assert result["allowed_tools"] == ["email.fetch", "calendar.list"]
+        assert result["tags"] == ["productivity", "morning"]

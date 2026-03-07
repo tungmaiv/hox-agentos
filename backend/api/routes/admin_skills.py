@@ -21,7 +21,7 @@ from typing import Any
 from uuid import UUID
 
 import structlog
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -100,6 +100,13 @@ async def create_skill(
         procedure_json=body.procedure_json,
         input_schema=body.input_schema,
         output_schema=body.output_schema,
+        license=body.license,
+        compatibility=body.compatibility,
+        metadata_json=body.metadata_json,
+        allowed_tools=body.allowed_tools,
+        tags=body.tags,
+        category=body.category,
+        source_url=body.source_url,
         created_by=user["user_id"],
     )
     session.add(skill)
@@ -224,6 +231,13 @@ async def import_skill(
         procedure_json=skill_data.get("procedure_json"),
         input_schema=skill_data.get("input_schema"),
         output_schema=skill_data.get("output_schema"),
+        license=skill_data.get("license"),
+        compatibility=skill_data.get("compatibility"),
+        metadata_json=skill_data.get("metadata_json"),
+        allowed_tools=skill_data.get("allowed_tools"),
+        tags=skill_data.get("tags"),
+        category=skill_data.get("category"),
+        source_url=skill_data.get("source_url"),
         status="pending_review",
         is_active=False,
         security_score=report.score,
@@ -245,6 +259,98 @@ async def import_skill(
         name=skill.name,
         security_score=report.score,
         recommendation=report.recommendation,
+        user_id=str(user["user_id"]),
+    )
+
+    return {
+        "skill": SkillDefinitionResponse.model_validate(skill).model_dump(mode="json"),
+        "security_report": {
+            "score": report.score,
+            "factors": report.factors,
+            "recommendation": report.recommendation,
+            "injection_matches": report.injection_matches,
+        },
+    }
+
+
+@router.post("/import/zip", status_code=201)
+async def import_skill_zip(
+    file: UploadFile = File(..., description="ZIP bundle containing SKILL.md"),
+    user: UserContext = Depends(_require_registry_manager),
+    session: AsyncSession = Depends(get_db),
+) -> dict[str, Any]:
+    """Import a skill from a ZIP bundle (agentskills.io format).
+
+    ZIP must contain SKILL.md at root or in a top-level directory.
+    Optional MANIFEST.json provides fallback metadata.
+    Flow: unzip -> parse SKILL.md -> validate -> security scan -> quarantine.
+    """
+    importer = SkillImporter()
+    scanner = SecurityScanner()
+
+    # Step 1: Read ZIP bytes
+    zip_bytes = await file.read()
+
+    # Step 2: Parse ZIP bundle
+    try:
+        skill_data = importer.import_from_zip(zip_bytes)
+    except SkillImportError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    # Step 3: Validate (if procedural)
+    if skill_data.get("skill_type") == "procedural" and skill_data.get("procedure_json"):
+        from skills.validator import SkillValidator
+        validator = SkillValidator()
+        errors = validator.validate_procedure(skill_data["procedure_json"])
+        if errors:
+            raise HTTPException(
+                status_code=400,
+                detail={"message": "Skill validation failed", "errors": errors},
+            )
+
+    # Step 4: Security scan
+    report = scanner.scan(skill_data, source_url=skill_data.get("source_url"))
+
+    # Step 5: Persist with pending_review status
+    skill = SkillDefinition(
+        name=skill_data["name"],
+        display_name=skill_data.get("display_name"),
+        description=skill_data.get("description"),
+        version=skill_data.get("version", "1.0.0"),
+        skill_type=skill_data.get("skill_type", "instructional"),
+        slash_command=skill_data.get("slash_command"),
+        source_type="imported",
+        instruction_markdown=skill_data.get("instruction_markdown"),
+        procedure_json=skill_data.get("procedure_json"),
+        input_schema=skill_data.get("input_schema"),
+        output_schema=skill_data.get("output_schema"),
+        license=skill_data.get("license"),
+        compatibility=skill_data.get("compatibility"),
+        metadata_json=skill_data.get("metadata_json"),
+        allowed_tools=skill_data.get("allowed_tools"),
+        tags=skill_data.get("tags"),
+        category=skill_data.get("category"),
+        source_url=skill_data.get("source_url"),
+        status="pending_review",
+        is_active=False,
+        security_score=report.score,
+        security_report={
+            "score": report.score,
+            "factors": report.factors,
+            "recommendation": report.recommendation,
+            "injection_matches": report.injection_matches,
+        },
+        created_by=user["user_id"],
+    )
+    session.add(skill)
+    await session.commit()
+    await session.refresh(skill)
+
+    logger.info(
+        "admin_skill_zip_imported",
+        skill_id=str(skill.id),
+        name=skill.name,
+        security_score=report.score,
         user_id=str(user["user_id"]),
     )
 

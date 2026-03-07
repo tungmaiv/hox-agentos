@@ -132,7 +132,7 @@ def test_crud_flow(admin_client: TestClient) -> None:
     create_resp = admin_client.post(
         "/api/admin/skills",
         json={
-            "name": "test_skill",
+            "name": "test-skill",
             "display_name": "Test Skill",
             "skill_type": "instructional",
             "instruction_markdown": "# Test\nDo the thing.",
@@ -141,7 +141,7 @@ def test_crud_flow(admin_client: TestClient) -> None:
     assert create_resp.status_code == 201
     skill = create_resp.json()
     skill_id = skill["id"]
-    assert skill["name"] == "test_skill"
+    assert skill["name"] == "test-skill"
     assert skill["skill_type"] == "instructional"
     assert skill["version"] == "1.0.0"
     assert skill["is_active"] is True
@@ -149,7 +149,7 @@ def test_crud_flow(admin_client: TestClient) -> None:
     # Get
     get_resp = admin_client.get(f"/api/admin/skills/{skill_id}")
     assert get_resp.status_code == 200
-    assert get_resp.json()["name"] == "test_skill"
+    assert get_resp.json()["name"] == "test-skill"
 
     # List
     list_resp = admin_client.get("/api/admin/skills")
@@ -197,7 +197,7 @@ def test_pending_filter(admin_client: TestClient) -> None:
     r = admin_client.post(
         "/api/admin/skills",
         json={
-            "name": "pending_skill",
+            "name": "pending-skill",
             "skill_type": "instructional",
             "instruction_markdown": "# Pending",
         },
@@ -222,7 +222,7 @@ def test_multi_version_activation(admin_client: TestClient) -> None:
     r1 = admin_client.post(
         "/api/admin/skills",
         json={
-            "name": "multi_skill",
+            "name": "multi-skill",
             "version": "1.0.0",
             "skill_type": "instructional",
             "instruction_markdown": "# v1",
@@ -234,7 +234,7 @@ def test_multi_version_activation(admin_client: TestClient) -> None:
     r2 = admin_client.post(
         "/api/admin/skills",
         json={
-            "name": "multi_skill",
+            "name": "multi-skill",
             "version": "1.1.0",
             "skill_type": "instructional",
             "instruction_markdown": "# v1.1",
@@ -267,7 +267,7 @@ def test_list_filter_by_skill_type(admin_client: TestClient) -> None:
     admin_client.post(
         "/api/admin/skills",
         json={
-            "name": "proc_skill",
+            "name": "proc-skill",
             "skill_type": "procedural",
             "procedure_json": {"steps": []},
         },
@@ -275,7 +275,7 @@ def test_list_filter_by_skill_type(admin_client: TestClient) -> None:
     admin_client.post(
         "/api/admin/skills",
         json={
-            "name": "inst_skill",
+            "name": "inst-skill",
             "skill_type": "instructional",
             "instruction_markdown": "# Inst",
         },
@@ -293,7 +293,7 @@ def test_list_filter_by_version(admin_client: TestClient) -> None:
     admin_client.post(
         "/api/admin/skills",
         json={
-            "name": "ver_skill",
+            "name": "ver-skill",
             "version": "5.0.0",
             "skill_type": "instructional",
             "instruction_markdown": "# v5",
@@ -318,7 +318,7 @@ def test_bulk_status_update(admin_client: TestClient) -> None:
         r = admin_client.post(
             "/api/admin/skills",
             json={
-                "name": f"bulk_skill_{i}",
+                "name": f"bulk-skill-{i}",
                 "skill_type": "instructional",
                 "instruction_markdown": f"# Bulk {i}",
             },
@@ -349,7 +349,7 @@ def test_validate_skill_valid(admin_client: TestClient) -> None:
     r = admin_client.post(
         "/api/admin/skills",
         json={
-            "name": "validate_skill",
+            "name": "validate-skill",
             "skill_type": "procedural",
             "procedure_json": {
                 "schema_version": "1.0",
@@ -371,7 +371,7 @@ def test_validate_skill_invalid(admin_client: TestClient) -> None:
     r = admin_client.post(
         "/api/admin/skills",
         json={
-            "name": "validate_invalid",
+            "name": "validate-invalid",
             "skill_type": "procedural",
             "procedure_json": {"steps": [{"name": "step1", "tool": "email.send"}]},
         },

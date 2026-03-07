@@ -81,6 +81,19 @@ class SkillDefinition(Base):
     output_schema: Mapped[dict[str, Any] | None] = mapped_column(
         _JSONB, nullable=True
     )
+    # ── agentskills.io standard metadata fields ──────────────────────────────
+    license: Mapped[str | None] = mapped_column(Text, nullable=True)
+    compatibility: Mapped[str | None] = mapped_column(Text, nullable=True)
+    metadata_json: Mapped[dict[str, Any] | None] = mapped_column(
+        _JSONB, nullable=True
+    )
+    allowed_tools: Mapped[list[str] | None] = mapped_column(
+        _JSONB, nullable=True
+    )
+    tags: Mapped[list[str] | None] = mapped_column(_JSONB, nullable=True)
+    category: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     security_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
     security_report: Mapped[dict[str, Any] | None] = mapped_column(
         _JSONB, nullable=True

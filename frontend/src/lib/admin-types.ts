@@ -107,6 +107,14 @@ export interface SkillDefinition {
   procedureJson: Record<string, unknown> | null;
   inputSchema: Record<string, unknown> | null;
   outputSchema: Record<string, unknown> | null;
+  // agentskills.io standard fields
+  license: string | null;
+  compatibility: string | null;
+  metadataJson: Record<string, unknown> | null;
+  allowedTools: string[] | null;
+  tags: string[] | null;
+  category: string | null;
+  sourceUrl: string | null;
   securityScore: number | null;
   securityReport: Record<string, unknown> | null;
   reviewedBy: string | null;

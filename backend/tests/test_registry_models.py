@@ -222,7 +222,7 @@ async def test_create_procedural_skill(session: AsyncSession):
 
 @pytest.mark.asyncio
 async def test_skill_unique_constraint_name_version(session: AsyncSession):
-    kwargs = dict(name="test_skill", version="1.0.0", skill_type="instructional",
+    kwargs = dict(name="test-skill", version="1.0.0", skill_type="instructional",
                   instruction_markdown="test")
     session.add(SkillDefinition(id=uuid.uuid4(), **kwargs))
     await session.commit()
@@ -424,7 +424,7 @@ def test_skill_create_procedural_requires_json():
 def test_skill_create_valid_instructional():
     """Valid instructional skill passes validation."""
     skill = SkillDefinitionCreate(
-        name="test_skill",
+        name="test-skill",
         skill_type="instructional",
         instruction_markdown="# Instructions\nDo this.",
     )
@@ -435,7 +435,7 @@ def test_skill_create_valid_instructional():
 def test_skill_create_valid_procedural():
     """Valid procedural skill passes validation."""
     skill = SkillDefinitionCreate(
-        name="test_skill",
+        name="test-skill",
         skill_type="procedural",
         procedure_json={"steps": [{"action": "run"}]},
     )

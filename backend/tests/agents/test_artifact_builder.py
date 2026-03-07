@@ -76,7 +76,7 @@ def test_validate_draft_invalid_tool_handler_type():
 def test_validate_draft_skill_instructional_missing_markdown():
     """Instructional skill without instruction_markdown fails cross-field validation."""
     from agents.artifact_builder_validation import validate_artifact_draft
-    draft = {"name": "test_skill", "skill_type": "instructional"}
+    draft = {"name": "test-skill", "skill_type": "instructional"}
     errors = validate_artifact_draft("skill", draft)
     assert any("instruction_markdown" in e.lower() for e in errors)
 
@@ -85,7 +85,7 @@ def test_validate_draft_skill_procedural_valid():
     """Valid procedural skill passes."""
     from agents.artifact_builder_validation import validate_artifact_draft
     draft = {
-        "name": "deploy_skill", "skill_type": "procedural",
+        "name": "deploy-skill", "skill_type": "procedural",
         "procedure_json": {"steps": [{"tool": "deploy", "args": {}}]},
     }
     errors = validate_artifact_draft("skill", draft)
@@ -275,7 +275,7 @@ async def test_validate_and_present_invalid_draft():
     state = {
         "messages": [],
         "artifact_type": "skill",
-        "artifact_draft": {"name": "bad_skill", "skill_type": "instructional"},
+        "artifact_draft": {"name": "bad-skill", "skill_type": "instructional"},
         "validation_errors": [],
         "is_complete": True,
     }
