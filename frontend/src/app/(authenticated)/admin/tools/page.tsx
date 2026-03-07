@@ -4,8 +4,9 @@
  *
  * Same pattern as agents page, with additional columns for
  * handler_type and sandbox_required.
+ * Name search (300ms debounce) + handler_type dropdown filter.
  */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAdminArtifacts } from "@/hooks/use-admin-artifacts";
 import type { ToolDefinition, ToolDefinitionCreate } from "@/lib/admin-types";
 import { ArtifactTable } from "@/components/admin/artifact-table";
@@ -20,6 +21,16 @@ export default function AdminToolsPage() {
   const [formData, setFormData] = useState<ToolDefinitionCreate>({
     name: "",
   });
+
+  // Filter state
+  const [toolSearch, setToolSearch] = useState("");
+  const [debouncedToolSearch, setDebouncedToolSearch] = useState("");
+  const [filterHandlerType, setFilterHandlerType] = useState("");
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedToolSearch(toolSearch), 300);
+    return () => clearTimeout(t);
+  }, [toolSearch]);
 
   const handleCreate = async () => {
     const result = await create(formData as unknown as Record<string, unknown>);
@@ -51,12 +62,40 @@ export default function AdminToolsPage() {
     },
   ];
 
+  const filteredTools = items.filter((item) => {
+    const s = debouncedToolSearch.toLowerCase();
+    const matchesName = !s || item.name.toLowerCase().includes(s);
+    const matchesType = !filterHandlerType || item.handlerType === filterHandlerType;
+    return matchesName && matchesType;
+  });
+
   if (loading) {
     return <div className="text-gray-500 py-8">Loading tools...</div>;
   }
 
   return (
     <div>
+      {/* Filter bar */}
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <input
+          type="text"
+          value={toolSearch}
+          onChange={(e) => setToolSearch(e.target.value)}
+          placeholder="Search by name..."
+          className="flex-1 min-w-40 text-sm border border-gray-300 rounded px-2 py-1.5 text-gray-900 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+        />
+        <select
+          value={filterHandlerType}
+          onChange={(e) => setFilterHandlerType(e.target.value)}
+          className="text-sm border border-gray-300 rounded px-2 py-1.5 text-gray-700 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+        >
+          <option value="">All types</option>
+          <option value="backend">Backend</option>
+          <option value="mcp">MCP</option>
+          <option value="sandbox">Sandbox</option>
+        </select>
+      </div>
+
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-gray-900">Tool Definitions</h2>
         <div className="flex items-center gap-3">
@@ -175,14 +214,14 @@ export default function AdminToolsPage() {
 
       {viewMode === "table" ? (
         <ArtifactTable
-          items={items}
+          items={filteredTools}
           columns={extraColumns}
           onPatchStatus={patchStatus}
           onActivateVersion={activateVersion}
         />
       ) : (
         <ArtifactCardGrid
-          items={items}
+          items={filteredTools}
           renderExtra={(item) => (
             <div className="flex items-center gap-2">
               <span className="bg-gray-100 px-1.5 py-0.5 rounded">

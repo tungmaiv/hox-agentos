@@ -5,8 +5,9 @@
  * Additional columns for skill_type, slash_command, security_score.
  * Includes "Pending Review" filter shortcut and review actions.
  * Shows agentskills.io standard metadata fields (read-only) in detail panel.
+ * FTS search + category + author + sort filter bar (client-side filtering).
  */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAdminArtifacts } from "@/hooks/use-admin-artifacts";
 import type { SkillDefinition, SkillDefinitionCreate } from "@/lib/admin-types";
 import { ArtifactTable } from "@/components/admin/artifact-table";
@@ -101,6 +102,18 @@ export default function AdminSkillsPage() {
     skill_type: "instructional",
   });
 
+  // Filter state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [filterCategory, setFilterCategory] = useState("");
+  const [filterAuthor, setFilterAuthor] = useState("");
+  const [sortMode, setSortMode] = useState("newest");
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchQuery), 300);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+
   const handleCreate = async () => {
     const result = await create(formData as unknown as Record<string, unknown>);
     if (result) {
@@ -154,9 +167,31 @@ export default function AdminSkillsPage() {
       });
   };
 
-  const displayItems = showPendingOnly
+  const baseItems = showPendingOnly
     ? items.filter((s) => s.status === "pending_review")
     : items;
+
+  const filteredItems = baseItems.filter((item) => {
+    const s = debouncedSearch.toLowerCase();
+    const matchesSearch =
+      !s ||
+      item.name.toLowerCase().includes(s) ||
+      (item.description ?? "").toLowerCase().includes(s);
+    const matchesCategory = !filterCategory || item.category === filterCategory;
+    const matchesAuthor = !filterAuthor || item.createdBy === filterAuthor;
+    return matchesSearch && matchesCategory && matchesAuthor;
+  });
+
+  const displayItems = [...filteredItems].sort((a, b) => {
+    if (sortMode === "most_used") {
+      return 0; // usageCount not in SkillDefinition — preserve order
+    }
+    if (sortMode === "oldest") {
+      return new Date(a.createdAt ?? 0).getTime() - new Date(b.createdAt ?? 0).getTime();
+    }
+    // newest (default)
+    return new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime();
+  });
 
   const extraColumns = [
     {
@@ -214,6 +249,40 @@ export default function AdminSkillsPage() {
 
   return (
     <div>
+      {/* Filter bar */}
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search skills..."
+          className="flex-1 min-w-40 text-sm border border-gray-300 rounded px-2 py-1.5 text-gray-900 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+        />
+        <input
+          type="text"
+          value={filterCategory}
+          onChange={(e) => setFilterCategory(e.target.value)}
+          placeholder="Category"
+          className="w-32 text-sm border border-gray-300 rounded px-2 py-1.5 text-gray-900 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+        />
+        <input
+          type="text"
+          value={filterAuthor}
+          onChange={(e) => setFilterAuthor(e.target.value)}
+          placeholder="Author UUID"
+          className="w-36 text-sm border border-gray-300 rounded px-2 py-1.5 text-gray-900 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+        />
+        <select
+          value={sortMode}
+          onChange={(e) => setSortMode(e.target.value)}
+          className="text-sm border border-gray-300 rounded px-2 py-1.5 text-gray-700 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+        >
+          <option value="newest">Newest</option>
+          <option value="oldest">Oldest</option>
+          <option value="most_used">Most Used</option>
+        </select>
+      </div>
+
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <h2 className="text-lg font-semibold text-gray-900">
