@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Production Readiness & Skill Platform
 status: unknown
-last_updated: "2026-03-07T14:15:38.440Z"
+last_updated: "2026-03-07T14:20:28.327Z"
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 20
-  completed_plans: 18
+  completed_plans: 19
 ---
 
 # Project State
@@ -102,6 +102,9 @@ v1.3 roadmap decisions:
 - [Phase 20]: [20-01]: Non-CONCURRENTLY GIN index — dev DB is small, avoids autocommit isolation complexity
 - [Phase 20]: [20-01]: 'simple' tsvector config (not 'english') — required for Vietnamese text support (SKCAT-02)
 - [Phase 20]: [20-01]: No tsvector ORM column — GIN functional index managed purely in SQL, invisible to SQLAlchemy
+- [Phase 20]: [20-02]: user catalog (GET /api/skills) shows all active skills without ACL join — ACL enforced only at run time per SKCAT-03
+- [Phase 20]: [20-02]: browse_skills uses in-memory offset pagination (items[cursor:cursor+limit]) — index in-memory from cached_index; no DB-level OFFSET needed
+- [Phase 20]: [20-02]: SkillBrowseItem convenience fields (category, tags, license, author, source_url) extracted from metadata dict — simplifies frontend display
 
 ### Pending Todos
 
