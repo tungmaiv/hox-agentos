@@ -187,8 +187,12 @@ def test_list_skills_returns_active_only(seeded_client) -> None:
     assert "inactive_skill" not in names
 
 
-def test_list_skills_excludes_denied(seeded_client) -> None:
-    """GET /api/skills excludes skills denied by artifact_permissions for user's role."""
+def test_list_skills_shows_all_active_regardless_of_acl(seeded_client) -> None:
+    """GET /api/skills returns ALL active skills without ACL join (SKCAT-03 decision).
+
+    The user catalog shows all active skills so users can discover and request access.
+    ACL enforcement is only applied at run time (POST /api/skills/{name}/run).
+    """
     client, session_factory = seeded_client
 
     async def _deny_skill():
@@ -200,7 +204,7 @@ def test_list_skills_excludes_denied(seeded_client) -> None:
                 select(SkillDefinition).where(SkillDefinition.name == "morning_digest")
             )
             skill = result.scalar_one()
-            # Deny for employee role
+            # Deny for employee role — should NOT hide the skill from the list
             perm = ArtifactPermission(
                 artifact_type="skill",
                 artifact_id=skill.id,
@@ -217,7 +221,8 @@ def test_list_skills_excludes_denied(seeded_client) -> None:
     response = client.get("/api/skills")
     assert response.status_code == 200
     names = [s["name"] for s in response.json()]
-    assert "morning_digest" not in names
+    # All active skills are visible — ACL denial does NOT hide from catalog
+    assert "morning_digest" in names
     assert "proc_skill" in names
     loop.close()
 

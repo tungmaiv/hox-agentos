@@ -13,9 +13,9 @@ Security:
 from typing import Any
 
 import structlog
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import asc, desc, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.models.skill_definition import SkillDefinition
@@ -48,34 +48,44 @@ async def _require_chat(
 
 @router.get("")
 async def list_user_skills(
+    q: str | None = Query(None, description="Full-text search on name and description"),
+    category: str | None = Query(None, description="Filter by category"),
+    skill_type: str | None = Query(None, description="Filter by skill_type"),
+    sort: str | None = Query(None, description="Sort: newest (default), oldest, most_used"),
     user: UserContext = Depends(_require_chat),
     session: AsyncSession = Depends(get_user_db),
 ) -> list[SkillListItem]:
     """List skills available to the current user.
 
-    Filters:
-    1. Only active skills (status='active' AND is_active=True)
-    2. Excludes skills denied by artifact_permissions for user's roles
-    3. Respects user_artifact_permissions per-user overrides
+    Returns all active skills without ACL join per CONTEXT.md decision (SKCAT-03).
+    Supports FTS, category, skill_type, and sort filtering.
     """
-    result = await session.execute(
-        select(SkillDefinition).where(
-            SkillDefinition.status == "active",
-            SkillDefinition.is_active == True,  # noqa: E712
+    stmt = select(SkillDefinition).where(
+        SkillDefinition.status == "active",
+        SkillDefinition.is_active == True,  # noqa: E712
+    )
+    if q:
+        stmt = stmt.where(
+            func.to_tsvector(
+                text("'simple'"),
+                func.coalesce(SkillDefinition.name, "") + " " + func.coalesce(SkillDefinition.description, "")
+            ).op("@@")(func.plainto_tsquery(text("'simple'"), q))
         )
-    )
-    skills = result.scalars().all()
+    if category is not None:
+        stmt = stmt.where(SkillDefinition.category == category)
+    if skill_type is not None:
+        stmt = stmt.where(SkillDefinition.skill_type == skill_type)
+    if sort == "oldest":
+        stmt = stmt.order_by(asc(SkillDefinition.created_at))
+    elif sort == "most_used":
+        stmt = stmt.order_by(desc(SkillDefinition.usage_count))
+    else:
+        stmt = stmt.order_by(desc(SkillDefinition.created_at))
 
-    # Batch permission check: 2 queries instead of N per-skill queries
-    all_ids = [skill.id for skill in skills]
-    allowed_ids = await batch_check_artifact_permissions(
-        user, "skill", all_ids, session
-    )
-    visible = [
-        SkillListItem.model_validate(skill)
-        for skill in skills
-        if skill.id in allowed_ids
-    ]
+    result = await session.execute(stmt)
+    skills = result.scalars().all()
+    # Return all active skills directly — no ACL join per CONTEXT.md decision
+    visible = [SkillListItem.model_validate(skill) for skill in skills]
 
     logger.info(
         "user_skills_listed",

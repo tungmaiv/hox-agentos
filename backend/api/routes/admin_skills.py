@@ -64,10 +64,16 @@ async def list_skills(
     status: str | None = Query(None, description="Filter by status"),
     skill_type: str | None = Query(None, description="Filter by skill_type"),
     version: str | None = Query(None, description="Filter by version"),
+    q: str | None = Query(None, description="Full-text search on name and description"),
+    category: str | None = Query(None, description="Filter by category"),
+    author: str | None = Query(None, description="Filter by created_by UUID string"),
+    sort: str | None = Query(None, description="Sort: newest (default), oldest, most_used"),
     user: UserContext = Depends(_require_registry_manager),
     session: AsyncSession = Depends(get_db),
 ) -> list[SkillDefinitionResponse]:
     """List all skill definitions with optional filters."""
+    from sqlalchemy import asc, desc, text
+
     stmt = select(SkillDefinition)
     if status is not None:
         stmt = stmt.where(SkillDefinition.status == status)
@@ -75,6 +81,28 @@ async def list_skills(
         stmt = stmt.where(SkillDefinition.skill_type == skill_type)
     if version is not None:
         stmt = stmt.where(SkillDefinition.version == version)
+    if q:
+        stmt = stmt.where(
+            func.to_tsvector(
+                text("'simple'"),
+                func.coalesce(SkillDefinition.name, "") + " " + func.coalesce(SkillDefinition.description, "")
+            ).op("@@")(func.plainto_tsquery(text("'simple'"), q))
+        )
+    if category is not None:
+        stmt = stmt.where(SkillDefinition.category == category)
+    if author is not None:
+        from uuid import UUID as _UUID
+        try:
+            author_uuid = _UUID(author)
+            stmt = stmt.where(SkillDefinition.created_by == author_uuid)
+        except ValueError:
+            pass  # invalid UUID — ignore silently
+    if sort == "oldest":
+        stmt = stmt.order_by(asc(SkillDefinition.created_at))
+    elif sort == "most_used":
+        stmt = stmt.order_by(desc(SkillDefinition.usage_count))
+    else:
+        stmt = stmt.order_by(desc(SkillDefinition.created_at))  # newest (default)
     result = await session.execute(stmt)
     skills = result.scalars().all()
     logger.info("admin_skills_listed", user_id=str(user["user_id"]), count=len(skills))
