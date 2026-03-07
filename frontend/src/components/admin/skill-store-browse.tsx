@@ -4,7 +4,8 @@
  *
  * Features:
  * - Search bar filters by name/description (debounced)
- * - 3-column responsive card grid (3 cols lg, 2 cols md, 1 col sm)
+ * - Paginated 3-column card grid (20 per page, cursor-based Load More)
+ * - Detail drawer: clicking a card opens full metadata before import
  * - Import dialog with 2-step flow: confirm → show security scan results
  */
 import { useCallback, useEffect, useState } from "react";
@@ -15,7 +16,12 @@ interface SkillBrowseItem {
   version: string | null;
   repository_name: string;
   repository_id: string;
-  metadata: Record<string, string> | null;
+  metadata: Record<string, unknown> | null;
+  category: string | null;
+  tags: string[] | null;
+  license: string | null;
+  author: string | null;
+  source_url: string | null;
 }
 
 interface ImportResponse {
@@ -41,10 +47,14 @@ export function SkillStoreBrowse() {
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [skills, setSkills] = useState<SkillBrowseItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dialogState, setDialogState] = useState<ImportDialogState | null>(
     null
   );
+  // Detail drawer state — opens before the import confirm dialog
+  const [drawerSkill, setDrawerSkill] = useState<SkillBrowseItem | null>(null);
 
   // Debounce search query by 300ms
   useEffect(() => {
@@ -52,37 +62,58 @@ export function SkillStoreBrowse() {
     return () => clearTimeout(timer);
   }, [query]);
 
-  const fetchSkills = useCallback(async (q: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const url = q.trim()
-        ? `/api/skill-repos/browse?q=${encodeURIComponent(q.trim())}`
-        : "/api/skill-repos/browse";
-      const response = await fetch(url);
-      if (!response.ok) {
-        const data = (await response.json().catch(() => ({}))) as {
-          detail?: string;
-        };
-        setError(data.detail ?? `Error ${response.status}`);
-        return;
+  const fetchSkills = useCallback(
+    async (q: string, append = false, currentCursor = 0) => {
+      if (!append) setLoading(true);
+      else setLoadingMore(true);
+      setError(null);
+      try {
+        const params = new URLSearchParams({
+          limit: "20",
+          cursor: String(currentCursor),
+        });
+        if (q.trim()) params.set("q", encodeURIComponent(q.trim()));
+        const response = await fetch(
+          `/api/skill-repos/browse?${params.toString()}`
+        );
+        if (!response.ok) {
+          const data = (await response.json().catch(() => ({}))) as {
+            detail?: string;
+          };
+          setError(data.detail ?? `Error ${response.status}`);
+          return;
+        }
+        const data: unknown = await response.json();
+        if (!Array.isArray(data)) {
+          setError("Unexpected response from server");
+          return;
+        }
+        const items = data as SkillBrowseItem[];
+        if (append) {
+          setSkills((prev) => [...prev, ...items]);
+        } else {
+          setSkills(items);
+        }
+        setHasMore(items.length === 20);
+      } catch {
+        setError("Failed to connect to backend");
+      } finally {
+        setLoading(false);
+        setLoadingMore(false);
       }
-      const data = (await response.json()) as SkillBrowseItem[];
-      setSkills(data);
-    } catch {
-      setError("Failed to connect to backend");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    },
+    []
+  );
 
+  // Reset and refetch when query changes
   useEffect(() => {
-    void fetchSkills(debouncedQuery);
-  }, [debouncedQuery, fetchSkills]);
+    void fetchSkills(debouncedQuery, false, 0);
+  }, [fetchSkills, debouncedQuery]);
 
-  const handleImportClick = (skill: SkillBrowseItem) => {
-    setDialogState({ phase: "confirm", skill });
-  };
+  const handleLoadMore = useCallback(() => {
+    const nextCursor = skills.length;
+    void fetchSkills(debouncedQuery, true, nextCursor);
+  }, [fetchSkills, debouncedQuery, skills.length]);
 
   const handleImportConfirm = async () => {
     if (!dialogState || dialogState.phase !== "confirm") return;
@@ -203,7 +234,8 @@ export function SkillStoreBrowse() {
           {skills.map((skill) => (
             <div
               key={`${skill.repository_id}:${skill.name}`}
-              className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow flex flex-col"
+              className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow flex flex-col cursor-pointer"
+              onClick={() => setDrawerSkill(skill)}
             >
               {/* Skill header */}
               <div className="flex items-start justify-between gap-2 mb-2">
@@ -243,7 +275,7 @@ export function SkillStoreBrowse() {
                   <span className="truncate">{skill.repository_name}</span>
                 </div>
 
-                {skill.metadata?.author && (
+                {skill.author && (
                   <div className="flex items-center gap-1.5 text-xs text-gray-500">
                     <svg
                       className="h-3.5 w-3.5"
@@ -258,11 +290,11 @@ export function SkillStoreBrowse() {
                         d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
                       />
                     </svg>
-                    <span>{skill.metadata.author}</span>
+                    <span>{skill.author}</span>
                   </div>
                 )}
 
-                {skill.metadata?.license && (
+                {skill.license && (
                   <div className="flex items-center gap-1.5 text-xs text-gray-500">
                     <svg
                       className="h-3.5 w-3.5"
@@ -277,20 +309,129 @@ export function SkillStoreBrowse() {
                         d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
                       />
                     </svg>
-                    <span>{skill.metadata.license}</span>
+                    <span>{skill.license}</span>
                   </div>
                 )}
               </div>
 
-              {/* Import button */}
-              <button
-                onClick={() => handleImportClick(skill)}
-                className="w-full py-2 text-sm font-medium text-blue-600 border border-blue-200 rounded-md hover:bg-blue-50 transition-colors"
-              >
-                Import
-              </button>
+              {/* View Details hint */}
+              <div className="w-full py-2 text-sm font-medium text-blue-600 border border-blue-200 rounded-md text-center hover:bg-blue-50 transition-colors">
+                View Details
+              </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Load More button */}
+      {hasMore && (
+        <div className="mt-6 flex justify-center">
+          <button
+            onClick={handleLoadMore}
+            disabled={loadingMore}
+            className="px-4 py-2 text-sm font-medium text-blue-600 border border-blue-300 rounded-md hover:bg-blue-50 disabled:opacity-50 transition-colors"
+          >
+            {loadingMore ? "Loading..." : "Load More"}
+          </button>
+        </div>
+      )}
+
+      {/* Detail Drawer — shows full metadata before import */}
+      {drawerSkill && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/30"
+            onClick={() => setDrawerSkill(null)}
+          />
+          {/* Drawer panel */}
+          <aside className="relative z-10 w-full max-w-md bg-white shadow-xl flex flex-col h-full overflow-y-auto">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h2 className="font-semibold text-gray-900 text-lg">
+                {drawerSkill.name}
+              </h2>
+              <button
+                onClick={() => setDrawerSkill(null)}
+                className="text-gray-400 hover:text-gray-600 text-xl leading-none"
+              >
+                &times;
+              </button>
+            </div>
+            <div className="p-4 flex-1 space-y-4">
+              {drawerSkill.description && (
+                <p className="text-sm text-gray-700">{drawerSkill.description}</p>
+              )}
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                {drawerSkill.version && (
+                  <>
+                    <dt className="text-gray-500">Version</dt>
+                    <dd className="text-gray-900">{drawerSkill.version}</dd>
+                  </>
+                )}
+                {drawerSkill.category && (
+                  <>
+                    <dt className="text-gray-500">Category</dt>
+                    <dd className="text-gray-900">{drawerSkill.category}</dd>
+                  </>
+                )}
+                {drawerSkill.license && (
+                  <>
+                    <dt className="text-gray-500">License</dt>
+                    <dd className="text-gray-900">{drawerSkill.license}</dd>
+                  </>
+                )}
+                {drawerSkill.author && (
+                  <>
+                    <dt className="text-gray-500">Author</dt>
+                    <dd className="text-gray-900">{drawerSkill.author}</dd>
+                  </>
+                )}
+                {drawerSkill.source_url && (
+                  <>
+                    <dt className="text-gray-500">Source</dt>
+                    <dd className="truncate">
+                      <a
+                        href={drawerSkill.source_url}
+                        className="text-blue-600 hover:underline text-xs"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {drawerSkill.source_url}
+                      </a>
+                    </dd>
+                  </>
+                )}
+                <dt className="text-gray-500">Repository</dt>
+                <dd className="text-gray-900">{drawerSkill.repository_name}</dd>
+              </dl>
+              {drawerSkill.tags && drawerSkill.tags.length > 0 && (
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Tags</p>
+                  <div className="flex flex-wrap gap-1">
+                    {drawerSkill.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="p-4 border-t">
+              <button
+                onClick={() => {
+                  setDialogState({ phase: "confirm", skill: drawerSkill });
+                  setDrawerSkill(null);
+                }}
+                className="w-full px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors"
+              >
+                Import Skill
+              </button>
+            </div>
+          </aside>
         </div>
       )}
 
