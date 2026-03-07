@@ -18,14 +18,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-05)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates their daily work routines and lets them build custom automations without writing code — all within an enterprise-secure, on-premise environment where data never leaves the company.
-**Current focus:** v1.3 Phase 19 — Skill Platform A Standards Compliance (Complete — 1/1 plans done)
+**Current focus:** v1.3 Phase 20 — Skill Platform B Discovery & Catalog (Complete — 3/3 plans done)
 
 ## Current Position
 
-Phase: 19 of 23 (Skill Platform A — Standards Compliance) — Complete
-Plan: 01 of 01 complete
-Status: Phase 19 done — 7 metadata columns, name validation, SKILL.md import/export, ZIP bundle import/export, admin UI metadata panel. All 5 UAT criteria pass. 794 backend tests passing.
-Last activity: 2026-03-07 - Completed 19-01: SKSTD-01 through SKSTD-05 satisfied. Phase 19 complete.
+Phase: 20 of 23 (Skill Platform B — Discovery & Catalog) — Complete
+Plan: 03 of 03 complete
+Status: Phase 20 done — FTS GIN index (20-01), /api/skills endpoint with browse/search (20-02), user skills catalog page + admin filter bars (20-03). SKCAT-01/02/03 satisfied.
+Last activity: 2026-03-07 - Completed 20-03: User /skills ArtifactCardGrid catalog + admin filter bars. Phase 20 complete.
 
 Progress: [#########░] ~61%
 
@@ -144,5 +144,5 @@ v1.3 roadmap decisions:
 ## Session Continuity
 
 Last session: 2026-03-07
-Stopped at: Completed Phase 19 — all 5 UAT criteria pass, post-UAT fixes applied (source_url frontmatter, proxy multipart, error display, migration applied). GSD artifacts backfilled.
+Stopped at: Completed Phase 20 Plan 03 — user /skills ArtifactCardGrid catalog + admin filter bars. Phase 20 complete (3/3 plans done).
 Resume file: .planning/phases/19-skill-standards-compliance/19-01-SUMMARY.md
