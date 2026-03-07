@@ -71,7 +71,7 @@
 - [x] **SKCAT-02**: PostgreSQL tsvector uses `'simple'` language config (not `'english'`) for Vietnamese support; GIN index created via raw SQL Alembic migration
 - [x] **SKCAT-03**: Tool catalog backend provides search/filter by handler_type, status, and name
 - [x] **SKCAT-04**: Admin can browse external skill registries from configured registry URLs with paginated index
-- [ ] **SKCAT-05**: One-click import from external registry triggers existing SecurityScanner + quarantine flow
+- [x] **SKCAT-05**: One-click import from external registry triggers existing SecurityScanner + quarantine flow
 
 ## Skill Platform — Dependency & Security Hardening
 
@@ -178,7 +178,7 @@
 | SKCAT-02 | Phase 20 | Complete |
 | SKCAT-03 | Phase 20 | Complete |
 | SKCAT-04 | Phase 20 | Complete |
-| SKCAT-05 | Phase 20 | pending |
+| SKCAT-05 | Phase 20 | Complete |
 | SKSEC-01 | Phase 21 | pending |
 | SKSEC-02 | Phase 21 | pending |
 | SKSEC-03 | Phase 21 | pending |
