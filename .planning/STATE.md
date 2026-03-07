@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Production Readiness & Skill Platform
 status: unknown
-last_updated: "2026-03-07T14:20:28.327Z"
+last_updated: "2026-03-07T14:25:16.226Z"
 progress:
   total_phases: 6
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 20
-  completed_plans: 19
+  completed_plans: 21
 ---
 
 # Project State
@@ -105,6 +105,11 @@ v1.3 roadmap decisions:
 - [Phase 20]: [20-02]: user catalog (GET /api/skills) shows all active skills without ACL join — ACL enforced only at run time per SKCAT-03
 - [Phase 20]: [20-02]: browse_skills uses in-memory offset pagination (items[cursor:cursor+limit]) — index in-memory from cached_index; no DB-level OFFSET needed
 - [Phase 20]: [20-02]: SkillBrowseItem convenience fields (category, tags, license, author, source_url) extracted from metadata dict — simplifies frontend display
+- [Phase 20]: [20-03]: User /skills page uses ArtifactCardGrid read-only (no action props) — locked by CONTEXT.md decision
+- [Phase 20]: [20-03]: Admin filter bars use client-side filtering on fetched items — avoids hook modification, acceptable for small admin datasets
+- [Phase 20]: [20-04]: usage_count incremented for both procedural and instructional skills — both represent successful user engagement
+- [Phase 20]: [20-04]: detail drawer implemented as fixed aside panel — consistent with existing inline dialog pattern, no external Sheet component needed
+- [Phase 20]: [20-04]: card onClick opens drawer not confirm dialog — SKCAT-04 requires metadata view before import
 
 ### Pending Todos
 
@@ -133,6 +138,8 @@ v1.3 roadmap decisions:
 | Phase 18 P02 | 10 | 4 tasks | 4 files |
 | Phase 18 P03 | 16 | 4 tasks | 7 files |
 | Phase 20 P01 | 526455 | 2 tasks | 2 files |
+| Phase 20 P03 | 2m | 2 tasks | 3 files |
+| Phase 20 P04 | 162 | 2 tasks | 2 files |
 
 ## Session Continuity
 
