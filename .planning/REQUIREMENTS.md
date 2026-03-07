@@ -67,8 +67,8 @@
 
 ## Skill Platform — Discovery & Catalog
 
-- [ ] **SKCAT-01**: Skill catalog at `/admin/skills/catalog` (or `/skills`) with search (name/description via PostgreSQL tsvector FTS), filter (category, status, author), sort (date, usage), and skill detail view
-- [ ] **SKCAT-02**: PostgreSQL tsvector uses `'simple'` language config (not `'english'`) for Vietnamese support; GIN index created via raw SQL Alembic migration
+- [x] **SKCAT-01**: Skill catalog at `/admin/skills/catalog` (or `/skills`) with search (name/description via PostgreSQL tsvector FTS), filter (category, status, author), sort (date, usage), and skill detail view
+- [x] **SKCAT-02**: PostgreSQL tsvector uses `'simple'` language config (not `'english'`) for Vietnamese support; GIN index created via raw SQL Alembic migration
 - [ ] **SKCAT-03**: Tool catalog backend provides search/filter by handler_type, status, and name
 - [ ] **SKCAT-04**: Admin can browse external skill registries from configured registry URLs with paginated index
 - [ ] **SKCAT-05**: One-click import from external registry triggers existing SecurityScanner + quarantine flow
@@ -174,8 +174,8 @@
 | SKSTD-03 | Phase 19 | pending |
 | SKSTD-04 | Phase 19 | pending |
 | SKSTD-05 | Phase 19 | pending |
-| SKCAT-01 | Phase 20 | pending |
-| SKCAT-02 | Phase 20 | pending |
+| SKCAT-01 | Phase 20 | Complete |
+| SKCAT-02 | Phase 20 | Complete |
 | SKCAT-03 | Phase 20 | pending |
 | SKCAT-04 | Phase 20 | pending |
 | SKCAT-05 | Phase 20 | pending |

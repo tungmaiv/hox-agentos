@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Production Readiness & Skill Platform
 status: unknown
-last_updated: "2026-03-06T09:25:59.798Z"
+last_updated: "2026-03-07T14:15:38.440Z"
 progress:
-  total_phases: 4
+  total_phases: 6
   completed_phases: 4
-  total_plans: 16
-  completed_plans: 16
+  total_plans: 20
+  completed_plans: 18
 ---
 
 # Project State
@@ -99,6 +99,9 @@ v1.3 roadmap decisions:
 - [Phase 19]: Next.js catch-all admin proxy used request.text() for all body types — corrupts binary multipart; fixed to use request.arrayBuffer() when Content-Type is multipart/form-data
 - [Phase 19]: SkillMetadataPanel only renders in card grid view (not table view) — deliberate: table rows are too narrow for metadata display
 - [Phase 19]: Pydantic 422 detail is an array of objects, not a string — use-admin-artifacts.ts create() must extract detail[0].msg, not cast detail to string
+- [Phase 20]: [20-01]: Non-CONCURRENTLY GIN index — dev DB is small, avoids autocommit isolation complexity
+- [Phase 20]: [20-01]: 'simple' tsvector config (not 'english') — required for Vietnamese text support (SKCAT-02)
+- [Phase 20]: [20-01]: No tsvector ORM column — GIN functional index managed purely in SQL, invisible to SQLAlchemy
 
 ### Pending Todos
 
@@ -126,6 +129,7 @@ v1.3 roadmap decisions:
 | Phase 18 P01 | 27 | 4 tasks | 14 files |
 | Phase 18 P02 | 10 | 4 tasks | 4 files |
 | Phase 18 P03 | 16 | 4 tasks | 7 files |
+| Phase 20 P01 | 526455 | 2 tasks | 2 files |
 
 ## Session Continuity
 
