@@ -249,7 +249,7 @@ Plans:
 | 17. Performance & Embedding Sidecar | 7/7 | Complete    | 2026-03-05 | - |
 | 18. Identity Configuration | 3/3 | Complete    | 2026-03-06 | - |
 | 19. Skill Platform A — Standards | v1.3 | 1/1 | ✅ Complete | 2026-03-07 |
-| 20. Skill Platform B — Catalog | 4/4 | Complete    | 2026-03-07 | - |
+| 20. Skill Platform B — Catalog | 6/6 | Complete   | 2026-03-08 | - |
 | 21. Skill Platform C — Security | v1.3 | 0/TBD | Not started | - |
 | 22. Skill Platform D — Sharing | v1.3 | 0/TBD | Not started | - |
 | 23. Skill Platform E — Builder | v1.3 | 0/TBD | Not started | - |

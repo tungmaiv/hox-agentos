@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Production Readiness & Skill Platform
 status: unknown
-last_updated: "2026-03-07T14:43:13.929Z"
+last_updated: "2026-03-08T04:23:44.992Z"
 progress:
   total_phases: 6
   completed_phases: 5
-  total_plans: 20
-  completed_plans: 21
+  total_plans: 22
+  completed_plans: 23
 ---
 
 # Project State
@@ -110,6 +110,7 @@ v1.3 roadmap decisions:
 - [Phase 20]: [20-04]: usage_count incremented for both procedural and instructional skills — both represent successful user engagement
 - [Phase 20]: [20-04]: detail drawer implemented as fixed aside panel — consistent with existing inline dialog pattern, no external Sheet component needed
 - [Phase 20]: [20-04]: card onClick opens drawer not confirm dialog — SKCAT-04 requires metadata view before import
+- [Phase 20]: [20-05]: Used local _SkillDef alias in _skill_executor_node for usage_count increment — avoids redundant top-level import, fresh get_session() per branch avoids closed-session reuse
 
 ### Pending Todos
 
@@ -143,6 +144,7 @@ v1.3 roadmap decisions:
 | Phase 20 P01 | 526455 | 2 tasks | 2 files |
 | Phase 20 P03 | 2m | 2 tasks | 3 files |
 | Phase 20 P04 | 162 | 2 tasks | 2 files |
+| Phase 20 P05 | 5 | 1 tasks | 1 files |
 
 ## Session Continuity
 
