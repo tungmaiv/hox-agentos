@@ -165,13 +165,15 @@ Plans:
   2. Tool catalog search and filtering by handler_type, status, and name works from the admin UI
   3. Admin can browse external skill registries from configured registry URLs with paginated results and see skill details before importing
   4. One-click import from external registry triggers the existing SecurityScanner + quarantine flow — imported skills appear in `pending_review` status
-**Plans**: 4 plans
+**Plans**: 6 plans (4 original + 2 gap closure)
 
 Plans:
-- [ ] 20-01-PLAN.md — DB migration 023: usage_count column + tsvector GIN index on skill_definitions
-- [ ] 20-02-PLAN.md — Backend FTS + filter + sort params on admin_skills, user_skills, admin_tools; limit + cursor pagination on browse
-- [ ] 20-03-PLAN.md — User /skills catalog page + admin skills FTS filter bar + admin tools name/handler_type filter bar
-- [ ] 20-04-PLAN.md — SkillStoreBrowse detail drawer + Load More pagination + usage_count increment on skill run
+- [x] 20-01-PLAN.md — DB migration 023: usage_count column + tsvector GIN index on skill_definitions
+- [x] 20-02-PLAN.md — Backend FTS + filter + sort params on admin_skills, user_skills, admin_tools; limit + cursor pagination on browse
+- [x] 20-03-PLAN.md — User /skills catalog page + admin skills FTS filter bar + admin tools name/handler_type filter bar
+- [x] 20-04-PLAN.md — SkillStoreBrowse detail drawer + Load More pagination + usage_count increment on skill run
+- [ ] 20-05-PLAN.md — GAP: usage_count increment in agent skill executor path (chat-invoked skills)
+- [ ] 20-06-PLAN.md — GAP: ArtifactTable disableInternalSort prop + usageCount in SkillDefinition type
 
 ### Phase 21: Skill Platform C — Dependency & Security Hardening
 **Goal**: Skills with scripts declare their dependencies explicitly, tool access is restricted to declared permissions, and imported skills are monitored for upstream changes
