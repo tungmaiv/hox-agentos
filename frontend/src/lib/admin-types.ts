@@ -120,9 +120,15 @@ export interface SkillDefinition {
   reviewedBy: string | null;
   reviewedAt: string | null;
   usageCount: number;
+  isPromoted: boolean;
   createdBy: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface SkillShareEntry {
+  user_id: string;
+  created_at: string;
 }
 
 export interface SkillDefinitionCreate {
