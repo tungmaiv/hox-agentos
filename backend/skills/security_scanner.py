@@ -158,7 +158,8 @@ class SecurityScanner:
         factors["complexity"] = self._score_complexity(skill_data)
 
         # Factor 5: Dependency risk (20%)
-        factors["dependency_risk"] = self._score_dependency_risk(skill_data)
+        dep_score, has_undeclared = self._score_dependency_risk(skill_data)
+        factors["dependency_risk"] = dep_score
 
         # Factor 6: Data flow risk (10%)
         factors["data_flow_risk"] = self._score_data_flow_risk(skill_data)
@@ -174,8 +175,10 @@ class SecurityScanner:
         )
         score = int(round(overall))
 
-        # Hard veto: undeclared third-party imports always reject regardless of other factors
-        if factors["dependency_risk"] == 0 and skill_data.get("scripts_content"):
+        # Hard veto: undeclared third-party imports always reject regardless of other factors.
+        # Uses has_undeclared flag (not dep_score==0) to avoid false-positive rejection of
+        # skills that transparently declare all dangerous packages and score low due to penalties.
+        if has_undeclared:
             recommendation = "reject"
         # Determine recommendation from weighted score
         elif score >= 80:
@@ -315,17 +318,23 @@ class SecurityScanner:
             return 40
         return 20  # over 20 steps
 
-    def _score_dependency_risk(self, skill_data: dict[str, Any]) -> int:
+    def _score_dependency_risk(
+        self, skill_data: dict[str, Any]
+    ) -> tuple[int, bool]:
         """Score based on third-party dependencies in attached scripts.
 
         Returns:
-            0   — undeclared third-party imports detected (untrusted execution risk)
-            <100 — declared but dangerous packages found (penalty per package)
-            100  — no scripts, or all imports are stdlib/declared/safe
+            (score, has_undeclared) tuple where:
+            - score: 0-100 dependency risk score
+            - has_undeclared: True only when undeclared third-party imports are
+              detected; False when score is low due to high danger-penalty.
+              The caller uses has_undeclared for the hard-veto, not the score,
+              to avoid false-positive rejection of skills that transparently
+              declare all their dangerous packages.
         """
         scripts_content: list[dict[str, str]] = skill_data.get("scripts_content", [])
         if not scripts_content:
-            return 100
+            return 100, False
 
         # Collect all imports across all scripts
         all_imports: set[str] = set()
@@ -337,11 +346,11 @@ class SecurityScanner:
         # Third-party = all imports minus stdlib
         third_party_imports = all_imports - _STDLIB_MODULES
 
-        # Signal 3: undeclared imports -> immediate rejection
+        # Signal 3: undeclared imports -> immediate rejection (hard veto path)
         declared_set: set[str] = set(skill_data.get("declared_dependencies", []))
         undeclared = third_party_imports - declared_set
         if undeclared:
-            return 0
+            return 0, True  # has_undeclared=True: caller applies hard veto
 
         # Signal 1: dangerous packages declared
         dangerous_found = declared_set & _DANGEROUS_PACKAGES
@@ -358,7 +367,7 @@ class SecurityScanner:
         else:
             bloat_score = 20
 
-        return max(0, bloat_score - danger_penalty)
+        return max(0, bloat_score - danger_penalty), False
 
     def _score_data_flow_risk(self, skill_data: dict[str, Any]) -> int:
         """Score based on data flow patterns that indicate exfiltration risk.

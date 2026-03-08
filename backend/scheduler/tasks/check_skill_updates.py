@@ -66,10 +66,25 @@ async def _check_single_skill(skill: Any) -> None:
 
     from core.models.skill_definition import SkillDefinition
 
+    _MAX_SKILL_SOURCE_BYTES = 10 * 1024 * 1024  # 10 MB cap per skill source fetch
+
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.get(skill.source_url)
-            resp.raise_for_status()
+            async with client.stream("GET", skill.source_url) as resp:
+                resp.raise_for_status()
+                chunks: list[bytes] = []
+                total = 0
+                async for chunk in resp.aiter_bytes(chunk_size=65536):
+                    total += len(chunk)
+                    if total > _MAX_SKILL_SOURCE_BYTES:
+                        logger.warning(
+                            "skill_update_check_oversized",
+                            skill_name=skill.name,
+                            limit_bytes=_MAX_SKILL_SOURCE_BYTES,
+                        )
+                        return
+                    chunks.append(chunk)
+                content = b"".join(chunks)
     except Exception as exc:
         logger.warning(
             "skill_update_check_fetch_failed",
@@ -78,7 +93,7 @@ async def _check_single_skill(skill: Any) -> None:
         )
         return
 
-    new_hash = hashlib.sha256(resp.content).hexdigest()
+    new_hash = hashlib.sha256(content).hexdigest()
 
     if skill.source_hash is None:
         # No baseline -- store hash without creating pending_review
@@ -99,9 +114,29 @@ async def _check_single_skill(skill: Any) -> None:
     if new_hash == skill.source_hash:
         return  # No change
 
-    # Change detected -- create pending_review version row
+    # Change detected -- create pending_review version row (if not already pending)
     new_version = _bump_version(skill.version)
     async with async_session() as session:
+        # Guard: skip if a pending_review row for (name, bumped_version) already exists.
+        # This prevents a unique-constraint violation when the checker runs again before
+        # the admin reviews the first pending row.
+        from sqlalchemy import select as _select
+
+        existing = await session.execute(
+            _select(SkillDefinition).where(
+                SkillDefinition.name == skill.name,
+                SkillDefinition.version == new_version,
+                SkillDefinition.status == "pending_review",
+            )
+        )
+        if existing.scalar_one_or_none() is not None:
+            logger.info(
+                "skill_update_pending_review_exists",
+                skill_name=skill.name,
+                version=new_version,
+            )
+            return
+
         new_row = SkillDefinition(
             name=skill.name,
             display_name=skill.display_name,
@@ -125,6 +160,13 @@ async def _check_single_skill(skill: Any) -> None:
             created_by=skill.created_by,
         )
         session.add(new_row)
+        # Also update the active skill's source_hash so subsequent runs don't
+        # re-detect the same change and attempt another duplicate insert.
+        await session.execute(
+            update(SkillDefinition)
+            .where(SkillDefinition.id == skill.id)
+            .values(source_hash=new_hash)
+        )
         await session.commit()
 
     logger.info(

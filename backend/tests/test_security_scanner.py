@@ -273,6 +273,27 @@ class TestDependencyRisk:
         report = scanner.scan(data)
         assert report.factors["dependency_risk"] == 100
 
+    def test_all_dangerous_declared_not_rejected(
+        self, scanner: SecurityScanner
+    ) -> None:
+        """Skill declaring many dangerous packages scores low but must NOT be hard-vetoed.
+
+        Regression test for false-positive veto: when danger_penalty exceeds bloat_score,
+        dependency_risk score hits 0 via max(0, ...). The hard veto must NOT fire here
+        because all imports ARE declared — the skill is transparent about its dependencies.
+        """
+        data = _clean_skill_data()
+        # 7 dangerous packages -- all declared; danger_penalty=140, bloat_score=50 -> score=0
+        pkgs = ["requests", "httpx", "paramiko", "cryptography", "pycryptodome", "scapy", "nmap"]
+        imports = "\n".join(f"import {p}" for p in pkgs)
+        data["scripts_content"] = [{"filename": "main.py", "source": imports}]
+        data["declared_dependencies"] = pkgs
+        report = scanner.scan(data)
+        # dependency_risk score is 0 (heavy penalty), but recommendation must NOT be "reject"
+        # solely because of this -- the weighted score determines the outcome
+        assert report.factors["dependency_risk"] == 0
+        assert report.recommendation != "reject" or report.score < 60  # reject only from score, not hard veto
+
 
 class TestDataFlowRisk:
     def test_instructional_skill_returns_100(

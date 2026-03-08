@@ -107,6 +107,10 @@ v1.3 roadmap decisions:
 - [Phase 20]: [20-02]: SkillBrowseItem convenience fields (category, tags, license, author, source_url) extracted from metadata dict — simplifies frontend display
 - [Phase 20]: [20-03]: User /skills page uses ArtifactCardGrid read-only (no action props) — locked by CONTEXT.md decision
 - [Phase 20]: [20-03]: Admin filter bars use client-side filtering on fetched items — avoids hook modification, acceptable for small admin datasets
+- [Phase 21]: [21-01]: SecurityScanner weights: source_reputation=25%, tool_scope=20%, prompt_safety=20%, complexity=5%, dependency_risk=20%, data_flow_risk=10% — deviated from design doc proposal (source_reputation=30%) to balance undeclared-import signal weight
+- [Phase 21]: [21-01]: Hard veto uses has_undeclared bool from _score_dependency_risk (not dep_score==0) — prevents false-positive rejection of skills that transparently declare all dangerous packages
+- [Phase 21]: [21-03]: Null-baseline on first check_skill_updates run — stores hash without pending_review row; avoids spurious review flood on first deploy
+- [Phase 21]: [21-03]: Duplicate pending_review guard — checks existing row before insert; updates source_hash on active skill so next run doesn't re-detect same change
 - [Phase 20]: [20-04]: usage_count incremented for both procedural and instructional skills — both represent successful user engagement
 - [Phase 20]: [20-04]: detail drawer implemented as fixed aside panel — consistent with existing inline dialog pattern, no external Sheet component needed
 - [Phase 20]: [20-04]: card onClick opens drawer not confirm dialog — SKCAT-04 requires metadata view before import

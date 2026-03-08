@@ -75,6 +75,25 @@ def test_bump_version_non_semver() -> None:
 # ── _check_single_skill tests ─────────────────────────────────────────────────
 
 
+def _make_stream_client(content: bytes) -> MagicMock:
+    """Build a mock httpx.AsyncClient that supports client.stream() context manager."""
+
+    async def _aiter_bytes(chunk_size: int = 65536):
+        yield content
+
+    mock_resp = AsyncMock()
+    mock_resp.raise_for_status = MagicMock()
+    mock_resp.aiter_bytes = _aiter_bytes
+    mock_resp.__aenter__ = AsyncMock(return_value=mock_resp)
+    mock_resp.__aexit__ = AsyncMock(return_value=None)
+
+    mock_client = AsyncMock()
+    mock_client.stream = MagicMock(return_value=mock_resp)
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=None)
+    return mock_client
+
+
 @pytest.mark.asyncio
 async def test_hash_unchanged_no_new_row() -> None:
     """When fetched hash equals stored source_hash, no new DB row is created."""
@@ -82,15 +101,7 @@ async def test_hash_unchanged_no_new_row() -> None:
     current_hash = hashlib.sha256(content).hexdigest()
     skill = _make_skill(source_hash=current_hash)
 
-    mock_resp = MagicMock()
-    mock_resp.content = content
-    mock_resp.raise_for_status = MagicMock()
-
-    mock_client = AsyncMock()
-    mock_client.get = AsyncMock(return_value=mock_resp)
-    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-    mock_client.__aexit__ = AsyncMock(return_value=None)
-
+    mock_client = _make_stream_client(content)
     mock_session = AsyncMock()
     mock_session.add = MagicMock()
     mock_session.commit = AsyncMock()
@@ -116,19 +127,16 @@ async def test_hash_changed_creates_pending_review() -> None:
     new_content = b"new skill content - upstream changed"
     skill = _make_skill(source_hash=old_hash, version="1.0.0")
 
-    mock_resp = MagicMock()
-    mock_resp.content = new_content
-    mock_resp.raise_for_status = MagicMock()
+    mock_client = _make_stream_client(new_content)
 
-    mock_client = AsyncMock()
-    mock_client.get = AsyncMock(return_value=mock_resp)
-    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-    mock_client.__aexit__ = AsyncMock(return_value=None)
+    # session.execute returns None for the duplicate-check SELECT (no existing pending_review)
+    mock_dup_check_result = MagicMock()
+    mock_dup_check_result.scalar_one_or_none.return_value = None
 
     mock_session = AsyncMock()
     mock_session.add = MagicMock()
     mock_session.commit = AsyncMock()
-    mock_session.execute = AsyncMock()
+    mock_session.execute = AsyncMock(return_value=mock_dup_check_result)
     mock_session.__aenter__ = AsyncMock(return_value=mock_session)
     mock_session.__aexit__ = AsyncMock(return_value=None)
 
@@ -152,15 +160,7 @@ async def test_null_hash_stores_without_creating_review() -> None:
     content = b"first time fetched content"
     skill = _make_skill(source_hash=None)
 
-    mock_resp = MagicMock()
-    mock_resp.content = content
-    mock_resp.raise_for_status = MagicMock()
-
-    mock_client = AsyncMock()
-    mock_client.get = AsyncMock(return_value=mock_resp)
-    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-    mock_client.__aexit__ = AsyncMock(return_value=None)
-
+    mock_client = _make_stream_client(content)
     mock_session = AsyncMock()
     mock_session.add = MagicMock()
     mock_session.commit = AsyncMock()
@@ -188,8 +188,13 @@ async def test_fetch_failure_logs_warning_and_continues() -> None:
 
     skill = _make_skill(source_hash="somehash")
 
+    # stream() raises on entry — mock the context manager to raise
+    mock_resp = AsyncMock()
+    mock_resp.__aenter__ = AsyncMock(side_effect=httpx.ConnectError("connection refused"))
+    mock_resp.__aexit__ = AsyncMock(return_value=None)
+
     mock_client = AsyncMock()
-    mock_client.get = AsyncMock(side_effect=httpx.ConnectError("connection refused"))
+    mock_client.stream = MagicMock(return_value=mock_resp)
     mock_client.__aenter__ = AsyncMock(return_value=mock_client)
     mock_client.__aexit__ = AsyncMock(return_value=None)
 

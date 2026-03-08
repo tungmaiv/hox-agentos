@@ -241,8 +241,12 @@ class SkillImporter:
                     try:
                         source = zf.read(name).decode("utf-8")
                         scripts_content.append({"filename": parts[-1], "source": source})
-                    except Exception:
-                        pass  # Skip unreadable files silently
+                    except Exception as exc:
+                        logger.warning(
+                            "skill_zip_script_unreadable",
+                            filename=parts[-1],
+                            error=str(exc),
+                        )
             if scripts_content:
                 skill_data["scripts_content"] = scripts_content
 
