@@ -97,6 +97,9 @@ class SkillDefinition(Base):
     usage_count: Mapped[int] = mapped_column(
         Integer, nullable=False, server_default=text("0")
     )
+    is_promoted: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text("false")
+    )
 
     security_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
     security_report: Mapped[dict[str, Any] | None] = mapped_column(

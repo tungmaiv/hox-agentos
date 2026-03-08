@@ -232,6 +232,7 @@ class SkillDefinitionResponse(BaseModel):
     tags: list[str] | None
     category: str | None
     source_url: str | None
+    is_promoted: bool
     security_score: int | None
     security_report: dict[str, Any] | None
     reviewed_by: uuid.UUID | None
@@ -252,6 +253,8 @@ class SkillListItem(BaseModel):
     description: str | None
     slash_command: str | None
     usage_count: int = 0
+    is_promoted: bool = False
+    is_shared: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -387,3 +390,23 @@ class StatusUpdate(BaseModel):
 class BulkStatusUpdate(BaseModel):
     ids: list[uuid.UUID]
     status: Literal["active", "disabled", "deprecated"]
+
+
+# ---------------------------------------------------------------------------
+# Skill sharing schemas
+# ---------------------------------------------------------------------------
+
+
+class SkillShareRequest(BaseModel):
+    """Request body for granting a user access to a skill."""
+
+    user_id: uuid.UUID
+
+
+class SkillShareEntry(BaseModel):
+    """Single share entry — who was granted access and when."""
+
+    user_id: uuid.UUID
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
