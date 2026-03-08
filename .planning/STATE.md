@@ -117,6 +117,9 @@ v1.3 roadmap decisions:
 - [ ] Add CREDENTIAL_ENCRYPTION_KEY to production .env before OAuth flows (deferred to v1.4)
 - [ ] [POST-MVP] HashiCorp Vault for secret management
 - [ ] [TECH-DEBT] Fix frontend `pnpm build` failure — SWR hooks in Server Components cause prerender crash on `/settings/integrations` and `/settings/memory` pages. Root cause: `useSWR()` destructuring (`const { data } = useSWR(...)`) runs during static export where SWR context is undefined. Fix: add `"use client"` directive to affected pages, or move SWR calls into client sub-components.
+- [ ] [LLM] Switch back to qwen3.5:cloud when weekly Ollama limit resets (currently qwen2.5:7b local)
+- [ ] [UI] LLM model and provider configurable in admin console — see .planning/todos/pending/2026-03-08-llm-model-and-provider-configurable-in-admin-console.md — currently using qwen2.5:7b (local) as fallback. Update infra/litellm/config.yaml model entries.
+- [ ] [SKILL-PLATFORM] Support GitHub repositories as skill sources in Skill Store — currently only agentskills-index.json protocol supported. Add GitHub adapter: fetch repo file tree, detect skill files (YAML/JSON frontmatter), build index on-the-fly. Allow entering a GitHub repo URL (e.g., github.com/user/repo) in Add Repository dialog alongside agentskills-index.json URLs.
 - [ ] [TECH-DEBT] Keycloak SSO login returns "Server error — Configuration" (`/api/auth/error?error=Configuration`). next-auth Keycloak provider fails during OIDC discovery or token exchange. Likely causes: (1) `KEYCLOAK_ISSUER` URL unreachable from Next.js server (self-signed cert / DNS), (2) `KEYCLOAK_CLIENT_ID` or `KEYCLOAK_CLIENT_SECRET` mismatch with Keycloak realm config, (3) Keycloak service not running or realm not configured. Investigate in Phase 18 (Identity Configuration) or fix earlier if blocking dev workflows.
 
 ### Blockers/Concerns
