@@ -184,11 +184,13 @@ Plans:
   2. When a skill executes, tool calls are restricted to the intersection of the skill's declared `allowed-tools` and the user's ACL — denied calls are logged to the audit trail
   3. The update checker (Celery periodic task) detects when a skill's source URL content has changed and creates a `pending_review` version for admin approval
   4. SecurityScanner includes dependency risk factor (20%) and data flow analysis factor in its trust score calculation
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 21-01: TBD
-- [ ] 21-02: TBD
+- [ ] 21-01-PLAN.md — SecurityScanner: replace author_verification with dependency_risk + data_flow_risk factors (SKSEC-04)
+- [ ] 21-02-PLAN.md — allowed_tools pre-gate in SkillExecutor with audit logging (SKSEC-02)
+- [ ] 21-03-PLAN.md — source_hash migration 024 + Celery daily update checker task (SKSEC-03)
+- [ ] 21-04-PLAN.md — SkillImporter: dependencies frontmatter parsing + scripts/ AST extraction (SKSEC-01)
 
 ### Phase 22: Skill Platform D — Sharing & Marketplace
 **Goal**: Skills can be promoted for visibility, exported for sharing, and shared between users within the platform
