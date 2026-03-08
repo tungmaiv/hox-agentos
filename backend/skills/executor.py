@@ -25,11 +25,13 @@ import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.config import get_llm
+from core.logging import get_audit_logger
 from gateway.tool_registry import get_tool
 from security.acl import check_tool_acl
 from skills.safe_eval import safe_eval_condition
 
 logger = structlog.get_logger(__name__)
+audit_logger = get_audit_logger()
 
 # Allowed module prefixes for tool handler dispatch via importlib.
 # Prevents a compromised admin from pointing a tool_definition at arbitrary
@@ -100,6 +102,13 @@ class SkillExecutor:
         context = StepContext(user_input=user_input)
         user_id: UUID = user_context["user_id"]
 
+        # Capture skill metadata for audit logging in _run_tool_step()
+        self._current_skill_name = getattr(skill, "name", "unknown")
+        self._current_skill_id = getattr(skill, "id", None)
+
+        # Read allowed_tools from ORM model (None or empty list = permissive)
+        skill_allowed_tools: list[str] | None = getattr(skill, "allowed_tools", None)
+
         # Build step index for condition routing
         step_index: dict[str, int] = {}
         for i, step in enumerate(steps):
@@ -115,7 +124,8 @@ class SkillExecutor:
             try:
                 if step_type == "tool":
                     result = await self._run_tool_step(
-                        step, context, user_id, session
+                        step, context, user_id, session,
+                        allowed_tools=skill_allowed_tools,
                     )
                     context.outputs[step_id] = result
                 elif step_type == "llm":
@@ -206,9 +216,28 @@ class SkillExecutor:
         context: StepContext,
         user_id: UUID,
         session: AsyncSession,
+        allowed_tools: list[str] | None = None,
     ) -> Any:
-        """Execute a tool step with 3-gate security."""
+        """Execute a tool step with allowed_tools pre-gate + 3-gate security."""
         tool_name = step["tool"]
+
+        # Skill-declared allowed_tools pre-gate (SKSEC-02).
+        # None or empty list = permissive (backwards-compatible with existing skills).
+        # Fires BEFORE get_tool() — no DB lookup on denied calls.
+        if allowed_tools is not None and len(allowed_tools) > 0:
+            if tool_name not in allowed_tools:
+                audit_logger.info(
+                    "skill_allowed_tools_denied",
+                    skill_name=getattr(self, "_current_skill_name", "unknown"),
+                    skill_id=getattr(self, "_current_skill_id", None),
+                    tool_name=tool_name,
+                    user_id=str(user_id),
+                    declared_allowed_tools=allowed_tools,
+                )
+                raise SkillStepError(
+                    f"Tool '{tool_name}' not permitted by this skill. "
+                    f"Declared allowed tools: {allowed_tools}"
+                )
 
         # Gate: verify tool exists and is active
         tool_def = await get_tool(tool_name, session)
