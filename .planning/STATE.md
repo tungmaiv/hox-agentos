@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Production Readiness & Skill Platform
 status: unknown
-last_updated: "2026-03-08T18:08:10.987Z"
+last_updated: "2026-03-08T18:09:04.506Z"
 progress:
   total_phases: 8
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 29
-  completed_plans: 29
+  completed_plans: 30
 ---
 
 # Project State
@@ -131,6 +131,8 @@ v1.3 roadmap decisions:
 - [Phase 22]: [22-03]: mapSkillItem extracted outside component — DRY, avoids repeating mapping in fetchSkills and fetchPromotedSkills
 - [Phase 22]: [22-03]: Shared badge in renderExtra of main ArtifactCardGrid, no separate Shared section — locked decision from 22-CONTEXT.md
 - [Phase 22]: [22-03]: tsc --noEmit used instead of pnpm build — .next owned by Docker root in container-only dev mode
+- [Phase 22]: [22-02]: Promote/Share buttons in renderExtra (flat button pattern) not a dropdown menu — ArtifactCardGrid has no dropdown menu convention
+- [Phase 22]: [22-02]: Generic mapArraySnakeToCamel handles is_promoted -> isPromoted — no explicit hook mapping needed
 
 ### Pending Todos
 
@@ -172,6 +174,7 @@ v1.3 roadmap decisions:
 | Phase 21 P04 | 8 | 1 tasks | 3 files |
 | Phase 22 P01 | 7 | 3 tasks | 10 files |
 | Phase 22 P03 | 131 | 2 tasks | 2 files |
+| Phase 22 P02 | 15 | 2 tasks | 2 files |
 
 ## Session Continuity
 
