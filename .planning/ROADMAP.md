@@ -67,7 +67,7 @@ Full phase details: `.planning/milestones/v1.2-ROADMAP.md`
 - [x] **Phase 18: Identity Configuration** — Keycloak-optional boot, admin runtime config, connection testing (completed 2026-03-06)
 - [x] **Phase 19: Skill Platform A — Standards Compliance** — Agent Skills spec compliance, schema extension, import/export (completed 2026-03-07)
 - [x] **Phase 20: Skill Platform B — Discovery & Catalog** — FTS catalog, tool search, external registry browse, one-click import (completed 2026-03-07)
-- [ ] **Phase 21: Skill Platform C — Dependency & Security Hardening** — Dependency enforcement, allowed-tools gate, update checker, scanner enhancement
+- [x] **Phase 21: Skill Platform C — Dependency & Security Hardening** — Dependency enforcement, allowed-tools gate, update checker, scanner enhancement (completed 2026-03-08)
 - [ ] **Phase 22: Skill Platform D — Sharing & Marketplace** — Promoted skills, export download, user-to-user sharing
 - [ ] **Phase 23: Skill Platform E — Enhanced Builder** — Executable skill generation, external learning, security gate on all artifacts
 
@@ -252,6 +252,6 @@ Plans:
 | 18. Identity Configuration | 3/3 | Complete    | 2026-03-06 | - |
 | 19. Skill Platform A — Standards | v1.3 | 1/1 | ✅ Complete | 2026-03-07 |
 | 20. Skill Platform B — Catalog | 6/6 | Complete    | 2026-03-08 | - |
-| 21. Skill Platform C — Security | 3/4 | In Progress|  | - |
+| 21. Skill Platform C — Security | 4/4 | Complete   | 2026-03-08 | - |
 | 22. Skill Platform D — Sharing | v1.3 | 0/TBD | Not started | - |
 | 23. Skill Platform E — Builder | v1.3 | 0/TBD | Not started | - |

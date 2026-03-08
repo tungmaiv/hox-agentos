@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Production Readiness & Skill Platform
 status: unknown
-last_updated: "2026-03-08T12:28:56.934Z"
+last_updated: "2026-03-08T12:34:26.900Z"
 progress:
   total_phases: 7
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 26
-  completed_plans: 26
+  completed_plans: 27
 ---
 
 # Project State
@@ -119,6 +119,8 @@ v1.3 roadmap decisions:
 - [Phase 21]: [21-03]: _check_single_skill uses separate async_session() contexts for read and write — avoids holding sessions across slow HTTP fetches
 - [Phase 21]: [21-01]: author_verification removed — always returned 50 (no security value); replaced by dependency_risk and data_flow_risk
 - [Phase 21]: [21-01]: undeclared third-party import returns 0 immediately — conservative default for unknown code
+- [Phase 21]: [21-04]: SecurityScanner hard veto: dependency_risk==0 with scripts_content forces reject regardless of weighted sum — weighted scoring alone cannot enforce undeclared-import rejection
+- [Phase 21]: [21-04]: Frontmatter dependencies: takes priority over scripts/requirements.txt — SKILL.md is the authoritative declaration
 
 ### Pending Todos
 
@@ -157,9 +159,10 @@ v1.3 roadmap decisions:
 | Phase 21 P02 | 2 | 1 tasks | 2 files |
 | Phase 21 P03 | 15 | 2 tasks | 5 files |
 | Phase 21 P01 | 5 | 1 tasks | 2 files |
+| Phase 21 P04 | 8 | 1 tasks | 3 files |
 
 ## Session Continuity
 
 Last session: 2026-03-08
-Stopped at: Completed 21-03-PLAN.md — source_hash column + daily check_skill_updates Celery task (SKSEC-03).
-Resume file: .planning/phases/21-skill-platform-c-dependency-security-hardening/21-03-SUMMARY.md
+Stopped at: Completed 21-04-PLAN.md — SkillImporter dependency/scripts extraction + SecurityScanner hard veto (SKSEC-01). Phase 21 complete (4/4 plans).
+Resume file: .planning/phases/21-skill-platform-c-dependency-security-hardening/21-04-SUMMARY.md
