@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Production Readiness & Skill Platform
 status: unknown
-last_updated: "2026-03-08T18:03:50.055Z"
+last_updated: "2026-03-08T18:08:10.987Z"
 progress:
   total_phases: 8
   completed_phases: 6
   total_plans: 29
-  completed_plans: 28
+  completed_plans: 29
 ---
 
 # Project State
@@ -18,14 +18,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-05)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates their daily work routines and lets them build custom automations without writing code — all within an enterprise-secure, on-premise environment where data never leaves the company.
-**Current focus:** v1.3 Phase 22 — Skill Platform D Sharing & Marketplace (22-01 complete)
+**Current focus:** v1.3 Phase 22 — Skill Platform D Sharing & Marketplace (22-01, 22-03 complete)
 
 ## Current Position
 
 Phase: 22 of 23 (Skill Platform D — Sharing & Marketplace) — In Progress
-Plan: 01 of 03 complete
-Status: Phase 22 in progress — Backend foundations complete (22-01): migration 025 is_promoted column, PATCH /promote endpoint, GET /api/skills with is_shared JOIN + promoted filter, GET /api/skills/{id}/export ZIP download, admin POST/DELETE/GET sharing endpoints. SKMKT-01/02/03 backend satisfied.
-Last activity: 2026-03-08 - Completed 22-01: Backend skill sharing foundations — 11 new tests, 837 total passing.
+Plan: 03 of 03 complete (22-03 done; 22-02 admin UI pending)
+Status: Phase 22 in progress — 22-01 backend + 22-03 frontend complete. 22-02 (admin UI for skill sharing) is the remaining plan.
+Last activity: 2026-03-09 - Completed 22-03: User /skills page promoted section, Shared badge in main grid, Export button.
 
 Progress: [#########░] ~61%
 
@@ -128,6 +128,9 @@ v1.3 roadmap decisions:
 - [Phase 22]: [22-01]: admin role in tests must be it-admin (not admin) — only it-admin maps to registry:manage in DEFAULT_ROLE_PERMISSIONS
 - [Phase 22]: [22-01]: admin_skill_sharing_router registered before admin_skills.router — literal path segments /share and /shares must resolve before /{skill_id} UUID catch-all
 - [Phase 22]: [22-01]: SkillShareEntry.user_id from UserArtifactPermission.user_id — polymorphic artifact_type=skill pattern, no FK
+- [Phase 22]: [22-03]: mapSkillItem extracted outside component — DRY, avoids repeating mapping in fetchSkills and fetchPromotedSkills
+- [Phase 22]: [22-03]: Shared badge in renderExtra of main ArtifactCardGrid, no separate Shared section — locked decision from 22-CONTEXT.md
+- [Phase 22]: [22-03]: tsc --noEmit used instead of pnpm build — .next owned by Docker root in container-only dev mode
 
 ### Pending Todos
 
@@ -168,6 +171,7 @@ v1.3 roadmap decisions:
 | Phase 21 P01 | 5 | 1 tasks | 2 files |
 | Phase 21 P04 | 8 | 1 tasks | 3 files |
 | Phase 22 P01 | 7 | 3 tasks | 10 files |
+| Phase 22 P03 | 131 | 2 tasks | 2 files |
 
 ## Session Continuity
 
