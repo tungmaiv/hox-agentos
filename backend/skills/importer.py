@@ -146,6 +146,16 @@ class SkillImporter:
         if "source_url" in frontmatter:
             skill_data["source_url"] = frontmatter["source_url"]
 
+        # SKSEC-01: dependency declaration parsing
+        if "dependencies" in frontmatter:
+            raw_deps = frontmatter["dependencies"]
+            if isinstance(raw_deps, list):
+                skill_data["declared_dependencies"] = [str(d) for d in raw_deps]
+            elif isinstance(raw_deps, str):
+                parts = raw_deps.split()
+                if parts:
+                    skill_data["declared_dependencies"] = parts
+
         logger.info(
             "skill_md_parsed",
             name=skill_data["name"],
@@ -222,6 +232,40 @@ class SkillImporter:
                         "skill_manifest_invalid",
                         path=manifest_path,
                     )
+
+            # SKSEC-01: Extract scripts/ .py content for AST dependency scanning
+            scripts_content: list[dict[str, str]] = []
+            for name in names:
+                parts = name.replace("\\", "/").split("/")
+                if "scripts" in parts and name.endswith(".py"):
+                    try:
+                        source = zf.read(name).decode("utf-8")
+                        scripts_content.append({"filename": parts[-1], "source": source})
+                    except Exception:
+                        pass  # Skip unreadable files silently
+            if scripts_content:
+                skill_data["scripts_content"] = scripts_content
+
+            # SKSEC-01: Fallback — use scripts/requirements.txt if no frontmatter dependencies
+            if "declared_dependencies" not in skill_data:
+                for name in names:
+                    normalized = name.replace("\\", "/")
+                    if normalized.endswith("scripts/requirements.txt"):
+                        try:
+                            req_text = zf.read(name).decode("utf-8")
+                            deps = []
+                            for line in req_text.splitlines():
+                                line = line.strip()
+                                if line and not line.startswith("#"):
+                                    # Strip version specifiers: requests==2.31.0 -> requests
+                                    pkg = re.split(r"[=<>!~;]", line)[0].strip()
+                                    if pkg:
+                                        deps.append(pkg)
+                            if deps:
+                                skill_data["declared_dependencies"] = deps
+                        except Exception:
+                            pass
+                        break  # Only read one requirements.txt
 
         logger.info(
             "skill_imported_from_zip",

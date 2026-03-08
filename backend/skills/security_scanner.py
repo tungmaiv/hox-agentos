@@ -174,8 +174,11 @@ class SecurityScanner:
         )
         score = int(round(overall))
 
-        # Determine recommendation
-        if score >= 80:
+        # Hard veto: undeclared third-party imports always reject regardless of other factors
+        if factors["dependency_risk"] == 0 and skill_data.get("scripts_content"):
+            recommendation = "reject"
+        # Determine recommendation from weighted score
+        elif score >= 80:
             recommendation = "approve"
         elif score >= 60:
             recommendation = "review"

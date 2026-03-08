@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from skills.importer import SkillImportError, SkillImporter
+from skills.security_scanner import SecurityScanner
 
 
 def _make_zip(files: dict[str, str]) -> bytes:
@@ -323,3 +324,141 @@ class TestZipImport:
         assert result["license"] == "Apache-2.0"
         assert result["allowed_tools"] == ["email.fetch", "calendar.list"]
         assert result["tags"] == ["productivity", "morning"]
+
+
+# ── SKSEC-01: Dependency declaration parsing ─────────────────────────────────
+
+_SKILL_MD_WITH_DEPS_LIST = """---
+name: dep_skill
+description: Skill with dependency list
+dependencies:
+  - requests
+  - httpx
+---
+Some instructions.
+"""
+
+_SKILL_MD_WITH_DEPS_STRING = """---
+name: dep_skill_str
+description: Skill with dependency string
+dependencies: "requests httpx"
+---
+Some instructions.
+"""
+
+_SKILL_MD_WITHOUT_DEPS = """---
+name: no_dep_skill
+description: Skill with no dependencies
+---
+Some instructions.
+"""
+
+
+class TestDependencyParsing:
+    """Tests for SKSEC-01: parsing declared_dependencies from frontmatter and ZIP."""
+
+    def test_dependencies_list_parsed(self, importer: SkillImporter) -> None:
+        """dependencies: [requests, httpx] in frontmatter -> declared_dependencies list."""
+        result = importer.parse_skill_md(_SKILL_MD_WITH_DEPS_LIST)
+        assert result["declared_dependencies"] == ["requests", "httpx"]
+
+    def test_dependencies_string_parsed(self, importer: SkillImporter) -> None:
+        """dependencies: 'requests httpx' string -> declared_dependencies list."""
+        result = importer.parse_skill_md(_SKILL_MD_WITH_DEPS_STRING)
+        assert result["declared_dependencies"] == ["requests", "httpx"]
+
+    def test_no_dependencies_field(self, importer: SkillImporter) -> None:
+        """No dependencies: key -> declared_dependencies absent (or empty)."""
+        result = importer.parse_skill_md(_SKILL_MD_WITHOUT_DEPS)
+        assert "declared_dependencies" not in result or result.get("declared_dependencies") == []
+
+    def test_dependencies_from_requirements_txt_in_zip(
+        self, importer: SkillImporter
+    ) -> None:
+        """ZIP with scripts/requirements.txt (no frontmatter deps) -> declared_dependencies from file."""
+        req_content = "requests==2.31.0\nhttpx>=0.27.0\n# comment\n\n"
+        zip_bytes = _make_zip({
+            "SKILL.md": _SKILL_MD_WITHOUT_DEPS,
+            "scripts/requirements.txt": req_content,
+        })
+        result = importer.import_from_zip(zip_bytes)
+        assert result["declared_dependencies"] == ["requests", "httpx"]
+
+    def test_frontmatter_deps_take_priority_over_requirements_txt(
+        self, importer: SkillImporter
+    ) -> None:
+        """Frontmatter dependencies: takes precedence over scripts/requirements.txt."""
+        req_content = "requests\n"
+        zip_bytes = _make_zip({
+            "SKILL.md": _SKILL_MD_WITH_DEPS_LIST,  # has [requests, httpx]
+            "scripts/requirements.txt": "flask\n",  # different package
+        })
+        result = importer.import_from_zip(zip_bytes)
+        # Frontmatter wins: [requests, httpx], not [flask]
+        assert result["declared_dependencies"] == ["requests", "httpx"]
+
+
+# ── SKSEC-01: scripts/ extraction from ZIP ───────────────────────────────────
+
+_SKILL_MD_BASIC = """---
+name: scripted_skill
+description: Skill with scripts
+dependencies:
+  - requests
+---
+Some instructions.
+"""
+
+
+class TestZipScripts:
+    """Tests for SKSEC-01: extracting scripts/ .py content from ZIP bundles."""
+
+    def test_scripts_py_extracted(self, importer: SkillImporter) -> None:
+        """scripts/helper.py in ZIP -> scripts_content with filename and source."""
+        helper_src = "import requests\nprint('hello')\n"
+        zip_bytes = _make_zip({
+            "SKILL.md": _SKILL_MD_BASIC,
+            "scripts/helper.py": helper_src,
+        })
+        result = importer.import_from_zip(zip_bytes)
+        assert "scripts_content" in result
+        assert len(result["scripts_content"]) == 1
+        assert result["scripts_content"][0]["filename"] == "helper.py"
+        assert result["scripts_content"][0]["source"] == helper_src
+
+    def test_no_scripts_directory_empty_list(self, importer: SkillImporter) -> None:
+        """ZIP with no scripts/ dir -> scripts_content absent or empty."""
+        zip_bytes = _make_zip({"SKILL.md": _VALID_SKILL_MD})
+        result = importer.import_from_zip(zip_bytes)
+        # Either absent or empty list is acceptable
+        assert result.get("scripts_content", []) == []
+
+    def test_non_py_files_in_scripts_ignored(self, importer: SkillImporter) -> None:
+        """scripts/readme.txt in ZIP is NOT included in scripts_content."""
+        zip_bytes = _make_zip({
+            "SKILL.md": _SKILL_MD_BASIC,
+            "scripts/readme.txt": "This is documentation.",
+        })
+        result = importer.import_from_zip(zip_bytes)
+        assert result.get("scripts_content", []) == []
+
+    def test_undeclared_import_triggers_rejection(
+        self, importer: SkillImporter
+    ) -> None:
+        """Integration: skill with undeclared 'paramiko' import -> SecurityScanner rejects."""
+        skill_md = """---
+name: unsafe_skill
+description: Skill that uses undeclared paramiko
+---
+Some instructions.
+"""
+        # scripts/tool.py imports paramiko but it's NOT declared in frontmatter
+        tool_src = "import paramiko\nprint('connecting')\n"
+        zip_bytes = _make_zip({
+            "SKILL.md": skill_md,
+            "scripts/tool.py": tool_src,
+        })
+        skill_data = importer.import_from_zip(zip_bytes)
+        scanner = SecurityScanner()
+        report = scanner.scan(skill_data)
+        assert report.recommendation == "reject"
