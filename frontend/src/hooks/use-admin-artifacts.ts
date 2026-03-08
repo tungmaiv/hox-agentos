@@ -16,7 +16,7 @@ interface UseAdminArtifactsResult<T> {
   items: T[];
   loading: boolean;
   error: string | null;
-  create: (data: Record<string, unknown>) => Promise<T | null>;
+  create: (data: object) => Promise<T | null>;
   update: (id: string, data: Record<string, unknown>) => Promise<T | null>;
   patchStatus: (
     id: string,
@@ -31,7 +31,8 @@ interface UseAdminArtifactsResult<T> {
 }
 
 export function useAdminArtifacts<T>(
-  type: ArtifactType
+  type: ArtifactType,
+  params?: Record<string, string>
 ): UseAdminArtifactsResult<T> {
   const [items, setItems] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,6 +40,8 @@ export function useAdminArtifacts<T>(
   const [refreshKey, setRefreshKey] = useState(0);
 
   const basePath = `/api/admin/${type}`;
+  // Serialize params for stable dependency tracking
+  const paramsStr = params ? new URLSearchParams(params).toString() : "";
 
   const refetch = useCallback(() => {
     setRefreshKey((k) => k + 1);
@@ -49,7 +52,8 @@ export function useAdminArtifacts<T>(
     setLoading(true);
     setError(null);
 
-    fetch(basePath, { cache: "no-store" })
+    const fetchUrl = paramsStr ? `${basePath}?${paramsStr}` : basePath;
+    fetch(fetchUrl, { cache: "no-store" })
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
@@ -73,10 +77,10 @@ export function useAdminArtifacts<T>(
     return () => {
       cancelled = true;
     };
-  }, [basePath, refreshKey]);
+  }, [basePath, paramsStr, refreshKey]);
 
   const create = useCallback(
-    async (data: Record<string, unknown>): Promise<T | null> => {
+    async (data: object): Promise<T | null> => {
       try {
         const res = await fetch(basePath, {
           method: "POST",

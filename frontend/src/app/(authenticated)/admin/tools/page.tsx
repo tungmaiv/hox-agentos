@@ -33,7 +33,7 @@ export default function AdminToolsPage() {
   }, [toolSearch]);
 
   const handleCreate = async () => {
-    const result = await create(formData as unknown as Record<string, unknown>);
+    const result = await create(formData);
     if (result) {
       setShowCreate(false);
       setFormData({ name: "" });

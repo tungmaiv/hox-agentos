@@ -5,7 +5,7 @@
  * Additional columns for skill_type, slash_command, security_score.
  * Includes "Pending Review" filter shortcut and review actions.
  * Shows agentskills.io standard metadata fields (read-only) in detail panel.
- * FTS search + category + author + sort filter bar (client-side filtering).
+ * FTS search + category + author + sort filter bar (server-side filtering via API).
  */
 import { useState, useEffect } from "react";
 import { useAdminArtifacts } from "@/hooks/use-admin-artifacts";
@@ -92,8 +92,6 @@ function SkillMetadataPanel({ skill }: { skill: SkillDefinition }) {
 }
 
 export default function AdminSkillsPage() {
-  const { items, loading, error, create, patchStatus, activateVersion, refetch } =
-    useAdminArtifacts<SkillDefinition>("skills");
   const [viewMode, setViewMode] = useViewMode();
   const [showCreate, setShowCreate] = useState(false);
   const [showPendingOnly, setShowPendingOnly] = useState(false);
@@ -101,6 +99,7 @@ export default function AdminSkillsPage() {
     name: "",
     skill_type: "instructional",
   });
+  const [reviewError, setReviewError] = useState<string | null>(null);
 
   // Filter state
   const [searchQuery, setSearchQuery] = useState("");
@@ -114,8 +113,18 @@ export default function AdminSkillsPage() {
     return () => clearTimeout(t);
   }, [searchQuery]);
 
+  // Build server-side filter params — re-fetches when any filter changes
+  const filterParams: Record<string, string> = { sort: sortMode };
+  if (debouncedSearch) filterParams.q = debouncedSearch;
+  if (filterCategory) filterParams.category = filterCategory;
+  if (filterAuthor) filterParams.author = filterAuthor;
+  if (showPendingOnly) filterParams.status = "pending_review";
+
+  const { items: displayItems, loading, error, create, patchStatus, activateVersion, refetch } =
+    useAdminArtifacts<SkillDefinition>("skills", filterParams);
+
   const handleCreate = async () => {
-    const result = await create(formData as unknown as Record<string, unknown>);
+    const result = await create(formData);
     if (result) {
       setShowCreate(false);
       setFormData({ name: "", skill_type: "instructional" });
@@ -126,15 +135,21 @@ export default function AdminSkillsPage() {
     skillId: string,
     decision: "approve" | "reject"
   ) => {
+    setReviewError(null);
     try {
-      await fetch(`/api/admin/skills/${skillId}/review`, {
+      const res = await fetch(`/api/admin/skills/${skillId}/review`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ decision }),
       });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { detail?: string };
+        setReviewError(body.detail ?? `Review failed (HTTP ${res.status})`);
+        return;
+      }
       refetch();
     } catch {
-      // Error handled by hook
+      setReviewError("Network error — review request failed");
     }
   };
 
@@ -167,31 +182,6 @@ export default function AdminSkillsPage() {
       });
   };
 
-  const baseItems = showPendingOnly
-    ? items.filter((s) => s.status === "pending_review")
-    : items;
-
-  const filteredItems = baseItems.filter((item) => {
-    const s = debouncedSearch.toLowerCase();
-    const matchesSearch =
-      !s ||
-      item.name.toLowerCase().includes(s) ||
-      (item.description ?? "").toLowerCase().includes(s);
-    const matchesCategory = !filterCategory || item.category === filterCategory;
-    const matchesAuthor = !filterAuthor || item.createdBy === filterAuthor;
-    return matchesSearch && matchesCategory && matchesAuthor;
-  });
-
-  const displayItems = [...filteredItems].sort((a, b) => {
-    if (sortMode === "most_used") {
-      return (b.usageCount ?? 0) - (a.usageCount ?? 0);
-    }
-    if (sortMode === "oldest") {
-      return new Date(a.createdAt ?? 0).getTime() - new Date(b.createdAt ?? 0).getTime();
-    }
-    // newest (default)
-    return new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime();
-  });
 
   const extraColumns = [
     {
@@ -310,9 +300,9 @@ export default function AdminSkillsPage() {
         </div>
       </div>
 
-      {error && (
+      {(error ?? reviewError) && (
         <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-600">
-          {error}
+          {error ?? reviewError}
         </div>
       )}
 

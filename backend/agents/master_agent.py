@@ -43,7 +43,7 @@ from core.config import get_llm, settings
 from core.logging import timed
 from core.prompts import load_prompt
 from core.context import current_conversation_id_ctx, current_user_ctx
-from core.db import get_session
+from core.db import async_session, get_session
 from core.models.memory import ConversationTurn
 from memory.embeddings import SidecarEmbeddingProvider
 from memory.long_term import search_facts
@@ -703,7 +703,7 @@ async def _skill_executor_node(state: BlitzState) -> dict[str, list[BaseMessage]
 
         # Fire-and-forget usage_count increment — non-fatal if fails
         try:
-            async with get_session() as _inc_session:
+            async with async_session() as _inc_session:
                 await _inc_session.execute(
                     update(_SkillDef)
                     .where(_SkillDef.id == skill.id)
@@ -739,7 +739,7 @@ async def _skill_executor_node(state: BlitzState) -> dict[str, list[BaseMessage]
 
         # Fire-and-forget usage_count increment — non-fatal if fails
         try:
-            async with get_session() as _inc_session:
+            async with async_session() as _inc_session:
                 await _inc_session.execute(
                     update(_SkillDef)
                     .where(_SkillDef.id == skill.id)

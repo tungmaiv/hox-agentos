@@ -72,7 +72,7 @@ export function SkillStoreBrowse() {
           limit: "20",
           cursor: String(currentCursor),
         });
-        if (q.trim()) params.set("q", encodeURIComponent(q.trim()));
+        if (q.trim()) params.set("q", q.trim());
         const response = await fetch(
           `/api/skill-repos/browse?${params.toString()}`
         );
