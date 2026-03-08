@@ -241,6 +241,20 @@ def test_list_skills_shape(seeded_client) -> None:
         assert "slash_command" in item
 
 
+def test_list_skills_includes_is_shared(seeded_client) -> None:
+    """GET /api/skills returns is_shared field on all items (False when no permission row)."""
+    client, _ = seeded_client
+    response = client.get("/api/skills")
+    assert response.status_code == 200
+    items = response.json()
+    assert len(items) > 0
+    for item in items:
+        assert "is_shared" in item
+        assert "is_promoted" in item
+        # No permission rows seeded — all items should have is_shared=False
+        assert item["is_shared"] is False
+
+
 # ---------------------------------------------------------------------------
 # POST /api/skills/{name}/run tests
 # ---------------------------------------------------------------------------

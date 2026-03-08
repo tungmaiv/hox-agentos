@@ -11,6 +11,7 @@ Security:
   - Denied skills return 403 on execution
 """
 from typing import Any
+from uuid import UUID
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -20,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.models.skill_definition import SkillDefinition
 from core.models.user import UserContext
+from core.models.user_artifact_permission import UserArtifactPermission
 from core.schemas.registry import SkillListItem, SkillRunResponse
 from security.deps import get_current_user, get_user_db
 from security.rbac import batch_check_artifact_permissions, check_artifact_permission, has_permission
@@ -52,15 +54,31 @@ async def list_user_skills(
     category: str | None = Query(None, description="Filter by category"),
     skill_type: str | None = Query(None, description="Filter by skill_type"),
     sort: str | None = Query(None, description="Sort: newest (default), oldest, most_used"),
+    promoted: bool | None = Query(None, description="Filter to promoted skills only"),
     user: UserContext = Depends(_require_chat),
     session: AsyncSession = Depends(get_user_db),
 ) -> list[SkillListItem]:
     """List skills available to the current user.
 
-    Returns all active skills without ACL join per CONTEXT.md decision (SKCAT-03).
-    Supports FTS, category, skill_type, and sort filtering.
+    Returns all active skills with is_shared field from UserArtifactPermission JOIN.
+    ACL enforcement is only applied at run time (POST /api/skills/{name}/run).
+    Supports FTS, category, skill_type, promoted, and sort filtering.
     """
-    stmt = select(SkillDefinition).where(
+    # Correlated EXISTS subquery to check if current user has a shared permission
+    shared_subq = (
+        select(UserArtifactPermission.id)
+        .where(
+            UserArtifactPermission.artifact_type == "skill",
+            UserArtifactPermission.artifact_id == SkillDefinition.id,
+            UserArtifactPermission.user_id == user["user_id"],
+            UserArtifactPermission.allowed == True,  # noqa: E712
+            UserArtifactPermission.status == "active",
+        )
+        .exists()
+        .label("is_shared")
+    )
+
+    stmt = select(SkillDefinition, shared_subq).where(
         SkillDefinition.status == "active",
         SkillDefinition.is_active == True,  # noqa: E712
     )
@@ -75,6 +93,8 @@ async def list_user_skills(
         stmt = stmt.where(SkillDefinition.category == category)
     if skill_type is not None:
         stmt = stmt.where(SkillDefinition.skill_type == skill_type)
+    if promoted is not None:
+        stmt = stmt.where(SkillDefinition.is_promoted == promoted)
     if sort == "oldest":
         stmt = stmt.order_by(asc(SkillDefinition.created_at))
     elif sort == "most_used":
@@ -83,17 +103,19 @@ async def list_user_skills(
         stmt = stmt.order_by(desc(SkillDefinition.created_at))
 
     result = await session.execute(stmt)
-    skills = result.scalars().all()
-    # Return all active skills directly — no ACL join per CONTEXT.md decision
-    visible = [SkillListItem.model_validate(skill) for skill in skills]
+    rows = result.all()
+    items: list[SkillListItem] = []
+    for skill, is_shared in rows:
+        item = SkillListItem.model_validate(skill)
+        item.is_shared = bool(is_shared)
+        items.append(item)
 
     logger.info(
         "user_skills_listed",
         user_id=str(user["user_id"]),
-        total=len(skills),
-        visible=len(visible),
+        total=len(items),
     )
-    return visible
+    return items
 
 
 @router.post("/{skill_name}/run")

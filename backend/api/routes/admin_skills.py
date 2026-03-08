@@ -393,6 +393,34 @@ async def import_skill_zip(
     }
 
 
+@router.patch("/{skill_id}/promote")
+async def toggle_skill_promoted(
+    skill_id: UUID,
+    user: UserContext = Depends(_require_registry_manager),
+    session: AsyncSession = Depends(get_db),
+) -> SkillDefinitionResponse:
+    """Toggle is_promoted on a skill (True → False → True).
+
+    Requires registry:manage permission. Returns the updated SkillDefinitionResponse.
+    """
+    result = await session.execute(
+        select(SkillDefinition).where(SkillDefinition.id == skill_id)
+    )
+    skill = result.scalar_one_or_none()
+    if skill is None:
+        raise HTTPException(status_code=404, detail="Skill not found")
+    skill.is_promoted = not skill.is_promoted
+    await session.commit()
+    await session.refresh(skill)
+    logger.info(
+        "admin_skill_promoted_toggled",
+        skill_id=str(skill_id),
+        is_promoted=skill.is_promoted,
+        user_id=str(user["user_id"]),
+    )
+    return SkillDefinitionResponse.model_validate(skill)
+
+
 @router.get("/{skill_id}")
 async def get_skill(
     skill_id: UUID,
