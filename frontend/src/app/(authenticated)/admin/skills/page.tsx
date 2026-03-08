@@ -184,7 +184,7 @@ export default function AdminSkillsPage() {
 
   const displayItems = [...filteredItems].sort((a, b) => {
     if (sortMode === "most_used") {
-      return 0; // usageCount not in SkillDefinition — preserve order
+      return (b.usageCount ?? 0) - (a.usageCount ?? 0);
     }
     if (sortMode === "oldest") {
       return new Date(a.createdAt ?? 0).getTime() - new Date(b.createdAt ?? 0).getTime();
@@ -444,6 +444,7 @@ export default function AdminSkillsPage() {
           onPatchStatus={patchStatus}
           onActivateVersion={activateVersion}
           onExport={handleExport}
+          disableInternalSort={true}
         />
       ) : (
         <ArtifactCardGrid
