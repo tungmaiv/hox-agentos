@@ -701,6 +701,18 @@ async def _skill_executor_node(state: BlitzState) -> dict[str, list[BaseMessage]
             success=skill_result.success,
         )
 
+        # Fire-and-forget usage_count increment — non-fatal if fails
+        try:
+            async with get_session() as _inc_session:
+                await _inc_session.execute(
+                    update(_SkillDef)
+                    .where(_SkillDef.id == skill.id)
+                    .values(usage_count=_SkillDef.usage_count + 1)
+                )
+                await _inc_session.commit()
+        except Exception:
+            logger.warning("usage_count_increment_failed", skill_id=str(skill.id))
+
         return {"messages": [AIMessage(content=skill_result.output)]}
 
     elif skill.skill_type == "instructional":
@@ -724,6 +736,18 @@ async def _skill_executor_node(state: BlitzState) -> dict[str, list[BaseMessage]
             skill_name=skill.name,
             command=command,
         )
+
+        # Fire-and-forget usage_count increment — non-fatal if fails
+        try:
+            async with get_session() as _inc_session:
+                await _inc_session.execute(
+                    update(_SkillDef)
+                    .where(_SkillDef.id == skill.id)
+                    .values(usage_count=_SkillDef.usage_count + 1)
+                )
+                await _inc_session.commit()
+        except Exception:
+            logger.warning("usage_count_increment_failed", skill_id=str(skill.id))
 
         return {"messages": [response]}
 
