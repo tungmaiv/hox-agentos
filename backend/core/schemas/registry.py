@@ -251,6 +251,7 @@ class SkillListItem(BaseModel):
     display_name: str | None
     description: str | None
     slash_command: str | None
+    usage_count: int = 0
 
     model_config = ConfigDict(from_attributes=True)
 

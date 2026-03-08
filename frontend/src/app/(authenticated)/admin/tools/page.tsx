@@ -14,8 +14,6 @@ import { ArtifactCardGrid } from "@/components/admin/artifact-card-grid";
 import { ViewToggle, useViewMode } from "@/components/admin/view-toggle";
 
 export default function AdminToolsPage() {
-  const { items, loading, error, create, patchStatus, activateVersion } =
-    useAdminArtifacts<ToolDefinition>("tools");
   const [viewMode, setViewMode] = useViewMode();
   const [showCreate, setShowCreate] = useState(false);
   const [formData, setFormData] = useState<ToolDefinitionCreate>({
@@ -31,6 +29,14 @@ export default function AdminToolsPage() {
     const t = setTimeout(() => setDebouncedToolSearch(toolSearch), 300);
     return () => clearTimeout(t);
   }, [toolSearch]);
+
+  // Build server-side filter params — re-fetches when any filter changes
+  const filterParams: Record<string, string> = {};
+  if (debouncedToolSearch) filterParams.name = debouncedToolSearch;
+  if (filterHandlerType) filterParams.handler_type = filterHandlerType;
+
+  const { items, loading, error, create, patchStatus, activateVersion } =
+    useAdminArtifacts<ToolDefinition>("tools", filterParams);
 
   const handleCreate = async () => {
     const result = await create(formData);
@@ -61,13 +67,6 @@ export default function AdminToolsPage() {
         ),
     },
   ];
-
-  const filteredTools = items.filter((item) => {
-    const s = debouncedToolSearch.toLowerCase();
-    const matchesName = !s || item.name.toLowerCase().includes(s);
-    const matchesType = !filterHandlerType || item.handlerType === filterHandlerType;
-    return matchesName && matchesType;
-  });
 
   if (loading) {
     return <div className="text-gray-500 py-8">Loading tools...</div>;
@@ -214,14 +213,14 @@ export default function AdminToolsPage() {
 
       {viewMode === "table" ? (
         <ArtifactTable
-          items={filteredTools}
+          items={items}
           columns={extraColumns}
           onPatchStatus={patchStatus}
           onActivateVersion={activateVersion}
         />
       ) : (
         <ArtifactCardGrid
-          items={filteredTools}
+          items={items}
           renderExtra={(item) => (
             <div className="flex items-center gap-2">
               <span className="bg-gray-100 px-1.5 py-0.5 rounded">

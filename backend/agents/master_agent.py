@@ -25,6 +25,7 @@ Long-term memory (Phase 3):
 """
 import importlib
 import time
+import uuid
 from datetime import datetime, timezone
 from typing import Any
 
@@ -627,6 +628,22 @@ async def _agent_enabled(agent_name: str) -> bool:
     return _agent_enabled_cache.get(key, True)
 
 
+async def _increment_skill_usage(skill_id: uuid.UUID) -> None:
+    """Fire-and-forget usage_count increment for agent-path skill execution."""
+    from core.models.skill_definition import SkillDefinition as _SkillDef
+
+    try:
+        async with async_session() as _inc_session:
+            await _inc_session.execute(
+                update(_SkillDef)
+                .where(_SkillDef.id == skill_id)
+                .values(usage_count=_SkillDef.usage_count + 1)
+            )
+            await _inc_session.commit()
+    except Exception:
+        logger.warning("usage_count_increment_failed", skill_id=str(skill_id))
+
+
 async def _skill_executor_node(state: BlitzState) -> dict[str, list[BaseMessage]]:
     """
     Execute a skill triggered by a /command in chat.
@@ -701,18 +718,7 @@ async def _skill_executor_node(state: BlitzState) -> dict[str, list[BaseMessage]
             success=skill_result.success,
         )
 
-        # Fire-and-forget usage_count increment — non-fatal if fails
-        try:
-            async with async_session() as _inc_session:
-                await _inc_session.execute(
-                    update(_SkillDef)
-                    .where(_SkillDef.id == skill.id)
-                    .values(usage_count=_SkillDef.usage_count + 1)
-                )
-                await _inc_session.commit()
-        except Exception:
-            logger.warning("usage_count_increment_failed", skill_id=str(skill.id))
-
+        await _increment_skill_usage(skill.id)
         return {"messages": [AIMessage(content=skill_result.output)]}
 
     elif skill.skill_type == "instructional":
@@ -737,18 +743,7 @@ async def _skill_executor_node(state: BlitzState) -> dict[str, list[BaseMessage]
             command=command,
         )
 
-        # Fire-and-forget usage_count increment — non-fatal if fails
-        try:
-            async with async_session() as _inc_session:
-                await _inc_session.execute(
-                    update(_SkillDef)
-                    .where(_SkillDef.id == skill.id)
-                    .values(usage_count=_SkillDef.usage_count + 1)
-                )
-                await _inc_session.commit()
-        except Exception:
-            logger.warning("usage_count_increment_failed", skill_id=str(skill.id))
-
+        await _increment_skill_usage(skill.id)
         return {"messages": [response]}
 
     else:

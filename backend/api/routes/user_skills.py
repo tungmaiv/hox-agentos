@@ -66,10 +66,10 @@ async def list_user_skills(
     )
     if q:
         stmt = stmt.where(
-            func.to_tsvector(
-                text("'simple'"),
-                func.coalesce(SkillDefinition.name, "") + " " + func.coalesce(SkillDefinition.description, "")
-            ).op("@@")(func.plainto_tsquery(text("'simple'"), q))
+            text(
+                "to_tsvector('simple', coalesce(name, '') || ' ' || coalesce(description, '')) "
+                "@@ plainto_tsquery('simple', :q)"
+            ).bindparams(q=q)
         )
     if category is not None:
         stmt = stmt.where(SkillDefinition.category == category)
