@@ -93,6 +93,7 @@ class SkillDefinition(Base):
     tags: Mapped[list[str] | None] = mapped_column(_JSONB, nullable=True)
     category: Mapped[str | None] = mapped_column(Text, nullable=True)
     source_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
     usage_count: Mapped[int] = mapped_column(
         Integer, nullable=False, server_default=text("0")
     )
