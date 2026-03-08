@@ -61,16 +61,17 @@ reason: Depends on test 6 — no registry available.
 
 ### 9. Skill Usage Count Increments on Run
 expected: Run any skill from the /skills page. After successful execution, query the DB or re-open the catalog sorted by "Most Used" — the just-run skill's usage_count should be higher than before.
-result: skipped
-reason: Skill execution takes several minutes (LLM/Ollama latency — pre-existing, not phase 20). usage_count increment code verified in source (user_skills.py lines 153-162 procedural, 179-188 instructional). Cannot complete interactively.
+result: issue
+reported: "Ran /summarize via chat — skill completed but usage_count stayed 0 for all skills in DB"
+severity: major
 
 ## Summary
 
 total: 9
 passed: 4
-issues: 2
+issues: 3
 pending: 0
-skipped: 4
+skipped: 3
 skipped: 0
 
 ## Gaps
@@ -86,6 +87,20 @@ skipped: 0
       issue: "GET() ignored Request object — fixed to forward searchParams"
   missing: []
   debug_session: "Fixed inline during UAT"
+
+- truth: "usage_count increments after every skill execution (chat or /skills page)"
+  status: failed
+  reason: "User ran /summarize via chat — skill completed but all usage_count values stayed 0"
+  severity: major
+  test: 9
+  root_cause: "Increment only in POST /api/skills/{id}/run (user_skills.py lines 153-188). Agent executor (master_agent.py:694 executor.run()) bypasses this route entirely — chat-invoked skills never increment usage_count."
+  artifacts:
+    - path: "backend/agents/master_agent.py"
+      issue: "executor.run() at line 694 has no usage_count increment"
+    - path: "backend/api/routes/user_skills.py"
+      issue: "Increment at lines 153-162, 179-188 only reachable via POST /api/skills/{id}/run"
+  missing:
+    - "Add usage_count increment to the agent skill executor path (master_agent.py or the executor class)"
 
 - truth: "Sort dropdown on /skills reorders skills by creation date (Newest/Oldest)"
   status: failed
