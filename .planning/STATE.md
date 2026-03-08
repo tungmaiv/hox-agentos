@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Production Readiness & Skill Platform
 status: unknown
-last_updated: "2026-03-08T12:44:41.667Z"
+last_updated: "2026-03-08T18:03:50.055Z"
 progress:
-  total_phases: 7
+  total_phases: 8
   completed_phases: 6
-  total_plans: 26
-  completed_plans: 27
+  total_plans: 29
+  completed_plans: 28
 ---
 
 # Project State
@@ -18,14 +18,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-05)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates their daily work routines and lets them build custom automations without writing code — all within an enterprise-secure, on-premise environment where data never leaves the company.
-**Current focus:** v1.3 Phase 20 — Skill Platform B Discovery & Catalog (Gap closure — 20-06 complete)
+**Current focus:** v1.3 Phase 22 — Skill Platform D Sharing & Marketplace (22-01 complete)
 
 ## Current Position
 
-Phase: 20 of 23 (Skill Platform B — Discovery & Catalog) — Complete (including gap closure)
-Plan: 06 of 06 complete (gap closure plans 20-04, 20-05, 20-06 added post-UAT)
-Status: Phase 20 done — FTS GIN index (20-01), /api/skills endpoint with browse/search (20-02), user skills catalog page + admin filter bars (20-03), usage_count increment + skill detail drawer (20-04), usage_count increment in skill executor node (20-05), admin /skills sort fix: disableInternalSort + usageCount field (20-06). SKCAT-01/02/03/04 satisfied.
-Last activity: 2026-03-08 - Completed 20-06: Admin /skills sort dropdown fixed — ArtifactTable disableInternalSort prop + SkillDefinition.usageCount field enables Newest/Oldest/Most Used to actually reorder table rows.
+Phase: 22 of 23 (Skill Platform D — Sharing & Marketplace) — In Progress
+Plan: 01 of 03 complete
+Status: Phase 22 in progress — Backend foundations complete (22-01): migration 025 is_promoted column, PATCH /promote endpoint, GET /api/skills with is_shared JOIN + promoted filter, GET /api/skills/{id}/export ZIP download, admin POST/DELETE/GET sharing endpoints. SKMKT-01/02/03 backend satisfied.
+Last activity: 2026-03-08 - Completed 22-01: Backend skill sharing foundations — 11 new tests, 837 total passing.
 
 Progress: [#########░] ~61%
 
@@ -125,6 +125,9 @@ v1.3 roadmap decisions:
 - [Phase 21]: [21-01]: undeclared third-party import returns 0 immediately — conservative default for unknown code
 - [Phase 21]: [21-04]: SecurityScanner hard veto: dependency_risk==0 with scripts_content forces reject regardless of weighted sum — weighted scoring alone cannot enforce undeclared-import rejection
 - [Phase 21]: [21-04]: Frontmatter dependencies: takes priority over scripts/requirements.txt — SKILL.md is the authoritative declaration
+- [Phase 22]: [22-01]: admin role in tests must be it-admin (not admin) — only it-admin maps to registry:manage in DEFAULT_ROLE_PERMISSIONS
+- [Phase 22]: [22-01]: admin_skill_sharing_router registered before admin_skills.router — literal path segments /share and /shares must resolve before /{skill_id} UUID catch-all
+- [Phase 22]: [22-01]: SkillShareEntry.user_id from UserArtifactPermission.user_id — polymorphic artifact_type=skill pattern, no FK
 
 ### Pending Todos
 
@@ -164,6 +167,7 @@ v1.3 roadmap decisions:
 | Phase 21 P03 | 15 | 2 tasks | 5 files |
 | Phase 21 P01 | 5 | 1 tasks | 2 files |
 | Phase 21 P04 | 8 | 1 tasks | 3 files |
+| Phase 22 P01 | 7 | 3 tasks | 10 files |
 
 ## Session Continuity
 

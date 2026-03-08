@@ -82,9 +82,9 @@
 
 ## Skill Platform — Sharing & Marketplace
 
-- [ ] **SKMKT-01**: Admin can mark skills as "Promoted" in catalog — promoted skills appear in a curated section visible to all users
-- [ ] **SKMKT-02**: Users can export skills as agentskills.io-compliant ZIP download from catalog UI
-- [ ] **SKMKT-03**: Skill sharing between users via existing `artifact_permissions` system
+- [x] **SKMKT-01**: Admin can mark skills as "Promoted" in catalog — promoted skills appear in a curated section visible to all users
+- [x] **SKMKT-02**: Users can export skills as agentskills.io-compliant ZIP download from catalog UI
+- [x] **SKMKT-03**: Skill sharing between users via existing `artifact_permissions` system
 
 ## Skill Platform — Enhanced Builder
 
@@ -183,9 +183,9 @@
 | SKSEC-02 | Phase 21 | Complete |
 | SKSEC-03 | Phase 21 | Complete |
 | SKSEC-04 | Phase 21 | Complete |
-| SKMKT-01 | Phase 22 | pending |
-| SKMKT-02 | Phase 22 | pending |
-| SKMKT-03 | Phase 22 | pending |
+| SKMKT-01 | Phase 22 | Complete |
+| SKMKT-02 | Phase 22 | Complete |
+| SKMKT-03 | Phase 22 | Complete |
 | SKBLD-01 | Phase 23 | pending |
 | SKBLD-02 | Phase 23 | pending |
 | SKBLD-03 | Phase 23 | pending |
