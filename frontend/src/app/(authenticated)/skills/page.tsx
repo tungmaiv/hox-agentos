@@ -6,6 +6,9 @@
  * Admin-only actions are hidden by omitting all action props.
  * Supports FTS search (server-side via /api/skills?q=), category filter,
  * skill_type filter, and sort — all with 300ms debounce on search.
+ *
+ * Phase 22: Promoted section above main grid, Shared badge in main grid,
+ * Export button per card.
  */
 import { useState, useEffect, useCallback } from "react";
 import { ArtifactCardGrid } from "@/components/admin/artifact-card-grid";
@@ -31,6 +34,34 @@ interface SkillItem {
   allowedTools: string[] | null;
   compatibility: string | null;
   usageCount: number;
+  // Phase 22 fields
+  isPromoted: boolean;
+  isShared: boolean;
+}
+
+/** Map a raw API item to SkillItem — used by fetchSkills and fetchPromotedSkills. */
+function mapSkillItem(item: Record<string, unknown>): SkillItem {
+  return {
+    id: String(item.id ?? ""),
+    name: String(item.name ?? ""),
+    displayName: (item.display_name ?? item.displayName ?? null) as string | null,
+    description: (item.description ?? null) as string | null,
+    version: String(item.version ?? "1.0.0"),
+    isActive: Boolean(item.is_active ?? item.isActive ?? true),
+    status: ((item.status ?? "active") as ArtifactStatus),
+    lastSeenAt: (item.last_seen_at ?? item.lastSeenAt ?? null) as string | null,
+    createdAt: String(item.created_at ?? item.createdAt ?? new Date().toISOString()),
+    skillType: String(item.skill_type ?? item.skillType ?? "instructional"),
+    category: (item.category ?? null) as string | null,
+    tags: (item.tags ?? null) as string[] | null,
+    license: (item.license ?? null) as string | null,
+    sourceUrl: (item.source_url ?? item.sourceUrl ?? null) as string | null,
+    allowedTools: (item.allowed_tools ?? item.allowedTools ?? null) as string[] | null,
+    compatibility: (item.compatibility ?? null) as string | null,
+    usageCount: Number(item.usage_count ?? item.usageCount ?? 0),
+    isPromoted: Boolean(item.is_promoted ?? item.isPromoted ?? false),
+    isShared: Boolean(item.is_shared ?? item.isShared ?? false),
+  };
 }
 
 /** Read-only metadata section shown when a skill has any metadata fields. */
@@ -115,6 +146,10 @@ export default function SkillsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Promoted skills state
+  const [promotedSkills, setPromotedSkills] = useState<SkillItem[]>([]);
+  const [promotedLoading, setPromotedLoading] = useState(true);
+
   // Filter state
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -146,27 +181,7 @@ export default function SkillsPage() {
       const data: unknown = await res.json();
       const items = Array.isArray(data) ? data : (data as { items?: unknown[] }).items ?? [];
 
-      const mapped: SkillItem[] = (items as Record<string, unknown>[]).map((item) => ({
-        id: String(item.id ?? ""),
-        name: String(item.name ?? ""),
-        displayName: (item.display_name ?? item.displayName ?? null) as string | null,
-        description: (item.description ?? null) as string | null,
-        version: String(item.version ?? "1.0.0"),
-        isActive: Boolean(item.is_active ?? item.isActive ?? true),
-        status: ((item.status ?? "active") as ArtifactStatus),
-        lastSeenAt: (item.last_seen_at ?? item.lastSeenAt ?? null) as string | null,
-        createdAt: String(item.created_at ?? item.createdAt ?? new Date().toISOString()),
-        skillType: String(item.skill_type ?? item.skillType ?? "instructional"),
-        category: (item.category ?? null) as string | null,
-        tags: (item.tags ?? null) as string[] | null,
-        license: (item.license ?? null) as string | null,
-        sourceUrl: (item.source_url ?? item.sourceUrl ?? null) as string | null,
-        allowedTools: (item.allowed_tools ?? item.allowedTools ?? null) as string[] | null,
-        compatibility: (item.compatibility ?? null) as string | null,
-        usageCount: Number(item.usage_count ?? item.usageCount ?? 0),
-      }));
-
-      setSkills(mapped);
+      setSkills((items as Record<string, unknown>[]).map(mapSkillItem));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load skills");
     } finally {
@@ -174,9 +189,50 @@ export default function SkillsPage() {
     }
   }, [debouncedQuery, category, skillType, sort]);
 
+  const fetchPromotedSkills = useCallback(async () => {
+    setPromotedLoading(true);
+    try {
+      const res = await fetch("/api/skills?promoted=true");
+      if (!res.ok) return;
+      const data: unknown = await res.json();
+      const items = Array.isArray(data) ? data : (data as { items?: unknown[] }).items ?? [];
+      setPromotedSkills((items as Record<string, unknown>[]).map(mapSkillItem));
+    } catch {
+      // Non-fatal — promoted section simply won't show
+    } finally {
+      setPromotedLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     void fetchSkills();
   }, [fetchSkills]);
+
+  useEffect(() => {
+    void fetchPromotedSkills();
+  }, [fetchPromotedSkills]);
+
+  /** Trigger a ZIP download for the given skill via GET /api/skills/{id}/export. */
+  const handleExport = (skill: SkillItem) => {
+    fetch(`/api/skills/${skill.id}/export`)
+      .then((res) => {
+        if (!res.ok) return;
+        const disposition = res.headers.get("Content-Disposition") ?? "";
+        const filenameMatch = disposition.match(/filename="?([^"]+)"?/);
+        const filename = filenameMatch?.[1] ?? `${skill.name}-${skill.version}.zip`;
+        return res.blob().then((blob) => {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        });
+      })
+      .catch(() => {});
+  };
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -186,6 +242,53 @@ export default function SkillsPage() {
           Browse available skills you can use with the agent.
         </p>
       </div>
+
+      {/* Promoted / Featured Skills section — hidden when empty */}
+      {!promotedLoading && promotedSkills.length > 0 && (
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-amber-500 text-base">★</span>
+            <h2 className="text-base font-semibold text-gray-800">Featured Skills</h2>
+            <span className="text-xs text-gray-400">Curated picks</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {promotedSkills.map((skill) => (
+              <div key={skill.id} className="border border-amber-200 bg-amber-50 rounded-lg p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">
+                      {skill.displayName ?? skill.name}
+                    </p>
+                    {skill.description && (
+                      <p className="text-xs text-gray-600 mt-1 line-clamp-2">
+                        {skill.description}
+                      </p>
+                    )}
+                  </div>
+                  <span
+                    className={`shrink-0 px-1.5 py-0.5 rounded text-xs ${
+                      skill.skillType === "procedural"
+                        ? "bg-blue-100 text-blue-700"
+                        : "bg-purple-100 text-purple-700"
+                    }`}
+                  >
+                    {skill.skillType}
+                  </span>
+                </div>
+                {skill.usageCount > 0 && (
+                  <p className="text-xs text-gray-400 mt-2">Used {skill.usageCount}x</p>
+                )}
+                <button
+                  onClick={() => handleExport(skill)}
+                  className="mt-2 text-xs text-gray-500 hover:text-gray-700 underline"
+                >
+                  Export
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Filter bar */}
       <div className="flex flex-wrap items-center gap-2 mb-6">
@@ -242,12 +345,19 @@ export default function SkillsPage() {
         </div>
       )}
 
-      {/* Skill grid — read-only (no admin action props) */}
+      {/* Skill grid — shows Shared badge per card, Export button via onExport */}
       {!loading && skills.length > 0 && (
         <ArtifactCardGrid
           items={skills}
+          onExport={handleExport}
           renderExtra={(skill) => (
             <div>
+              {/* Shared badge — only shown when skill was shared with this user */}
+              {(skill as SkillItem).isShared && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-green-100 text-green-700 font-medium mb-1">
+                  Shared
+                </span>
+              )}
               <div className="flex items-center gap-2 flex-wrap">
                 <span
                   className={`px-1.5 py-0.5 rounded text-xs ${
@@ -267,8 +377,8 @@ export default function SkillsPage() {
               <SkillMetadataPanel skill={skill} />
             </div>
           )}
-          // No onEdit, onPatchStatus, onActivateVersion, onExport, artifactType
-          // Omitting all action props suppresses all admin buttons
+          // No onEdit, onPatchStatus, onActivateVersion, artifactType
+          // Omitting all action props (except onExport) suppresses all admin buttons
         />
       )}
     </div>
