@@ -99,7 +99,9 @@ Base URL (local dev): `http://localhost:8000`
 ### Skills (User-facing)
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/skills` | List skills available to current user (role-filtered) |
+| GET | `/api/skills` | List skills available to current user (role-filtered); response includes `is_promoted` and `is_shared` per item (Phase 22) |
+| GET | `/api/skills?promoted=true` | List only promoted skills (for Featured Skills section) |
+| GET | `/api/skills/{id}/export` | Download skill as agentskills.io ZIP (auth required) |
 | POST | `/api/skills/{name}/run` | Execute a skill by name (procedural or instructional) |
 
 ### Tools (User-facing)
@@ -139,6 +141,10 @@ All admin endpoints require `registry:manage` permission (Gate 2 RBAC — it-adm
 | POST | `/api/admin/skills/{id}/validate` | Dry-run validate procedure |
 | POST | `/api/admin/skills/{id}/review` | Approve/reject quarantined skill |
 | GET | `/api/admin/skills/{id}/security-report` | Get security scan report |
+| PATCH | `/api/admin/skills/{id}/promote` | Toggle is_promoted flag (registry:manage) |
+| POST | `/api/admin/skills/{id}/share` | Share skill with user (body: {user_id}, registry:manage) |
+| DELETE | `/api/admin/skills/{id}/share/{user_id}` | Revoke user share (registry:manage) |
+| GET | `/api/admin/skills/{id}/shares` | List users with access to skill (registry:manage) |
 | PUT | `/api/admin/permissions/roles/{role}` | Set role permissions |
 | PUT | `/api/admin/permissions/artifacts/{id}` | Set artifact permissions (staged) |
 | POST | `/api/admin/permissions/apply` | Apply pending permissions |
@@ -294,6 +300,7 @@ Tools are called via the backend MCPClient — never directly from frontend.
 | Backend DB tables missing on fresh install | Queries fail with 500 | Run `just migrate` (or `cd backend && .venv/bin/alembic upgrade head`) before first use |
 | `justfile` + JSON list env var (e.g. `CORS_ORIGINS`) | `set dotenv-load := true` (mangles `["url"]` → `[`) | Removed — each service reads its own `.env` directly; do not add it back |
 | `just *-kill` recipe self-terminates on signal 9 | Bare `pkill -9 -f "pattern"` (pattern in `sh -c '...'` cmdline) | Use `#!/usr/bin/env bash` shebang + `fuser -k <port>/tcp` fallback |
+| Frontend container Keycloak SSL (Alpine Linux) | `NODE_EXTRA_CA_CERTS=/app/certs/keycloak.crt` (ignored by musl libc) | `docker-entrypoint.sh` appends cert to `/etc/ssl/certs/ca-certificates.crt` at container startup — Alpine doesn't respect Node's CA env var |
 
 ---
 
@@ -317,3 +324,5 @@ Tools are called via the backend MCPClient — never directly from frontend.
 | 2026-02-28 | Phase 6 endpoints: user-facing GET /api/skills, POST /api/skills/{name}/run, GET /api/tools; admin CRUD for agents/tools/skills/permissions at /api/admin/*; skill slash commands detected in master agent _pre_route | claude |
 | 2026-03-02 | [Phase 11]: Added Cloudflare Tunnel documentation (172.16.155.118, external machine, INFRA-01/02 satisfied) | claude |
 | 2026-03-06 | Backend and frontend run in Docker containers ONLY (dev-local mode). No host processes. Removed host-mode justfile recipes (backend, backend-bg, backend-stop, backend-kill, frontend, frontend-bg, frontend-stop, frontend-kill, stop, kill, stack, dev). Use `just dev-local` for full stack. | claude |
+| 2026-03-07 | Frontend Alpine SSL: docker-entrypoint.sh adds Keycloak CA to system bundle at runtime; NODE_EXTRA_CA_CERTS doesn't work with musl libc | claude |
+| 2026-03-09 | Phase 22: user GET /api/skills now returns is_promoted+is_shared per item; GET /api/skills?promoted=true for featured section; GET /api/skills/{id}/export ZIP download; admin PATCH /promote, POST/DELETE/GET /api/admin/skills/{id}/share* | claude |
