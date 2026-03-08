@@ -76,7 +76,7 @@
 ## Skill Platform — Dependency & Security Hardening
 
 - [ ] **SKSEC-01**: Skills with `scripts/` directory must declare dependencies explicitly; SecurityScanner blocks undeclared subprocess/socket/os.system usage
-- [ ] **SKSEC-02**: `allowed-tools` enforcement: SkillExecutor restricts tool calls to intersection of skill's declared `allowed-tools` and user's ACL; denied calls logged to audit
+- [x] **SKSEC-02**: `allowed-tools` enforcement: SkillExecutor restricts tool calls to intersection of skill's declared `allowed-tools` and user's ACL; denied calls logged to audit
 - [ ] **SKSEC-03**: Update checker (Celery periodic task) re-fetches `source_url`, compares hash, creates `pending_review` version if changed
 - [ ] **SKSEC-04**: SecurityScanner enhanced with dependency risk factor (20%) and data flow analysis factor (replaces author verification 10%)
 
@@ -180,7 +180,7 @@
 | SKCAT-04 | Phase 20 | Complete |
 | SKCAT-05 | Phase 20 | Complete |
 | SKSEC-01 | Phase 21 | pending |
-| SKSEC-02 | Phase 21 | pending |
+| SKSEC-02 | Phase 21 | Complete |
 | SKSEC-03 | Phase 21 | pending |
 | SKSEC-04 | Phase 21 | pending |
 | SKMKT-01 | Phase 22 | pending |

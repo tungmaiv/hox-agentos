@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Production Readiness & Skill Platform
 status: unknown
-last_updated: "2026-03-08T04:29:51.578Z"
+last_updated: "2026-03-08T12:26:38.769Z"
 progress:
-  total_phases: 6
+  total_phases: 7
   completed_phases: 5
-  total_plans: 22
-  completed_plans: 23
+  total_plans: 26
+  completed_plans: 24
 ---
 
 # Project State
@@ -113,6 +113,8 @@ v1.3 roadmap decisions:
 - [Phase 20]: [20-05]: Used local _SkillDef alias in _skill_executor_node for usage_count increment — avoids redundant top-level import, fresh get_session() per branch avoids closed-session reuse
 - [Phase 20]: [20-06]: disableInternalSort prop bypasses internal sort entirely — column-header sort buttons still work if user clicks them (secondary sort override, acceptable UX)
 - [Phase 20]: [20-06]: usageCount: number (required, not optional) — backend always returns this field; nullish coalescing ?? 0 handles any legacy rows
+- [Phase 21]: allowed_tools=None or [] is permissive — backwards-compatible with all existing skills that have no allowed_tools declaration
+- [Phase 21]: [21-02]: Pre-gate fires before get_tool() call — no DB lookup on denied tool calls (performance + principle of least privilege)
 
 ### Pending Todos
 
@@ -148,6 +150,7 @@ v1.3 roadmap decisions:
 | Phase 20 P04 | 162 | 2 tasks | 2 files |
 | Phase 20 P05 | 5 | 1 tasks | 1 files |
 | Phase 20 P06 | 2m | 2 tasks | 3 files |
+| Phase 21 P02 | 2 | 1 tasks | 2 files |
 
 ## Session Continuity
 
