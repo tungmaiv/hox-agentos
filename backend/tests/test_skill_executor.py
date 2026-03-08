@@ -422,6 +422,199 @@ class TestEventEmitter:
         assert event["status"] == "failed"
 
 
+class TestAllowedTools:
+    """Tests for allowed_tools pre-gate in SkillExecutor._run_tool_step().
+
+    SKSEC-02: Skills declare which tools they can use. Calls to undeclared
+    tools are blocked before Gate 3 (check_tool_acl is never called).
+    """
+
+    def _make_skill(
+        self,
+        allowed_tools: list[str] | None,
+        tool_name: str = "email.send",
+        step_id: str = "step1",
+    ) -> MagicMock:
+        skill = MagicMock()
+        skill.name = "test_skill"
+        skill.id = "skill-uuid-123"
+        skill.allowed_tools = allowed_tools
+        skill.procedure_json = {
+            "schema_version": "1.0",
+            "steps": [
+                {
+                    "id": step_id,
+                    "type": "tool",
+                    "tool": tool_name,
+                    "params": {},
+                }
+            ],
+        }
+        return skill
+
+    @pytest.mark.asyncio
+    async def test_null_allowed_tools_permissive(
+        self, executor: SkillExecutor, user_context: dict, mock_session: AsyncMock
+    ) -> None:
+        """allowed_tools=None is permissive — tool step proceeds to Gate 3."""
+        skill = self._make_skill(allowed_tools=None, tool_name="email.fetch")
+
+        with (
+            patch("skills.executor.get_tool", new_callable=AsyncMock) as mock_get_tool,
+            patch("skills.executor.check_tool_acl", new_callable=AsyncMock) as mock_acl,
+        ):
+            mock_get_tool.return_value = {
+                "name": "email.fetch",
+                "handler_module": "tools.email",
+                "handler_function": "fetch_emails",
+            }
+            mock_acl.return_value = True
+
+            with patch("importlib.import_module") as mock_import:
+                mock_module = MagicMock()
+                mock_module.fetch_emails = AsyncMock(return_value="emails")
+                mock_import.return_value = mock_module
+
+                result = await executor.run(skill, user_context, mock_session)
+
+        # Pre-gate does not block — no SkillStepError raised from pre-gate
+        # (may still fail at Gate 3 but check_tool_acl returned True here)
+        assert result.success is True
+        mock_acl.assert_called_once()  # Gate 3 was reached
+
+    @pytest.mark.asyncio
+    async def test_empty_list_allowed_tools_permissive(
+        self, executor: SkillExecutor, user_context: dict, mock_session: AsyncMock
+    ) -> None:
+        """allowed_tools=[] is permissive — treated same as None."""
+        skill = self._make_skill(allowed_tools=[], tool_name="email.fetch")
+
+        with (
+            patch("skills.executor.get_tool", new_callable=AsyncMock) as mock_get_tool,
+            patch("skills.executor.check_tool_acl", new_callable=AsyncMock) as mock_acl,
+        ):
+            mock_get_tool.return_value = {
+                "name": "email.fetch",
+                "handler_module": "tools.email",
+                "handler_function": "fetch_emails",
+            }
+            mock_acl.return_value = True
+
+            with patch("importlib.import_module") as mock_import:
+                mock_module = MagicMock()
+                mock_module.fetch_emails = AsyncMock(return_value="emails")
+                mock_import.return_value = mock_module
+
+                result = await executor.run(skill, user_context, mock_session)
+
+        assert result.success is True
+        mock_acl.assert_called_once()  # Gate 3 was reached
+
+    @pytest.mark.asyncio
+    async def test_declared_tool_permitted(
+        self, executor: SkillExecutor, user_context: dict, mock_session: AsyncMock
+    ) -> None:
+        """Tool in allowed_tools passes pre-gate and proceeds to Gate 3."""
+        skill = self._make_skill(
+            allowed_tools=["email.fetch"], tool_name="email.fetch"
+        )
+
+        with (
+            patch("skills.executor.get_tool", new_callable=AsyncMock) as mock_get_tool,
+            patch("skills.executor.check_tool_acl", new_callable=AsyncMock) as mock_acl,
+        ):
+            mock_get_tool.return_value = {
+                "name": "email.fetch",
+                "handler_module": "tools.email",
+                "handler_function": "fetch_emails",
+            }
+            mock_acl.return_value = True
+
+            with patch("importlib.import_module") as mock_import:
+                mock_module = MagicMock()
+                mock_module.fetch_emails = AsyncMock(return_value="emails")
+                mock_import.return_value = mock_module
+
+                result = await executor.run(skill, user_context, mock_session)
+
+        # Pre-gate passes; Gate 3 was reached
+        assert result.success is True
+        mock_acl.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_undeclared_tool_blocked(
+        self, executor: SkillExecutor, user_context: dict, mock_session: AsyncMock
+    ) -> None:
+        """Tool NOT in allowed_tools returns SkillResult(success=False)."""
+        skill = self._make_skill(
+            allowed_tools=["email.fetch"],
+            tool_name="email.send",
+            step_id="send_step",
+        )
+
+        with (
+            patch("skills.executor.get_tool", new_callable=AsyncMock),
+            patch("skills.executor.check_tool_acl", new_callable=AsyncMock),
+        ):
+            result = await executor.run(skill, user_context, mock_session)
+
+        assert result.success is False
+        assert result.failed_step == "send_step"
+        assert "email.send" in result.output
+        assert "not permitted" in result.output
+
+    @pytest.mark.asyncio
+    async def test_audit_log_on_denial(
+        self, executor: SkillExecutor, user_context: dict, mock_session: AsyncMock
+    ) -> None:
+        """Denied tool call emits audit log 'skill_allowed_tools_denied'."""
+        skill = self._make_skill(
+            allowed_tools=["email.fetch"],
+            tool_name="email.send",
+        )
+
+        with (
+            patch("skills.executor.get_tool", new_callable=AsyncMock),
+            patch("skills.executor.check_tool_acl", new_callable=AsyncMock),
+            patch("skills.executor.audit_logger") as mock_audit_logger,
+        ):
+            await executor.run(skill, user_context, mock_session)
+
+        mock_audit_logger.info.assert_called_once()
+        call_args = mock_audit_logger.info.call_args
+        event_name = call_args[0][0]
+        kwargs = call_args[1]
+
+        assert event_name == "skill_allowed_tools_denied"
+        assert kwargs["tool_name"] == "email.send"
+        assert kwargs["skill_name"] == "test_skill"
+        assert kwargs["skill_id"] == "skill-uuid-123"
+        assert "declared_allowed_tools" in kwargs
+        assert "email.fetch" in kwargs["declared_allowed_tools"]
+        assert "user_id" in kwargs
+
+    @pytest.mark.asyncio
+    async def test_denied_tool_does_not_hit_db(
+        self, executor: SkillExecutor, user_context: dict, mock_session: AsyncMock
+    ) -> None:
+        """check_tool_acl (Gate 3) is NOT called when pre-gate rejects the tool."""
+        skill = self._make_skill(
+            allowed_tools=["email.fetch"],
+            tool_name="admin.all",
+        )
+
+        with (
+            patch("skills.executor.get_tool", new_callable=AsyncMock) as mock_get_tool,
+            patch("skills.executor.check_tool_acl", new_callable=AsyncMock) as mock_acl,
+        ):
+            result = await executor.run(skill, user_context, mock_session)
+
+        assert result.success is False
+        # Pre-gate fired — neither get_tool nor check_tool_acl should be called
+        mock_get_tool.assert_not_called()
+        mock_acl.assert_not_called()
+
+
 class TestInvalidProcedure:
     @pytest.mark.asyncio
     async def test_missing_procedure_json(
