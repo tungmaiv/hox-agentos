@@ -34,6 +34,8 @@ interface ArtifactTableProps<T extends ArtifactBase> {
   onActivateVersion?: (id: string) => void;
   /** Optional export callback — when provided, an Export button appears on each row. */
   onExport?: (item: T) => void;
+  /** When true, skip internal alphabetical sort — render items in parent-provided order. */
+  disableInternalSort?: boolean;
 }
 
 function StatusBadge({ status }: { status: ArtifactStatus }) {
@@ -80,6 +82,7 @@ export function ArtifactTable<T extends ArtifactBase>({
   onPatchStatus,
   onActivateVersion,
   onExport,
+  disableInternalSort,
 }: ArtifactTableProps<T>) {
   const router = useRouter();
   const [sortField, setSortField] = useState<SortField>("name");
@@ -99,14 +102,16 @@ export function ArtifactTable<T extends ArtifactBase>({
     (item) => statusFilter === "all" || item.status === statusFilter
   );
 
-  const sorted = [...filtered].sort((a, b) => {
-    const dir = sortDir === "asc" ? 1 : -1;
-    const aVal = a[sortField] ?? "";
-    const bVal = b[sortField] ?? "";
-    if (aVal < bVal) return -1 * dir;
-    if (aVal > bVal) return 1 * dir;
-    return 0;
-  });
+  const displayItems = disableInternalSort
+    ? filtered
+    : [...filtered].sort((a, b) => {
+        const dir = sortDir === "asc" ? 1 : -1;
+        const aVal = a[sortField] ?? "";
+        const bVal = b[sortField] ?? "";
+        if (aVal < bVal) return -1 * dir;
+        if (aVal > bVal) return 1 * dir;
+        return 0;
+      });
 
   const SortHeader = ({
     field,
@@ -143,7 +148,7 @@ export function ArtifactTable<T extends ArtifactBase>({
           <option value="deprecated">Deprecated</option>
         </select>
         <span className="text-xs text-gray-400">
-          {sorted.length} item{sorted.length !== 1 ? "s" : ""}
+          {displayItems.length} item{displayItems.length !== 1 ? "s" : ""}
         </span>
       </div>
 
@@ -172,7 +177,7 @@ export function ArtifactTable<T extends ArtifactBase>({
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {sorted.map((item) => (
+            {displayItems.map((item) => (
               <tr key={item.id} className="hover:bg-gray-50 transition-colors">
                 <td className="px-4 py-2.5">
                   <div>
@@ -275,7 +280,7 @@ export function ArtifactTable<T extends ArtifactBase>({
                 </td>
               </tr>
             ))}
-            {sorted.length === 0 && (
+            {displayItems.length === 0 && (
               <tr>
                 <td
                   colSpan={6 + (columns?.length ?? 0)}

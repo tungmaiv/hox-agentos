@@ -119,6 +119,7 @@ export interface SkillDefinition {
   securityReport: Record<string, unknown> | null;
   reviewedBy: string | null;
   reviewedAt: string | null;
+  usageCount: number;
   createdBy: string | null;
   createdAt: string;
   updatedAt: string;
