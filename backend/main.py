@@ -32,6 +32,7 @@ from api.routes import (
     user_tools,
 )
 from api.routes.admin_keycloak import router as admin_keycloak_router
+from api.routes.admin_skill_sharing import router as admin_skill_sharing_router
 from api.routes.admin_local_users import router as admin_local_users_router
 from api.routes.admin_memory import router as admin_memory_router
 from api.routes.auth_local import router as auth_local_router
@@ -198,6 +199,11 @@ def create_app() -> FastAPI:
     # MUST be registered before admin_skills.router to prevent FastAPI routing collision:
     # the literal path segment "export" must take precedence over UUID /{skill_id}.
     app.include_router(skill_export_router)
+
+    # Admin skill sharing — POST/DELETE/GET /api/admin/skills/{id}/share* (registry:manage)
+    # MUST be registered before admin_skills.router: literal path segments "share" and
+    # "shares" must take precedence over UUID /{skill_id} catch-all routes.
+    app.include_router(admin_skill_sharing_router)
 
     # Admin skill CRUD — /api/admin/skills (registry:manage permission)
     app.include_router(admin_skills.router)

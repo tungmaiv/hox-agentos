@@ -15,6 +15,7 @@ from uuid import UUID
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import asc, desc, func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,6 +26,7 @@ from core.models.user_artifact_permission import UserArtifactPermission
 from core.schemas.registry import SkillListItem, SkillRunResponse
 from security.deps import get_current_user, get_user_db
 from security.rbac import batch_check_artifact_permissions, check_artifact_permission, has_permission
+from skill_export.exporter import build_skill_zip
 from skills.executor import SkillExecutor
 
 logger = structlog.get_logger(__name__)
@@ -116,6 +118,42 @@ async def list_user_skills(
         total=len(items),
     )
     return items
+
+
+@router.get("/{skill_id}/export")
+async def export_user_skill(
+    skill_id: UUID,
+    user: UserContext = Depends(_require_chat),
+    session: AsyncSession = Depends(get_user_db),
+) -> StreamingResponse:
+    """Download a skill as an agentskills.io-compliant ZIP archive.
+
+    Any authenticated user with 'chat' permission can export any active skill.
+    Returns 404 for unknown or inactive skills.
+    """
+    result = await session.execute(
+        select(SkillDefinition).where(
+            SkillDefinition.id == skill_id,
+            SkillDefinition.status == "active",
+            SkillDefinition.is_active == True,  # noqa: E712
+        )
+    )
+    skill = result.scalar_one_or_none()
+    if skill is None:
+        raise HTTPException(status_code=404, detail="Skill not found or not active")
+    zip_bytes = build_skill_zip(skill)
+    filename = f"{skill.name}-{skill.version}.zip"
+    logger.info(
+        "user_skill_exported",
+        skill_id=str(skill_id),
+        skill_name=skill.name,
+        user_id=str(user["user_id"]),
+    )
+    return StreamingResponse(
+        zip_bytes,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.post("/{skill_name}/run")
