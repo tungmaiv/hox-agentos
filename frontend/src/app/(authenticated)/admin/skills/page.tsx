@@ -9,7 +9,7 @@
  */
 import { useState, useEffect } from "react";
 import { useAdminArtifacts } from "@/hooks/use-admin-artifacts";
-import type { SkillDefinition, SkillDefinitionCreate } from "@/lib/admin-types";
+import type { SkillDefinition, SkillDefinitionCreate, SkillShareEntry } from "@/lib/admin-types";
 import { ArtifactTable } from "@/components/admin/artifact-table";
 import { ArtifactCardGrid } from "@/components/admin/artifact-card-grid";
 import { ViewToggle, useViewMode } from "@/components/admin/view-toggle";
@@ -101,6 +101,15 @@ export default function AdminSkillsPage() {
   });
   const [reviewError, setReviewError] = useState<string | null>(null);
 
+  // Share dialog state
+  const [shareDialogSkill, setShareDialogSkill] = useState<SkillDefinition | null>(null);
+  const [userSearchQuery, setUserSearchQuery] = useState("");
+  const [userSearchResults, setUserSearchResults] = useState<Array<{id: string; email: string; username: string}>>([]);
+  const [userSearchLoading, setUserSearchLoading] = useState(false);
+  const [shares, setShares] = useState<SkillShareEntry[]>([]);
+  const [sharesLoading, setSharesLoading] = useState(false);
+  const [shareError, setShareError] = useState<string | null>(null);
+
   // Filter state
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -182,6 +191,37 @@ export default function AdminSkillsPage() {
       });
   };
 
+
+  const handlePromote = async (skill: SkillDefinition) => {
+    try {
+      const res = await fetch(`/api/admin/skills/${skill.id}/promote`, { method: "PATCH" });
+      if (!res.ok) return;
+      refetch(); // refresh list so badge updates
+    } catch {
+      // non-critical
+    }
+  };
+
+  const loadShares = async (skillId: string) => {
+    setSharesLoading(true);
+    setShareError(null);
+    try {
+      const res = await fetch(`/api/admin/skills/${skillId}/shares`);
+      if (!res.ok) { setShareError("Failed to load shares"); return; }
+      setShares((await res.json()) as SkillShareEntry[]);
+    } catch { setShareError("Network error"); } finally { setSharesLoading(false); }
+  };
+
+  const searchUsers = async (q: string) => {
+    if (!q.trim()) { setUserSearchResults([]); return; }
+    setUserSearchLoading(true);
+    try {
+      const res = await fetch(`/api/admin/users?q=${encodeURIComponent(q)}`);
+      if (!res.ok) return;
+      const data = await res.json() as Array<{id: string; email: string; username: string}>;
+      setUserSearchResults(data);
+    } catch { /* non-fatal */ } finally { setUserSearchLoading(false); }
+  };
 
   const extraColumns = [
     {
@@ -456,6 +496,11 @@ export default function AdminSkillsPage() {
                     {item.slashCommand}
                   </span>
                 )}
+                {(item as SkillDefinition).isPromoted && (
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-amber-100 text-amber-700 font-medium">
+                    Promoted
+                  </span>
+                )}
                 {item.securityScore !== null && (
                   <span
                     className={`font-medium ${
@@ -486,6 +531,26 @@ export default function AdminSkillsPage() {
                   </div>
                 )}
               </div>
+              {/* Promote / Share actions */}
+              <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-gray-100">
+                <button
+                  onClick={() => void handlePromote(item as SkillDefinition)}
+                  className="text-xs px-2 py-1 text-amber-700 border border-amber-200 rounded hover:bg-amber-50 transition-colors"
+                >
+                  {(item as SkillDefinition).isPromoted ? "Unpromote" : "Promote"}
+                </button>
+                <button
+                  onClick={() => {
+                    setShareDialogSkill(item as SkillDefinition);
+                    setUserSearchQuery("");
+                    setUserSearchResults([]);
+                    void loadShares(item.id);
+                  }}
+                  className="text-xs px-2 py-1 text-blue-700 border border-blue-200 rounded hover:bg-blue-50 transition-colors"
+                >
+                  Share with user...
+                </button>
+              </div>
               <SkillMetadataPanel skill={item as SkillDefinition} />
             </div>
           )}
@@ -493,6 +558,103 @@ export default function AdminSkillsPage() {
           onActivateVersion={activateVersion}
           onExport={handleExport}
         />
+      )}
+
+      {/* Share dialog modal */}
+      {shareDialogSkill && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShareDialogSkill(null)}>
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-sm font-semibold text-gray-900 mb-4">
+              Share &ldquo;{shareDialogSkill.displayName ?? shareDialogSkill.name}&rdquo; with user
+            </h3>
+
+            {/* User search field — queries GET /api/admin/users */}
+            <div className="relative mb-3">
+              <input
+                type="text"
+                value={userSearchQuery}
+                onChange={(e) => {
+                  setUserSearchQuery(e.target.value);
+                  void searchUsers(e.target.value);
+                }}
+                placeholder="Search by name or email..."
+                className="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                autoFocus
+              />
+              {userSearchLoading && (
+                <span className="absolute right-3 top-2.5 text-xs text-gray-400">Searching...</span>
+              )}
+              {userSearchResults.length > 0 && (
+                <ul className="absolute z-10 w-full bg-white border border-gray-200 rounded shadow-lg mt-1 max-h-48 overflow-y-auto">
+                  {userSearchResults.map((u) => (
+                    <li key={u.id}>
+                      <button
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 flex flex-col"
+                        onClick={async () => {
+                          setUserSearchQuery("");
+                          setUserSearchResults([]);
+                          setShareError(null);
+                          const res = await fetch(`/api/admin/skills/${shareDialogSkill.id}/share`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ user_id: u.id }),
+                          });
+                          if (res.status === 201) {
+                            const entry = (await res.json()) as SkillShareEntry;
+                            setShares((prev) => [...prev, entry]);
+                          } else if (res.status === 409) {
+                            setShareError("Already shared with this user");
+                          } else {
+                            setShareError("Failed to share skill");
+                          }
+                        }}
+                      >
+                        <span className="font-medium">{u.username}</span>
+                        <span className="text-xs text-gray-500">{u.email}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            {/* Current shares list */}
+            <div className="mt-4">
+              <p className="text-xs font-semibold text-gray-700 mb-2">Currently shared with</p>
+              {sharesLoading && <p className="text-xs text-gray-400">Loading...</p>}
+              {!sharesLoading && shares.length === 0 && (
+                <p className="text-xs text-gray-400">Not shared with anyone yet.</p>
+              )}
+              {shares.map((share) => (
+                <div key={share.user_id} className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs font-mono text-gray-600 truncate max-w-xs">{share.user_id}</span>
+                  <button
+                    onClick={async () => {
+                      const res = await fetch(`/api/admin/skills/${shareDialogSkill.id}/share/${share.user_id}`, { method: "DELETE" });
+                      if (res.ok || res.status === 204) {
+                        setShares((prev) => prev.filter((s) => s.user_id !== share.user_id));
+                      }
+                    }}
+                    className="ml-2 text-xs text-red-500 hover:text-red-700 shrink-0"
+                  >
+                    Revoke
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {shareError && <p className="text-xs text-red-500 mt-2">{shareError}</p>}
+
+            <div className="mt-4 flex justify-end">
+              <button
+                onClick={() => setShareDialogSkill(null)}
+                className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded hover:bg-gray-50"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
