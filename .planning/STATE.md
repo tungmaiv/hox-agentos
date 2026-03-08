@@ -18,14 +18,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-05)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates their daily work routines and lets them build custom automations without writing code — all within an enterprise-secure, on-premise environment where data never leaves the company.
-**Current focus:** v1.3 Phase 20 — Skill Platform B Discovery & Catalog (Complete — 3/3 plans done)
+**Current focus:** v1.3 Phase 20 — Skill Platform B Discovery & Catalog (Gap closure — 20-06 complete)
 
 ## Current Position
 
-Phase: 20 of 23 (Skill Platform B — Discovery & Catalog) — Complete
-Plan: 03 of 03 complete
-Status: Phase 20 done — FTS GIN index (20-01), /api/skills endpoint with browse/search (20-02), user skills catalog page + admin filter bars (20-03). SKCAT-01/02/03 satisfied.
-Last activity: 2026-03-07 - Completed 20-03: User /skills ArtifactCardGrid catalog + admin filter bars. Phase 20 complete.
+Phase: 20 of 23 (Skill Platform B — Discovery & Catalog) — Complete (including gap closure)
+Plan: 06 of 06 complete (gap closure plans 20-04, 20-05, 20-06 added post-UAT)
+Status: Phase 20 done — FTS GIN index (20-01), /api/skills endpoint with browse/search (20-02), user skills catalog page + admin filter bars (20-03), usage_count increment + skill detail drawer (20-04), usage_count increment in skill executor node (20-05), admin /skills sort fix: disableInternalSort + usageCount field (20-06). SKCAT-01/02/03/04 satisfied.
+Last activity: 2026-03-08 - Completed 20-06: Admin /skills sort dropdown fixed — ArtifactTable disableInternalSort prop + SkillDefinition.usageCount field enables Newest/Oldest/Most Used to actually reorder table rows.
 
 Progress: [#########░] ~61%
 
@@ -111,6 +111,8 @@ v1.3 roadmap decisions:
 - [Phase 20]: [20-04]: detail drawer implemented as fixed aside panel — consistent with existing inline dialog pattern, no external Sheet component needed
 - [Phase 20]: [20-04]: card onClick opens drawer not confirm dialog — SKCAT-04 requires metadata view before import
 - [Phase 20]: [20-05]: Used local _SkillDef alias in _skill_executor_node for usage_count increment — avoids redundant top-level import, fresh get_session() per branch avoids closed-session reuse
+- [Phase 20]: [20-06]: disableInternalSort prop bypasses internal sort entirely — column-header sort buttons still work if user clicks them (secondary sort override, acceptable UX)
+- [Phase 20]: [20-06]: usageCount: number (required, not optional) — backend always returns this field; nullish coalescing ?? 0 handles any legacy rows
 
 ### Pending Todos
 
@@ -145,9 +147,10 @@ v1.3 roadmap decisions:
 | Phase 20 P03 | 2m | 2 tasks | 3 files |
 | Phase 20 P04 | 162 | 2 tasks | 2 files |
 | Phase 20 P05 | 5 | 1 tasks | 1 files |
+| Phase 20 P06 | 2m | 2 tasks | 3 files |
 
 ## Session Continuity
 
-Last session: 2026-03-07
-Stopped at: Completed Phase 20 Plan 03 — user /skills ArtifactCardGrid catalog + admin filter bars. Phase 20 complete (3/3 plans done).
-Resume file: .planning/phases/19-skill-standards-compliance/19-01-SUMMARY.md
+Last session: 2026-03-08
+Stopped at: Completed Phase 20 Plan 06 — admin /skills sort fix: disableInternalSort prop + usageCount field (SKCAT-01 gap closure).
+Resume file: .planning/phases/20-skill-platform-b-discovery-catalog/20-06-SUMMARY.md
