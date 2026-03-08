@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Production Readiness & Skill Platform
 status: unknown
-last_updated: "2026-03-08T12:26:38.769Z"
+last_updated: "2026-03-08T12:28:56.934Z"
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 26
-  completed_plans: 24
+  completed_plans: 26
 ---
 
 # Project State
@@ -115,6 +115,10 @@ v1.3 roadmap decisions:
 - [Phase 20]: [20-06]: usageCount: number (required, not optional) — backend always returns this field; nullish coalescing ?? 0 handles any legacy rows
 - [Phase 21]: allowed_tools=None or [] is permissive — backwards-compatible with all existing skills that have no allowed_tools declaration
 - [Phase 21]: [21-02]: Pre-gate fires before get_tool() call — no DB lookup on denied tool calls (performance + principle of least privilege)
+- [Phase 21]: [21-03]: null baseline guard — source_hash=None stores hash without pending_review row, avoids spurious first-run review flood
+- [Phase 21]: [21-03]: _check_single_skill uses separate async_session() contexts for read and write — avoids holding sessions across slow HTTP fetches
+- [Phase 21]: [21-01]: author_verification removed — always returned 50 (no security value); replaced by dependency_risk and data_flow_risk
+- [Phase 21]: [21-01]: undeclared third-party import returns 0 immediately — conservative default for unknown code
 
 ### Pending Todos
 
@@ -151,9 +155,11 @@ v1.3 roadmap decisions:
 | Phase 20 P05 | 5 | 1 tasks | 1 files |
 | Phase 20 P06 | 2m | 2 tasks | 3 files |
 | Phase 21 P02 | 2 | 1 tasks | 2 files |
+| Phase 21 P03 | 15 | 2 tasks | 5 files |
+| Phase 21 P01 | 5 | 1 tasks | 2 files |
 
 ## Session Continuity
 
 Last session: 2026-03-08
-Stopped at: Completed Phase 20 Plan 06 — admin /skills sort fix: disableInternalSort prop + usageCount field (SKCAT-01 gap closure).
-Resume file: .planning/phases/20-skill-platform-b-discovery-catalog/20-06-SUMMARY.md
+Stopped at: Completed 21-03-PLAN.md — source_hash column + daily check_skill_updates Celery task (SKSEC-03).
+Resume file: .planning/phases/21-skill-platform-c-dependency-security-hardening/21-03-SUMMARY.md
