@@ -70,3 +70,28 @@ class IndexSchema(BaseModel):
 
     repository: dict[str, Any]  # must contain: name, description, url, version
     skills: list[dict[str, Any]]
+
+
+class SimilarSkillItem(BaseModel):
+    """A single result from the similar-skill cosine search."""
+
+    name: str
+    description: str | None
+    repository_name: str
+    source_url: str | None
+    category: str | None
+    tags: list[str] | None
+
+
+class SearchSimilarRequest(BaseModel):
+    """Request body for the search-similar endpoint."""
+
+    name: str
+    description: str
+    top_k: int = 5
+
+
+class SearchSimilarResponse(BaseModel):
+    """Response from the search-similar endpoint."""
+
+    results: list[SimilarSkillItem]

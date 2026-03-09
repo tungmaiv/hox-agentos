@@ -5,9 +5,11 @@ Functions:
 - fetch_index(url)                          — fetch and validate agentskills-index.json
 - add_repo(url, session)                    — register a new repo (fetches index on add)
 - remove_repo(repo_id, session)             — delete a repo (imported skills remain)
-- sync_repo(repo_id, session)               — re-fetch index, update cached_index
+- sync_repo(repo_id, session)               — re-fetch index, update cached_index + skill_repo_index
 - list_repos(session)                       — list all repos with skill_count
 - browse_skills(query, session)             — aggregate + filter skills from all active repos
+- search_similar(query_embedding, top_k,   — cosine search over skill_repo_index (SKBLD-04)
+                 session)
 - import_from_repo(repo_id, skill_name,     — import a skill via SkillImporter + SecurityScanner
                    user_id, session)
 """
@@ -20,11 +22,13 @@ import httpx
 import structlog
 from fastapi import HTTPException
 from pydantic import ValidationError
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.models.skill_definition import SkillDefinition
+from core.models.skill_repo_index import SkillRepoIndex
 from core.models.skill_repository import SkillRepository
+from memory.embeddings import SidecarEmbeddingProvider
 from skill_repos.schemas import (
     ImportResponse,
     IndexSchema,
@@ -162,6 +166,11 @@ async def remove_repo(repo_id: UUID, session: AsyncSession) -> None:
 async def sync_repo(repo_id: UUID, session: AsyncSession) -> RepoInfo:
     """Re-fetch the index for a repository and update cached_index + last_synced_at.
 
+    Also populates skill_repo_index table with embeddings for the "Find Similar"
+    cosine search feature (SKBLD-04). Each skill entry gets an embedding computed
+    from "name description" via SidecarEmbeddingProvider. If the sidecar is
+    unavailable, the row is inserted with embedding=None (search gracefully skips it).
+
     Args:
         repo_id: UUID of the repository to sync.
         session: Async DB session.
@@ -183,10 +192,60 @@ async def sync_repo(repo_id: UUID, session: AsyncSession) -> RepoInfo:
     repo.cached_index = index
     repo.last_synced_at = datetime.now(timezone.utc)
 
+    # Populate skill_repo_index with embeddings ---------------------------------
+    # Delete existing rows for this repository before re-inserting
+    await session.execute(
+        delete(SkillRepoIndex).where(SkillRepoIndex.repository_id == repo_id)
+    )
+
+    skills: list[dict[str, Any]] = index.get("skills", [])
+    embedding_provider = SidecarEmbeddingProvider()
+    indexed_count = 0
+
+    for skill in skills:
+        skill_name: str = skill.get("name", "")
+        description: str | None = skill.get("description") or None
+        meta: dict[str, Any] = skill.get("metadata") or {}
+        source_url: str | None = meta.get("source_url") or skill.get("source_url") or None
+        category: str | None = meta.get("category") or None
+        tags: list | None = meta.get("tags") if isinstance(meta.get("tags"), list) else None
+
+        # Compute embedding: embed "name description" text
+        embedding: list[float] | None = None
+        embed_text = f"{skill_name} {description or ''}".strip()
+        try:
+            vectors = await embedding_provider.embed([embed_text])
+            embedding = vectors[0] if vectors else None
+        except Exception as exc:
+            logger.warning(
+                "skill_repo_index_embed_failed",
+                skill_name=skill_name,
+                repo_id=str(repo_id),
+                error=str(exc),
+            )
+
+        row = SkillRepoIndex(
+            repository_id=repo_id,
+            skill_name=skill_name,
+            description=description,
+            source_url=source_url,
+            category=category,
+            tags=tags,
+            embedding=embedding,
+            synced_at=datetime.now(timezone.utc),
+        )
+        session.add(row)
+        indexed_count += 1
+
     await session.commit()
     await session.refresh(repo)
 
-    logger.info("repo_synced", repo_id=str(repo_id), skill_count=len(index.get("skills", [])))
+    logger.info(
+        "repo_synced",
+        repo_id=str(repo_id),
+        skill_count=len(skills),
+        indexed_count=indexed_count,
+    )
     return _repo_to_info(repo)
 
 
@@ -263,6 +322,65 @@ async def browse_skills(
             )
 
     return items[cursor : cursor + limit]
+
+
+async def search_similar(
+    query_embedding: list[float],
+    session: AsyncSession,
+    top_k: int = 5,
+) -> list[dict[str, Any]]:
+    """Search skill_repo_index for skills similar to the given embedding.
+
+    Performs a cosine distance nearest-neighbour search over SkillRepoIndex rows
+    that have a non-NULL embedding. Rows without embeddings are skipped (they were
+    inserted with embedding=None because the sidecar was unavailable at sync time).
+
+    The result includes repository_name by joining SkillRepository rows in a
+    separate query (not a SQL join, to preserve async simplicity).
+
+    Args:
+        query_embedding: 1024-dim query vector to search against.
+        session: Async DB session.
+        top_k: Maximum number of results to return (default 5).
+
+    Returns:
+        List of dicts with keys: name, description, repository_name, source_url,
+        category, tags. Ordered by cosine distance (most similar first).
+        Empty list if no rows with embeddings exist.
+    """
+    # Cosine distance query — pgvector sorts ascending (closest = 0.0 first)
+    stmt = (
+        select(SkillRepoIndex)
+        .where(SkillRepoIndex.embedding.is_not(None))
+        .order_by(SkillRepoIndex.embedding.cosine_distance(query_embedding))
+        .limit(top_k)
+    )
+    result = await session.execute(stmt)
+    rows = result.scalars().all()
+
+    if not rows:
+        return []
+
+    # Resolve repository names — fetch all referenced repos in one query
+    repo_ids = list({row.repository_id for row in rows})
+    repo_result = await session.execute(
+        select(SkillRepository).where(SkillRepository.id.in_(repo_ids))
+    )
+    repo_map: dict[uuid.UUID, str] = {
+        r.id: r.name for r in repo_result.scalars().all()
+    }
+
+    return [
+        {
+            "name": row.skill_name,
+            "description": row.description,
+            "repository_name": repo_map.get(row.repository_id, ""),
+            "source_url": row.source_url,
+            "category": row.category,
+            "tags": row.tags,
+        }
+        for row in rows
+    ]
 
 
 async def import_from_repo(

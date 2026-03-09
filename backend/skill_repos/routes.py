@@ -26,6 +26,8 @@ from skill_repos.schemas import (
     ImportResponse,
     RepoCreate,
     RepoInfo,
+    SearchSimilarRequest,
+    SearchSimilarResponse,
     SkillBrowseItem,
 )
 from skill_repos.service import (
@@ -34,6 +36,7 @@ from skill_repos.service import (
     import_from_repo,
     list_repos,
     remove_repo,
+    search_similar,
     sync_repo,
 )
 
@@ -44,6 +47,50 @@ logger = structlog.get_logger(__name__)
 # ---------------------------------------------------------------------------
 
 admin_router = APIRouter(prefix="/api/admin/skill-repos", tags=["admin-skill-repos"])
+
+
+@admin_router.post("/search-similar", response_model=SearchSimilarResponse)
+async def search_similar_route(
+    body: SearchSimilarRequest,
+    user: UserContext = Depends(require_registry_manager),
+    session: AsyncSession = Depends(get_db),
+) -> SearchSimilarResponse:
+    """Find skills similar to the given name and description using pgvector cosine search.
+
+    Embeds the provided name+description via the embedding sidecar, then queries
+    skill_repo_index for the top-k nearest neighbours by cosine distance.
+
+    Route declared BEFORE /{repo_id} catch-alls to avoid path conflicts.
+    """
+    from memory.embeddings import SidecarEmbeddingProvider
+
+    embed_text = f"{body.name} {body.description}".strip()
+    provider = SidecarEmbeddingProvider()
+
+    try:
+        vectors = await provider.embed([embed_text])
+        query_embedding = vectors[0]
+    except Exception as exc:
+        logger.warning(
+            "search_similar_embed_failed",
+            user_id=str(user["user_id"]),
+            error=str(exc),
+        )
+        return SearchSimilarResponse(results=[])
+
+    results = await search_similar(
+        query_embedding=query_embedding,
+        top_k=body.top_k,
+        session=session,
+    )
+
+    logger.info(
+        "admin_skill_repos_search_similar",
+        user_id=str(user["user_id"]),
+        name=body.name,
+        result_count=len(results),
+    )
+    return SearchSimilarResponse(results=results)
 
 
 @admin_router.get("", response_model=list[RepoInfo])
