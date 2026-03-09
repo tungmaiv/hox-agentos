@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Production Readiness & Skill Platform
 status: unknown
-last_updated: "2026-03-09T18:47:46.711Z"
+last_updated: "2026-03-09T18:56:00.169Z"
 progress:
   total_phases: 9
   completed_phases: 7
   total_plans: 33
-  completed_plans: 31
+  completed_plans: 33
 ---
 
 # Project State
@@ -136,6 +136,9 @@ v1.3 roadmap decisions:
 - [Phase 23]: Migration 027 uses TEXT placeholder + ALTER COLUMN TYPE vector(1024) USING NULL — same pattern as migration 008
 - [Phase 23]: Wave 0 xfail stubs use pytest.mark.xfail + assert False — collected by pytest, show as 'x' not 'E', never break CI
 - [Phase 23]: SkillRepoIndex has no FK to skill_repositories — matches codebase no-FK polymorphic pattern
+- [Phase 23]: [23-02]: _route_intent checks content absence before routing to generate_skill_content — avoids re-generating content on subsequent messages
+- [Phase 23]: [23-02]: ToolDefinitionUpdate extended with status + handler_code — required for pending_stub workflow
+- [Phase 23]: [23-02]: Claude Code YAML skill_type defaults to instructional — Claude Code skills are instructions for the AI, not an execution engine
 
 ### Pending Todos
 
@@ -179,6 +182,7 @@ v1.3 roadmap decisions:
 | Phase 22 P03 | 131 | 2 tasks | 2 files |
 | Phase 22 P02 | 15 | 2 tasks | 2 files |
 | Phase 23 P01 | 4 | 2 tasks | 9 files |
+| Phase 23 P02 | 6 | 2 tasks | 8 files |
 
 ## Session Continuity
 
