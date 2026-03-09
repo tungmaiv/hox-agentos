@@ -215,12 +215,13 @@ Plans:
   3. Builder searches cached external repo indexes and shows top 3-5 relevant similar skills as reference — user can fork an existing external skill as a starting point
   4. Every artifact (built, imported, forked, or cloned) goes through SecurityScanner before activation — a SecurityReportCard A2UI component shows trust score, factor breakdown, tool permissions, injection warnings, and recommendation
   5. For `review` or `reject` recommendations from SecurityScanner, admin must explicitly approve before the skill is activated — no automatic activation for flagged artifacts
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 23-01: TBD
-- [ ] 23-02: TBD
-- [ ] 23-03: TBD
+- [ ] 23-01-PLAN.md — DB migrations 026+027, SkillRepoIndex ORM, ArtifactBuilderState extension, Wave 0 test stubs
+- [ ] 23-02-PLAN.md — Skill content generation node (procedure_json/instruction_markdown/handler_code stubs) + Claude Code import adapter
+- [ ] 23-03-PLAN.md — Similar skills search (pgvector cosine on skill_repo_index) + fork capability + frontend Find Similar button
+- [ ] 23-04-PLAN.md — Security gate (builder-save endpoint + SecurityScanner) + SecurityReportCard component + inline approval
 
 ## Progress
 
@@ -254,4 +255,4 @@ Plans:
 | 20. Skill Platform B — Catalog | 6/6 | Complete    | 2026-03-08 | - |
 | 21. Skill Platform C — Security | 4/4 | Complete    | 2026-03-08 | - |
 | 22. Skill Platform D — Sharing | 3/3 | Complete    | 2026-03-08 | - |
-| 23. Skill Platform E — Builder | v1.3 | 0/TBD | Not started | - |
+| 23. Skill Platform E — Builder | v1.3 | 0/4 | In progress | - |
