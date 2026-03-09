@@ -53,6 +53,7 @@ async function proxyRequest(
   const fetchInit: RequestInit = {
     method: request.method,
     headers,
+    cache: "no-store",
   };
 
   // Forward body for methods that have one (including DELETE with body)
