@@ -41,3 +41,13 @@ class ArtifactBuilderState(TypedDict):
     form_url: str | None
     # Name of clone source artifact (for context-aware AI greeting)
     clone_source_name: str | None
+    # Phase 23 — Enhanced builder fields ──────────────────────────────────────
+    # Top-k results from skill_repo_index cosine search (SKBLD-04)
+    # Each dict: {name, description, repository_name, source_url, category, tags}
+    similar_skills: list[dict] | None
+    # SecurityReport serialized: {score, factors, recommendation, injection_matches}
+    security_report: dict | None
+    # Attribution for forked external skills, e.g. "skill-name@https://source-url"
+    fork_source: str | None
+    # Python stub text generated for tool artifacts (SKBLD-03)
+    handler_code: str | None
