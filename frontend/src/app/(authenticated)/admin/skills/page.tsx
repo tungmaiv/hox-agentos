@@ -216,10 +216,11 @@ export default function AdminSkillsPage() {
     if (!q.trim()) { setUserSearchResults([]); return; }
     setUserSearchLoading(true);
     try {
-      const res = await fetch(`/api/admin/users?q=${encodeURIComponent(q)}`);
+      const res = await fetch(`/api/admin/local/users`);
       if (!res.ok) return;
-      const data = await res.json() as Array<{id: string; email: string; username: string}>;
-      setUserSearchResults(data);
+      const all = await res.json() as Array<{id: string; email: string; username: string}>;
+      const lower = q.toLowerCase();
+      setUserSearchResults(all.filter((u) => u.username.toLowerCase().includes(lower) || u.email.toLowerCase().includes(lower)));
     } catch { /* non-fatal */ } finally { setUserSearchLoading(false); }
   };
 
