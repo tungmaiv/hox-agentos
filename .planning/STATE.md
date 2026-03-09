@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Production Readiness & Skill Platform
 status: unknown
-last_updated: "2026-03-08T18:13:08.805Z"
+last_updated: "2026-03-09T18:47:46.711Z"
 progress:
-  total_phases: 8
+  total_phases: 9
   completed_phases: 7
-  total_plans: 29
-  completed_plans: 30
+  total_plans: 33
+  completed_plans: 31
 ---
 
 # Project State
@@ -18,14 +18,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-05)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates their daily work routines and lets them build custom automations without writing code — all within an enterprise-secure, on-premise environment where data never leaves the company.
-**Current focus:** v1.3 Phase 22 — Skill Platform D Sharing & Marketplace (22-01, 22-03 complete)
+**Current focus:** v1.3 Phase 23 — Skill Platform E Enhanced Builder (23-01 complete)
 
 ## Current Position
 
-Phase: 22 of 23 (Skill Platform D — Sharing & Marketplace) — In Progress
-Plan: 03 of 03 complete (22-03 done; 22-02 admin UI pending)
-Status: Phase 22 in progress — 22-01 backend + 22-03 frontend complete. 22-02 (admin UI for skill sharing) is the remaining plan.
-Last activity: 2026-03-09 - Completed 22-03: User /skills page promoted section, Shared badge in main grid, Export button.
+Phase: 23 of 23 (Skill Platform E — Enhanced Builder) — In Progress
+Plan: 01 of 04 complete (23-01 DB + type foundation done)
+Status: Phase 23 in progress — 23-01 (migrations 026+027, SkillRepoIndex ORM, ArtifactBuilderState extension, Wave 0 stubs) complete. Plans 02, 03, 04 are Wave 2 (parallel).
+Last activity: 2026-03-10 - Completed 23-01: migrations 026+027, SkillRepoIndex ORM, extended ArtifactBuilderState, 8 xfail test stubs.
 
 Progress: [#########░] ~61%
 
@@ -133,6 +133,9 @@ v1.3 roadmap decisions:
 - [Phase 22]: [22-03]: tsc --noEmit used instead of pnpm build — .next owned by Docker root in container-only dev mode
 - [Phase 22]: [22-02]: Promote/Share buttons in renderExtra (flat button pattern) not a dropdown menu — ArtifactCardGrid has no dropdown menu convention
 - [Phase 22]: [22-02]: Generic mapArraySnakeToCamel handles is_promoted -> isPromoted — no explicit hook mapping needed
+- [Phase 23]: Migration 027 uses TEXT placeholder + ALTER COLUMN TYPE vector(1024) USING NULL — same pattern as migration 008
+- [Phase 23]: Wave 0 xfail stubs use pytest.mark.xfail + assert False — collected by pytest, show as 'x' not 'E', never break CI
+- [Phase 23]: SkillRepoIndex has no FK to skill_repositories — matches codebase no-FK polymorphic pattern
 
 ### Pending Todos
 
@@ -175,6 +178,7 @@ v1.3 roadmap decisions:
 | Phase 22 P01 | 7 | 3 tasks | 10 files |
 | Phase 22 P03 | 131 | 2 tasks | 2 files |
 | Phase 22 P02 | 15 | 2 tasks | 2 files |
+| Phase 23 P01 | 4 | 2 tasks | 9 files |
 
 ## Session Continuity
 
