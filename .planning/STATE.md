@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Production Readiness & Skill Platform
 status: unknown
-last_updated: "2026-03-09T18:56:00.169Z"
+last_updated: "2026-03-09T18:56:13.464Z"
 progress:
   total_phases: 9
   completed_phases: 7
@@ -18,14 +18,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-05)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates their daily work routines and lets them build custom automations without writing code — all within an enterprise-secure, on-premise environment where data never leaves the company.
-**Current focus:** v1.3 Phase 23 — Skill Platform E Enhanced Builder (23-01 complete)
+**Current focus:** v1.3 Phase 23 — Skill Platform E Enhanced Builder (23-04 checkpoint: human-verify)
 
 ## Current Position
 
 Phase: 23 of 23 (Skill Platform E — Enhanced Builder) — In Progress
-Plan: 01 of 04 complete (23-01 DB + type foundation done)
-Status: Phase 23 in progress — 23-01 (migrations 026+027, SkillRepoIndex ORM, ArtifactBuilderState extension, Wave 0 stubs) complete. Plans 02, 03, 04 are Wave 2 (parallel).
-Last activity: 2026-03-10 - Completed 23-01: migrations 026+027, SkillRepoIndex ORM, extended ArtifactBuilderState, 8 xfail test stubs.
+Plan: 04 of 04 at checkpoint (Tasks 1+2 complete, awaiting human-verify of security gate flow)
+Status: Phase 23 in progress — 23-04 Tasks 1+2 done (builder-save endpoint + SecurityReportCard). Awaiting human verification at checkpoint before plan completion.
+Last activity: 2026-03-10 - Completed 23-04 Tasks 1+2: POST /api/admin/skills/builder-save + SecurityReportCard component + frontend wiring. Checkpoint reached.
 
 Progress: [#########░] ~61%
 
@@ -139,6 +139,9 @@ v1.3 roadmap decisions:
 - [Phase 23]: [23-02]: _route_intent checks content absence before routing to generate_skill_content — avoids re-generating content on subsequent messages
 - [Phase 23]: [23-02]: ToolDefinitionUpdate extended with status + handler_code — required for pending_stub workflow
 - [Phase 23]: [23-02]: Claude Code YAML skill_type defaults to instructional — Claude Code skills are instructions for the AI, not an execution engine
+- [Phase 23]: [23-04]: BuilderSaveResponse returns skill_id + status + security_report — frontend uses status to decide whether to show SecurityReportCard or saveSuccess
+- [Phase 23]: [23-04]: SecurityReportCard uses pure Tailwind colored spans instead of shadcn Badge — no ui/badge.tsx exists in codebase
+- [Phase 23]: [23-04]: SecurityReportCard replaces ArtifactPreview on pending_review — full panel for security info, cleaner UX
 
 ### Pending Todos
 
