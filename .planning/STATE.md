@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Production Readiness & Skill Platform
 status: unknown
-last_updated: "2026-03-09T18:56:13.464Z"
+last_updated: "2026-03-09T18:59:05.292Z"
 progress:
   total_phases: 9
-  completed_phases: 7
+  completed_phases: 8
   total_plans: 33
-  completed_plans: 33
+  completed_plans: 34
 ---
 
 # Project State
@@ -142,6 +142,9 @@ v1.3 roadmap decisions:
 - [Phase 23]: [23-04]: BuilderSaveResponse returns skill_id + status + security_report — frontend uses status to decide whether to show SecurityReportCard or saveSuccess
 - [Phase 23]: [23-04]: SecurityReportCard uses pure Tailwind colored spans instead of shadcn Badge — no ui/badge.tsx exists in codebase
 - [Phase 23]: [23-04]: SecurityReportCard replaces ArtifactPreview on pending_review — full panel for security info, cleaner UX
+- [Phase 23-03]: [23-03]: search_similar() resolves repository_name via secondary SkillRepository query (not SQL join) to preserve async simplicity
+- [Phase 23-03]: [23-03]: Route /search-similar declared before /{repo_id} pattern to avoid FastAPI routing conflict
+- [Phase 23-03]: [23-03]: Fork action is optimistic frontend-only — copies name+description into draft, sets fork_source; builder agent re-validates on next message
 
 ### Pending Todos
 
@@ -186,6 +189,7 @@ v1.3 roadmap decisions:
 | Phase 22 P02 | 15 | 2 tasks | 2 files |
 | Phase 23 P01 | 4 | 2 tasks | 9 files |
 | Phase 23 P02 | 6 | 2 tasks | 8 files |
+| Phase 23 P03 | 8 | 2 tasks | 5 files |
 
 ## Session Continuity
 

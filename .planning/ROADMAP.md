@@ -69,7 +69,7 @@ Full phase details: `.planning/milestones/v1.2-ROADMAP.md`
 - [x] **Phase 20: Skill Platform B — Discovery & Catalog** — FTS catalog, tool search, external registry browse, one-click import (completed 2026-03-07)
 - [x] **Phase 21: Skill Platform C — Dependency & Security Hardening** — Dependency enforcement, allowed-tools gate, update checker, scanner enhancement (completed 2026-03-08)
 - [x] **Phase 22: Skill Platform D — Sharing & Marketplace** — Promoted skills, export download, user-to-user sharing (completed 2026-03-08)
-- [ ] **Phase 23: Skill Platform E — Enhanced Builder** — Executable skill generation, external learning, security gate on all artifacts
+- [x] **Phase 23: Skill Platform E — Enhanced Builder** — Executable skill generation, external learning, security gate on all artifacts (completed 2026-03-09)
 
 ## Phase Details
 
@@ -255,4 +255,4 @@ Plans:
 | 20. Skill Platform B — Catalog | 6/6 | Complete    | 2026-03-08 | - |
 | 21. Skill Platform C — Security | 4/4 | Complete    | 2026-03-08 | - |
 | 22. Skill Platform D — Sharing | 3/3 | Complete    | 2026-03-08 | - |
-| 23. Skill Platform E — Builder | 3/4 | In Progress|  | - |
+| 23. Skill Platform E — Builder | 4/4 | Complete   | 2026-03-09 | - |
