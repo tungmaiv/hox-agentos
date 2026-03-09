@@ -19,6 +19,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.db import get_db
+from core.models.local_auth import LocalUser
 from core.models.skill_definition import SkillDefinition
 from core.models.user import UserContext
 from core.models.user_artifact_permission import UserArtifactPermission
@@ -88,7 +89,15 @@ async def share_skill_with_user(
         target_user_id=str(body.user_id),
         admin_user_id=str(user["user_id"]),
     )
-    return SkillShareEntry.model_validate(permission)
+    local_user_result = await session.execute(select(LocalUser).where(LocalUser.id == body.user_id))
+    local_user = local_user_result.scalar_one_or_none()
+    entry = SkillShareEntry(
+        user_id=permission.user_id,
+        created_at=permission.created_at,
+        username=local_user.username if local_user else "",
+        email=local_user.email if local_user else "",
+    )
+    return entry
 
 
 @router.delete("/{skill_id}/share/{target_user_id}", status_code=204)
@@ -146,10 +155,24 @@ async def list_skill_shares(
     )
     permissions = result.scalars().all()
 
+    user_ids = [p.user_id for p in permissions]
+    users_map: dict[object, LocalUser] = {}
+    if user_ids:
+        users_result = await session.execute(select(LocalUser).where(LocalUser.id.in_(user_ids)))
+        users_map = {u.id: u for u in users_result.scalars().all()}
+
     logger.info(
         "admin_skill_shares_listed",
         skill_id=str(skill_id),
         count=len(permissions),
         admin_user_id=str(user["user_id"]),
     )
-    return [SkillShareEntry.model_validate(p) for p in permissions]
+    return [
+        SkillShareEntry(
+            user_id=p.user_id,
+            created_at=p.created_at,
+            username=users_map[p.user_id].username if p.user_id in users_map else "",
+            email=users_map[p.user_id].email if p.user_id in users_map else "",
+        )
+        for p in permissions
+    ]

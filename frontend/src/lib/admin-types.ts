@@ -128,6 +128,8 @@ export interface SkillDefinition {
 
 export interface SkillShareEntry {
   user_id: string;
+  username: string;
+  email: string;
   created_at: string;
 }
 

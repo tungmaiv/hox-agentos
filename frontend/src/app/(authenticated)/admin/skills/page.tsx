@@ -628,7 +628,10 @@ export default function AdminSkillsPage() {
               )}
               {shares.map((share) => (
                 <div key={share.user_id} className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs font-mono text-gray-600 truncate max-w-xs">{share.user_id}</span>
+                  <span className="text-xs text-gray-700 truncate max-w-xs">
+                    {share.username || share.user_id}
+                    {share.email && <span className="text-gray-400 ml-1">({share.email})</span>}
+                  </span>
                   <button
                     onClick={async () => {
                       const res = await fetch(`/api/admin/skills/${shareDialogSkill.id}/share/${share.user_id}`, { method: "DELETE" });

@@ -407,6 +407,8 @@ class SkillShareEntry(BaseModel):
     """Single share entry — who was granted access and when."""
 
     user_id: uuid.UUID
+    username: str = ""
+    email: str = ""
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
