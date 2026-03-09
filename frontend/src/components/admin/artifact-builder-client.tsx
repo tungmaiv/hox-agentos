@@ -13,6 +13,10 @@ import { useCoAgentStateRender } from "@copilotkit/react-core";
 import "@copilotkit/react-ui/styles.css";
 
 import { ArtifactPreview } from "./artifact-preview";
+import {
+  SecurityReportCard,
+  type SecurityReportData,
+} from "./security-report-card";
 
 /** Map artifact_type to admin API path segment */
 const TYPE_TO_PATH: Record<string, string> = {
@@ -48,6 +52,9 @@ function BuilderInner() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [securityReport, setSecurityReport] =
+    useState<SecurityReportData | null>(null);
+  const [savedSkillId, setSavedSkillId] = useState<string | null>(null);
 
   // Ref to buffer co-agent state updates — avoids setState during render phase
   const pendingStateRef = useRef<BuilderState | null>(null);
@@ -129,43 +136,82 @@ function BuilderInner() {
     }
 
     try {
-      const res = await fetch(`/api/admin/${path}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(builderState.artifact_draft),
-      });
+      if (builderState.artifact_type === "skill") {
+        // Skills go through builder-save for the security gate
+        const res = await fetch("/api/admin/skills/builder-save", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            skill_data: builderState.artifact_draft,
+            skill_id: savedSkillId,
+          }),
+        });
 
-      if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as Record<
-          string,
-          unknown
-        >;
-        // FastAPI returns Pydantic validation errors as:
-        //   {"detail": [{"loc": [...], "msg": "...", "type": "..."}]}
-        // Handle both string and array-of-objects formats.
-        let errorMsg = `HTTP ${res.status}`;
-        if (typeof body.detail === "string") {
-          errorMsg = body.detail;
-        } else if (Array.isArray(body.detail)) {
-          errorMsg = (body.detail as Array<Record<string, unknown>>)
-            .map((e) => {
-              const loc = Array.isArray(e.loc)
-                ? (e.loc as string[]).join(" > ")
-                : "";
-              return loc ? `${loc}: ${e.msg}` : String(e.msg ?? e);
-            })
-            .join("; ");
+        if (!res.ok) {
+          const errBody = (await res.json().catch(() => ({}))) as Record<
+            string,
+            unknown
+          >;
+          let errorMsg = `HTTP ${res.status}`;
+          if (typeof errBody.detail === "string") {
+            errorMsg = errBody.detail;
+          }
+          throw new Error(errorMsg);
         }
-        throw new Error(errorMsg);
-      }
 
-      setSaveSuccess(true);
+        const data = (await res.json()) as {
+          skill_id: string;
+          status: string;
+          security_report: SecurityReportData;
+        };
+
+        setSecurityReport(data.security_report);
+        setSavedSkillId(data.skill_id);
+
+        if (data.status === "active") {
+          setSaveSuccess(true);
+        }
+        // If pending_review: stay in builder, SecurityReportCard renders
+      } else {
+        // Non-skill artifact types: use existing generic save
+        const res = await fetch(`/api/admin/${path}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(builderState.artifact_draft),
+        });
+
+        if (!res.ok) {
+          const body = (await res.json().catch(() => ({}))) as Record<
+            string,
+            unknown
+          >;
+          // FastAPI returns Pydantic validation errors as:
+          //   {"detail": [{"loc": [...], "msg": "...", "type": "..."}]}
+          // Handle both string and array-of-objects formats.
+          let errorMsg = `HTTP ${res.status}`;
+          if (typeof body.detail === "string") {
+            errorMsg = body.detail;
+          } else if (Array.isArray(body.detail)) {
+            errorMsg = (body.detail as Array<Record<string, unknown>>)
+              .map((e) => {
+                const loc = Array.isArray(e.loc)
+                  ? (e.loc as string[]).join(" > ")
+                  : "";
+                return loc ? `${loc}: ${e.msg}` : String(e.msg ?? e);
+              })
+              .join("; ");
+          }
+          throw new Error(errorMsg);
+        }
+
+        setSaveSuccess(true);
+      }
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Save failed");
     } finally {
       setSaving(false);
     }
-  }, [builderState.artifact_type, builderState.artifact_draft]);
+  }, [builderState.artifact_type, builderState.artifact_draft, savedSkillId]);
 
   if (saveSuccess) {
     const listPath = TYPE_TO_PATH[builderState.artifact_type ?? ""] ?? "agents";
@@ -238,12 +284,20 @@ function BuilderInner() {
             )}
         </div>
         <div className="flex-1 overflow-auto p-4">
-          <ArtifactPreview
-            artifactType={builderState.artifact_type}
-            draft={builderState.artifact_draft}
-            validationErrors={builderState.validation_errors}
-            isComplete={builderState.is_complete}
-          />
+          {securityReport && !saveSuccess && savedSkillId ? (
+            <SecurityReportCard
+              skillId={savedSkillId}
+              report={securityReport}
+              onApproved={() => setSaveSuccess(true)}
+            />
+          ) : (
+            <ArtifactPreview
+              artifactType={builderState.artifact_type}
+              draft={builderState.artifact_draft}
+              validationErrors={builderState.validation_errors}
+              isComplete={builderState.is_complete}
+            />
+          )}
           {saveError && (
             <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-700">
               {saveError}
