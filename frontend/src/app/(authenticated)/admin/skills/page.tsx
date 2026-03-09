@@ -612,11 +612,10 @@ export default function AdminSkillsPage() {
                           });
                           if (res.status === 201) {
                             const entry = (await res.json()) as SkillShareEntry;
-                            setShares((prev) => {
-                              const next = [...prev, entry];
-                              setShareCountOverrides((o) => ({ ...o, [shareDialogSkill.id]: next.length }));
-                              return next;
-                            });
+                            const skillId = shareDialogSkill.id;
+                            const newCount = shares.length + 1;
+                            setShares((prev) => [...prev, entry]);
+                            setShareCountOverrides((o) => ({ ...o, [skillId]: newCount }));
                             refetch();
                           } else if (res.status === 409) {
                             setShareError("Already shared with this user");
@@ -651,11 +650,10 @@ export default function AdminSkillsPage() {
                     onClick={async () => {
                       const res = await fetch(`/api/admin/skills/${shareDialogSkill.id}/share/${share.user_id}`, { method: "DELETE" });
                       if (res.ok || res.status === 204) {
-                        setShares((prev) => {
-                          const next = prev.filter((s) => s.user_id !== share.user_id);
-                          setShareCountOverrides((o) => ({ ...o, [shareDialogSkill.id]: next.length }));
-                          return next;
-                        });
+                        const skillId = shareDialogSkill.id;
+                        const newCount = Math.max(0, shares.length - 1);
+                        setShares((prev) => prev.filter((s) => s.user_id !== share.user_id));
+                        setShareCountOverrides((o) => ({ ...o, [skillId]: newCount }));
                         refetch();
                       }
                     }}
