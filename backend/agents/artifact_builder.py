@@ -26,7 +26,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
-from agents.artifact_builder_prompts import get_gather_type_prompt, get_system_prompt
+from agents.artifact_builder_prompts import get_gather_type_prompt, get_skill_generation_prompt, get_system_prompt
 from agents.artifact_builder_validation import validate_artifact_draft
 from agents.state.artifact_builder_types import ArtifactBuilderState
 from copilotkit.langgraph import copilotkit_emit_state
@@ -93,6 +93,22 @@ def _route_intent(state: ArtifactBuilderState) -> str:
         return "gather_type"
     if state.get("is_complete"):
         return "validate_and_present"
+
+    # Route to content generation when we have name+description but no content yet.
+    # Applies to skills (missing procedure_json or instruction_markdown) and tools
+    # (missing handler_code). The gather_details node populates name/description first.
+    artifact_type = state.get("artifact_type")
+    draft = state.get("artifact_draft") or {}
+    if artifact_type in ("skill", "tool") and draft.get("name") and draft.get("description"):
+        if artifact_type == "tool" and not state.get("handler_code"):
+            return "generate_skill_content"
+        if artifact_type == "skill":
+            skill_type = draft.get("skill_type", "instructional")
+            if skill_type == "procedural" and not draft.get("procedure_json"):
+                return "generate_skill_content"
+            if skill_type != "procedural" and not draft.get("instruction_markdown"):
+                return "generate_skill_content"
+
     return "gather_details"
 
 
@@ -501,6 +517,91 @@ async def _fill_form_node(state: ArtifactBuilderState, config: RunnableConfig) -
     return {**merged}
 
 
+def _extract_python_code_block(content: str) -> str | None:
+    """Extract the content of the first ```python ... ``` code block."""
+    pattern = r"```(?:python)?\s*\n?([\s\S]*?)\n?```"
+    match = re.search(pattern, content)
+    if match:
+        return match.group(1).strip()
+    return None
+
+
+async def _generate_skill_content_node(
+    state: ArtifactBuilderState, config: RunnableConfig
+) -> dict:
+    """Generate full skill content or tool stub using a single LLM call.
+
+    Routes based on artifact_type and skill_type:
+    - Procedural skill → procedure_json with steps array
+    - Instructional skill → instruction_markdown string
+    - Tool artifact → handler_code Python stub with InputModel/OutputModel
+
+    The generated content is merged into artifact_draft (for skill fields)
+    or returned as handler_code (for tool stubs).
+    """
+    artifact_type = state.get("artifact_type", "skill")
+    draft = state.get("artifact_draft") or {}
+
+    prompt = get_skill_generation_prompt(artifact_type, draft)
+    llm = get_llm("blitz/master")
+
+    try:
+        response = await llm.ainvoke([
+            SystemMessage(content=prompt),
+        ])
+    except Exception as exc:
+        logger.error("llm_error", node="generate_skill_content", error=str(exc))
+        await _emit_builder_state(config, artifact_type, draft, [], False)
+        return {
+            "messages": [AIMessage(content="I encountered an issue generating content. Please try again.")],
+            "artifact_type": artifact_type,
+            "artifact_draft": draft,
+        }
+
+    content = response.content if isinstance(response.content, str) else str(response.content)
+    updated_draft = dict(draft)
+    handler_code: str | None = state.get("handler_code")
+
+    if artifact_type == "tool":
+        # Extract Python code block for tool stubs
+        extracted = _extract_python_code_block(content)
+        if extracted:
+            handler_code = extracted
+        else:
+            # Fallback: use full content if no code block found
+            handler_code = content
+    elif artifact_type == "skill":
+        skill_type = draft.get("skill_type", "instructional")
+        if skill_type == "procedural":
+            # Extract procedure_json from JSON code block
+            parsed = _extract_draft_from_response(content, {})
+            if "procedure_json" in parsed:
+                updated_draft["procedure_json"] = parsed["procedure_json"]
+            elif "steps" in parsed:
+                # LLM returned the steps object directly
+                updated_draft["procedure_json"] = parsed
+        else:
+            # Instructional: content is the markdown
+            # Strip code blocks if LLM wrapped it in one (shouldn't happen but handle it)
+            if content.startswith("```"):
+                extracted = _extract_python_code_block(content)
+                updated_draft["instruction_markdown"] = extracted or content
+            else:
+                updated_draft["instruction_markdown"] = content
+
+    await _emit_builder_state(config, artifact_type, updated_draft, [], False)
+
+    result: dict = {
+        "messages": [response],
+        "artifact_type": artifact_type,
+        "artifact_draft": updated_draft,
+    }
+    if handler_code is not None:
+        result["handler_code"] = handler_code
+
+    return result
+
+
 def create_artifact_builder_graph() -> CompiledStateGraph:
     """Build and compile the artifact builder LangGraph."""
     graph = StateGraph(ArtifactBuilderState)
@@ -509,6 +610,7 @@ def create_artifact_builder_graph() -> CompiledStateGraph:
     graph.add_node("gather_details", _gather_details_node)
     graph.add_node("validate_and_present", _validate_and_present_node)
     graph.add_node("fill_form_node", _fill_form_node)
+    graph.add_node("generate_skill_content", _generate_skill_content_node)
 
     # Conditional entry point: routes to correct node based on state
     graph.set_conditional_entry_point(
@@ -518,6 +620,7 @@ def create_artifact_builder_graph() -> CompiledStateGraph:
             "gather_details": "gather_details",
             "validate_and_present": "validate_and_present",
             "fill_form_node": "fill_form_node",
+            "generate_skill_content": "generate_skill_content",
         },
     )
 
@@ -525,5 +628,6 @@ def create_artifact_builder_graph() -> CompiledStateGraph:
     graph.add_edge("gather_details", END)
     graph.add_edge("validate_and_present", END)
     graph.add_edge("fill_form_node", END)
+    graph.add_edge("generate_skill_content", END)
 
     return graph.compile(checkpointer=MemorySaver())
