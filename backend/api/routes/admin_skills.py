@@ -22,6 +22,7 @@ from uuid import UUID
 
 import structlog
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from pydantic import BaseModel
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -38,6 +39,21 @@ from core.schemas.registry import (
     SkillReviewRequest,
     StatusUpdate,
 )
+
+# ---------------------------------------------------------------------------
+# Builder-save request/response models
+# ---------------------------------------------------------------------------
+
+
+class BuilderSaveRequest(BaseModel):
+    skill_data: dict[str, Any]
+    skill_id: str | None = None  # set for re-scan of existing skill
+
+
+class BuilderSaveResponse(BaseModel):
+    skill_id: str
+    status: str
+    security_report: dict[str, Any]
 from security.deps import get_current_user
 from security.rbac import has_permission
 from skills.importer import SkillImportError, SkillImporter
@@ -418,6 +434,121 @@ async def import_skill_zip(
             "injection_matches": report.injection_matches,
         },
     }
+
+
+@router.post("/builder-save")
+async def builder_save(
+    body: BuilderSaveRequest,
+    user: UserContext = Depends(_require_registry_manager),
+    session: AsyncSession = Depends(get_db),
+) -> BuilderSaveResponse:
+    """Save a skill draft from the builder with security gate.
+
+    Runs SecurityScanner synchronously before writing to DB.
+    - "approve" recommendation → status=active, is_active=True
+    - "review" or "reject" recommendation → status=pending_review, is_active=False
+
+    If skill_id is provided, updates the existing skill (re-scan on edit).
+    Otherwise creates a new SkillDefinition row.
+    """
+    from core.logging import get_audit_logger
+
+    audit_logger = get_audit_logger()
+
+    # Determine source_url from skill_data (for forked skills)
+    skill_data = body.skill_data
+    source_url: str | None = skill_data.get("source_url") or None
+    if not source_url:
+        fork_source = skill_data.get("fork_source", "")
+        if fork_source and "@" in fork_source:
+            source_url = fork_source.split("@", 1)[-1] or None
+
+    # Run security scan synchronously
+    scanner = SecurityScanner()
+    report = scanner.scan(skill_data, source_url=source_url)
+
+    # Determine activation status from recommendation
+    if report.recommendation == "approve":
+        status = "active"
+        is_active = True
+    else:
+        # "review" or "reject" → quarantine
+        status = "pending_review"
+        is_active = False
+
+    security_report_dict: dict[str, Any] = {
+        "score": report.score,
+        "factors": report.factors,
+        "recommendation": report.recommendation,
+        "injection_matches": report.injection_matches,
+    }
+
+    if body.skill_id is not None:
+        # Re-scan of existing skill — update in place
+        from uuid import UUID as _UUID
+        try:
+            existing_id = _UUID(body.skill_id)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid skill_id UUID")
+
+        result = await session.execute(
+            select(SkillDefinition).where(SkillDefinition.id == existing_id)
+        )
+        skill = result.scalar_one_or_none()
+        if skill is None:
+            raise HTTPException(status_code=404, detail="Skill not found")
+
+        skill.status = status
+        skill.is_active = is_active
+        skill.security_score = report.score
+        skill.security_report = security_report_dict
+        await session.commit()
+        await session.refresh(skill)
+    else:
+        # New skill from builder
+        source_type_val = "imported" if skill_data.get("fork_source") else "user_created"
+        skill = SkillDefinition(
+            name=skill_data["name"],
+            display_name=skill_data.get("display_name"),
+            description=skill_data.get("description"),
+            version=skill_data.get("version", "1.0.0"),
+            skill_type=skill_data.get("skill_type", "instructional"),
+            slash_command=skill_data.get("slash_command"),
+            source_type=source_type_val,
+            instruction_markdown=skill_data.get("instruction_markdown"),
+            procedure_json=skill_data.get("procedure_json"),
+            input_schema=skill_data.get("input_schema"),
+            output_schema=skill_data.get("output_schema"),
+            license=skill_data.get("license"),
+            compatibility=skill_data.get("compatibility"),
+            metadata_json=skill_data.get("metadata_json"),
+            allowed_tools=skill_data.get("allowed_tools"),
+            tags=skill_data.get("tags"),
+            category=skill_data.get("category"),
+            source_url=source_url,
+            status=status,
+            is_active=is_active,
+            security_score=report.score,
+            security_report=security_report_dict,
+            created_by=user["user_id"],
+        )
+        session.add(skill)
+        await session.commit()
+        await session.refresh(skill)
+
+    audit_logger.info(
+        "builder_save",
+        skill_id=str(skill.id),
+        recommendation=report.recommendation,
+        score=report.score,
+        user_id=str(user["user_id"]),
+    )
+
+    return BuilderSaveResponse(
+        skill_id=str(skill.id),
+        status=skill.status,
+        security_report=security_report_dict,
+    )
 
 
 @router.patch("/{skill_id}/promote")
