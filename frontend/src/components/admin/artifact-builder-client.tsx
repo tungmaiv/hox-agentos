@@ -4,7 +4,7 @@
  *
  * Split-panel layout:
  * - Left (45%): CopilotChat for conversational AI
- * - Right (55%): Live preview of the artifact being built
+ * - Right (55%): Live preview of the artifact being built + similar skill discovery
  */
 import { useState, useEffect, useCallback, useRef } from "react";
 import { CopilotKit } from "@copilotkit/react-core";
@@ -26,12 +26,26 @@ const TYPE_TO_PATH: Record<string, string> = {
   mcp_server: "mcp-servers",
 };
 
+/** A similar skill result from the search-similar API */
+interface SimilarSkill {
+  name: string;
+  description: string | null;
+  repository_name: string;
+  source_url: string | null;
+  category: string | null;
+  tags: string[] | null;
+}
+
 /** Co-agent state shape matching ArtifactBuilderState on backend */
 interface BuilderState {
   artifact_type: string | null;
   artifact_draft: Record<string, unknown> | null;
   validation_errors: string[];
   is_complete: boolean;
+  similar_skills: SimilarSkill[] | null;
+  fork_source: string | null;
+  handler_code: string | null;
+  security_report: Record<string, unknown> | null;
 }
 
 export function ArtifactBuilderClient() {
@@ -48,6 +62,10 @@ function BuilderInner() {
     artifact_draft: null,
     validation_errors: [],
     is_complete: false,
+    similar_skills: null,
+    fork_source: null,
+    handler_code: null,
+    security_report: null,
   });
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -55,6 +73,16 @@ function BuilderInner() {
   const [securityReport, setSecurityReport] =
     useState<SecurityReportData | null>(null);
   const [savedSkillId, setSavedSkillId] = useState<string | null>(null);
+
+  // Similar skills discovery state
+  const [similarSkills, setSimilarSkills] = useState<SimilarSkill[] | null>(null);
+  const [findingSimilar, setFindingSimilar] = useState(false);
+  const [similarError, setSimilarError] = useState<string | null>(null);
+
+  // Edit JSON toggle state
+  const [showJsonEditor, setShowJsonEditor] = useState(false);
+  const [jsonEditValue, setJsonEditValue] = useState<string>("");
+  const [jsonParseError, setJsonParseError] = useState<string | null>(null);
 
   // Ref to buffer co-agent state updates — avoids setState during render phase
   const pendingStateRef = useRef<BuilderState | null>(null);
@@ -72,6 +100,10 @@ function BuilderInner() {
           artifact_draft: state.artifact_draft ?? null,
           validation_errors: state.validation_errors ?? [],
           is_complete: state.is_complete ?? false,
+          similar_skills: state.similar_skills ?? null,
+          fork_source: state.fork_source ?? null,
+          handler_code: state.handler_code ?? null,
+          security_report: state.security_report ?? null,
         };
       }
       return null;
@@ -213,6 +245,86 @@ function BuilderInner() {
     }
   }, [builderState.artifact_type, builderState.artifact_draft, savedSkillId]);
 
+  /** POST to search-similar endpoint and update similar skills list */
+  const handleFindSimilar = useCallback(async () => {
+    const name = builderState.artifact_draft?.name;
+    const description = builderState.artifact_draft?.description;
+    if (!name || !description) return;
+    if (typeof name !== "string" || typeof description !== "string") return;
+
+    setFindingSimilar(true);
+    setSimilarError(null);
+
+    try {
+      const res = await fetch("/api/admin/skill-repos/search-similar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, description }),
+      });
+
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+        const msg =
+          typeof body.detail === "string"
+            ? body.detail
+            : `HTTP ${res.status}`;
+        throw new Error(msg);
+      }
+
+      const data = (await res.json()) as { results: SimilarSkill[] };
+      setSimilarSkills(data.results);
+    } catch (err) {
+      setSimilarError(err instanceof Error ? err.message : "Search failed");
+    } finally {
+      setFindingSimilar(false);
+    }
+  }, [builderState.artifact_draft]);
+
+  /** Fork a similar skill: copy its fields into the builder draft and set fork_source */
+  const handleFork = useCallback((skill: SimilarSkill) => {
+    const forkSource = `${skill.name}@${skill.source_url ?? ""}`;
+    setBuilderState((prev) => ({
+      ...prev,
+      artifact_draft: {
+        ...(prev.artifact_draft ?? {}),
+        name: skill.name,
+        description: skill.description ?? prev.artifact_draft?.description ?? null,
+      },
+      fork_source: forkSource,
+    }));
+    // Collapse the similar skills panel after forking
+    setSimilarSkills(null);
+  }, []);
+
+  /** Parse the JSON editor textarea value and update draft state */
+  const handleJsonParse = useCallback(() => {
+    setJsonParseError(null);
+    try {
+      const parsed = JSON.parse(jsonEditValue) as Record<string, unknown>;
+      setBuilderState((prev) => ({ ...prev, artifact_draft: parsed }));
+      setShowJsonEditor(false);
+    } catch (err) {
+      setJsonParseError(err instanceof Error ? err.message : "Invalid JSON");
+    }
+  }, [jsonEditValue]);
+
+  // When toggling the JSON editor ON, pre-fill with current draft
+  const handleToggleJsonEditor = useCallback(() => {
+    setShowJsonEditor((prev) => {
+      if (!prev && builderState.artifact_draft !== null) {
+        setJsonEditValue(JSON.stringify(builderState.artifact_draft, null, 2));
+        setJsonParseError(null);
+      }
+      return !prev;
+    });
+  }, [builderState.artifact_draft]);
+
+  const hasDraftNameAndDescription =
+    typeof builderState.artifact_draft?.name === "string" &&
+    builderState.artifact_draft.name.length > 0 &&
+    typeof builderState.artifact_draft?.description === "string" &&
+    builderState.artifact_draft.description.length > 0;
+
   if (saveSuccess) {
     const listPath = TYPE_TO_PATH[builderState.artifact_type ?? ""] ?? "agents";
 
@@ -266,7 +378,7 @@ function BuilderInner() {
         </div>
       </div>
 
-      {/* Right panel: Preview */}
+      {/* Right panel: Preview + similar skills + JSON editor */}
       <div className="w-[55%] flex flex-col border border-gray-200 rounded-lg overflow-hidden bg-white">
         <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-gray-900">
@@ -283,14 +395,48 @@ function BuilderInner() {
               </button>
             )}
         </div>
-        <div className="flex-1 overflow-auto p-4">
+
+        <div className="flex-1 overflow-auto p-4 space-y-4">
+          {/* Security report (post-save pending_review path) */}
           {securityReport && !saveSuccess && savedSkillId ? (
             <SecurityReportCard
               skillId={savedSkillId}
               report={securityReport}
               onApproved={() => setSaveSuccess(true)}
             />
+          ) : showJsonEditor ? (
+            /* JSON editor mode */
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-gray-700">
+                  Edit JSON
+                </span>
+                <button
+                  onClick={handleToggleJsonEditor}
+                  className="text-xs text-gray-500 hover:text-gray-700"
+                >
+                  Cancel
+                </button>
+              </div>
+              <textarea
+                value={jsonEditValue}
+                onChange={(e) => setJsonEditValue(e.target.value)}
+                rows={20}
+                className="w-full font-mono text-xs border border-gray-300 rounded-md p-2 resize-y focus:outline-none focus:ring-1 focus:ring-blue-500"
+                spellCheck={false}
+              />
+              {jsonParseError && (
+                <p className="text-xs text-red-600">{jsonParseError}</p>
+              )}
+              <button
+                onClick={handleJsonParse}
+                className="px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-xs font-medium"
+              >
+                Parse
+              </button>
+            </div>
           ) : (
+            /* Normal artifact preview */
             <ArtifactPreview
               artifactType={builderState.artifact_type}
               draft={builderState.artifact_draft}
@@ -298,8 +444,87 @@ function BuilderInner() {
               isComplete={builderState.is_complete}
             />
           )}
+
+          {/* Edit JSON toggle — only when artifact is complete and not in JSON editor mode */}
+          {builderState.is_complete && !showJsonEditor && !securityReport && (
+            <button
+              onClick={handleToggleJsonEditor}
+              className="text-xs text-blue-600 hover:text-blue-800 underline"
+            >
+              Edit JSON
+            </button>
+          )}
+
+          {/* Find Similar button — visible when draft has name + description */}
+          {hasDraftNameAndDescription && !securityReport && (
+            <div className="border-t border-gray-100 pt-3">
+              <button
+                onClick={handleFindSimilar}
+                disabled={findingSimilar}
+                className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 text-xs font-medium disabled:opacity-50 border border-gray-200"
+              >
+                {findingSimilar ? "Searching..." : "Find Similar"}
+              </button>
+
+              {similarError && (
+                <p className="mt-2 text-xs text-red-600">{similarError}</p>
+              )}
+
+              {/* Similar skills results */}
+              {similarSkills !== null && (
+                <div className="mt-3 space-y-2">
+                  <h3 className="text-xs font-semibold text-gray-700">
+                    Similar Skills
+                  </h3>
+                  {similarSkills.length === 0 ? (
+                    <p className="text-xs text-gray-500">
+                      No similar skills found.
+                    </p>
+                  ) : (
+                    similarSkills.map((skill, idx) => (
+                      <div
+                        key={idx}
+                        className="border border-gray-200 rounded-md p-3 bg-gray-50"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-semibold text-gray-900 truncate">
+                              {skill.name}
+                            </p>
+                            {skill.description && (
+                              <p className="text-xs text-gray-600 mt-0.5 line-clamp-2">
+                                {skill.description}
+                              </p>
+                            )}
+                            <p className="text-xs text-gray-400 mt-1">
+                              {skill.repository_name}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => handleFork(skill)}
+                            className="flex-shrink-0 px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700"
+                          >
+                            Fork
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Fork attribution badge */}
+          {builderState.fork_source && (
+            <div className="text-xs text-gray-500 bg-blue-50 border border-blue-100 rounded px-2 py-1">
+              Forked from:{" "}
+              <span className="font-medium">{builderState.fork_source}</span>
+            </div>
+          )}
+
           {saveError && (
-            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-700">
+            <div className="p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-700">
               {saveError}
             </div>
           )}
