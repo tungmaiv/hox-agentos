@@ -384,3 +384,52 @@ def test_activate_version_invalidates_cache(admin_client: TestClient) -> None:
         f"Expected '{tool_name}' to be evicted from _tool_cache after activate_tool_version(), "
         f"but stale version data remains. Old version stays callable for up to 60s (regression)."
     )
+
+# ---------------------------------------------------------------------------
+# activate-stub endpoint (SKBLD-03)
+# ---------------------------------------------------------------------------
+
+
+def test_activate_stub_endpoint(admin_client: TestClient) -> None:
+    """PATCH /activate-stub promotes pending_stub -> active, handler_code preserved."""
+    # Create a tool with pending_stub status and handler_code
+    create_resp = admin_client.post(
+        "/api/admin/tools",
+        json={
+            "name": "stub_tool_activate",
+            "description": "A tool pending stub activation",
+            "handler_type": "backend",
+        },
+    )
+    assert create_resp.status_code == 201
+    tool_id = create_resp.json()["id"]
+
+    # Manually set status to pending_stub and add handler_code
+    patch_resp = admin_client.put(
+        f"/api/admin/tools/{tool_id}",
+        json={"status": "pending_stub", "handler_code": "async def handler(input): return {}"},
+    )
+    assert patch_resp.status_code == 200
+    assert patch_resp.json()["status"] == "pending_stub"
+
+    # Now activate the stub
+    activate_resp = admin_client.patch(f"/api/admin/tools/{tool_id}/activate-stub")
+    assert activate_resp.status_code == 200
+    result = activate_resp.json()
+    assert result["status"] == "active"
+    assert result["is_active"] is True
+
+
+def test_activate_stub_returns_409_if_not_pending_stub(admin_client: TestClient) -> None:
+    """PATCH /activate-stub returns 409 if tool is already active (not pending_stub)."""
+    create_resp = admin_client.post(
+        "/api/admin/tools",
+        json={"name": "already_active_tool", "handler_type": "backend"},
+    )
+    assert create_resp.status_code == 201
+    tool_id = create_resp.json()["id"]
+
+    # Tool is 'active' by default — activate-stub should return 409
+    activate_resp = admin_client.patch(f"/api/admin/tools/{tool_id}/activate-stub")
+    assert activate_resp.status_code == 409
+

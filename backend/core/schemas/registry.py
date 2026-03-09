@@ -89,9 +89,11 @@ class ToolDefinitionUpdate(BaseModel):
     display_name: str | None = None
     description: str | None = None
     version: str | None = None
+    status: str | None = None
     handler_type: Literal["backend", "mcp", "sandbox"] | None = None
     handler_module: str | None = None
     handler_function: str | None = None
+    handler_code: str | None = None
     mcp_server_id: uuid.UUID | None = None
     mcp_tool_name: str | None = None
     sandbox_required: bool | None = None
@@ -111,6 +113,7 @@ class ToolDefinitionResponse(BaseModel):
     handler_type: str
     handler_module: str | None
     handler_function: str | None
+    handler_code: str | None
     mcp_server_id: uuid.UUID | None
     mcp_tool_name: str | None
     sandbox_required: bool

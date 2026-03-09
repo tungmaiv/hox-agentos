@@ -462,3 +462,39 @@ Some instructions.
         scanner = SecurityScanner()
         report = scanner.scan(skill_data)
         assert report.recommendation == "reject"
+
+
+# ── Claude Code YAML import ───────────────────────────────────────────────────
+
+
+_CLAUDE_CODE_YAML = """
+name: morning_digest
+description: Sends a morning summary of emails and calendar events to keep you on track.
+when_to_use: Use this skill at the start of the workday to get a quick overview.
+trigger: /morning or when user says "morning briefing"
+tools:
+  - email.fetch
+  - calendar.list
+  - llm.summarize
+category: productivity
+"""
+
+
+def test_import_claude_code_yaml(importer: SkillImporter) -> None:
+    """Claude Code YAML with name/description/tools is correctly mapped to agentskills fields."""
+    result = importer.import_from_claude_code_yaml(_CLAUDE_CODE_YAML)
+
+    assert result["name"] == "morning_digest"
+    assert "Sends a morning summary" in result["description"]
+    assert isinstance(result["instruction_markdown"], str)
+    assert len(result["instruction_markdown"]) > 0
+    assert isinstance(result["allowed_tools"], list)
+    assert "email.fetch" in result["allowed_tools"]
+    assert result["skill_type"] == "instructional"
+
+
+def test_github_raw_url_conversion(importer: SkillImporter) -> None:
+    """GitHub blob URL is converted to raw.githubusercontent.com before fetching."""
+    github_url = "https://github.com/user/repo/blob/main/skill.yaml"
+    raw_url = SkillImporter._github_to_raw_url(github_url)
+    assert raw_url == "https://raw.githubusercontent.com/user/repo/main/skill.yaml"

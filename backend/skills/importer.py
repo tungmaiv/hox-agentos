@@ -278,6 +278,133 @@ class SkillImporter:
         )
         return skill_data
 
+    @staticmethod
+    def _github_to_raw_url(url: str) -> str:
+        """Convert a GitHub file blob URL to a raw.githubusercontent.com URL.
+
+        Converts:
+          https://github.com/{user}/{repo}/blob/{branch}/{path}
+        To:
+          https://raw.githubusercontent.com/{user}/{repo}/{branch}/{path}
+
+        Non-GitHub URLs are returned unchanged.
+
+        Args:
+            url: URL to convert.
+
+        Returns:
+            Converted raw URL (or original URL if not a GitHub blob URL).
+        """
+        converted = re.sub(
+            r"github\.com/([^/]+)/([^/]+)/blob/([^/]+)/(.*)",
+            r"raw.githubusercontent.com/\1/\2/\3/\4",
+            url,
+        )
+        return converted
+
+    def import_from_claude_code_yaml(self, content: str) -> dict[str, Any]:
+        """Parse a Claude Code YAML skill definition and map to agentskills fields.
+
+        Claude Code YAML format (subset supported):
+            name: skill_name
+            description: What the skill does
+            when_to_use: Conditions / triggers
+            trigger: Slash command or phrase
+            tools: [list, of, tool, names]
+            category: productivity
+
+        The method maps these to the agentskills.io field shape used by parse_skill_md().
+
+        Args:
+            content: Raw YAML string from a Claude Code skill file.
+
+        Returns:
+            Dict in agentskills.io shape (same keys as parse_skill_md output).
+
+        Raises:
+            SkillImportError: If YAML is invalid or missing required name/description.
+        """
+        try:
+            parsed = yaml.safe_load(content)
+        except yaml.YAMLError as exc:
+            raise SkillImportError(f"Claude Code YAML parse error: {exc}") from exc
+
+        if not isinstance(parsed, dict):
+            raise SkillImportError("Claude Code YAML must be a mapping")
+
+        missing = _REQUIRED_FIELDS - set(parsed.keys())
+        if missing:
+            raise SkillImportError(
+                f"Missing required fields in Claude Code YAML: {', '.join(sorted(missing))}"
+            )
+
+        name = parsed["name"]
+        description = parsed["description"]
+
+        # Build instruction_markdown from description + when_to_use + trigger context
+        md_parts: list[str] = []
+        when_to_use = parsed.get("when_to_use", "")
+        trigger = parsed.get("trigger", "")
+
+        if when_to_use:
+            md_parts.append(f"## When to Use\n{when_to_use}")
+        if trigger:
+            md_parts.append(f"## Trigger\n{trigger}")
+        md_parts.append(description)
+
+        instruction_markdown = "\n\n".join(md_parts)
+
+        # Map tools list to allowed_tools
+        raw_tools = parsed.get("tools", [])
+        allowed_tools: list[str] | None = None
+        if isinstance(raw_tools, list) and raw_tools:
+            allowed_tools = [str(t) for t in raw_tools]
+        elif isinstance(raw_tools, str) and raw_tools:
+            allowed_tools = raw_tools.split()
+
+        # Guess category from explicit field or description keywords
+        category = parsed.get("category")
+        if not category:
+            desc_lower = description.lower()
+            if "email" in desc_lower:
+                category = "communication"
+            elif "calendar" in desc_lower:
+                category = "productivity"
+            elif "claude" in desc_lower:
+                category = "ai"
+            else:
+                category = "general"
+
+        skill_data: dict[str, Any] = {
+            "name": name,
+            "description": description,
+            "instruction_markdown": instruction_markdown,
+            "skill_type": "instructional",  # Claude Code skills are inherently instructional
+            "source_type": "imported",
+            "version": parsed.get("version", "1.0.0"),
+            "category": category,
+        }
+
+        if allowed_tools is not None:
+            skill_data["allowed_tools"] = allowed_tools
+
+        if "tags" in parsed:
+            raw_tags = parsed["tags"]
+            skill_data["tags"] = (
+                raw_tags if isinstance(raw_tags, list) else [str(raw_tags)]
+            )
+        if "license" in parsed:
+            skill_data["license"] = parsed["license"]
+        if "source_url" in parsed:
+            skill_data["source_url"] = parsed["source_url"]
+
+        logger.info(
+            "claude_code_yaml_imported",
+            name=name,
+            skill_type="instructional",
+        )
+        return skill_data
+
     async def import_from_url(self, url: str) -> dict[str, Any]:
         """Fetch a SKILL.md or ZIP bundle from a URL and parse it.
 
@@ -290,6 +417,12 @@ class SkillImporter:
         Raises:
             SkillImportError: If fetch fails or content is invalid.
         """
+        # Convert GitHub blob URLs to raw.githubusercontent.com before fetching
+        from urllib.parse import urlparse
+        parsed_url = urlparse(url)
+        if parsed_url.hostname in ("github.com", "www.github.com"):
+            url = self._github_to_raw_url(url)
+
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.get(url)

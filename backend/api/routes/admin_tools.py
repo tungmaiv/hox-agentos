@@ -106,6 +106,55 @@ async def create_tool(
     return ToolDefinitionResponse.model_validate(tool)
 
 
+@router.patch("/{tool_id}/activate-stub")
+async def activate_tool_stub(
+    tool_id: UUID,
+    user: UserContext = Depends(_require_registry_manager),
+    session: AsyncSession = Depends(get_db),
+) -> ToolDefinitionResponse:
+    """
+    Activate a pending_stub tool — promotes it from pending_stub to active.
+
+    Used after the artifact builder generates a Python handler stub (SKBLD-03).
+    The stub is code-reviewed by the admin, then activated to make the tool callable.
+
+    Returns 409 if the tool is not in pending_stub status.
+    """
+    from core.logging import get_audit_logger
+    audit = get_audit_logger()
+
+    result = await session.execute(
+        select(ToolDefinition).where(ToolDefinition.id == tool_id)
+    )
+    tool = result.scalar_one_or_none()
+    if tool is None:
+        raise HTTPException(status_code=404, detail="Tool not found")
+
+    if tool.status != "pending_stub":
+        raise HTTPException(
+            status_code=409,
+            detail=f"Tool is not in pending_stub status (current: {tool.status})",
+        )
+
+    tool.status = "active"
+    tool.is_active = True
+    await session.commit()
+    await session.refresh(tool)
+
+    audit.info(
+        "tool_stub_activated",
+        tool_id=str(tool_id),
+        user_id=str(user["user_id"]),
+    )
+    logger.info(
+        "admin_tool_stub_activated",
+        tool_id=str(tool_id),
+        name=tool.name,
+        user_id=str(user["user_id"]),
+    )
+    return ToolDefinitionResponse.model_validate(tool)
+
+
 @router.get("/check-name")
 async def check_tool_name(
     name: str = Query(..., min_length=1),
