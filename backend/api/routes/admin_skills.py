@@ -105,8 +105,35 @@ async def list_skills(
         stmt = stmt.order_by(desc(SkillDefinition.created_at))  # newest (default)
     result = await session.execute(stmt)
     skills = result.scalars().all()
+
+    # Fetch share counts in a single batch query
+    from sqlalchemy import func
+    from core.models.user_artifact_permission import UserArtifactPermission
+
+    skill_ids = [s.id for s in skills]
+    share_counts: dict[object, int] = {}
+    if skill_ids:
+        counts_result = await session.execute(
+            select(
+                UserArtifactPermission.artifact_id,
+                func.count(UserArtifactPermission.id).label("cnt"),
+            )
+            .where(
+                UserArtifactPermission.artifact_type == "skill",
+                UserArtifactPermission.artifact_id.in_(skill_ids),
+                UserArtifactPermission.status == "active",
+            )
+            .group_by(UserArtifactPermission.artifact_id)
+        )
+        share_counts = {row.artifact_id: row.cnt for row in counts_result}
+
     logger.info("admin_skills_listed", user_id=str(user["user_id"]), count=len(skills))
-    return [SkillDefinitionResponse.model_validate(s) for s in skills]
+    responses = []
+    for s in skills:
+        r = SkillDefinitionResponse.model_validate(s)
+        r.share_count = share_counts.get(s.id, 0)
+        responses.append(r)
+    return responses
 
 
 @router.post("", status_code=201)

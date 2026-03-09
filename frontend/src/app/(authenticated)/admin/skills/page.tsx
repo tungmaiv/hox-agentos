@@ -502,6 +502,11 @@ export default function AdminSkillsPage() {
                     Promoted
                   </span>
                 )}
+                {(item as SkillDefinition).shareCount > 0 && (
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-blue-100 text-blue-700 font-medium">
+                    Shared ({(item as SkillDefinition).shareCount})
+                  </span>
+                )}
                 {item.securityScore !== null && (
                   <span
                     className={`font-medium ${
@@ -603,6 +608,7 @@ export default function AdminSkillsPage() {
                           if (res.status === 201) {
                             const entry = (await res.json()) as SkillShareEntry;
                             setShares((prev) => [...prev, entry]);
+                            refetch();
                           } else if (res.status === 409) {
                             setShareError("Already shared with this user");
                           } else {
@@ -637,6 +643,7 @@ export default function AdminSkillsPage() {
                       const res = await fetch(`/api/admin/skills/${shareDialogSkill.id}/share/${share.user_id}`, { method: "DELETE" });
                       if (res.ok || res.status === 204) {
                         setShares((prev) => prev.filter((s) => s.user_id !== share.user_id));
+                        refetch();
                       }
                     }}
                     className="ml-2 text-xs text-red-500 hover:text-red-700 shrink-0"

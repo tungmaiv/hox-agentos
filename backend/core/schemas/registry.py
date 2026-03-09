@@ -240,6 +240,7 @@ class SkillDefinitionResponse(BaseModel):
     created_by: uuid.UUID | None
     created_at: datetime
     updated_at: datetime
+    share_count: int = 0
 
     model_config = ConfigDict(from_attributes=True)
 

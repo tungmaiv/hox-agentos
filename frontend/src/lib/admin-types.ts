@@ -121,6 +121,7 @@ export interface SkillDefinition {
   reviewedAt: string | null;
   usageCount: number;
   isPromoted: boolean;
+  shareCount: number;
   createdBy: string | null;
   createdAt: string;
   updatedAt: string;
