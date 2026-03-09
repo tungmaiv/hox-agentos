@@ -109,6 +109,8 @@ export default function AdminSkillsPage() {
   const [shares, setShares] = useState<SkillShareEntry[]>([]);
   const [sharesLoading, setSharesLoading] = useState(false);
   const [shareError, setShareError] = useState<string | null>(null);
+  // Optimistic share count overrides: updated immediately on share/revoke actions
+  const [shareCountOverrides, setShareCountOverrides] = useState<Record<string, number>>({});
 
   // Filter state
   const [searchQuery, setSearchQuery] = useState("");
@@ -502,11 +504,14 @@ export default function AdminSkillsPage() {
                     Promoted
                   </span>
                 )}
-                {(item as SkillDefinition).shareCount > 0 && (
-                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-blue-100 text-blue-700 font-medium">
-                    Shared ({(item as SkillDefinition).shareCount})
-                  </span>
-                )}
+                {(() => {
+                  const count = shareCountOverrides[item.id] ?? (item as SkillDefinition).shareCount;
+                  return count > 0 ? (
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-blue-100 text-blue-700 font-medium">
+                      Shared ({count})
+                    </span>
+                  ) : null;
+                })()}
                 {item.securityScore !== null && (
                   <span
                     className={`font-medium ${
@@ -607,7 +612,11 @@ export default function AdminSkillsPage() {
                           });
                           if (res.status === 201) {
                             const entry = (await res.json()) as SkillShareEntry;
-                            setShares((prev) => [...prev, entry]);
+                            setShares((prev) => {
+                              const next = [...prev, entry];
+                              setShareCountOverrides((o) => ({ ...o, [shareDialogSkill.id]: next.length }));
+                              return next;
+                            });
                             refetch();
                           } else if (res.status === 409) {
                             setShareError("Already shared with this user");
@@ -642,7 +651,11 @@ export default function AdminSkillsPage() {
                     onClick={async () => {
                       const res = await fetch(`/api/admin/skills/${shareDialogSkill.id}/share/${share.user_id}`, { method: "DELETE" });
                       if (res.ok || res.status === 204) {
-                        setShares((prev) => prev.filter((s) => s.user_id !== share.user_id));
+                        setShares((prev) => {
+                          const next = prev.filter((s) => s.user_id !== share.user_id);
+                          setShareCountOverrides((o) => ({ ...o, [shareDialogSkill.id]: next.length }));
+                          return next;
+                        });
                         refetch();
                       }
                     }}
