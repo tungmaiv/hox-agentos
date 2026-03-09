@@ -17,6 +17,7 @@ Security:
   - client_secret is NEVER logged. Stored AES-256-GCM encrypted in platform_config.
   - GET config response never includes client_secret or masked string — only has_secret: bool.
 """
+
 import asyncio
 import base64
 import json
@@ -30,13 +31,19 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.config import settings
+from sqlalchemy import select
+
 from core.db import async_session, get_db
 from core.logging import get_audit_logger
+from core.models.local_auth import LocalUser
 from core.models.platform_config import PlatformConfig
 from core.models.user import UserContext
 from security.deps import get_current_user
 from security.jwt import invalidate_jwks_cache
-from security.keycloak_config import get_keycloak_config, invalidate_keycloak_config_cache
+from security.keycloak_config import (
+    get_keycloak_config,
+    invalidate_keycloak_config_cache,
+)
 from security.rbac import has_permission
 
 logger = structlog.get_logger(__name__)
@@ -65,7 +72,9 @@ async def _require_admin(
 class KeycloakConfigInput(BaseModel):
     issuer_url: str
     client_id: str
-    client_secret: str | None = None  # None or "" means "keep existing secret if one is stored"
+    client_secret: str | None = (
+        None  # None or "" means "keep existing secret if one is stored"
+    )
     realm: str
     ca_cert_path: str = ""
 
@@ -78,10 +87,13 @@ class KeycloakConfigResponse(BaseModel):
       has_secret: bool — true if a client secret is stored in platform_config.
       The raw secret (or any masked representation like "*****") is NEVER included.
     """
+
     configured: bool = True
     issuer_url: str = ""
     client_id: str = ""
-    has_secret: bool = False   # true if client_secret_encrypted is set; never raw/masked string
+    has_secret: bool = (
+        False  # true if client_secret_encrypted is set; never raw/masked string
+    )
     realm: str = ""
     ca_cert_path: str = ""
     enabled: bool = True
@@ -108,11 +120,22 @@ class DisableResponse(BaseModel):
     frontend_restarting: bool
 
 
+class EnableResponse(BaseModel):
+    enabled: bool
+    frontend_restarting: bool
+
+
 class InternalProviderConfig(BaseModel):
     enabled: bool
     client_id: str = ""
     client_secret: str = ""
     issuer: str = ""
+
+
+class KeycloakUserEntry(BaseModel):
+    id: str
+    username: str
+    email: str
 
 
 # ---------------------------------------------------------------------------
@@ -209,15 +232,17 @@ async def _save_keycloak_config_to_db(config: KeycloakConfigInput) -> None:
                 # Do NOT touch existing.enabled — preserve whatever the admin last set.
                 # Use POST /api/admin/keycloak/disable to change the enabled state.
             else:
-                session.add(PlatformConfig(
-                    id=1,
-                    keycloak_url=keycloak_url,
-                    keycloak_realm=config.realm,
-                    keycloak_client_id=config.client_id,
-                    keycloak_client_secret_encrypted=encrypted_secret,
-                    keycloak_ca_cert=config.ca_cert_path or None,
-                    enabled=True,
-                ))
+                session.add(
+                    PlatformConfig(
+                        id=1,
+                        keycloak_url=keycloak_url,
+                        keycloak_realm=config.realm,
+                        keycloak_client_id=config.client_id,
+                        keycloak_client_secret_encrypted=encrypted_secret,
+                        keycloak_ca_cert=config.ca_cert_path or None,
+                        enabled=True,
+                    )
+                )
 
 
 async def _set_keycloak_enabled(enabled: bool) -> None:
@@ -250,7 +275,11 @@ async def _test_jwks_endpoint(issuer_url: str, ca_cert_path: str) -> dict[str, A
     Only it-admin role can reach this code path (enforced by _require_admin dependency).
     """
     if not issuer_url.startswith("https://"):
-        return {"reachable": False, "keys_found": 0, "error": "issuer_url must use https://"}
+        return {
+            "reachable": False,
+            "keys_found": 0,
+            "error": "issuer_url must use https://",
+        }
     jwks_url = f"{issuer_url}/protocol/openid-connect/certs"
     ssl_verify: str | bool = ca_cert_path or True
     try:
@@ -359,7 +388,9 @@ async def save_keycloak_config(
     return SaveConfigResponse(saved=True, frontend_restarting=True)
 
 
-@router.post("/api/admin/keycloak/test-connection", response_model=TestConnectionResponse)
+@router.post(
+    "/api/admin/keycloak/test-connection", response_model=TestConnectionResponse
+)
 async def test_keycloak_connection(
     body: TestConnectionInput,
     user: UserContext = Depends(_require_admin),
@@ -378,6 +409,26 @@ async def test_keycloak_connection(
         admin_user=str(user["user_id"]),
     )
     return TestConnectionResponse(**result)
+
+
+@router.post("/api/admin/keycloak/enable", response_model=EnableResponse)
+async def enable_sso(
+    background_tasks: BackgroundTasks,
+    user: UserContext = Depends(_require_admin),
+) -> EnableResponse:
+    """
+    Enable SSO (re-enable after being disabled).
+
+    Sets platform_config.enabled=True, invalidates caches,
+    and restarts frontend so Next.js loads the Keycloak provider.
+    """
+    await _set_keycloak_enabled(True)
+    invalidate_keycloak_config_cache()
+    invalidate_jwks_cache()
+    background_tasks.add_task(_restart_frontend_container)
+
+    audit_logger.info("keycloak_sso_enabled", admin_user=str(user["user_id"]))
+    return EnableResponse(enabled=True, frontend_restarting=True)
 
 
 @router.post("/api/admin/keycloak/disable", response_model=DisableResponse)
@@ -405,7 +456,9 @@ async def disable_sso(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/api/internal/keycloak/provider-config", response_model=InternalProviderConfig)
+@router.get(
+    "/api/internal/keycloak/provider-config", response_model=InternalProviderConfig
+)
 async def internal_provider_config(
     x_internal_key: str | None = Header(default=None, alias="X-Internal-Key"),
 ) -> InternalProviderConfig:
@@ -432,3 +485,92 @@ async def internal_provider_config(
         client_secret=kc.client_secret,
         issuer=kc.issuer_url,
     )
+
+
+@router.get("/api/admin/keycloak/users")
+async def search_keycloak_users(
+    q: str = "",
+    user: UserContext = Depends(_require_admin),
+    session: AsyncSession = Depends(get_db),
+) -> list[KeycloakUserEntry]:
+    """Search all users (local DB + Keycloak) by username or email.
+
+    Always queries local_users table. If Keycloak is enabled, also queries
+    Keycloak admin API. Results are merged and deduplicated by email — when
+    the same email appears in both sources, the Keycloak entry takes precedence
+    (its ID matches the JWT sub claim used for authentication).
+
+    Used by the admin skill share dialog so the stored user_id always matches
+    the target user's JWT sub, regardless of which auth method they use.
+    """
+    lower = q.strip().lower()
+
+    # --- 1. Local DB users ---
+    local_stmt = select(LocalUser)
+    if lower:
+        from sqlalchemy import or_
+        local_stmt = local_stmt.where(
+            or_(
+                LocalUser.username.ilike(f"%{lower}%"),
+                LocalUser.email.ilike(f"%{lower}%"),
+            )
+        )
+    local_result = await session.execute(local_stmt)
+    local_users = local_result.scalars().all()
+
+    # Build result map keyed by email (lowercase) — local entries first
+    # {email: KeycloakUserEntry}
+    by_email: dict[str, KeycloakUserEntry] = {
+        lu.email.lower(): KeycloakUserEntry(
+            id=str(lu.id),
+            username=lu.username,
+            email=lu.email,
+        )
+        for lu in local_users
+    }
+
+    # --- 2. Keycloak users (if configured) — override local entries by email ---
+    kc = await get_keycloak_config()
+    if kc is not None and kc.enabled:
+        base_url = kc.issuer_url.split("/realms/")[0]
+        ca_cert: str | bool = kc.ca_cert_path if kc.ca_cert_path else False
+        try:
+            async with httpx.AsyncClient(verify=ca_cert, timeout=10.0) as client:
+                token_resp = await client.post(
+                    f"{base_url}/realms/master/protocol/openid-connect/token",
+                    data={
+                        "grant_type": "password",
+                        "client_id": "admin-cli",
+                        "username": settings.keycloak_admin_username,
+                        "password": settings.keycloak_admin_password,
+                    },
+                )
+                if token_resp.status_code == 200:
+                    admin_token = token_resp.json()["access_token"]
+                    params: dict[str, str | int] = {"max": 50}
+                    if lower:
+                        params["search"] = lower
+                    users_resp = await client.get(
+                        f"{base_url}/admin/realms/{kc.realm}/users",
+                        headers={"Authorization": f"Bearer {admin_token}"},
+                        params=params,
+                    )
+                    if users_resp.status_code == 200:
+                        for u in users_resp.json():
+                            email = u.get("email", "").lower()
+                            username = u.get("username", "")
+                            # Client-side filter (Keycloak search is broad)
+                            if lower and lower not in username.lower() and lower not in email:
+                                continue
+                            # Keycloak entry overrides local entry for same email
+                            by_email[email] = KeycloakUserEntry(
+                                id=u["id"],
+                                username=username,
+                                email=u.get("email", ""),
+                            )
+                else:
+                    logger.warning("keycloak_admin_token_failed", status=token_resp.status_code)
+        except Exception as exc:
+            logger.warning("keycloak_user_search_error", error=str(exc))
+
+    return list(by_email.values())

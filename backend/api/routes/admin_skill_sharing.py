@@ -12,12 +12,14 @@ Returns 409 on duplicate share attempt (UNIQUE constraint on artifact_type + art
 """
 from uuid import UUID
 
+import httpx
 import structlog
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core.config import settings
 from core.db import get_db
 from core.models.local_auth import LocalUser
 from core.models.skill_definition import SkillDefinition
@@ -25,9 +27,54 @@ from core.models.user import UserContext
 from core.models.user_artifact_permission import UserArtifactPermission
 from core.schemas.registry import SkillShareEntry, SkillShareRequest
 from security.deps import get_current_user
+from security.keycloak_config import get_keycloak_config
 from security.rbac import has_permission
 
 logger = structlog.get_logger(__name__)
+
+
+async def _resolve_user_identity(user_id: UUID, session: AsyncSession) -> tuple[str, str]:
+    """Return (username, email) for a user_id.
+
+    Checks local_users first, then falls back to Keycloak admin API.
+    Returns ("", "") if the user cannot be resolved.
+    """
+    local = await session.execute(select(LocalUser).where(LocalUser.id == user_id))
+    local_user = local.scalar_one_or_none()
+    if local_user:
+        return local_user.username, local_user.email
+
+    # Not a local user — try Keycloak admin API
+    kc = await get_keycloak_config()
+    if kc is None or not kc.enabled:
+        return "", ""
+    base_url = kc.issuer_url.split("/realms/")[0]
+    ca_cert: str | bool = kc.ca_cert_path if kc.ca_cert_path else False
+    try:
+        async with httpx.AsyncClient(verify=ca_cert, timeout=8.0) as client:
+            token_resp = await client.post(
+                f"{base_url}/realms/master/protocol/openid-connect/token",
+                data={
+                    "grant_type": "password",
+                    "client_id": "admin-cli",
+                    "username": settings.keycloak_admin_username,
+                    "password": settings.keycloak_admin_password,
+                },
+            )
+            if token_resp.status_code != 200:
+                return "", ""
+            admin_token = token_resp.json()["access_token"]
+            user_resp = await client.get(
+                f"{base_url}/admin/realms/{kc.realm}/users/{user_id}",
+                headers={"Authorization": f"Bearer {admin_token}"},
+            )
+            if user_resp.status_code != 200:
+                return "", ""
+            data = user_resp.json()
+            return data.get("username", ""), data.get("email", "")
+    except Exception as exc:
+        logger.warning("keycloak_user_resolve_failed", user_id=str(user_id), error=str(exc))
+        return "", ""
 
 router = APIRouter(prefix="/api/admin/skills", tags=["admin-skills-sharing"])
 
@@ -89,15 +136,13 @@ async def share_skill_with_user(
         target_user_id=str(body.user_id),
         admin_user_id=str(user["user_id"]),
     )
-    local_user_result = await session.execute(select(LocalUser).where(LocalUser.id == body.user_id))
-    local_user = local_user_result.scalar_one_or_none()
-    entry = SkillShareEntry(
+    username, email = await _resolve_user_identity(body.user_id, session)
+    return SkillShareEntry(
         user_id=permission.user_id,
         created_at=permission.created_at,
-        username=local_user.username if local_user else "",
-        email=local_user.email if local_user else "",
+        username=username,
+        email=email,
     )
-    return entry
 
 
 @router.delete("/{skill_id}/share/{target_user_id}", status_code=204)
@@ -155,11 +200,12 @@ async def list_skill_shares(
     )
     permissions = result.scalars().all()
 
+    # Batch-resolve local users; fall back to Keycloak for any not found locally
     user_ids = [p.user_id for p in permissions]
-    users_map: dict[object, LocalUser] = {}
+    local_map: dict[UUID, LocalUser] = {}
     if user_ids:
         users_result = await session.execute(select(LocalUser).where(LocalUser.id.in_(user_ids)))
-        users_map = {u.id: u for u in users_result.scalars().all()}
+        local_map = {u.id: u for u in users_result.scalars().all()}
 
     logger.info(
         "admin_skill_shares_listed",
@@ -167,12 +213,18 @@ async def list_skill_shares(
         count=len(permissions),
         admin_user_id=str(user["user_id"]),
     )
-    return [
-        SkillShareEntry(
+
+    entries: list[SkillShareEntry] = []
+    for p in permissions:
+        if p.user_id in local_map:
+            u = local_map[p.user_id]
+            username, email = u.username, u.email
+        else:
+            username, email = await _resolve_user_identity(p.user_id, session)
+        entries.append(SkillShareEntry(
             user_id=p.user_id,
             created_at=p.created_at,
-            username=users_map[p.user_id].username if p.user_id in users_map else "",
-            email=users_map[p.user_id].email if p.user_id in users_map else "",
-        )
-        for p in permissions
-    ]
+            username=username,
+            email=email,
+        ))
+    return entries

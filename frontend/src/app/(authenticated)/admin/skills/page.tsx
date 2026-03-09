@@ -218,11 +218,13 @@ export default function AdminSkillsPage() {
     if (!q.trim()) { setUserSearchResults([]); return; }
     setUserSearchLoading(true);
     try {
-      const res = await fetch(`/api/admin/local/users`);
+      const res = await fetch(`/api/admin/keycloak/users?q=${encodeURIComponent(q)}`);
       if (!res.ok) return;
-      const all = await res.json() as Array<{id: string; email: string; username: string}>;
+      const results = await res.json() as Array<{id: string; email: string; username: string}>;
       const lower = q.toLowerCase();
-      setUserSearchResults(all.filter((u) => u.username.toLowerCase().includes(lower) || u.email.toLowerCase().includes(lower)));
+      setUserSearchResults(results.filter((u) =>
+        u.username.toLowerCase().includes(lower) || u.email.toLowerCase().includes(lower)
+      ));
     } catch { /* non-fatal */ } finally { setUserSearchLoading(false); }
   };
 
