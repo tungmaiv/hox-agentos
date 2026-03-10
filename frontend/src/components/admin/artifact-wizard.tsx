@@ -55,6 +55,7 @@ interface BuilderCoAgentState {
   form_entry_point?: string | null;
   form_url?: string | null;
   form_instruction_markdown?: string | null;
+  handler_code?: string | null;
 }
 
 function WizardInner() {
@@ -67,6 +68,7 @@ function WizardInner() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [aiFilledFields, setAiFilledFields] = useState<Set<string>>(new Set());
   const [cloneSourceName, setCloneSourceName] = useState<string | null>(null);
+  const [aiHandlerCode, setAiHandlerCode] = useState<string | null>(null);
 
   // Ref to buffer co-agent state updates — avoids setState during render phase
   const pendingStateRef = useRef<BuilderCoAgentState | null>(null);
@@ -144,6 +146,10 @@ function WizardInner() {
       // Update artifact_type if AI set it
       if (pending.artifact_type && pending.artifact_type !== artifactType) {
         setArtifactType(pending.artifact_type);
+      }
+      // Capture generated handler stub for tool save payload
+      if (pending.handler_code != null) {
+        setAiHandlerCode(pending.handler_code);
       }
 
       if (Object.keys(updates).length > 0) {
@@ -246,6 +252,7 @@ function WizardInner() {
         payload.handler_module = formState.handler_module || undefined;
         payload.sandbox_required = formState.sandbox_required;
         payload.required_permissions = formState.required_permissions;
+        if (aiHandlerCode) payload.handler_code = aiHandlerCode;
         break;
       case "skill":
         payload.skill_type = "instructional";

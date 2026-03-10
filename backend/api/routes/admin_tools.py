@@ -80,6 +80,7 @@ async def create_tool(
     session: AsyncSession = Depends(get_db),
 ) -> ToolDefinitionResponse:
     """Create a new tool definition."""
+    has_stub = bool(body.handler_code)
     tool = ToolDefinition(
         name=body.name,
         display_name=body.display_name,
@@ -93,6 +94,11 @@ async def create_tool(
         sandbox_required=body.sandbox_required,
         input_schema=body.input_schema,
         output_schema=body.output_schema,
+        handler_code=body.handler_code,
+        # If a handler stub was generated, hold the tool in pending_stub
+        # until the admin fills and activates it via /activate-stub
+        status="pending_stub" if has_stub else "active",
+        is_active=not has_stub,
     )
     session.add(tool)
     await session.commit()

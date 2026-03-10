@@ -83,6 +83,7 @@ class ToolDefinitionCreate(BaseModel):
     sandbox_required: bool = False
     input_schema: dict[str, Any] | None = None
     output_schema: dict[str, Any] | None = None
+    handler_code: str | None = None
 
 
 class ToolDefinitionUpdate(BaseModel):
