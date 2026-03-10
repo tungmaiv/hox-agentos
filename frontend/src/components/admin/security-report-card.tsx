@@ -153,8 +153,8 @@ export function SecurityReportCard({
         </div>
       )}
 
-      {/* Approve & Activate (only for review/reject) */}
-      {report.recommendation !== "approve" && (
+      {/* Approve & Activate (only for review — reject is a hard block) */}
+      {report.recommendation === "review" && (
         <div className="pt-2 border-t border-gray-100">
           <button
             onClick={handleApprove}

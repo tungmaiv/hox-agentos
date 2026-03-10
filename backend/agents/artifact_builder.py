@@ -271,7 +271,11 @@ def _extract_draft_from_response(content: str, current_draft: dict) -> dict:
                 continue
 
     if best is not None:
-        return {**current_draft, **best}
+        # Filter out None values so LLM-returned null fields don't overwrite
+        # existing draft values (e.g., a partial extraction should not blank
+        # out a field the user already filled in).
+        filtered = {k: v for k, v in best.items() if v is not None}
+        return {**current_draft, **filtered}
 
     # Fallback: try parsing the entire content as raw JSON (no code fences).
     # LLMs sometimes output {"name": "artifact_name", "arguments": {...}} as plain text.
@@ -290,10 +294,13 @@ def _extract_draft_from_response(content: str, current_draft: dict) -> dict:
                     name_override: dict = {}
                     if outer_name and outer_name != "fill_form" and "name" not in args:
                         name_override = {"name": outer_name}
-                    return {**current_draft, **args, **name_override}
+                    # Filter None values from args to avoid overwriting existing draft
+                    filtered_args = {k: v for k, v in args.items() if v is not None}
+                    return {**current_draft, **filtered_args, **name_override}
                 if len(parsed) > 1 and "arguments" not in parsed and "args" not in parsed:
-                    # LLM output a flat dict of skill fields directly
-                    return {**current_draft, **parsed}
+                    # LLM output a flat dict of skill fields directly; filter None values
+                    filtered_parsed = {k: v for k, v in parsed.items() if v is not None}
+                    return {**current_draft, **filtered_parsed}
         except (json.JSONDecodeError, ValueError):
             continue
 
