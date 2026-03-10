@@ -283,7 +283,7 @@ def _extract_draft_from_response(content: str, current_draft: dict) -> dict:
             parsed = json.loads(attempt)
             if isinstance(parsed, dict):
                 args = parsed.get("arguments") or parsed.get("args")
-                if isinstance(args, dict) and len(args) > 1:
+                if isinstance(args, dict) and len(args) >= 1:
                     # LLM output a tool-call-shaped blob — use the arguments dict.
                     # If the outer "name" is not "fill_form", it's the artifact name.
                     outer_name = parsed.get("name")
@@ -669,27 +669,23 @@ def create_artifact_builder_graph() -> CompiledStateGraph:
     )
 
     # After gather_type: route based on draft completeness.
-    # - Draft already has all required content → validate_and_present (sets is_complete=True)
-    # - Draft has name+description but missing content → generate_skill_content
-    # - Otherwise (no type detected yet) → END (wait for next user message)
+    # - Type is skill/tool + draft already has all required content → validate_and_present
+    # - Type is skill/tool (any draft state) → generate_skill_content to fill/complete it
+    # - Other artifact types or no type detected → END (wait for next user message)
     def _route_after_gather_type(state: ArtifactBuilderState) -> str:
         draft = state.get("artifact_draft") or {}
         atype = state.get("artifact_type")
-        if atype in ("skill", "tool") and draft.get("name") and draft.get("description"):
-            if atype == "tool":
-                if state.get("handler_code"):
-                    return "validate_and_present"
-                return "generate_skill_content"
-            if atype == "skill":
-                skill_type = draft.get("skill_type", "instructional")
-                if skill_type == "procedural":
-                    if draft.get("procedure_json"):
-                        return "validate_and_present"
-                    return "generate_skill_content"
-                else:
-                    if draft.get("instruction_markdown"):
-                        return "validate_and_present"
-                    return "generate_skill_content"
+        if atype == "tool":
+            if state.get("handler_code"):
+                return "validate_and_present"
+            return "generate_skill_content"
+        if atype == "skill":
+            skill_type = draft.get("skill_type", "instructional")
+            if skill_type == "procedural" and draft.get("procedure_json"):
+                return "validate_and_present"
+            if skill_type != "procedural" and draft.get("instruction_markdown"):
+                return "validate_and_present"
+            return "generate_skill_content"
         return END
 
     graph.add_conditional_edges(
