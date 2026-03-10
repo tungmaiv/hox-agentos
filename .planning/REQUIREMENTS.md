@@ -88,14 +88,14 @@
 
 ## Skill Platform — Enhanced Builder
 
-- [ ] **SKBLD-01**: Builder generates complete `procedure_json` with steps, tool references, conditions, and prompt templates for procedural skills
-- [ ] **SKBLD-02**: Builder generates `instruction_markdown` for instructional skills with proper Agent Skills format
-- [ ] **SKBLD-03**: For tools: builder generates handler code scaffolding (Python function stub with Pydantic I/O models)
-- [ ] **SKBLD-04**: Builder searches cached external repo indexes for similar skills and shows top 3-5 relevant examples as reference
-- [ ] **SKBLD-05**: "Fork" capability: user selects an existing external skill as starting point; builder pre-populates and adapts
-- [ ] **SKBLD-06**: Every artifact (built or imported) goes through SecurityScanner before activation — `security_review` node added to builder LangGraph
-- [ ] **SKBLD-07**: SecurityReportCard A2UI component shows trust score, factor breakdown, tool permissions, injection warnings, and recommendation
-- [ ] **SKBLD-08**: For `review` or `reject` recommendations, admin must explicitly approve before skill is activated
+- [x] **SKBLD-01**: Builder generates complete `procedure_json` with steps, tool references, conditions, and prompt templates for procedural skills
+- [x] **SKBLD-02**: Builder generates `instruction_markdown` for instructional skills with proper Agent Skills format
+- [x] **SKBLD-03**: For tools: builder generates handler code scaffolding (Python function stub with Pydantic I/O models)
+- [x] **SKBLD-04**: Builder searches cached external repo indexes for similar skills and shows top 3-5 relevant examples as reference
+- [x] **SKBLD-05**: "Fork" capability: user selects an existing external skill as starting point; builder pre-populates and adapts
+- [x] **SKBLD-06**: Every artifact (built or imported) goes through SecurityScanner before activation — `security_review` node added to builder LangGraph
+- [x] **SKBLD-07**: SecurityReportCard A2UI component shows trust score, factor breakdown, tool permissions, injection warnings, and recommendation
+- [x] **SKBLD-08**: For `review` or `reject` recommendations, admin must explicitly approve before skill is activated
 
 ---
 
@@ -186,14 +186,14 @@
 | SKMKT-01 | Phase 22 | Complete |
 | SKMKT-02 | Phase 22 | Complete |
 | SKMKT-03 | Phase 22 | Complete |
-| SKBLD-01 | Phase 23 | pending |
-| SKBLD-02 | Phase 23 | pending |
-| SKBLD-03 | Phase 23 | pending |
-| SKBLD-04 | Phase 23 | pending |
-| SKBLD-05 | Phase 23 | pending |
-| SKBLD-06 | Phase 23 | pending |
-| SKBLD-07 | Phase 23 | pending |
-| SKBLD-08 | Phase 23 | pending |
+| SKBLD-01 | Phase 23 | Complete |
+| SKBLD-02 | Phase 23 | Complete |
+| SKBLD-03 | Phase 23 | Complete |
+| SKBLD-04 | Phase 23 | Complete |
+| SKBLD-05 | Phase 23 | Complete |
+| SKBLD-06 | Phase 23 | Complete |
+| SKBLD-07 | Phase 23 | Complete |
+| SKBLD-08 | Phase 23 | Complete |
 
 ---
 *Generated: 2026-03-05 from approved v1.3 design and research*
