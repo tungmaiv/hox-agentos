@@ -46,17 +46,17 @@ decisions:
   - "[23-04]: Re-save of existing skill uses skill_id in BuilderSaveRequest body, updates existing row — avoids duplicate skills on re-scan"
 
 metrics:
-  duration: "~15 minutes"
+  duration: "~45 minutes (Tasks 1+2 + human-verify checkpoint)"
   completed_date: "2026-03-10"
-  tasks_total: 2
-  tasks_completed: 2
+  tasks_total: 3
+  tasks_completed: 3
   files_created: 2
   files_modified: 2
 ---
 
 # Phase 23 Plan 04: Builder Security Gate + SecurityReportCard Summary
 
-**One-liner:** POST /api/admin/skills/builder-save endpoint gates every builder save through SecurityScanner, with SecurityReportCard showing trust score breakdown and inline Approve & Activate for flagged skills.
+**One-liner:** POST /api/admin/skills/builder-save endpoint gates every builder save through SecurityScanner, with SecurityReportCard showing trust score breakdown and inline Approve & Activate for flagged skills — human verified end-to-end.
 
 ## What Was Built
 
@@ -108,6 +108,13 @@ Modified `frontend/src/components/admin/artifact-builder-client.tsx`:
 
 None other — plan executed as written for all other aspects.
 
+## Human Verification: APPROVED
+
+Task 3 checkpoint was approved by the user on 2026-03-10. Security gate flow verified end-to-end:
+- Builder-save endpoint with SecurityScanner gate
+- SecurityReportCard rendering in builder right panel
+- Approve & Activate button with confirmation dialog and inline transition to active
+
 ## Self-Check: PASSED
 
 | Item | Status |
@@ -116,3 +123,4 @@ None other — plan executed as written for all other aspects.
 | `backend/tests/skills/test_security_gate.py` | FOUND |
 | Commit 7aea085 (builder-save endpoint) | FOUND |
 | Commit ba6444c (SecurityReportCard + wiring) | FOUND |
+| Human verification checkpoint | APPROVED |
