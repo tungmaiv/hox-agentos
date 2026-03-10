@@ -170,6 +170,7 @@ v1.3 roadmap decisions:
 |---|-------------|------|--------|-----------|
 | 4 | fix avatar dropdown z-index in nav-rail.tsx (z-40 → z-50) | 2026-03-05 | 8a45435 | [4-fix-avatar-dropdown-z-index-in-nav-rail-](./quick/4-fix-avatar-dropdown-z-index-in-nav-rail-/) |
 | 5 | skill repo GitHub fallback + owner/repo shorthand normalization | 2026-03-10 | 606367a | [5-skill-repo-graceful-github-fallback-owne](./quick/5-skill-repo-graceful-github-fallback-owne/) |
+| 6 | Phase 23 UAT gaps: reject hard block, hybrid LLM scanner, null draft filter | 2026-03-11 | 4b06a15 | [6-fix-phase-23-gaps-reject-hard-block-hybr](./quick/6-fix-phase-23-gaps-reject-hard-block-hybr/) |
 | Phase 17 P05 | 5 | 5 tasks | 6 files |
 | Phase 17 P06 | 6 | 5 tasks | 15 files |
 | Phase 17 P04 | 3 | 3 tasks | 3 files |
@@ -196,6 +197,6 @@ v1.3 roadmap decisions:
 
 ## Session Continuity
 
-Last session: 2026-03-10
-Stopped at: Completed 23-04-PLAN.md — Builder security gate + SecurityReportCard + human verification (Phase 23 complete, v1.3 all phases done).
+Last session: 2026-03-11
+Stopped at: Completed quick-6 — Phase 23 UAT gaps closed (reject hard block, hybrid LLM scanner, null draft filter).
 Resume file: .planning/phases/23-skill-platform-e-enhanced-builder/23-04-SUMMARY.md
