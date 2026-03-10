@@ -2,6 +2,7 @@
 External skill repository management service.
 
 Functions:
+- normalize_repo_url(url)                  — expand owner/repo shorthand to full GitHub URL
 - fetch_index(url)                          — fetch and validate agentskills-index.json
 - add_repo(url, session)                    — register a new repo (fetches index on add)
 - remove_repo(repo_id, session)             — delete a repo (imported skills remain)
@@ -13,6 +14,7 @@ Functions:
 - import_from_repo(repo_id, skill_name,     — import a skill via SkillImporter + SecurityScanner
                    user_id, session)
 """
+import re
 import uuid
 from datetime import datetime, timezone
 from typing import Any
@@ -40,6 +42,33 @@ from skills.security_scanner import SecurityScanner
 
 logger = structlog.get_logger(__name__)
 
+# Matches exactly owner/repo with no scheme — e.g. "HKUDS/CLI-Anything", "my.org/my-repo"
+_OWNER_REPO_RE = re.compile(r"^[A-Za-z0-9_.\-]+/[A-Za-z0-9_.\-]+$")
+# Matches https://github.com/{owner}/{repo} with exactly two path segments
+_GITHUB_REPO_RE = re.compile(r"^https://github\.com/([^/]+)/([^/]+)$")
+
+
+def normalize_repo_url(url: str) -> str:
+    """Expand owner/repo shorthand to a full GitHub URL.
+
+    If the input matches the pattern ``owner/repo`` (no scheme, exactly two
+    slash-separated segments of alphanumeric/dash/dot/underscore characters),
+    it is treated as a GitHub shorthand and expanded to
+    ``https://github.com/owner/repo``.
+
+    Any other input (full URL, path with extra segments, etc.) is returned
+    unchanged.
+
+    Args:
+        url: Raw URL or owner/repo shorthand.
+
+    Returns:
+        Normalized URL string.
+    """
+    if _OWNER_REPO_RE.match(url):
+        return f"https://github.com/{url}"
+    return url
+
 
 def _repo_to_info(repo: SkillRepository) -> RepoInfo:
     """Convert SkillRepository ORM instance to RepoInfo schema."""
@@ -65,22 +94,73 @@ def _repo_to_info(repo: SkillRepository) -> RepoInfo:
 async def fetch_index(url: str) -> dict[str, Any]:
     """Fetch and validate the agentskills-index.json from a remote repository.
 
+    For GitHub URLs (https://github.com/{owner}/{repo}) that return 404 for
+    agentskills-index.json, a fallback is attempted: the GitHub REST API is
+    queried for repo metadata and a synthetic index is returned with an empty
+    skills list. This allows any public GitHub repository to be registered as
+    a skill source even when it does not serve an agentskills-index.json.
+
+    Non-GitHub URLs and non-404 HTTP errors are NOT subject to the fallback —
+    they propagate the original httpx.HTTPStatusError unchanged.
+
     Args:
         url: Base URL of the repository (with or without trailing slash).
 
     Returns:
-        Parsed and validated index dict.
+        Parsed and validated index dict, or synthetic index for GitHub fallback.
 
     Raises:
-        ValueError: When the index structure is invalid or missing required fields.
-        httpx.HTTPError: When the HTTP request fails.
+        ValueError: When the index structure is invalid, or when the GitHub API
+                    returns a non-200 status during fallback.
+        httpx.HTTPStatusError: When the HTTP request fails with a non-404 error,
+                               or when a non-GitHub URL returns 404.
     """
     base = url.rstrip("/")
     index_url = f"{base}/agentskills-index.json"
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         response = await client.get(index_url)
-        response.raise_for_status()
+        try:
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            # Only attempt GitHub fallback on 404 for github.com repos
+            if exc.response.status_code == 404:
+                github_match = _GITHUB_REPO_RE.match(base)
+                if github_match:
+                    owner = github_match.group(1)
+                    repo = github_match.group(2)
+                    api_url = f"https://api.github.com/repos/{owner}/{repo}"
+                    api_response = await client.get(
+                        api_url,
+                        headers={
+                            "Accept": "application/vnd.github+json",
+                            "User-Agent": "blitz-agentos",
+                        },
+                    )
+                    if api_response.status_code == 200:
+                        data = api_response.json()
+                        synthetic_index: dict[str, Any] = {
+                            "repository": {
+                                "name": data["name"],
+                                "description": data.get("description") or "",
+                                "url": base,
+                                "version": "0.0.0",
+                            },
+                            "skills": [],
+                        }
+                        logger.info(
+                            "repo_index_github_fallback",
+                            url=base,
+                            owner=owner,
+                            repo=repo,
+                        )
+                        return synthetic_index
+                    else:
+                        raise ValueError(
+                            f"GitHub repo not found or inaccessible: {owner}/{repo}"
+                        )
+            # Non-404 error, or non-GitHub 404 — re-raise original error
+            raise
 
     raw = response.json()
 
@@ -110,6 +190,7 @@ async def add_repo(url: str, session: AsyncSession) -> RepoInfo:
         ValueError: When a repo with the same name already exists.
         httpx.HTTPError: When the index cannot be fetched.
     """
+    url = normalize_repo_url(url)
     index = await fetch_index(url)
     repo_meta: dict[str, Any] = index.get("repository", {})
     name: str = repo_meta.get("name", "")
