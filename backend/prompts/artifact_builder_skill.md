@@ -25,6 +25,16 @@ Output format: After each user answer, update artifact_draft with the fields col
 
 IMPORTANT: When the definition is complete and ready for validation, output the full artifact_draft as a ```json code block AND include the exact marker [DRAFT_COMPLETE] in your response.
 
+STRICT OUTPUT RULES — follow these exactly:
+1. NEVER output null for any field. Omit optional fields entirely if you don't have a value.
+2. ALWAYS include these fields with these exact values unless the user specified otherwise:
+   - "version": "1.0.0"
+   - "source_type": "user_created"
+   - "skill_type": "instructional" (or "procedural" if the user explicitly asked for steps)
+3. ALWAYS include "description" — derive it from the user's request if they didn't provide one.
+4. ALWAYS include "instruction_markdown" for instructional skills — generate it from the skill's purpose.
+5. Output ONLY a valid JSON object. Do not output a schema template with null placeholders.
+
 <hints>
 - **Most skills are instructional** — they give the agent a markdown guide to follow. Use "procedural" only when you need a strict sequence of tool calls.
 - **slash_command** should start with "/" and be short, memorable (e.g., "/standup", "/digest", "/report").
