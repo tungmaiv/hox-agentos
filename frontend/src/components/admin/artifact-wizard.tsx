@@ -54,6 +54,7 @@ interface BuilderCoAgentState {
   form_sandbox_required?: boolean | null;
   form_entry_point?: string | null;
   form_url?: string | null;
+  form_instruction_markdown?: string | null;
 }
 
 function WizardInner() {
@@ -134,6 +135,10 @@ function WizardInner() {
       if (pending.form_sandbox_required != null && pending.form_sandbox_required !== formState.sandbox_required) {
         updates.sandbox_required = pending.form_sandbox_required;
         changedFields.add("sandbox_required");
+      }
+      if (pending.form_instruction_markdown != null && pending.form_instruction_markdown !== formState.instruction_markdown) {
+        updates.instruction_markdown = pending.form_instruction_markdown;
+        changedFields.add("instruction_markdown");
       }
 
       // Update artifact_type if AI set it

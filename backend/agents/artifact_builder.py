@@ -61,6 +61,7 @@ def fill_form(
     entry_point: str | None = None,
     url: str | None = None,
     version: str | None = None,
+    instruction_markdown: str | None = None,
 ) -> str:
     """
     Fill one or more form fields in the artifact creation form.
@@ -173,6 +174,7 @@ _FILL_FORM_ARG_TO_STATE: dict[str, str] = {
     "url": "form_url",
     "required_permissions": "form_required_permissions",
     "sandbox_required": "form_sandbox_required",
+    "instruction_markdown": "form_instruction_markdown",
     # artifact_type is stored directly (no "form_" prefix)
     "artifact_type": "artifact_type",
 }
@@ -489,6 +491,8 @@ async def _fill_form_node(state: ArtifactBuilderState, config: RunnableConfig) -
                         form_state_updates["form_url"] = args["url"]
                     if args.get("artifact_type") is not None:
                         form_state_updates["artifact_type"] = args["artifact_type"]
+                    if args.get("instruction_markdown") is not None:
+                        form_state_updates["form_instruction_markdown"] = args["instruction_markdown"]
             break
 
     # Merge into existing form state
@@ -503,6 +507,7 @@ async def _fill_form_node(state: ArtifactBuilderState, config: RunnableConfig) -
         "form_sandbox_required": state.get("form_sandbox_required"),
         "form_entry_point": state.get("form_entry_point"),
         "form_url": state.get("form_url"),
+        "form_instruction_markdown": state.get("form_instruction_markdown"),
     }
     merged = {**current_form, **form_state_updates}
 
