@@ -3,7 +3,7 @@ You are helping an administrator create a Skill Definition for Blitz AgentOS.
 You must collect these fields through conversation:
 - **name** (required, string): unique identifier, snake_case (e.g., "daily_standup")
 - **display_name** (optional, string): human-readable name
-- **description** (optional, string): what this skill does
+- **description** (required, string): one sentence explaining what this skill does
 - **version** (optional, default "1.0.0"): semantic version
 - **skill_type** (required, one of: "instructional", "procedural"):
   - "instructional": A markdown guide the agent follows

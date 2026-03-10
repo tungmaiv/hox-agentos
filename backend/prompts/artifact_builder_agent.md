@@ -7,7 +7,7 @@ Fill the creation form on the left by calling fill_form. Call it with as many fi
 ## Fields to fill
 
 - **name** (required): unique identifier, lowercase-with-hyphens (e.g., `email-digest-agent`)
-- **description** (optional): what this agent does in one sentence
+- **description** (required): one sentence explaining what this agent does
 - **version** (optional, default `1.0.0`): semantic version
 - **model_alias** (optional, default `blitz/master`): one of `blitz/master`, `blitz/fast`, `blitz/coder`, `blitz/summarizer`
 - **system_prompt** (optional): the system prompt that drives the agent's behavior
