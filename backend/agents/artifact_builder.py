@@ -190,6 +190,32 @@ def _args_to_form_updates(args: dict) -> dict:
     return updates
 
 
+# Mapping from artifact_draft keys to co-agent form state field names.
+# Used to sync draft fields into form_updates after any LLM response.
+_DRAFT_TO_FORM: dict[str, str] = {
+    "name": "form_name",
+    "description": "form_description",
+    "version": "form_version",
+    "model_alias": "form_model_alias",
+    "system_prompt": "form_system_prompt",
+    "handler_module": "form_handler_module",
+    "entry_point": "form_entry_point",
+    "url": "form_url",
+    "required_permissions": "form_required_permissions",
+    "sandbox_required": "form_sandbox_required",
+    "instruction_markdown": "form_instruction_markdown",
+}
+
+
+def _merge_draft_into_form(draft: dict, form_updates: dict) -> dict:
+    """Merge draft fields into form_updates for any key not already set."""
+    merged = dict(form_updates)
+    for draft_key, state_key in _DRAFT_TO_FORM.items():
+        if draft_key in draft and state_key not in merged:
+            merged[state_key] = draft[draft_key]
+    return merged
+
+
 def _fix_triple_quotes(text: str) -> str:
     """Convert Python-style triple-quoted strings to valid JSON strings.
 
@@ -325,11 +351,13 @@ async def _gather_type_node(state: ArtifactBuilderState, config: RunnableConfig)
                 form_updates = _args_to_form_updates(
                     _try_extract_fill_form_args(response.content) or {}
                 )
-                await _emit_builder_state(config, detected, {}, [], False, form_updates or None)
+                updated_draft = _extract_draft_from_response(response.content, {})
+                form_updates = _merge_draft_into_form(updated_draft, form_updates)
+                await _emit_builder_state(config, detected, updated_draft, [], False, form_updates or None)
                 return {
                     "messages": [response],
                     "artifact_type": detected,
-                    "artifact_draft": {},
+                    "artifact_draft": updated_draft,
                     **form_updates,
                 }
 
@@ -412,22 +440,7 @@ async def _gather_details_node(state: ArtifactBuilderState, config: RunnableConf
     )
     # Merge draft fields into form_updates so the form reflects the latest draft
     # (handles models that update artifact_draft without calling fill_form)
-    draft_to_form = {
-        "name": "form_name",
-        "description": "form_description",
-        "version": "form_version",
-        "model_alias": "form_model_alias",
-        "system_prompt": "form_system_prompt",
-        "handler_module": "form_handler_module",
-        "entry_point": "form_entry_point",
-        "url": "form_url",
-        "required_permissions": "form_required_permissions",
-        "sandbox_required": "form_sandbox_required",
-        "instruction_markdown": "form_instruction_markdown",
-    }
-    for draft_key, state_key in draft_to_form.items():
-        if draft_key in updated_draft and state_key not in form_updates:
-            form_updates[state_key] = updated_draft[draft_key]
+    form_updates = _merge_draft_into_form(updated_draft, form_updates)
 
     await _emit_builder_state(
         config, artifact_type, updated_draft, validation_errors, looks_complete,
