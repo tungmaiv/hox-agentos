@@ -517,7 +517,7 @@ async def import_from_repo(
 
     # 4. Security scan
     scanner = SecurityScanner()
-    report = scanner.scan(skill_data, source_url=skill_url)
+    report = await scanner.scan(skill_data, source_url=skill_url)
 
     # 5. Create SkillDefinition with pending_review quarantine
     skill = SkillDefinition(

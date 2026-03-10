@@ -573,7 +573,7 @@ class TestImportFromRepo:
             injection_matches=[],
         )
         mock_scanner = MagicMock()
-        mock_scanner.scan = MagicMock(return_value=mock_report)
+        mock_scanner.scan = AsyncMock(return_value=mock_report)
 
         with patch("skill_repos.service.SkillImporter", return_value=mock_importer):
             with patch("skill_repos.service.SecurityScanner", return_value=mock_scanner):
@@ -648,7 +648,7 @@ class TestImportFromRepo:
             injection_matches=[],
         )
         mock_scanner = MagicMock()
-        mock_scanner.scan = MagicMock(return_value=mock_report)
+        mock_scanner.scan = AsyncMock(return_value=mock_report)
 
         with patch("skill_repos.service.SkillImporter", return_value=mock_importer):
             with patch("skill_repos.service.SecurityScanner", return_value=mock_scanner):
@@ -660,7 +660,7 @@ class TestImportFromRepo:
 
                     result = await import_from_repo(repo_id, "daily-digest", user_id, mock_session)
 
-        mock_scanner.scan.assert_called_once_with(skill_data, source_url=skill_url)
+        mock_scanner.scan.assert_awaited_once_with(skill_data, source_url=skill_url)
 
     @pytest.mark.asyncio
     async def test_import_from_repo_creates_pending_review_skill(self) -> None:
@@ -700,7 +700,7 @@ class TestImportFromRepo:
             injection_matches=[],
         )
         mock_scanner = MagicMock()
-        mock_scanner.scan = MagicMock(return_value=mock_report)
+        mock_scanner.scan = AsyncMock(return_value=mock_report)
 
         created_kwargs: dict[str, Any] = {}
 

@@ -287,7 +287,7 @@ async def import_skill(
             )
 
     # Step 3: Security scan
-    report = scanner.scan(skill_data, source_url=body.source_url)
+    report = await scanner.scan(skill_data, source_url=body.source_url)
 
     # Step 4: Create with pending_review status (quarantine)
     skill = SkillDefinition(
@@ -380,7 +380,7 @@ async def import_skill_zip(
             )
 
     # Step 4: Security scan
-    report = scanner.scan(skill_data, source_url=skill_data.get("source_url"))
+    report = await scanner.scan(skill_data, source_url=skill_data.get("source_url"))
 
     # Step 5: Persist with pending_review status
     skill = SkillDefinition(
@@ -463,9 +463,9 @@ async def builder_save(
         if fork_source and "@" in fork_source:
             source_url = fork_source.split("@", 1)[-1] or None
 
-    # Run security scan synchronously
+    # Run security scan (async — may invoke LLM for sub-80 scores)
     scanner = SecurityScanner()
-    report = scanner.scan(skill_data, source_url=source_url)
+    report = await scanner.scan(skill_data, source_url=source_url)
 
     # Determine activation status from recommendation
     if report.recommendation == "approve":

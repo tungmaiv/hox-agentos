@@ -442,7 +442,7 @@ class TestZipScripts:
         result = importer.import_from_zip(zip_bytes)
         assert result.get("scripts_content", []) == []
 
-    def test_undeclared_import_triggers_rejection(
+    async def test_undeclared_import_triggers_rejection(
         self, importer: SkillImporter
     ) -> None:
         """Integration: skill with undeclared 'paramiko' import -> SecurityScanner rejects."""
@@ -460,7 +460,7 @@ Some instructions.
         })
         skill_data = importer.import_from_zip(zip_bytes)
         scanner = SecurityScanner()
-        report = scanner.scan(skill_data)
+        report = await scanner.scan(skill_data)
         assert report.recommendation == "reject"
 
 

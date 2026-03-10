@@ -8,7 +8,7 @@ SKBLD-08: Builder inline approval: admin can approve/reject pending skills
 """
 import asyncio
 from collections.abc import AsyncGenerator
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
@@ -113,7 +113,7 @@ def test_builder_save_approve(admin_client: TestClient) -> None:
     )
 
     with patch("api.routes.admin_skills.SecurityScanner") as mock_scanner_cls:
-        mock_scanner_cls.return_value.scan.return_value = approve_report
+        mock_scanner_cls.return_value.scan = AsyncMock(return_value=approve_report)
 
         res = admin_client.post(
             "/api/admin/skills/builder-save",
@@ -145,7 +145,7 @@ def test_builder_save_pending_review(admin_client: TestClient) -> None:
     )
 
     with patch("api.routes.admin_skills.SecurityScanner") as mock_scanner_cls:
-        mock_scanner_cls.return_value.scan.return_value = review_report
+        mock_scanner_cls.return_value.scan = AsyncMock(return_value=review_report)
 
         res = admin_client.post(
             "/api/admin/skills/builder-save",
@@ -177,7 +177,7 @@ def test_builder_inline_approve(admin_client: TestClient) -> None:
     )
 
     with patch("api.routes.admin_skills.SecurityScanner") as mock_scanner_cls:
-        mock_scanner_cls.return_value.scan.return_value = review_report
+        mock_scanner_cls.return_value.scan = AsyncMock(return_value=review_report)
 
         save_res = admin_client.post(
             "/api/admin/skills/builder-save",
