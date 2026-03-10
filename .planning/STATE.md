@@ -168,6 +168,7 @@ v1.3 roadmap decisions:
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 4 | fix avatar dropdown z-index in nav-rail.tsx (z-40 → z-50) | 2026-03-05 | 8a45435 | [4-fix-avatar-dropdown-z-index-in-nav-rail-](./quick/4-fix-avatar-dropdown-z-index-in-nav-rail-/) |
+| 5 | skill repo GitHub fallback + owner/repo shorthand normalization | 2026-03-10 | 606367a | [5-skill-repo-graceful-github-fallback-owne](./quick/5-skill-repo-graceful-github-fallback-owne/) |
 | Phase 17 P05 | 5 | 5 tasks | 6 files |
 | Phase 17 P06 | 6 | 5 tasks | 15 files |
 | Phase 17 P04 | 3 | 3 tasks | 3 files |
