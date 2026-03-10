@@ -373,6 +373,43 @@ def test_extract_draft_prefers_largest_json_block():
     assert "input_schema" in result
 
 
+def test_extract_draft_raw_json_tool_call_blob():
+    """LLM outputs {"name": "artifact_name", "arguments": {...}} as plain text — extract arguments."""
+    from agents.artifact_builder import _extract_draft_from_response
+    import json
+    payload = {
+        "name": "project_plan",
+        "arguments": {
+            "skill_type": "procedural",
+            "description": "Create a project plan",
+            "version": "1.0.0",
+            "procedure_json": {"steps": [{"tool": "gather_project_details"}]},
+        },
+    }
+    result = _extract_draft_from_response(json.dumps(payload), {})
+    assert result["skill_type"] == "procedural"
+    assert result["description"] == "Create a project plan"
+    assert "steps" in result["procedure_json"]
+    # outer "name" is treated as artifact name when not "fill_form"
+    assert result["name"] == "project_plan"
+
+
+def test_extract_draft_raw_flat_json():
+    """LLM outputs a flat skill definition dict as plain text — use it directly."""
+    from agents.artifact_builder import _extract_draft_from_response
+    import json
+    payload = {
+        "name": "my_skill",
+        "description": "Does something useful",
+        "skill_type": "instructional",
+        "instruction_markdown": "# Guide\nFollow these steps.",
+    }
+    result = _extract_draft_from_response(json.dumps(payload), {})
+    assert result["name"] == "my_skill"
+    assert result["skill_type"] == "instructional"
+    assert "# Guide" in result["instruction_markdown"]
+
+
 # ---------------------------------------------------------------------------
 # gather_details validation-on-complete tests
 # ---------------------------------------------------------------------------

@@ -246,6 +246,31 @@ def _extract_draft_from_response(content: str, current_draft: dict) -> dict:
 
     if best is not None:
         return {**current_draft, **best}
+
+    # Fallback: try parsing the entire content as raw JSON (no code fences).
+    # LLMs sometimes output {"name": "artifact_name", "arguments": {...}} as plain text.
+    # If the parsed dict has an "arguments" key containing a dict, use that as the
+    # draft update (the LLM mistook the artifact name for a tool call name).
+    raw = content.strip()
+    for attempt in (raw, _fix_triple_quotes(raw)):
+        try:
+            parsed = json.loads(attempt)
+            if isinstance(parsed, dict):
+                args = parsed.get("arguments") or parsed.get("args")
+                if isinstance(args, dict) and len(args) > 1:
+                    # LLM output a tool-call-shaped blob — use the arguments dict.
+                    # If the outer "name" is not "fill_form", it's the artifact name.
+                    outer_name = parsed.get("name")
+                    name_override: dict = {}
+                    if outer_name and outer_name != "fill_form" and "name" not in args:
+                        name_override = {"name": outer_name}
+                    return {**current_draft, **args, **name_override}
+                if len(parsed) > 1 and "arguments" not in parsed and "args" not in parsed:
+                    # LLM output a flat dict of skill fields directly
+                    return {**current_draft, **parsed}
+        except (json.JSONDecodeError, ValueError):
+            continue
+
     return current_draft
 
 
@@ -398,6 +423,7 @@ async def _gather_details_node(state: ArtifactBuilderState, config: RunnableConf
         "url": "form_url",
         "required_permissions": "form_required_permissions",
         "sandbox_required": "form_sandbox_required",
+        "instruction_markdown": "form_instruction_markdown",
     }
     for draft_key, state_key in draft_to_form.items():
         if draft_key in updated_draft and state_key not in form_updates:
