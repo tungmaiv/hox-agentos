@@ -4,11 +4,28 @@
  *
  * Features:
  * - Table of registered repositories: name, URL, skill count, last synced, status
- * - "Add Repository" dialog with URL input
+ * - "Add Repository" dialog with URL input (accepts full URL or owner/repo shorthand)
  * - "Sync" button per row — re-fetches index
  * - "Remove" button per row — with confirm prompt
  */
 import { useCallback, useEffect, useState } from "react";
+
+/**
+ * Normalize a raw repository input to a full URL.
+ *
+ * If the input matches the pattern ``owner/repo`` (exactly two slash-separated
+ * segments of alphanumeric/dash/dot/underscore characters, no scheme), it is
+ * treated as a GitHub shorthand and expanded to https://github.com/owner/repo.
+ *
+ * Any other input (full URL, etc.) is returned unchanged.
+ */
+function normalizeRepoUrl(raw: string): string {
+  const ownerRepoPattern = /^[A-Za-z0-9_.\-]+\/[A-Za-z0-9_.\-]+$/;
+  if (ownerRepoPattern.test(raw)) {
+    return `https://github.com/${raw}`;
+  }
+  return raw;
+}
 
 interface RepoInfo {
   id: string;
@@ -61,10 +78,11 @@ export function SkillStoreRepositories() {
     setAdding(true);
     setAddError(null);
     try {
+      const normalized = normalizeRepoUrl(addUrl.trim());
       const response = await fetch("/api/admin/skill-repos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: addUrl.trim() }),
+        body: JSON.stringify({ url: normalized }),
       });
       if (!response.ok) {
         const data = (await response.json().catch(() => ({}))) as {
@@ -267,8 +285,8 @@ export function SkillStoreRepositories() {
                 Repository Base URL
               </label>
               <input
-                type="url"
-                placeholder="https://skills.example.com"
+                type="text"
+                placeholder="https://skills.example.com or owner/repo"
                 value={addUrl}
                 onChange={(e) => setAddUrl(e.target.value)}
                 onKeyDown={(e) => {
@@ -278,11 +296,17 @@ export function SkillStoreRepositories() {
                 autoFocus
               />
               <p className="text-xs text-gray-500">
-                The URL must serve an{" "}
+                Enter a full URL (must serve{" "}
                 <code className="bg-gray-100 px-1 rounded">
                   agentskills-index.json
-                </code>{" "}
-                file at its root.
+                </code>
+                ) or a GitHub shorthand like{" "}
+                <code className="bg-gray-100 px-1 rounded">owner/repo</code>{" "}
+                (e.g.{" "}
+                <code className="bg-gray-100 px-1 rounded">
+                  HKUDS/CLI-Anything
+                </code>
+                ).
               </p>
 
               {addError && (
