@@ -668,7 +668,27 @@ def create_artifact_builder_graph() -> CompiledStateGraph:
         },
     )
 
-    graph.add_edge("gather_type", END)
+    # After gather_type: if the draft already has name+description, immediately
+    # chain to generate_skill_content rather than waiting for a second user message.
+    def _route_after_gather_type(state: ArtifactBuilderState) -> str:
+        draft = state.get("artifact_draft") or {}
+        atype = state.get("artifact_type")
+        if atype in ("skill", "tool") and draft.get("name") and draft.get("description"):
+            if atype == "tool" and not state.get("handler_code"):
+                return "generate_skill_content"
+            if atype == "skill":
+                skill_type = draft.get("skill_type", "instructional")
+                if skill_type == "procedural" and not draft.get("procedure_json"):
+                    return "generate_skill_content"
+                if skill_type != "procedural" and not draft.get("instruction_markdown"):
+                    return "generate_skill_content"
+        return END
+
+    graph.add_conditional_edges(
+        "gather_type",
+        _route_after_gather_type,
+        {"generate_skill_content": "generate_skill_content", END: END},
+    )
     graph.add_edge("gather_details", END)
     graph.add_edge("validate_and_present", END)
     graph.add_edge("fill_form_node", END)
