@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-03-05)
 Phase: 23 of 23 (Skill Platform E — Enhanced Builder) — In Progress
 Plan: 04 of 04 at checkpoint (Tasks 1+2 complete, awaiting human-verify of security gate flow)
 Status: Phase 23 in progress — 23-04 Tasks 1+2 done (builder-save endpoint + SecurityReportCard). Awaiting human verification at checkpoint before plan completion.
-Last activity: 2026-03-10 - Completed 23-04 Tasks 1+2: POST /api/admin/skills/builder-save + SecurityReportCard component + frontend wiring. Checkpoint reached.
+Last activity: 2026-03-10 - Completed quick task 5: skill repo GitHub fallback + owner/repo shorthand normalization
 
 Progress: [#########░] ~61%
 
