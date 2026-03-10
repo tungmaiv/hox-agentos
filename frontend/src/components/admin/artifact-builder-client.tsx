@@ -86,6 +86,9 @@ function BuilderInner() {
 
   // Ref to buffer co-agent state updates — avoids setState during render phase
   const pendingStateRef = useRef<BuilderState | null>(null);
+  // When user manually edits draft via JSON editor, lock it so co-agent polling
+  // doesn't overwrite their edits before they click Save.
+  const manualDraftRef = useRef<Record<string, unknown> | null>(null);
 
   // Subscribe to co-agent state updates for live preview.
   // The render callback runs during React's render phase, so we buffer
@@ -110,12 +113,18 @@ function BuilderInner() {
     },
   });
 
-  // Apply buffered state outside the render phase
+  // Apply buffered state outside the render phase.
+  // If the user has manually edited the draft via the JSON editor, preserve
+  // their version and don't let co-agent polling overwrite it.
   useEffect(() => {
     const id = setInterval(() => {
       if (pendingStateRef.current) {
-        setBuilderState(pendingStateRef.current);
+        const pending = pendingStateRef.current;
         pendingStateRef.current = null;
+        setBuilderState((prev) => ({
+          ...pending,
+          artifact_draft: manualDraftRef.current ?? pending.artifact_draft ?? prev.artifact_draft,
+        }));
       }
     }, 100);
     return () => clearInterval(id);
@@ -201,6 +210,7 @@ function BuilderInner() {
         setSavedSkillId(data.skill_id);
 
         if (data.status === "active") {
+          manualDraftRef.current = null;
           setSaveSuccess(true);
         }
         // If pending_review: stay in builder, SecurityReportCard renders
@@ -301,6 +311,8 @@ function BuilderInner() {
     setJsonParseError(null);
     try {
       const parsed = JSON.parse(jsonEditValue) as Record<string, unknown>;
+      // Lock the draft so co-agent polling doesn't overwrite the user's edits
+      manualDraftRef.current = parsed;
       setBuilderState((prev) => ({ ...prev, artifact_draft: parsed }));
       setShowJsonEditor(false);
     } catch (err) {
