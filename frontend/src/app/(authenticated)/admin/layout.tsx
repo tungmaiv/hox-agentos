@@ -21,6 +21,7 @@ const ADMIN_TABS = [
   { label: "Users",       href: "/admin/users" },
   { label: "Skill Store", href: "/admin/skill-store" },
   { label: "AI Builder",  href: "/admin/create" },
+  { label: "Builder+",    href: "/admin/builder" },
 ] as const;
 
 /** Roles that grant access to the admin dashboard. */
