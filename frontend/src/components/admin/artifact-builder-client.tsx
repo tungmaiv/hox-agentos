@@ -308,6 +308,8 @@ function BuilderInner() {
       },
       fork_source: forkSource,
     }));
+    // Release manual draft lock so the forked draft takes effect
+    manualDraftRef.current = null;
     // Collapse the similar skills panel after forking
     setSimilarSkills(null);
   }, []);

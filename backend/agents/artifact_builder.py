@@ -76,6 +76,7 @@ def fill_form(
             "system_prompt": system_prompt, "handler_module": handler_module,
             "sandbox_required": sandbox_required, "entry_point": entry_point,
             "url": url, "version": version,
+            "instruction_markdown": instruction_markdown,
         }.items() if v is not None
     }
     return f"Filled {len(filled)} field(s): {', '.join(filled.keys())}"
