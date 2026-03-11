@@ -82,7 +82,14 @@ function LoginForm() {
       });
 
       if (result?.error) {
-        setError("Invalid username or password. Please try again.");
+        if (result.error === "CredentialsSignin") {
+          setError("Invalid username or password. Please try again.");
+        } else {
+          // Non-credential error (e.g. stale CSRF token after server restart).
+          // Reload the page to get a fresh CSRF token — the login will succeed
+          // on the next attempt without the user needing to understand why.
+          window.location.reload();
+        }
       } else if (result?.ok) {
         router.push(callbackUrl);
       }
