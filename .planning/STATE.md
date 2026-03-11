@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-03-05)
 Phase: 23 of 23 (Skill Platform E — Enhanced Builder) — Complete
 Plan: 04 of 04 complete (Tasks 1+2+3 done, human-verify approved)
 Status: Phase 23 complete — all 4 plans done (23-01 through 23-04). v1.3 milestone ready for final UAT.
-Last activity: 2026-03-10 - Completed 23-04-PLAN.md — builder-save security gate + SecurityReportCard + human verification approved
+Last activity: 2026-03-11 - Completed quick-8 — login page auto-reloads on stale CSRF token instead of showing misleading invalid-password error
 
 Progress: [#########░] ~61%
 
@@ -172,6 +172,7 @@ v1.3 roadmap decisions:
 | 5 | skill repo GitHub fallback + owner/repo shorthand normalization | 2026-03-10 | 606367a | [5-skill-repo-graceful-github-fallback-owne](./quick/5-skill-repo-graceful-github-fallback-owne/) |
 | 6 | Phase 23 UAT gaps: reject hard block, hybrid LLM scanner, null draft filter | 2026-03-11 | 4b06a15 | [6-fix-phase-23-gaps-reject-hard-block-hybr](./quick/6-fix-phase-23-gaps-reject-hard-block-hybr/) |
 | 7 | Add Import from URL panel to builder right panel | 2026-03-11 | 98a1d3e | [7-add-import-url-panel-to-builder-right-pa](./quick/7-add-import-url-panel-to-builder-right-pa/) |
+| 8 | fix login page CSRF stale-token error: auto-reload instead of misleading invalid-password message | 2026-03-11 | 08c3c50 | [8-fix-login-page-csrf-stale-token-error-au](./quick/8-fix-login-page-csrf-stale-token-error-au/) |
 | Phase 17 P05 | 5 | 5 tasks | 6 files |
 | Phase 17 P06 | 6 | 5 tasks | 15 files |
 | Phase 17 P04 | 3 | 3 tasks | 3 files |
