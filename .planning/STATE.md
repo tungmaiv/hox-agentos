@@ -173,6 +173,7 @@ v1.3 roadmap decisions:
 | 6 | Phase 23 UAT gaps: reject hard block, hybrid LLM scanner, null draft filter | 2026-03-11 | 4b06a15 | [6-fix-phase-23-gaps-reject-hard-block-hybr](./quick/6-fix-phase-23-gaps-reject-hard-block-hybr/) |
 | 7 | Add Import from URL panel to builder right panel | 2026-03-11 | 98a1d3e | [7-add-import-url-panel-to-builder-right-pa](./quick/7-add-import-url-panel-to-builder-right-pa/) |
 | 8 | fix login page CSRF stale-token error: auto-reload instead of misleading invalid-password message | 2026-03-11 | 08c3c50 | [8-fix-login-page-csrf-stale-token-error-au](./quick/8-fix-login-page-csrf-stale-token-error-au/) |
+| 9 | extend scanner truncation to 2000, fix fill_form count, clear manualDraftRef on fork | 2026-03-11 | 3269bbc | [9-fix-code-review-findings-scanner-truncat](./quick/9-fix-code-review-findings-scanner-truncat/) |
 | Phase 17 P05 | 5 | 5 tasks | 6 files |
 | Phase 17 P06 | 6 | 5 tasks | 15 files |
 | Phase 17 P04 | 3 | 3 tasks | 3 files |
@@ -200,5 +201,5 @@ v1.3 roadmap decisions:
 ## Session Continuity
 
 Last session: 2026-03-11
-Stopped at: Completed quick-7 — Import from URL panel added to builder right panel in artifact-builder-client.tsx.
+Stopped at: Completed quick-9 — scanner truncation extended to 2000, fill_form count fixed, manualDraftRef cleared on fork.
 Resume file: .planning/phases/23-skill-platform-e-enhanced-builder/23-04-SUMMARY.md
