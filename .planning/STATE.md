@@ -44,6 +44,19 @@ Progress: [#########░] ~61%
 
 ## Accumulated Context
 
+### Roadmap Evolution
+
+- Phase 24 added: Unified Registry, MCP Platform Enhancement & Skill Import Adapters — synthesized from docs/enhancements/ proposals (unified-registry-proposal.md, mcp-server-enhancement-proposal.md, skill-import-adapter-framework.md, security-scan-module/) and pending todos in STATE.md
+
+### Phase 24 Architecture Decisions (2026-03-12)
+
+- [24-conflict-1]: MCP servers storage → **Option B: migrate to `registry_entries` unified table** — migrate all 4 existing mcp_server rows; single table for agents/skills/tools/mcp; mcp_servers table dropped after migration
+- [24-conflict-2]: Security Scanner scope → **Option A: replace WeightedSecurityScanner** — build standalone Docker MCP service (infra/security-scanner/), remove backend/skills/security_scanner.py WeightedSecurityScanner; scope included in Phase 24 (plan 24-05)
+- [24-conflict-3]: Phase 24 plan structure → **Accept 6-plan merge** — 24-01 Tech Debt, 24-02 Unified Registry, 24-03 MCP Platform (+auto-generate from OpenAPI), 24-04 Skill Import Adapters, 24-05 Security Scan Module, 24-06 Admin UI & LLM Config
+- [24-conflict-4]: Security scan docs consolidation → **Consolidate to 3 files** — keep 00-specification.md (merged), 01-implementation-phases.md, 05-testing-strategy.md; delete 02-component-specs.md, 03-integration-guide.md, 04-deployment-guide.md
+- [24-conflict-5]: integration-guide-and-roadmap.md fate → **Delete after Phase 24 planning** — file marked deprecated; superseded by PLAN.md files once planning completes
+- [24-conflict-6]: Auto-generate MCP from API endpoints todo → **Fold into plan 24-03** — OpenAPI URL → new registry entry with type='mcp_server', config.server_type='openapi_bridge'
+
 ### Decisions
 
 Decisions are logged in PROJECT.md Key Decisions table.
