@@ -84,6 +84,12 @@ function BuilderInner() {
   const [jsonEditValue, setJsonEditValue] = useState<string>("");
   const [jsonParseError, setJsonParseError] = useState<string | null>(null);
 
+  // Import from URL panel state
+  const [showImport, setShowImport] = useState(false);
+  const [importUrl, setImportUrl] = useState("");
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+
   // Ref to buffer co-agent state updates — avoids setState during render phase
   const pendingStateRef = useRef<BuilderState | null>(null);
   // When user manually edits draft via JSON editor, lock it so co-agent polling
@@ -320,6 +326,36 @@ function BuilderInner() {
     }
   }, [jsonEditValue]);
 
+  const handleImport = useCallback(async () => {
+    if (!importUrl.trim()) return;
+    setImporting(true);
+    setImportError(null);
+    try {
+      const res = await fetch("/api/admin/skills/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ source_url: importUrl.trim() }),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+        const msg = typeof body.detail === "string" ? body.detail : `HTTP ${res.status}`;
+        throw new Error(msg);
+      }
+      const data = (await res.json()) as {
+        skill: { id: string };
+        security_report: SecurityReportData;
+      };
+      setSecurityReport(data.security_report);
+      setSavedSkillId(data.skill.id);
+      setShowImport(false);
+      setImportUrl("");
+    } catch (err) {
+      setImportError(err instanceof Error ? err.message : "Import failed");
+    } finally {
+      setImporting(false);
+    }
+  }, [importUrl]);
+
   // When toggling the JSON editor ON, pre-fill with current draft
   const handleToggleJsonEditor = useCallback(() => {
     setShowJsonEditor((prev) => {
@@ -465,6 +501,49 @@ function BuilderInner() {
             >
               Edit JSON
             </button>
+          )}
+
+          {/* Import from URL — always accessible, not gated on is_complete */}
+          {!securityReport && (
+            <div>
+              {!showImport ? (
+                <button
+                  onClick={() => { setShowImport(true); setImportError(null); }}
+                  className="text-xs text-blue-600 hover:text-blue-800 underline"
+                >
+                  Import from URL
+                </button>
+              ) : (
+                <div className="space-y-2 border border-gray-200 rounded-md p-3 bg-gray-50">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-gray-700">Import SKILL.md from URL</span>
+                    <button
+                      onClick={() => { setShowImport(false); setImportUrl(""); setImportError(null); }}
+                      className="text-xs text-gray-500 hover:text-gray-700"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                  <input
+                    type="url"
+                    value={importUrl}
+                    onChange={(e) => setImportUrl(e.target.value)}
+                    placeholder="https://github.com/owner/repo/blob/main/SKILL.md"
+                    className="w-full text-xs border border-gray-300 rounded-md px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                  {importError && (
+                    <p className="text-xs text-red-600">{importError}</p>
+                  )}
+                  <button
+                    onClick={handleImport}
+                    disabled={importing || !importUrl.trim()}
+                    className="px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-xs font-medium disabled:opacity-50"
+                  >
+                    {importing ? "Importing..." : "Import"}
+                  </button>
+                </div>
+              )}
+            </div>
           )}
 
           {/* Find Similar button — visible when draft has name + description */}
