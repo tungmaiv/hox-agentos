@@ -213,6 +213,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         };
         return {
           ...token,
+          error: undefined, // clear stale error from any previous expired session
           accessToken: u.accessToken,
           realmRoles: u.realmRoles ?? [],
           // Local tokens: 8-hour expiry from now, no refresh token
@@ -225,6 +226,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (account?.provider === "keycloak" && account) {
         return {
           ...token,
+          error: undefined, // clear stale error from any previous expired session
           accessToken: account.access_token,
           idToken: account.id_token,
           refreshToken: account.refresh_token,
