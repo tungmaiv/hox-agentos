@@ -56,23 +56,33 @@ Every Blitz employee gets an intelligent, context-aware assistant that automates
 - ✓ All LLM prompts externalized to `backend/prompts/*.md` with `PromptLoader` utility — v1.2
 - ✓ `classify_intent()` dead code removed, `router.py` deleted — v1.2
 
+### Validated (v1.3)
+
+- ✓ Next.js middleware route protection with jose Edge Runtime JWT; CVE-2025-29927 mitigated — v1.3
+- ✓ Silent session refresh (5-min buffer), Keycloak end-session logout, multi-tab sync — v1.3
+- ✓ Persistent navigation rail (56px, role-gated admin tab, all authenticated pages) — v1.3
+- ✓ User profile page: account info, password change, custom instructions, LLM preferences — v1.3
+- ✓ LLM preferences (thinking mode, response style) injected into agent system prompt — v1.3
+- ✓ Embedding sidecar service (bge-m3 Docker Compose service, HTTP-first, warm, dimension-validated) — v1.3
+- ✓ 7 critical-path duration_ms instrumentation + single DB session per request + TTL caches — v1.3
+- ✓ Keycloak as optional runtime config (admin Identity tab, JWKS hot-reload, local-auth-first boot) — v1.3
+- ✓ agentskills.io standards compliance: 7 metadata columns, kebab-case validation, SKILL.md/ZIP import/export — v1.3
+- ✓ Skill catalog with tsvector FTS (Vietnamese-compatible), category/author/status filters, usage tracking — v1.3
+- ✓ External skill registry browse with paginated index and one-click import — v1.3
+- ✓ SecurityScanner: dependency_risk + data_flow_risk factors + hard veto for undeclared imports — v1.3
+- ✓ allowed-tools enforcement pre-gate in SkillExecutor + audit logging — v1.3
+- ✓ SHA-256 skill update checker via Celery daily task — v1.3
+- ✓ Promoted skills curated section + user ZIP export + user-to-user sharing — v1.3
+- ✓ Builder generates procedure_json / instruction_markdown / handler_code stubs via LLM — v1.3
+- ✓ pgvector similarity search over external skill repo index (HNSW cosine) + Fork capability — v1.3
+- ✓ SecurityScanner gate on every builder save; SecurityReportCard A2UI + admin approval flow — v1.3
+
 ### Active
 
-## Current Milestone: v1.3 Production Readiness & Skill Platform
-
-**Goal:** Transform Blitz AgentOS from a feature-complete development platform into a production-ready, extensible agentic OS with proper session management, unified navigation, configurable identity, performance optimization, and a standards-compliant skill ecosystem.
-
-**Target features:**
-- Session & auth hardening (Next.js middleware, token validation, cookie security)
-- Menu redesign (navigation rail), profile page, user preferences (LLM thinking mode, response style)
-- Performance instrumentation + 7 bottleneck fixes + embedding sidecar service
-- Keycloak as optional runtime configuration (admin UI, local-auth-first boot)
-- Skill & Tool Platform: Agent Skills standard compliance, catalog/discovery, dependency hardening, sharing/marketplace, enhanced builder with external learning and security gate
-
-**Deferred to v1.4+:**
 - [ ] Real OAuth email/calendar integration (replace mock sub-agents with live Google/Microsoft OAuth)
 - [ ] WhatsApp Business live end-to-end (pending Meta Business API verification)
 - [ ] MS Teams live end-to-end (pending Azure Bot Service registration)
+- [ ] Builder fill_form metadata: populate `allowed_tools`/`category`/`tags` in artifact draft (v1.3 tech debt)
 
 ### Out of Scope
 
@@ -88,28 +98,27 @@ Every Blitz employee gets an intelligent, context-aware assistant that automates
 
 ## Context
 
-**Current state (v1.2 shipped 2026-03-04):**
-- Full enterprise agentic platform with developer extensibility features live on Docker Compose
-- 719 backend tests passing (pytest), 1 skipped; TypeScript strict 0 errors
-- Alembic migrations 001–019 applied; pgvector `vector(1024)`, RLS on 6 tables
-- 83,431 LOC (Python + TypeScript)
-- Unified admin desk at `/admin` with AI-assisted artifact creation wizard
-- Dual auth: Keycloak SSO + local user/group management with identical RBAC
-- `system.capabilities` queryable from chat; OpenAPI-to-MCP bridge live
-- External skill repository ecosystem with browse, import, and agentskills.io export
-- All LLM prompts externalized to `backend/prompts/*.md`
-- Cloudflare Tunnel for webhook exposure (Telegram live)
-- Grafana + Loki + Alloy observability stack live; Telegram spend alerting verified
+**Current state (v1.3 shipped 2026-03-11):**
+- Production-hardened agentic OS with secure sessions, standards-compliant skill ecosystem live on Docker Compose
+- 860 backend tests passing (pytest), 1 skipped; TypeScript strict 0 errors
+- Alembic migrations 001–027 applied; pgvector `vector(1024)` for memory + skill_repo_index (HNSW cosine)
+- 80,620 LOC Python · 18,959 LOC TypeScript (99,579 total)
+- Embedding runs in dedicated bge-m3 sidecar service (HTTP-first, warm, no cold-start delay)
+- Keycloak is optional: platform boots with local-auth-only; admin can enable SSO at runtime
+- Full skill ecosystem: catalog (FTS), security hardening, sharing/marketplace, enhanced builder with security gate
+- agentskills.io-compliant skill format: 7 metadata fields, SKILL.md/ZIP import+export
+- All authenticated pages behind Next.js middleware (jose Edge Runtime); session refresh, logout, multi-tab sync working
 
-**What shipped in v1.2:** Unified admin desk (migrate /settings → /admin); guided artifact creation wizard with AI form fill, templates, name check, clone; local auth with dual-issuer JWT dispatch; `system.capabilities` tool with CapabilitiesCard A2UI; OpenAPI-to-MCP auto-generation with 3-step wizard and runtime HTTP proxy; external skill repository management with SecurityScanner quarantine; agentskills.io-compliant skill export; PromptLoader for externalized LLM prompts; Cloudflare Tunnel; classify_intent dead code removal.
+**What shipped in v1.3:** Session hardening (middleware, refresh, logout); navigation rail + profile page + LLM preferences; embedding sidecar; 7-path perf instrumentation; Keycloak runtime config; agentskills.io standards compliance; skill catalog with FTS + external registry browse; SecurityScanner enhanced with dependency+data_flow risk; allowed-tools enforcement; daily update checker; promoted skills + ZIP export + sharing; LLM-generated skill content in builder; pgvector similarity search + Fork; SecurityScanner gate on all builder saves.
 
-**What's next:** Run `/gsd:new-milestone` to define v1.3 requirements. Likely candidates: real OAuth email/calendar integration, WhatsApp/Teams live credentials, user profile/logout, LLM preferences.
+**What's next:** Run `/gsd:new-milestone` to define v1.4. Priority candidates: real OAuth email/calendar integration, builder metadata fields fix, WhatsApp/Teams live credentials.
 
 **Known tech debt (accumulated):**
 - `MemoryFact` isolation pen test permanently skipped in SQLite (must run against live PostgreSQL)
 - WhatsApp + Teams: code complete, live credentials not yet available
 - Sub-agent prompt `.md` files pre-provisioned but not loaded (sub-agents are Phase 3 mocks)
 - Keycloak custom flat mapper corrupts service account tokens — forces admin/admin-cli credentials
+- Builder `fill_form` doesn't populate `allowed_tools`/`category`/`tags` — builder-created skills get null metadata
 
 **Inspiration:** OpenClaw architecture — local-first, multi-agent, sandboxed execution. Adapted for enterprise multi-tenancy with per-user isolation, RBAC, and audit compliance.
 
@@ -150,9 +159,13 @@ Every Blitz employee gets an intelligent, context-aware assistant that automates
 | PromptLoader for LLM prompts | Editable prompts without code changes; Jinja2-style substitution + in-memory caching | ✓ Good — 6 prompts externalized; template caching eliminates disk reads after first load |
 | OpenAPI-to-MCP bridge (handler_type=openapi_proxy) | Any REST API can become an MCP tool without writing adapter code | ✓ Good — runtime HTTP proxy through security gates; admin wizard for endpoint selection |
 | External skill repos with SecurityScanner | Ecosystem extensibility; quarantine imported skills until admin review | ✓ Good — AST safety check + dependency scan; cached index avoids remote HTTP on browse |
-| agentskills.io-compliant export | Standard skill format for sharing across AgentOS instances | ✓ Good — SKILL.md + procedure.json + schemas.json zip format |
+| agentskills.io-compliant export | Standard skill format for sharing across AgentOS instances | ✓ Good — SKILL.md + MANIFEST.json + assets/ zip format; 7 frontmatter fields; ZIP import with structure validation |
 | Docker sandbox for untrusted code | Security requirement: skill execution must be isolated from host and other users | ✓ Good — CPU/RAM/network/PID limits; non-root; cap_drop=ALL; no resource leaks; RLS as defense-in-depth |
 | Grafana + Loki + Alloy for observability | Prometheus-compatible; structured JSON logs from structlog pipe directly to Loki | ✓ Good — full stack live; Telegram spend alerting verified end-to-end; datasource UIDs stable |
+| Embedding sidecar (v1.3) | Extract bge-m3 from uvicorn process to eliminate 10-15s cold-start; keep model warm | ✓ Good — infinity-emb Docker Compose service; HTTP-first with Celery fallback; dimension validation on startup |
+| Keycloak as optional runtime config (v1.3) | Enterprises need auth flexibility without requiring restart; local-auth as fallback | ✓ Good — platform_config table + admin Identity tab; JWKS reloaded on save; local-auth-first boot confirmed |
+| PostgreSQL tsvector FTS for skill catalog (v1.3) | No need for external search engine at 100-user scale; 'simple' language for Vietnamese | ✓ Good — GIN index on migration 023; plainto_tsquery('simple') in user_skills.py; category/author exact-match filters |
+| SecurityScanner as central trust gate (v1.3) | All skill acquisition paths (import, builder, registry) go through one scanner | ✓ Good — same SecurityScanner used in ZIP import, one-click registry import, and builder-save; Phase 21 enhancements apply everywhere |
 
 ---
-*Last updated: 2026-03-05 after v1.3 milestone start*
+*Last updated: 2026-03-11 after v1.3 milestone*

@@ -1,5 +1,33 @@
 # Milestones
 
+## v1.3 Production Readiness & Skill Platform (Shipped: 2026-03-11)
+
+**Phases completed:** 9 phases, 34 plans, ~49 tasks
+**Timeline:** 2026-03-05 → 2026-03-10 (6 days)
+**Test suite:** 860 passed, 1 skipped
+**Commits:** 67 v1.3-specific
+**Files changed:** 296 (+40,942 / -1,669 lines)
+**Codebase:** 80,620 LOC Python · 18,959 LOC TypeScript
+
+**Delivered:** Production-hardened, standards-compliant agentic OS with secure session management, navigation rail, optional Keycloak runtime config, embedding sidecar, and a full-stack agentskills.io-compliant skill ecosystem (catalog, security, marketplace, enhanced builder).
+
+**Key accomplishments:**
+1. **Production session hardening** — Next.js middleware with jose Edge Runtime JWT, HttpOnly cookie stack, silent 5-min-buffer refresh, Keycloak end-session logout, multi-tab sync, CVE-2025-29927 mitigated
+2. **Navigation rail + user profile** — Persistent 56px nav rail on all authenticated pages; profile page with account info, password change, custom instructions, LLM thinking mode / response style preferences injected into agent system prompt
+3. **Embedding sidecar service** — bge-m3 extracted from uvicorn to dedicated Docker Compose service (infinity-emb); 10–15s cold-start eliminated; HTTP-first path with Celery fallback; dimension validation on startup
+4. **Keycloak as optional runtime config** — Platform boots with local-auth-only; admin Identity tab stores encrypted Keycloak config in `platform_config` table; JWKS reloaded without restart; `GET /api/auth/config` drives SSO button toggle
+5. **agentskills.io standards compliance** — 7 metadata columns (migration 022), kebab-case name validation, SKILL.md frontmatter import/export, ZIP bundle structure with MANIFEST.json
+6. **Skill catalog & discovery** — PostgreSQL tsvector FTS with Vietnamese-compatible `simple` language config, GIN index, category/author/status filters, usage_count tracking, paginated external registry browse with one-click import
+7. **Skill security hardening** — SecurityScanner enhanced with dependency_risk (20%) + data_flow_risk factors; `allowed-tools` enforcement pre-gate in SkillExecutor with audit logging; SHA-256 daily update checker via Celery
+8. **Skill sharing & marketplace** — Promoted skills curated section; agentskills.io ZIP export for users; user-to-user sharing via `artifact_permissions`; admin promote/unpromote toggle
+9. **Enhanced artifact builder** — LLM-generated `procedure_json`/`instruction_markdown`/handler_code stubs; pgvector similarity search over external repo index; Fork from external skill; SecurityScanner gate on every builder save with SecurityReportCard + admin approval flow
+
+**Archive:** `.planning/milestones/v1.3-ROADMAP.md` · `.planning/milestones/v1.3-REQUIREMENTS.md` · `.planning/milestones/v1.3-MILESTONE-AUDIT.md`
+
+**Known tech debt (see audit):** Builder `fill_form` doesn't populate `allowed_tools`/`category`/`tags` (builder-created skills get null metadata); Phase 19 VERIFICATION.md missing (UAT evidence present)
+
+---
+
 ## v1.2 Developer Experience (Shipped: 2026-03-04)
 
 **Phases completed:** 4 phases (11, 12, 13, 14) — 11 plans
