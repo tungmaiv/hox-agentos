@@ -10,7 +10,7 @@
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
 
-export async function GET() {
+export async function GET(request: Request) {
   const session = await auth();
   if (!session) return NextResponse.json([], { status: 401 });
 
@@ -18,9 +18,11 @@ export async function GET() {
     .accessToken as string | undefined;
   if (!accessToken) return NextResponse.json([]);
 
+  const { searchParams } = new URL(request.url);
+  const qs = searchParams.toString();
   const apiUrl = process.env.BACKEND_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
   try {
-    const response = await fetch(`${apiUrl}/api/skills`, {
+    const response = await fetch(`${apiUrl}/api/skills${qs ? `?${qs}` : ""}`, {
       headers: { Authorization: `Bearer ${accessToken}` },
       cache: "no-store",
     });

@@ -628,7 +628,15 @@ async def _generate_skill_content_node(
             # Extract procedure_json from JSON code block
             parsed = _extract_draft_from_response(content, {})
             if "procedure_json" in parsed:
-                updated_draft["procedure_json"] = parsed["procedure_json"]
+                proc = parsed["procedure_json"]
+                # Strip null fields from steps (LLMs often include retry/timeout/save_as as null)
+                if isinstance(proc.get("steps"), list):
+                    proc["steps"] = [
+                        {k: v for k, v in step.items() if v is not None}
+                        for step in proc["steps"]
+                        if isinstance(step, dict)
+                    ]
+                updated_draft["procedure_json"] = proc
             elif "steps" in parsed:
                 # LLM returned the steps object directly
                 updated_draft["procedure_json"] = parsed
@@ -641,12 +649,23 @@ async def _generate_skill_content_node(
             else:
                 updated_draft["instruction_markdown"] = content
 
-    await _emit_builder_state(config, artifact_type, updated_draft, [], False)
+        # Auto-set wizard defaults for skill artifacts
+        if "source_type" not in updated_draft:
+            updated_draft["source_type"] = "user_created"
+        if "slash_command" not in updated_draft and updated_draft.get("name"):
+            updated_draft["slash_command"] = f"/{updated_draft['name']}"
+
+    # Sync generated content to the frontend form fields.
+    # _merge_draft_into_form maps instruction_markdown → form_instruction_markdown
+    # so the Instructions text area on the left updates after content generation.
+    form_updates = _merge_draft_into_form(updated_draft, {})
+    await _emit_builder_state(config, artifact_type, updated_draft, [], False, form_updates or None)
 
     result: dict = {
         "messages": [response],
         "artifact_type": artifact_type,
         "artifact_draft": updated_draft,
+        **form_updates,
     }
     if handler_code is not None:
         result["handler_code"] = handler_code

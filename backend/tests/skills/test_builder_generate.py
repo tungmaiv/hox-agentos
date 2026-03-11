@@ -105,6 +105,59 @@ async def test_generate_instructional_skill_content() -> None:
 
 
 @pytest.mark.asyncio
+async def test_generate_instructional_syncs_form_field() -> None:
+    """SKBLD-02b: instruction_markdown is also returned as form_instruction_markdown for form sync."""
+    instruction_response = "# Email Digest\n\n## Steps\n1. Check emails\n2. Summarize\n"
+
+    mock_llm = AsyncMock()
+    mock_llm.ainvoke.return_value = AIMessage(content=instruction_response)
+
+    state = _make_state(
+        "skill",
+        {"name": "email-digest", "description": "Summarize daily emails", "skill_type": "instructional"},
+    )
+
+    with patch("agents.artifact_builder.get_llm", return_value=mock_llm), \
+         patch("agents.artifact_builder.copilotkit_emit_state", new_callable=AsyncMock):
+        result = await _generate_skill_content_node(state, _make_config())
+
+    # form_instruction_markdown must be in the returned state so the frontend form field updates
+    assert "form_instruction_markdown" in result, (
+        "form_instruction_markdown must be in returned state to sync the Instructions form field"
+    )
+    assert "# Email Digest" in result["form_instruction_markdown"]
+
+
+@pytest.mark.asyncio
+async def test_generate_instructional_emits_form_field_to_copilotkit() -> None:
+    """SKBLD-02c: _emit_builder_state is called with form_instruction_markdown so CopilotKit updates the form."""
+    from unittest.mock import call
+
+    instruction_response = "# My Skill\n\n## Steps\n1. Do something\n"
+
+    mock_llm = AsyncMock()
+    mock_llm.ainvoke.return_value = AIMessage(content=instruction_response)
+
+    state = _make_state(
+        "skill",
+        {"name": "my-skill", "description": "Does something", "skill_type": "instructional"},
+    )
+
+    emit_mock = AsyncMock()
+    with patch("agents.artifact_builder.get_llm", return_value=mock_llm), \
+         patch("agents.artifact_builder.copilotkit_emit_state", emit_mock):
+        await _generate_skill_content_node(state, _make_config())
+
+    # The emit must include form_instruction_markdown
+    assert emit_mock.called, "copilotkit_emit_state must be called"
+    emitted_state = emit_mock.call_args[0][1]  # second positional arg is the state dict
+    assert "form_instruction_markdown" in emitted_state, (
+        "emitted state must contain form_instruction_markdown"
+    )
+    assert "# My Skill" in emitted_state["form_instruction_markdown"]
+
+
+@pytest.mark.asyncio
 async def test_generate_tool_stub() -> None:
     """SKBLD-03: Node generates Python stub and sets handler_code in state."""
     python_stub = '''```python
@@ -141,3 +194,125 @@ async def handler(input: InputModel) -> OutputModel:
     assert result["handler_code"] is not None, "handler_code must not be None"
     assert "InputModel" in result["handler_code"], "handler_code must contain InputModel class"
     assert "OutputModel" in result["handler_code"], "handler_code must contain OutputModel class"
+
+
+@pytest.mark.asyncio
+async def test_generate_procedural_sets_slash_command() -> None:
+    """SKBLD-04: Node auto-derives slash_command from name for procedural skills."""
+    procedure_response = json.dumps({
+        "procedure_json": {
+            "schema_version": "1.0",
+            "steps": [
+                {"step": 1, "tool": "calendar.check", "prompt": "Check calendar"},
+            ],
+        }
+    })
+
+    mock_llm = AsyncMock()
+    mock_llm.ainvoke.return_value = AIMessage(content=f"```json\n{procedure_response}\n```")
+
+    state = _make_state(
+        "skill",
+        {"name": "daily-standup", "description": "Run daily standup", "skill_type": "procedural"},
+    )
+
+    with patch("agents.artifact_builder.get_llm", return_value=mock_llm), \
+         patch("agents.artifact_builder.copilotkit_emit_state", new_callable=AsyncMock):
+        result = await _generate_skill_content_node(state, _make_config())
+
+    draft = result["artifact_draft"]
+    assert draft.get("slash_command") == "/daily-standup", (
+        "slash_command must be auto-derived as /<name>"
+    )
+
+
+@pytest.mark.asyncio
+async def test_generate_procedural_sets_source_type_user_created() -> None:
+    """SKBLD-05: Node sets source_type to 'user_created' for wizard-created skills."""
+    procedure_response = json.dumps({
+        "procedure_json": {
+            "schema_version": "1.0",
+            "steps": [{"step": 1, "tool": "llm.chat", "prompt": "Hello"}],
+        }
+    })
+
+    mock_llm = AsyncMock()
+    mock_llm.ainvoke.return_value = AIMessage(content=f"```json\n{procedure_response}\n```")
+
+    state = _make_state(
+        "skill",
+        {"name": "my-skill", "description": "Does something", "skill_type": "procedural"},
+    )
+
+    with patch("agents.artifact_builder.get_llm", return_value=mock_llm), \
+         patch("agents.artifact_builder.copilotkit_emit_state", new_callable=AsyncMock):
+        result = await _generate_skill_content_node(state, _make_config())
+
+    draft = result["artifact_draft"]
+    assert draft.get("source_type") == "user_created", (
+        "source_type must be 'user_created' for wizard-created skills"
+    )
+
+
+@pytest.mark.asyncio
+async def test_generate_procedural_strips_null_step_fields() -> None:
+    """SKBLD-06: Node strips null fields from procedure_json steps (retry, timeout, save_as)."""
+    procedure_response = json.dumps({
+        "procedure_json": {
+            "schema_version": "1.0",
+            "steps": [
+                {
+                    "step": 1,
+                    "tool": "calendar.check",
+                    "prompt": "Check calendar",
+                    "retry": None,
+                    "timeout": None,
+                    "save_as": None,
+                },
+            ],
+        }
+    })
+
+    mock_llm = AsyncMock()
+    mock_llm.ainvoke.return_value = AIMessage(content=f"```json\n{procedure_response}\n```")
+
+    state = _make_state(
+        "skill",
+        {"name": "calendar-check", "description": "Check calendar", "skill_type": "procedural"},
+    )
+
+    with patch("agents.artifact_builder.get_llm", return_value=mock_llm), \
+         patch("agents.artifact_builder.copilotkit_emit_state", new_callable=AsyncMock):
+        result = await _generate_skill_content_node(state, _make_config())
+
+    draft = result["artifact_draft"]
+    steps = draft["procedure_json"]["steps"]
+    assert len(steps) == 1
+    step = steps[0]
+    assert "retry" not in step, "null 'retry' must be stripped from steps"
+    assert "timeout" not in step, "null 'timeout' must be stripped from steps"
+    assert "save_as" not in step, "null 'save_as' must be stripped from steps"
+
+
+@pytest.mark.asyncio
+async def test_generate_instructional_sets_source_type_user_created() -> None:
+    """SKBLD-05b: Node sets source_type to 'user_created' for instructional skills too."""
+    mock_llm = AsyncMock()
+    mock_llm.ainvoke.return_value = AIMessage(content="# My Skill\n\nDoes something useful.\n")
+
+    state = _make_state(
+        "skill",
+        {"name": "my-skill", "description": "Does something", "skill_type": "instructional"},
+    )
+
+    with patch("agents.artifact_builder.get_llm", return_value=mock_llm), \
+         patch("agents.artifact_builder.copilotkit_emit_state", new_callable=AsyncMock):
+        result = await _generate_skill_content_node(state, _make_config())
+
+    draft = result["artifact_draft"]
+    assert draft.get("source_type") == "user_created", (
+        "source_type must be 'user_created' for wizard-created skills"
+    )
+    assert draft.get("slash_command") == "/my-skill", (
+        "slash_command must be auto-derived for instructional skills too"
+    )

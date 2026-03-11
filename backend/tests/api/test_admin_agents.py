@@ -309,3 +309,96 @@ def test_graceful_removal_returns_workflow_count(admin_client: TestClient) -> No
     data = resp.json()
     assert data["active_workflow_runs"] == 0
     assert data["updated"] is True
+
+
+# ---------------------------------------------------------------------------
+# model_alias and system_prompt persistence via config_json
+# ---------------------------------------------------------------------------
+
+
+def test_create_agent_persists_model_alias_and_system_prompt(admin_client: TestClient) -> None:
+    """model_alias and system_prompt provided at creation are stored in config_json."""
+    resp = admin_client.post(
+        "/api/admin/agents",
+        json={
+            "name": "wizard_agent",
+            "description": "Created by artifact wizard",
+            "model_alias": "blitz/fast",
+            "system_prompt": "You are a focused task agent. Answer concisely.",
+        },
+    )
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["config_json"]["model_alias"] == "blitz/fast"
+    assert data["config_json"]["system_prompt"] == "You are a focused task agent. Answer concisely."
+
+
+def test_create_agent_model_alias_merged_with_existing_config_json(admin_client: TestClient) -> None:
+    """model_alias is merged into config_json alongside any other config fields."""
+    resp = admin_client.post(
+        "/api/admin/agents",
+        json={
+            "name": "merged_config_agent",
+            "model_alias": "blitz/coder",
+            "config_json": {"temperature": 0.2, "max_tokens": 1000},
+        },
+    )
+    assert resp.status_code == 201
+    cfg = resp.json()["config_json"]
+    assert cfg["model_alias"] == "blitz/coder"
+    assert cfg["temperature"] == 0.2
+    assert cfg["max_tokens"] == 1000
+
+
+def test_create_agent_without_model_alias_leaves_config_json_unchanged(admin_client: TestClient) -> None:
+    """Omitting model_alias does not inject it into config_json."""
+    resp = admin_client.post(
+        "/api/admin/agents",
+        json={"name": "no_alias_agent", "config_json": {"key": "value"}},
+    )
+    assert resp.status_code == 201
+    cfg = resp.json()["config_json"]
+    assert "model_alias" not in cfg
+    assert cfg["key"] == "value"
+
+
+def test_update_agent_persists_model_alias_and_system_prompt(admin_client: TestClient) -> None:
+    """PUT update with model_alias and system_prompt stores them in config_json."""
+    create_resp = admin_client.post(
+        "/api/admin/agents",
+        json={"name": "update_alias_agent"},
+    )
+    agent_id = create_resp.json()["id"]
+
+    update_resp = admin_client.put(
+        f"/api/admin/agents/{agent_id}",
+        json={
+            "model_alias": "blitz/summarizer",
+            "system_prompt": "You summarize content.",
+        },
+    )
+    assert update_resp.status_code == 200
+    cfg = update_resp.json()["config_json"]
+    assert cfg["model_alias"] == "blitz/summarizer"
+    assert cfg["system_prompt"] == "You summarize content."
+
+
+def test_update_agent_model_alias_merges_with_existing_config_json(admin_client: TestClient) -> None:
+    """PUT update merges model_alias into existing config_json without losing other keys."""
+    create_resp = admin_client.post(
+        "/api/admin/agents",
+        json={
+            "name": "merge_update_agent",
+            "config_json": {"existing_key": "existing_value"},
+        },
+    )
+    agent_id = create_resp.json()["id"]
+
+    update_resp = admin_client.put(
+        f"/api/admin/agents/{agent_id}",
+        json={"model_alias": "blitz/master"},
+    )
+    assert update_resp.status_code == 200
+    cfg = update_resp.json()["config_json"]
+    assert cfg["model_alias"] == "blitz/master"
+    assert cfg["existing_key"] == "existing_value"

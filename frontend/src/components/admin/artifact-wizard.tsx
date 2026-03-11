@@ -56,6 +56,8 @@ interface BuilderCoAgentState {
   form_url?: string | null;
   form_instruction_markdown?: string | null;
   handler_code?: string | null;
+  // Derived from artifact_draft for conditional form rendering
+  form_skill_type?: string | null;
 }
 
 function WizardInner() {
@@ -141,6 +143,13 @@ function WizardInner() {
       if (pending.form_instruction_markdown != null && pending.form_instruction_markdown !== formState.instruction_markdown) {
         updates.instruction_markdown = pending.form_instruction_markdown;
         changedFields.add("instruction_markdown");
+      }
+      // Sync skill_type from artifact_draft so form can conditionally show procedure/instruction UI
+      const draftSkillType = typeof pending.artifact_draft?.skill_type === "string"
+        ? pending.artifact_draft.skill_type
+        : null;
+      if (draftSkillType != null && draftSkillType !== formState.skill_type) {
+        updates.skill_type = draftSkillType;
       }
 
       // Update artifact_type if AI set it

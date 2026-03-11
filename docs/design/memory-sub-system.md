@@ -11,7 +11,53 @@ What we reuse from OpenClaw:[^3][^2][^1]
 Enterprise‑specific enhancements:
 
 - Multi‑tenant, **per‑user and per‑workspace isolation** (no shared `MEMORY.md` flat files).
-- **PostgreSQL + pgvector** (or similar) instead of local SQLite for multi‑user scale.[^4][^2]
+- **PostgreSQ1. NextAuth v5 (Auth.js) uses JWT strategy with cookies by default
+2. The JWT is stateless and stored in an HTTP-only cookie
+3. When the host restarts, the cookie persists in the browser
+4. Since it's a valid JWT signed with AUTH_SECRET, the chat page accepts it and allows access
+5. The page only checks if session exists, not if the underlying access token is still valid with the backend
+The root cause is that the frontend's NextAuth session is separate from the backend's token validation. The frontend session can persist even if the backend token has expired or been invalidated.
+Solution Options:
+1. Add a middleware.ts file to check authentication on all protected routes before the page renders
+2. Implement session validation with backend - on every page load, validate the access token with the backend
+3. Use database adapter for NextAuth to store sessions server-side (allows invalidation)
+4. Add shorter cookie expiry to force re-authentication more frequently
+The best approach for this application would be a combination:
+1. Create a middleware.ts that validates the session exists and optionally validates with the backend
+2. Ensure proper JWT expiry handling in the auth callbacks
+3. Add a global middleware to protect all routes under /chat/* and other protected areas
+Let me create a comprehensive solution.
+Based on my investigation, I've identified the root cause of why you can access the chat page after a host restart without logging in.
+Root Cause Analysis
+The issue stems from how NextAuth v5 (Auth.js) handles sessions with JWT strategy:
+1. Stateless JWT Cookies: Without a database adapter, NextAuth stores the session in a stateless JWT cookie (authjs.session-token)
+2. Cookie Persistence: Browser cookies survive host restarts
+3. No Server-Side Validation: The frontend only checks if a session exists locally - it doesn't validate the underlying access token with your backend
+4. AUTH_SECRET Consistency: Since your AUTH_SECRET hasn't changed, the JWT signature remains valid
+Current flow:
+Browser cookie (JWT) → NextAuth validates signature → Session considered valid
+                                                       ↓
+                                            No backend token check!
+Proposed Solution
+I'll implement a comprehensive session management fix with three layers of protection:
+Layer 1: Next.js Middleware (Global Route Protection)
+Create middleware.ts to intercept all protected routes before page rendering
+Layer 2: Backend Token Validation
+Add server-side token validation check in the chat page to verify the access token is still valid with your backend
+Layer 3: Cookie Security Enhancements
+Configure secure cookie settings and implement proper session expiry handling
+Implementation Plan
+Task 1: Create frontend/src/middleware.ts - Global authentication middleware that:
+- Protects /chat/* and other protected routes
+- Validates session exists before allowing access
+- Redirects to /login if unauthenticated
+Task 2: Update frontend/src/app/chat/page.tsx - Add backend token validation:
+- Verify the access token is still valid by calling backend /api/auth/validate or similar
+- Handle expired/invalid tokens by redirecting to login
+Task 3: Enhance auth cookie security in frontend/src/auth.ts:
+- Add explicit cookie configuration with maxAge matching token expiry
+- Ensure httpOnly, secure, and sameSite settings are properly configured
+Task 4: Add token refresh error handling in the session callback to force re-authentication when tokens are invalidL + pgvector** (or similar) instead of local SQLite for multi‑user scale.[^4][^2]
 - Strong RBAC/ACL integration: memory access is always filtered by roles and scopes.
 - Optional encryption at rest (column or tablespace) and redaction of sensitive fields.
 - Rich schema: distinguish conversational transcripts, episodic notes, and long‑term facts.

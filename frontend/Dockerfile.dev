@@ -7,9 +7,16 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
+# Install CA certificates for SSL/TLS support
+RUN apk add --no-cache ca-certificates
+
+# Copy entrypoint script
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
-ENV NODE_EXTRA_CA_CERTS=/app/certs/keycloak.crt
 
+ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["pnpm", "dev"]

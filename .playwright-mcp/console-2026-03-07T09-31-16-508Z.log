@@ -1,0 +1,5 @@
+[   94020ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:3000/api/admin/skills/import/zip:0
+[  121892ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:3000/api/admin/skills/import/zip:0
+[  121945ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:3000/api/admin/skills/import/zip:0
+[  739077ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:3000/api/admin/skills/import/zip:0
+[  739377ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:3000/api/admin/skills/import/zip:0

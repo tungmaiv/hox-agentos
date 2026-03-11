@@ -1,34 +1,25 @@
 model_list:
-  # Primary models — local Ollama (fast, private, no egress cost)
-  # think: false disables qwen3.5 reasoning tokens (6x faster, ~1.4s vs ~9s per call)
-  # TODO: make thinking mode configurable per-user via preferences API
+  # Primary models — local Ollama (no rate limits, no egress cost)
+  # Switched from qwen3.5:cloud (hit weekly usage limit) to local qwen2.5 models
   - model_name: blitz-master
     litellm_params:
-      model: ollama/qwen3.5:cloud
+      model: ollama/qwen2.5:7b
       api_base: http://host.docker.internal:11434
-      extra_body:
-        think: false
 
   - model_name: blitz-fast
     litellm_params:
-      model: ollama/qwen3.5:cloud
+      model: ollama/qwen2.5:7b
       api_base: http://host.docker.internal:11434
-      extra_body:
-        think: false
 
   - model_name: blitz-coder
     litellm_params:
-      model: ollama/qwen3.5:cloud
+      model: ollama/qwen2.5-coder:7b
       api_base: http://host.docker.internal:11434
-      extra_body:
-        think: false
 
   - model_name: blitz-summarizer
     litellm_params:
-      model: ollama/qwen3.5:cloud
+      model: ollama/qwen2.5:7b
       api_base: http://host.docker.internal:11434
-      extra_body:
-        think: false
 
   # Cloud fallback — free OpenRouter model, used when Ollama is unavailable.
   # Prefixed with "fb-" to avoid name collisions with primary entries.

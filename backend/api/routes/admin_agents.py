@@ -73,6 +73,12 @@ async def create_agent(
     session: AsyncSession = Depends(get_db),
 ) -> AgentDefinitionResponse:
     """Create a new agent definition."""
+    config_json = dict(body.config_json or {})
+    if body.model_alias is not None:
+        config_json["model_alias"] = body.model_alias
+    if body.system_prompt is not None:
+        config_json["system_prompt"] = body.system_prompt
+
     agent = AgentDefinition(
         name=body.name,
         display_name=body.display_name,
@@ -81,7 +87,7 @@ async def create_agent(
         handler_module=body.handler_module,
         handler_function=body.handler_function,
         routing_keywords=body.routing_keywords,
-        config_json=body.config_json,
+        config_json=config_json or None,
     )
     session.add(agent)
     await session.commit()
@@ -143,6 +149,19 @@ async def update_agent(
         raise HTTPException(status_code=404, detail="Agent not found")
 
     update_data = body.model_dump(exclude_unset=True)
+
+    # Merge model_alias / system_prompt into config_json instead of setting them
+    # as top-level columns (they live in config_json per the DB schema).
+    wizard_updates: dict[str, Any] = {}
+    for wizard_field in ("model_alias", "system_prompt"):
+        if wizard_field in update_data:
+            wizard_updates[wizard_field] = update_data.pop(wizard_field)
+
+    if wizard_updates:
+        existing_cfg = dict(agent.config_json or {})
+        existing_cfg.update(wizard_updates)
+        update_data["config_json"] = existing_cfg
+
     for field, value in update_data.items():
         setattr(agent, field, value)
 

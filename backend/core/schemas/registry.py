@@ -34,6 +34,9 @@ class AgentDefinitionCreate(BaseModel):
     handler_function: str | None = None
     routing_keywords: list[str] | None = None
     config_json: dict[str, Any] | None = None
+    # Wizard fields — stored inside config_json on save
+    model_alias: str | None = None
+    system_prompt: str | None = None
 
 
 class AgentDefinitionUpdate(BaseModel):
@@ -44,6 +47,9 @@ class AgentDefinitionUpdate(BaseModel):
     handler_function: str | None = None
     routing_keywords: list[str] | None = None
     config_json: dict[str, Any] | None = None
+    # Wizard fields — merged into config_json on save
+    model_alias: str | None = None
+    system_prompt: str | None = None
 
 
 class AgentDefinitionResponse(BaseModel):

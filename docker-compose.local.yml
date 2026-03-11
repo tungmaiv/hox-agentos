@@ -47,6 +47,7 @@ services:
       KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-blitz-portal-secret-dev}
       KEYCLOAK_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME:-admin}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-8f7d6e5c4b3a29180f7d6e5c4b3a2918}
       ENVIRONMENT: development
       TELEGRAM_GATEWAY_URL: http://telegram-gateway:9001
       WHATSAPP_GATEWAY_URL: http://whatsapp-gateway:9002

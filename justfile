@@ -1,164 +1,111 @@
-# Blitz AgentOS — task runner
-# Usage: just <recipe>   (run `just` to list all recipes)
+# Blitz AgentOS — simplified task runner
+# Usage: just <command> [service1 service2 ...]
+# All commands default to ALL services if none specified
 #
-# Dev workflow (Docker only — backend and frontend run in containers, not on host):
-#
-#   just dev-local-build   ← run once (or after dep changes to pyproject.toml / package.json)
-#   just dev-local         ← start everything with hot reload; code changes apply without rebuild
-#   just dev-local-down    ← stop all services
-#
-# Worker changes (no hot reload — must restart):
-#   just dev-local-restart-workers
+# Examples:
+#   just up                    # Start all services
+#   just up backend frontend   # Start only backend and frontend
+#   just down                  # Stop all services
+#   just rebuild frontend      # Rebuild and restart frontend
+#   just reset                 # DESTRUCTIVE: wipe all data and restart
 
-BACKEND_DIR  := "backend"
-FRONTEND_DIR := "frontend"
 LOCAL_COMPOSE := "-f docker-compose.yml -f docker-compose.local.yml"
 
 # List all available recipes
+[private]
 default:
     @just --list
 
-# ── Dev Mode: Full Docker with hot reload ─────────────────────────────────────
-# Backend image bakes the .venv; frontend Dockerfile.dev installs node_modules into the image.
-# Build dev images — run once on first use, or after pyproject.toml / package.json changes
-dev-local-build:
-    docker compose {{LOCAL_COMPOSE}} build backend frontend
+# ── Core Commands ─────────────────────────────────────────────────────────────
 
-# Backend: --reload; Frontend: HMR; Workers: source-mounted (restart after changes).
-# Prerequisite: run `just dev-local-build` once before first use.
-# Start full stack in Docker with hot reload — no rebuilds needed on source-code changes
-dev-local:
+# Start services (default: all)
+up *services:
+    #!/usr/bin/env bash
+    if [ -z "{{services}}" ]; then
+        docker compose {{LOCAL_COMPOSE}} up -d
+    else
+        docker compose {{LOCAL_COMPOSE}} up -d {{services}}
+    fi
+
+# Stop services (default: all)
+down *services:
+    #!/usr/bin/env bash
+    if [ -z "{{services}}" ]; then
+        docker compose {{LOCAL_COMPOSE}} down
+    else
+        docker compose {{LOCAL_COMPOSE}} stop {{services}}
+    fi
+
+# Alias for down
+stop *services:
+    just down {{services}}
+
+# Restart without rebuild (default: all)
+restart *services:
+    #!/usr/bin/env bash
+    if [ -z "{{services}}" ]; then
+        docker compose {{LOCAL_COMPOSE}} restart
+    else
+        docker compose {{LOCAL_COMPOSE}} restart {{services}}
+    fi
+
+# Rebuild and restart (default: all)
+rebuild *services:
+    #!/usr/bin/env bash
+    if [ -z "{{services}}" ]; then
+        docker compose {{LOCAL_COMPOSE}} build
+        docker compose {{LOCAL_COMPOSE}} up -d
+    else
+        docker compose {{LOCAL_COMPOSE}} build {{services}}
+        docker compose {{LOCAL_COMPOSE}} up -d --no-deps {{services}}
+    fi
+
+# Build only, don't start (default: all)
+build *services:
+    #!/usr/bin/env bash
+    if [ -z "{{services}}" ]; then
+        docker compose {{LOCAL_COMPOSE}} build
+    else
+        docker compose {{LOCAL_COMPOSE}} build {{services}}
+    fi
+
+# DESTRUCTIVE: Stop all, remove ALL volumes, start fresh
+reset:
+    #!/usr/bin/env bash
+    echo "⚠️  WARNING: This will DESTROY all data including database volumes!"
+    echo "   Press Ctrl+C within 3 seconds to cancel..."
+    sleep 3
+    echo ""
+    echo "🗑️  Stopping and removing all containers and volumes..."
+    docker compose {{LOCAL_COMPOSE}} down -v
+    echo ""
+    echo "🚀 Starting fresh..."
     docker compose {{LOCAL_COMPOSE}} up -d
+    echo ""
+    echo "✅ Reset complete."
+    echo "   Run 'just migrate' to re-apply database schema."
 
-# Stop the dev-local stack
-dev-local-down:
-    docker compose {{LOCAL_COMPOSE}} down
+# ── Status & Debugging ────────────────────────────────────────────────────────
 
-# Restart celery workers after scheduler/worker code changes (no rebuild needed)
-dev-local-restart-workers:
-    docker compose {{LOCAL_COMPOSE}} restart celery-worker celery-worker-default
-
-# ── Docker: Manage ────────────────────────────────────────────────────────────
-# Start all Docker services (detached)
-up:
-    docker compose up -d
-
-# Start specific service(s): just up-svc postgres redis
-up-svc *services:
-    docker compose up -d {{services}}
-
-# Stop all Docker services (keep volumes)
-down:
-    docker compose down
-
-# Stop all Docker services and remove volumes — DESTRUCTIVE, wipes DB data
-down-v:
-    docker compose down -v
-
-# Restart all services
-restart:
-    docker compose restart
-
-# Restart a specific service: just restart-svc backend
-restart-svc service:
-    docker compose {{LOCAL_COMPOSE}} restart {{service}}
-
-# Show clean status summary of all Docker services
+# Show status
 ps:
-    #!/usr/bin/env bash
-    echo ""
-    echo "🐳 Docker Compose Status"
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    docker compose {{LOCAL_COMPOSE}} ps
 
-    ALL_CONTAINERS=$(docker compose {{LOCAL_COMPOSE}} ps -a --format "table {{"{{"}}.Service{{"}}"}}|{{"{{"}}.State{{"}}"}}|{{"{{"}}.Status{{"}}"}}|{{"{{"}}.Ports{{"}}"}}")
-
-    RUNNING=$(echo "$ALL_CONTAINERS" | grep "|running|" | wc -l)
-    EXITED=$(echo "$ALL_CONTAINERS" | grep "|exited|" | wc -l)
-    TOTAL=$(echo "$ALL_CONTAINERS" | grep -v "^$" | wc -l)
-
-    echo ""
-    echo "  📊 Summary: $RUNNING running | $EXITED stopped | $TOTAL total"
-    echo ""
-
-    if [ "$RUNNING" -gt 0 ]; then
-        echo "  ✅ RUNNING:"
-        echo "$ALL_CONTAINERS" | grep "|running|" | while IFS='|' read -r service state status ports; do
-            printf "     %-20s | %s\n" "$service" "$status"
-        done
-        echo ""
-    fi
-
-    if [ "$EXITED" -gt 0 ]; then
-        echo "  ⏹️  STOPPED:"
-        echo "$ALL_CONTAINERS" | grep "|exited|" | while IFS='|' read -r service state status ports; do
-            printf "     %-20s | %s\n" "$service" "$status"
-        done
-        echo ""
-    fi
-
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo ""
-
-# Tail logs for all services, or a specific one: just logs postgres
+# Tail logs (default: all services, or specific service: just logs backend)
 logs *service:
-    docker compose {{LOCAL_COMPOSE}} logs -f {{service}}
-
-# Remove stopped containers and dangling images
-clean:
-    docker compose down --remove-orphans
-    docker image prune -f
-
-# ── Docker: Service Groups ────────────────────────────────────────────────────
-# Start core infra only — postgres, redis, litellm, MCPs, observability (no app services)
-infra:
-    docker compose up -d postgres redis litellm mcp-crm prometheus grafana loki alloy cadvisor
-
-# Start Celery workers only (requires infra already running)
-workers:
-    docker compose {{LOCAL_COMPOSE}} up -d celery-worker celery-worker-default
-
-# Stop Celery workers
-workers-stop:
-    docker compose {{LOCAL_COMPOSE}} stop celery-worker celery-worker-default
-
-# ── Docker: Build & Rebuild ───────────────────────────────────────────────────
-# Rebuild and restart a single service (prod images): just rebuild backend
-rebuild service:
-    docker compose build {{service}} && docker compose up -d --no-deps {{service}}
-
-# Rebuild and restart a single service (dev-local images): just rebuild-local frontend
-rebuild-local service:
-    docker compose {{LOCAL_COMPOSE}} build {{service}} && \
-    docker compose {{LOCAL_COMPOSE}} up -d --no-deps {{service}}
-
-# Rebuild and restart backend Docker image (dev-local)
-backend-rebuild:
-    docker compose {{LOCAL_COMPOSE}} build backend && docker compose {{LOCAL_COMPOSE}} up -d --no-deps backend
-
-# Rebuild and restart frontend Docker image (dev-local)
-frontend-rebuild:
-    docker compose {{LOCAL_COMPOSE}} build frontend && docker compose {{LOCAL_COMPOSE}} up -d --no-deps frontend
-
-# Run `just migrate` afterwards to re-apply schema.
-# Wipe infra containers + postgres volume then restart — DESTRUCTIVE, loses all DB data
-infra-reset:
     #!/usr/bin/env bash
-    set -e
-    echo "Stopping infra containers..."
-    docker compose stop postgres redis litellm mcp-crm prometheus grafana loki alloy cadvisor
-    docker compose rm -f postgres redis litellm mcp-crm prometheus grafana loki alloy cadvisor
-    echo "Removing postgres data volume..."
-    docker volume rm hox-agentos_postgres_data 2>/dev/null || echo "(volume already gone)"
-    echo "Starting fresh infra..."
-    docker compose up -d postgres redis litellm mcp-crm prometheus grafana loki alloy cadvisor
-    echo ""
-    echo "Done. Run 'just migrate' to re-apply the schema."
+    if [ -z "{{service}}" ]; then
+        docker compose {{LOCAL_COMPOSE}} logs -f
+    else
+        docker compose {{LOCAL_COMPOSE}} logs -f {{service}}
+    fi
 
 # ── Database ──────────────────────────────────────────────────────────────────
+
 # Run Alembic migrations
 migrate:
-    cd {{BACKEND_DIR}} && .venv/bin/alembic upgrade head
+    cd backend && .venv/bin/alembic upgrade head
 
-# Open a psql shell
+# Open PostgreSQL shell
 db:
     docker compose exec postgres psql -U blitz -d blitz

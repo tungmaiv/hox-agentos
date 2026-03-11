@@ -83,6 +83,11 @@ async function disableSSO(): Promise<boolean> {
   return res.ok;
 }
 
+async function enableSSO(): Promise<boolean> {
+  const res = await fetch("/api/admin/keycloak/enable", { method: "POST" });
+  return res.ok;
+}
+
 // ---------------------------------------------------------------------------
 // Page component
 // ---------------------------------------------------------------------------
@@ -115,6 +120,8 @@ export default function AdminIdentityPage() {
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [showDisableConfirm, setShowDisableConfirm] = useState(false);
   const [disabling, setDisabling] = useState(false);
+  const [showEnableConfirm, setShowEnableConfirm] = useState(false);
+  const [enabling, setEnabling] = useState(false);
 
   // ---------------------------------------------------------------------------
   // Load current config
@@ -198,6 +205,22 @@ export default function AdminIdentityPage() {
       }
     } finally {
       setDisabling(false);
+    }
+  }
+
+  async function handleEnable(): Promise<void> {
+    setEnabling(true);
+    try {
+      const ok = await enableSSO();
+      if (ok) {
+        setShowEnableConfirm(false);
+        // Update state optimistically — do NOT fetchConfig here. The backend triggers
+        // a frontend container restart as a BackgroundTask immediately after responding.
+        // Any fetch right after would race with the restart and fail.
+        if (config) setConfig({ ...config, enabled: true });
+      }
+    } finally {
+      setEnabling(false);
     }
   }
 
@@ -430,6 +453,53 @@ export default function AdminIdentityPage() {
                 <button
                   type="button"
                   onClick={() => setShowDisableConfirm(false)}
+                  className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* Enable SSO section - shown when SSO is configured but disabled */}
+      {isConfigured && !isSSOActive && (
+        <section className="rounded-lg border border-green-200 bg-white p-6 shadow-sm">
+          <h3 className="mb-1 text-sm font-medium text-gray-900">
+            Enable SSO
+          </h3>
+          <p className="mb-4 text-sm text-gray-500">
+            Enable SSO to allow users to sign in with Keycloak. The existing
+            SSO configuration will be activated.
+          </p>
+
+          {!showEnableConfirm ? (
+            <button
+              type="button"
+              onClick={() => setShowEnableConfirm(true)}
+              className="rounded-md border border-green-300 bg-white px-4 py-2 text-sm font-medium text-green-700 shadow-sm hover:bg-green-50"
+            >
+              Enable SSO
+            </button>
+          ) : (
+            <div className="rounded-md border border-green-300 bg-green-50 p-4">
+              <p className="mb-3 text-sm font-medium text-green-800">
+                Enabling SSO will allow new Keycloak logins. Users can also
+                continue to use local credentials. Continue?
+              </p>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  disabled={enabling}
+                  onClick={() => void handleEnable()}
+                  className="rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-60"
+                >
+                  {enabling ? "Enabling..." : "Yes, Enable SSO"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowEnableConfirm(false)}
                   className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
                 >
                   Cancel

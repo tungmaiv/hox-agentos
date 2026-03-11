@@ -30,6 +30,7 @@ export interface FormState {
   handler_module: string;        // Tool
   entry_point: string;           // Skill (optional: Python entry point)
   instruction_markdown: string;  // Skill (required for instructional type)
+  skill_type: string;            // Skill: "instructional" | "procedural"
   // MCP Server fields
   url: string;
   auth_token: string;
@@ -46,6 +47,7 @@ export const EMPTY_FORM: FormState = {
   handler_module: "",
   entry_point: "",
   instruction_markdown: "",
+  skill_type: "",
   url: "",
   auth_token: "",
 };
@@ -249,7 +251,7 @@ export function ArtifactWizardForm({
     !formState.name ||
     nameAvailable !== true ||
     !artifactType ||
-    (artifactType === "skill" && !formState.instruction_markdown);
+    (artifactType === "skill" && formState.skill_type !== "procedural" && !formState.instruction_markdown);
 
   const inputCls =
     "w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500";
@@ -423,18 +425,27 @@ export function ArtifactWizardForm({
         {artifactType === "skill" && (
           <div>
             <SectionLabel>Skill Settings</SectionLabel>
-            <FieldWrapper
-              label="Instructions * (Markdown)"
-              highlight={pulsingFields.has("instruction_markdown") || pulsingFields.has("form_instruction_markdown")}
-            >
-              <textarea
-                value={formState.instruction_markdown}
-                onChange={(e) => onFormChange({ instruction_markdown: e.target.value })}
-                rows={5}
-                className={inputCls}
-                placeholder="# Skill Instructions&#10;&#10;Describe what this skill does and how to use it..."
-              />
-            </FieldWrapper>
+            {formState.skill_type === "procedural" ? (
+              <FieldWrapper label="Procedure Steps">
+                <p className="text-xs text-gray-500 py-2">
+                  Procedural skill — steps are defined in the JSON draft (procedure_json.steps).
+                  No instruction markdown required.
+                </p>
+              </FieldWrapper>
+            ) : (
+              <FieldWrapper
+                label="Instructions * (Markdown)"
+                highlight={pulsingFields.has("instruction_markdown") || pulsingFields.has("form_instruction_markdown")}
+              >
+                <textarea
+                  value={formState.instruction_markdown}
+                  onChange={(e) => onFormChange({ instruction_markdown: e.target.value })}
+                  rows={5}
+                  className={inputCls}
+                  placeholder="# Skill Instructions&#10;&#10;Describe what this skill does and how to use it..."
+                />
+              </FieldWrapper>
+            )}
             <FieldWrapper label="Entry Point (optional)" highlight={pulsingFields.has("entry_point") || pulsingFields.has("form_entry_point")}>
               <input
                 type="text"
