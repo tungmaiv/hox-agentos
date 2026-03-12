@@ -97,7 +97,9 @@ function WizardInner() {
       const updates: Partial<FormState> = {};
 
       if (pending.form_name != null && pending.form_name !== formState.name) {
-        updates.name = pending.form_name;
+        // Normalize to kebab-case: lowercase, underscores → hyphens, strip invalid chars
+        const rawName = pending.form_name.toLowerCase().replace(/_/g, "-").replace(/[^a-z0-9-]/g, "").replace(/-{2,}/g, "-").replace(/^-|-$/g, "");
+        updates.name = rawName;
         changedFields.add("name");
       }
       if (pending.form_description != null && pending.form_description !== formState.description) {

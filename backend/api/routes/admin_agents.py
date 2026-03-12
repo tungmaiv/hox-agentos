@@ -108,10 +108,12 @@ async def check_agent_name(
     session: AsyncSession = Depends(get_db),
 ) -> dict[str, bool]:
     """Returns {"available": true/false} for the given agent name (case-insensitive)."""
+    from registry.models import RegistryEntry
     count = await session.scalar(
         select(func.count()).where(
-            func.lower(AgentDefinition.name) == name.lower(),
-            AgentDefinition.is_active == True,  # noqa: E712
+            RegistryEntry.type == "agent",
+            func.lower(RegistryEntry.name) == name.lower(),
+            RegistryEntry.deleted_at.is_(None),
         )
     )
     return {"available": (count or 0) == 0}

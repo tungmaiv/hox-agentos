@@ -168,10 +168,12 @@ async def check_tool_name(
     session: AsyncSession = Depends(get_db),
 ) -> dict[str, bool]:
     """Returns {"available": true/false} for the given tool name (case-insensitive)."""
+    from registry.models import RegistryEntry
     count = await session.scalar(
         select(func.count()).where(
-            func.lower(ToolDefinition.name) == name.lower(),
-            ToolDefinition.is_active == True,  # noqa: E712
+            RegistryEntry.type == "tool",
+            func.lower(RegistryEntry.name) == name.lower(),
+            RegistryEntry.deleted_at.is_(None),
         )
     )
     return {"available": (count or 0) == 0}

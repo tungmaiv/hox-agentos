@@ -217,10 +217,12 @@ async def check_skill_name(
     session: AsyncSession = Depends(get_db),
 ) -> dict[str, bool]:
     """Returns {"available": true/false} for the given skill name (case-insensitive)."""
+    from registry.models import RegistryEntry
     count = await session.scalar(
         select(func.count()).where(
-            func.lower(SkillDefinition.name) == name.lower(),
-            SkillDefinition.is_active == True,  # noqa: E712
+            RegistryEntry.type == "skill",
+            func.lower(RegistryEntry.name) == name.lower(),
+            RegistryEntry.deleted_at.is_(None),
         )
     )
     return {"available": (count or 0) == 0}

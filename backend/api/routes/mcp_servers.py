@@ -123,9 +123,12 @@ async def check_mcp_server_name(
     session: AsyncSession = Depends(get_db),
 ) -> dict[str, bool]:
     """Returns {"available": true/false} for the given MCP server name (case-insensitive)."""
+    from registry.models import RegistryEntry
     count = await session.scalar(
         select(func.count()).where(
-            func.lower(McpServer.name) == name.lower(),
+            RegistryEntry.type == "mcp_server",
+            func.lower(RegistryEntry.name) == name.lower(),
+            RegistryEntry.deleted_at.is_(None),
         )
     )
     return {"available": (count or 0) == 0}
