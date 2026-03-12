@@ -1,5 +1,16 @@
 # Blitz AgentOS Enhancement Integration Guide & Roadmap
 
+> ⚠️ **DEPRECATED — Delete after Phase 24 planning is complete.**
+> This document was the combined vision doc for unified-registry + MCP enhancement + skill import adapters.
+> It has been superseded by:
+> - `.planning/ROADMAP.md` Phase 24 entry (architecture decisions + 6-plan structure)
+> - `.planning/phases/24-*/` PLAN.md files (once `/gsd:plan-phase 24` runs)
+> - `docs/enhancements/security-scan-module/00-specification.md` (consolidated security scan spec)
+>
+> **Do not update this file.** Use the planning files above as source of truth.
+
+---
+
 ## Executive Summary
 
 This document integrates two major enhancement proposals for Blitz AgentOS:

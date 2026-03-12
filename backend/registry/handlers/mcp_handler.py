@@ -50,11 +50,17 @@ class MCPHandler(RegistryHandler):
 
     def validate_config(self, config: dict) -> None:
         """
-        Validate MCP server config.
+        Validate MCP server config based on server_type.
 
-        HTTP SSE servers require a 'url' key.
-        OpenAPI bridge servers require an 'openapi_spec_url' key.
+        server_type defaults to "http_sse" for backwards compatibility.
+
+        Supported server types:
+          - "http_sse": HTTP+SSE MCP server — requires 'url'
+          - "stdio": subprocess-based MCP server — requires 'command' and 'args'
+          - "openapi_bridge": OpenAPI-to-MCP bridge — requires 'openapi_url' (valid URL)
         """
+        import urllib.parse
+
         server_type = config.get("server_type", "http_sse")
 
         if server_type == "http_sse":
@@ -62,13 +68,31 @@ class MCPHandler(RegistryHandler):
                 raise ValueError(
                     "http_sse mcp_server config must include 'url'"
                 )
-        elif server_type == "openapi_bridge":
-            if not config.get("openapi_spec_url") and not config.get("url"):
+
+        elif server_type == "stdio":
+            if not config.get("command"):
                 raise ValueError(
-                    "openapi_bridge mcp_server config must include 'openapi_spec_url' or 'url'"
+                    "stdio mcp_server config must include 'command'"
                 )
+            if "args" not in config:
+                raise ValueError(
+                    "stdio mcp_server config must include 'args'"
+                )
+
+        elif server_type == "openapi_bridge":
+            openapi_url = config.get("openapi_url")
+            if not openapi_url:
+                raise ValueError(
+                    "openapi_bridge mcp_server config must include 'openapi_url'"
+                )
+            parsed = urllib.parse.urlparse(openapi_url)
+            if parsed.scheme not in ("http", "https"):
+                raise ValueError(
+                    f"openapi_bridge openapi_url must be an http/https URL, got: {openapi_url!r}"
+                )
+
         else:
-            # Unknown server type — require at minimum a url
+            # Unknown server_type — require at minimum a url
             if not config.get("url"):
                 raise ValueError(
                     f"mcp_server config with server_type='{server_type}' must include 'url'"

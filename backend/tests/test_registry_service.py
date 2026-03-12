@@ -131,8 +131,8 @@ def test_handler_validate_config_mcp_http():
     with pytest.raises(ValueError, match="url"):
         handler.validate_config({"server_type": "http_sse"})
 
-    # Valid: openapi_bridge with openapi_spec_url
+    # Valid: openapi_bridge with openapi_url (plan 24-03 spec)
     handler.validate_config({
         "server_type": "openapi_bridge",
-        "openapi_spec_url": "http://example.com/openapi.json",
+        "openapi_url": "http://example.com/openapi.json",
     })
