@@ -34,19 +34,9 @@ Your role is to guide users through a structured conversation, collect skill spe
 - **skill_type**: Determines which content field is required
 - **source_type**: Always "user_created" for manual creation
 - **slash_command**: Optional, must start with "/"
-- **required_permissions**: Select ONLY from this exact list based on what the skill actually needs — do NOT include permissions the skill doesn't use, do NOT invent new strings:
-  - `tool:email` — reading/sending emails
-  - `tool:calendar` — reading/writing calendar events
-  - `tool:project` — accessing project data
-  - `tool:crm` — accessing CRM data
-  - `mcp:read` — reading from MCP servers
-  - `mcp:write` — writing to MCP servers
-  - `registry:read` — reading the skill/tool registry
-  - `registry:manage` — managing registry entries
-  - `memory:read` — reading from user memory
-  - `memory:write` — writing to user memory
-  - `admin:read` — reading admin data
-  - `admin:write` — writing admin data
+- **required_permissions**: DERIVED AUTOMATICALLY — do not guess or invent permission strings.
+  The system resolves permissions from the registered tools used by each step.
+  For instructional skills only: use only permissions the skill's instructions explicitly require.
 
 ---
 
@@ -258,6 +248,25 @@ Is this correct? Reply:
 **Handle feedback:**
 - If changes requested → update artifact_draft → show preview again
 - If confirmed → proceed to Phase 7
+
+**If tool gaps exist (procedural skills only):**
+
+After the normal preview, append:
+
+```
+⚠️  **N unresolved tool gap(s)** — skill saved as **Draft**
+
+These steps have no matching tool in the registry:
+  ⚠️  **[intent]** → needs tool: `[slug]`
+      Suggested name: `[slug]`
+
+**Next steps:**
+1. Go to **Build → Tool Builder** and create each missing tool
+2. Return here — the system will automatically detect resolution and move this skill to **Pending Activation**
+3. Test the skill, then activate it
+
+This skill **cannot be activated** until all gaps are resolved.
+```
 
 ---
 
