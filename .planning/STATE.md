@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-12T19:07:10.784Z"
+last_updated: "2026-03-12T19:14:59.354Z"
 progress:
   total_phases: 11
   completed_phases: 9
   total_plans: 43
-  completed_plans: 42
+  completed_plans: 43
 ---
 
 # Project State
@@ -23,9 +23,9 @@ See: .planning/PROJECT.md (updated 2026-03-11)
 ## Current Position
 
 Phase: 25 (Skill Builder Tool Resolver)
-Plan: 01 of 01 complete — Phase 25 Plan 01 COMPLETE
-Status: Phase 25 in progress — plan 01 of 01 done
-Last activity: 2026-03-12 - Completed 25-01 — resolve_tools node, ArtifactBuilderState extension, graph wiring
+Plan: 02 of 02 complete — Phase 25 Plan 02 COMPLETE
+Status: Phase 25 complete — plans 01 and 02 done
+Last activity: 2026-03-12 - Completed 25-02 — gap summary, enforcement gates, auto-resolution implemented
 
 Progress: [##########] ~100%
 
@@ -162,6 +162,9 @@ v1.3 roadmap decisions:
 - [25-01]: blitz/fast (not blitz/master) for resolver — bounded matching task, faster/cheaper than complex reasoning
 - [25-01]: resolver falls back to empty lists on ANY exception — must never propagate errors into builder graph
 - [25-01]: required_permissions derived from resolved_tools in generate node, injected into draft before LLM generates content
+- [Phase 25]: [25-02]: activation gate uses pre-fetch get_entry before update call — Pattern A chosen over post-update check (simpler, no rollback needed)
+- [Phase 25]: [25-02]: _format_gap_summary returns empty string for None/empty gaps — safe default for non-skill artifact types
+- [Phase 25]: [25-02]: ToolHandler gap matching uses substring check (tool_slug in gap_slug) — handles dot-to-hyphen normalization correctly
 
 ### Pending Todos
 
@@ -218,6 +221,7 @@ v1.3 roadmap decisions:
 | Phase 24 P06 | 633 | 4 tasks | 13 files |
 | Phase 24 P07 | 285 | 3 tasks | 4 files |
 | Phase 25 P01 | 4 | 3 tasks | 4 files |
+| Phase 25 P02 | 4 | 3 tasks | 8 files |
 
 ## Session Continuity
 
