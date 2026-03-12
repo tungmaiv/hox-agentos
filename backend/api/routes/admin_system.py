@@ -85,6 +85,23 @@ async def _run_batch_scan(user_id: str) -> None:
         logger.info("rescan_skills_complete", count=len(entries))
 
 
+@router.get("/health")
+async def get_system_health(
+    user: UserContext = Depends(_require_admin),
+) -> dict:
+    """Return system health including security scanner availability. Admin only."""
+    from security.scan_client import SecurityScanClient
+
+    from core.config import settings
+
+    scan_client = SecurityScanClient(base_url=settings.security_scanner_url)
+    scanner_available = await scan_client.health_check()
+    return {
+        "status": "ok",
+        "security_scanner_available": scanner_available,
+    }
+
+
 @router.post("/rescan-skills", status_code=202)
 async def trigger_rescan_skills(
     background_tasks: BackgroundTasks,

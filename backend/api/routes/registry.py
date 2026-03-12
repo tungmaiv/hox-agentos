@@ -31,6 +31,7 @@ from registry.models import McpServerCatalog
 from registry.service import UnifiedRegistryService
 from security.deps import get_current_user
 from security.rbac import has_permission
+from skills.importer import SkillImportError
 from skills.import_service import UnifiedImportService
 
 logger = structlog.get_logger(__name__)
@@ -164,6 +165,8 @@ async def import_skill(
             owner_id=user["user_id"],
         )
         await session.commit()
+    except SkillImportError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except NotImplementedError as exc:
