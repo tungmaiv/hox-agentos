@@ -467,7 +467,14 @@ async def _gather_details_node(state: ArtifactBuilderState, config: RunnableConf
 async def _validate_and_present_node(state: ArtifactBuilderState, config: RunnableConfig) -> dict:
     """Validate the artifact draft against its Pydantic schema."""
     artifact_type = state["artifact_type"]
-    draft = state.get("artifact_draft") or {}
+    draft = dict(state.get("artifact_draft") or {})
+
+    # Normalize required fields that the LLM may omit but can be safely defaulted.
+    if artifact_type == "skill":
+        if "skill_type" not in draft:
+            draft["skill_type"] = "instructional"
+        if "source_type" not in draft:
+            draft["source_type"] = "user_created"
 
     errors = validate_artifact_draft(artifact_type, draft)
 
@@ -650,6 +657,8 @@ async def _generate_skill_content_node(
                 updated_draft["instruction_markdown"] = content
 
         # Auto-set wizard defaults for skill artifacts
+        if "skill_type" not in updated_draft:
+            updated_draft["skill_type"] = skill_type
         if "source_type" not in updated_draft:
             updated_draft["source_type"] = "user_created"
         if "slash_command" not in updated_draft and updated_draft.get("name"):
