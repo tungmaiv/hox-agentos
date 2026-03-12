@@ -108,6 +108,9 @@ def _route_intent(state: ArtifactBuilderState) -> str:
         if artifact_type == "skill":
             skill_type = draft.get("skill_type", "instructional")
             if skill_type == "procedural" and not draft.get("procedure_json"):
+                # Run tool resolver first if not yet done
+                if state.get("resolved_tools") is None:
+                    return "resolve_tools"
                 return "generate_skill_content"
             if skill_type != "procedural" and not draft.get("instruction_markdown"):
                 return "generate_skill_content"
@@ -461,6 +464,18 @@ async def _resolve_tools_node(
         }
 
 
+def _derive_permissions_from_resolved_tools(resolved_tools: list[dict]) -> list[str]:
+    """Compute deduplicated union of required_permissions from all resolved tools."""
+    seen: set[str] = set()
+    result: list[str] = []
+    for step in resolved_tools:
+        for perm in step.get("permissions", []):
+            if perm not in seen:
+                seen.add(perm)
+                result.append(perm)
+    return result
+
+
 async def _gather_type_node(state: ArtifactBuilderState, config: RunnableConfig) -> dict:
     """Ask the user what type of artifact they want, or detect from message."""
     messages = state.get("messages", [])
@@ -751,7 +766,25 @@ async def _generate_skill_content_node(
     if artifact_type == "skill":
         tool_reference = await _fetch_tool_reference_block()
 
-    prompt = get_skill_generation_prompt(artifact_type, draft, tool_reference)
+    resolved_tools = state.get("resolved_tools") or []
+    tool_gaps = state.get("tool_gaps") or []
+
+    # Inject verified tool mapping for procedural skills
+    resolved_context = ""
+    if artifact_type == "skill" and resolved_tools:
+        lines = ["\n\n## Verified Tool Mapping (use these exact tool names in procedure_json steps)"]
+        for step in resolved_tools:
+            lines.append(f"- intent: \"{step['intent']}\" → tool: \"{step['tool']}\" args_hint: {step.get('args_hint', {})}")
+        resolved_context = "\n".join(lines)
+
+    # Derive required_permissions from resolved tools and inject into draft
+    if artifact_type == "skill" and resolved_tools:
+        permissions = _derive_permissions_from_resolved_tools(resolved_tools)
+        draft = dict(draft)
+        draft["required_permissions"] = permissions
+        draft["tool_gaps"] = tool_gaps  # persist gaps into draft so RegistryEntry.config carries them
+
+    prompt = get_skill_generation_prompt(artifact_type, draft, tool_reference + resolved_context)
     llm = get_llm("blitz/master")
 
     try:
@@ -824,6 +857,8 @@ async def _generate_skill_content_node(
         "messages": [response],
         "artifact_type": artifact_type,
         "artifact_draft": updated_draft,
+        "resolved_tools": resolved_tools,
+        "tool_gaps": tool_gaps,
         **form_updates,
     }
     if handler_code is not None:
@@ -841,6 +876,7 @@ def create_artifact_builder_graph() -> CompiledStateGraph:
     graph.add_node("validate_and_present", _validate_and_present_node)
     graph.add_node("fill_form_node", _fill_form_node)
     graph.add_node("generate_skill_content", _generate_skill_content_node)
+    graph.add_node("resolve_tools", _resolve_tools_node)
 
     # Conditional entry point: routes to correct node based on state
     graph.set_conditional_entry_point(
@@ -851,11 +887,13 @@ def create_artifact_builder_graph() -> CompiledStateGraph:
             "validate_and_present": "validate_and_present",
             "fill_form_node": "fill_form_node",
             "generate_skill_content": "generate_skill_content",
+            "resolve_tools": "resolve_tools",
         },
     )
 
     # After gather_type: route based on draft completeness.
     # - Type is skill/tool + draft already has all required content → validate_and_present
+    # - Procedural skill without content → resolve tools first
     # - Type is skill/tool (any draft state) → generate_skill_content to fill/complete it
     # - Other artifact types or no type detected → END (wait for next user message)
     def _route_after_gather_type(state: ArtifactBuilderState) -> str:
@@ -871,6 +909,9 @@ def create_artifact_builder_graph() -> CompiledStateGraph:
                 return "validate_and_present"
             if skill_type != "procedural" and draft.get("instruction_markdown"):
                 return "validate_and_present"
+            # Procedural without content → resolve tools first
+            if skill_type == "procedural":
+                return "resolve_tools"
             return "generate_skill_content"
         return END
 
@@ -878,6 +919,7 @@ def create_artifact_builder_graph() -> CompiledStateGraph:
         "gather_type",
         _route_after_gather_type,
         {
+            "resolve_tools": "resolve_tools",
             "generate_skill_content": "generate_skill_content",
             "validate_and_present": "validate_and_present",
             END: END,
@@ -886,6 +928,7 @@ def create_artifact_builder_graph() -> CompiledStateGraph:
     graph.add_edge("gather_details", END)
     graph.add_edge("validate_and_present", END)
     graph.add_edge("fill_form_node", END)
+    graph.add_edge("resolve_tools", "generate_skill_content")
     graph.add_edge("generate_skill_content", "validate_and_present")
 
     return graph.compile(checkpointer=MemorySaver())

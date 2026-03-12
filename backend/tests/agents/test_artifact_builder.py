@@ -569,6 +569,27 @@ async def test_gather_details_llm_error_returns_friendly_message():
     assert result["artifact_draft"] == {"name": "existing"}
 
 
+def test_graph_has_resolve_tools_node():
+    """create_artifact_builder_graph must include a resolve_tools node."""
+    from agents.artifact_builder import create_artifact_builder_graph
+    graph = create_artifact_builder_graph()
+    assert "resolve_tools" in graph.nodes, "resolve_tools node missing from graph"
+
+
+def test_derive_permissions_from_resolved_tools():
+    """Permission union is computed correctly from resolved_tools list."""
+    from agents.artifact_builder import _derive_permissions_from_resolved_tools
+
+    resolved = [
+        {"intent": "fetch tasks", "tool": "project.list_tasks", "permissions": ["tool:project"]},
+        {"intent": "read calendar", "tool": "calendar.list_events", "permissions": ["tool:calendar"]},
+        {"intent": "read emails", "tool": "email.fetch", "permissions": ["tool:email", "tool:project"]},
+    ]
+    perms = _derive_permissions_from_resolved_tools(resolved)
+    assert set(perms) == {"tool:project", "tool:calendar", "tool:email"}
+    assert len(perms) == len(set(perms)), "permissions must be deduplicated"
+
+
 @pytest.mark.asyncio
 async def test_resolve_tools_node_matches_known_tool():
     """resolve_tools node maps a step intent to a matching tool from the registry."""
