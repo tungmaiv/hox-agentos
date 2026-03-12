@@ -81,6 +81,9 @@ class Settings(BaseSettings):
     # If total conversation turns reaches a multiple of this threshold, summarize_episode is triggered.
     episode_turn_threshold: int = 10
 
+    # Security scanner service (Docker microservice on port 8003)
+    security_scanner_url: str = "http://security-scanner:8003"
+
     # Channel sidecar URLs (Docker internal service names)
     telegram_gateway_url: str = "http://telegram-gateway:9001"
     whatsapp_gateway_url: str = "http://whatsapp-gateway:9002"

@@ -35,6 +35,7 @@ from api.routes.admin_keycloak import router as admin_keycloak_router
 from api.routes.admin_skill_sharing import router as admin_skill_sharing_router
 from api.routes.admin_local_users import router as admin_local_users_router
 from api.routes.admin_memory import router as admin_memory_router
+from api.routes.admin_system import router as admin_system_router
 from api.routes.auth_local import router as auth_local_router
 from api.routes.auth_config import router as auth_config_router
 from api.routes.auth_local_password import router as auth_local_password_router
@@ -219,6 +220,9 @@ def create_app() -> FastAPI:
 
     # Admin memory reindex — POST /api/admin/memory/reindex (tool:admin permission)
     app.include_router(admin_memory_router)
+
+    # Admin system management — POST /api/admin/system/rescan-skills (tool:admin permission)
+    app.include_router(admin_system_router)
 
     # Admin Keycloak identity config — GET/POST /api/admin/keycloak/* (tool:admin permission)
     # Internal provider config — GET /api/internal/keycloak/provider-config (X-Internal-Key)
