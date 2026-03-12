@@ -476,6 +476,59 @@ def _derive_permissions_from_resolved_tools(resolved_tools: list[dict]) -> list[
     return result
 
 
+def _format_gap_summary(
+    resolved_tools: list[dict] | None,
+    tool_gaps: list[dict] | None,
+) -> str:
+    """Format a human-readable gap summary for the validate_and_present node.
+
+    Shows ALL steps — resolved ones with ✅ and missing ones with ⚠️ — per
+    the locked decision "All steps shown (resolved and missing)".
+    Returns empty string when no gaps. Otherwise returns a block describing
+    each resolved and missing tool and instructions for resolving the gaps.
+    """
+    if not tool_gaps:
+        return ""
+
+    lines = [
+        "",
+        "---",
+        f"⚠️  **{len(tool_gaps)} unresolved tool gap(s)** — skill saved as **Draft**",
+        "",
+    ]
+
+    # Show resolved steps first (locked decision: all steps shown)
+    if resolved_tools:
+        lines.append("**Resolved steps:**")
+        lines.append("")
+        for step in resolved_tools:
+            intent = step.get("intent", "unknown")
+            tool = step.get("tool", "?")
+            lines.append(f"  ✅  **{intent}** → `{tool}`")
+        lines.append("")
+
+    # Show missing steps with plain language (locked decision phrasing)
+    lines.append("**Missing tools:**")
+    lines.append("")
+    for gap in tool_gaps:
+        intent = gap.get("intent", "unknown")
+        tool = gap.get("tool", "MISSING:unknown")
+        slug = tool.replace("MISSING:", "")
+        lines.append(f"  ⚠️  No tool found for: **{intent}**")
+        lines.append(f"      Suggested name: `{slug}`")
+
+    lines += [
+        "",
+        "**Next steps:**",
+        "1. Go to **Build → Tool Builder** and create each missing tool",
+        "2. Return here — the system will detect the gaps are resolved and move this skill to **Pending Activation**",
+        "3. Test the skill, then activate it",
+        "",
+        "This skill **cannot be activated** until all gaps are resolved.",
+    ]
+    return "\n".join(lines)
+
+
 async def _gather_type_node(state: ArtifactBuilderState, config: RunnableConfig) -> dict:
     """Ask the user what type of artifact they want, or detect from message."""
     messages = state.get("messages", [])
@@ -655,12 +708,21 @@ async def _validate_and_present_node(state: ArtifactBuilderState, config: Runnab
         }
 
     draft_json = json.dumps(draft, indent=2)
-    msg = AIMessage(
-        content=f"The artifact definition is valid and ready to save!\n\n"
+    response_content = (
+        f"The artifact definition is valid and ready to save!\n\n"
         f"```json\n{draft_json}\n```\n\n"
         f"Click **Save** to create this {artifact_type.replace('_', ' ')} in the registry, "
         f"or tell me if you'd like to make any changes."
     )
+
+    # Append gap summary to the AI message content if gaps exist
+    resolved_tools = state.get("resolved_tools") or []
+    tool_gaps = state.get("tool_gaps") or []
+    gap_summary = _format_gap_summary(resolved_tools, tool_gaps)
+    if gap_summary and isinstance(response_content, str):
+        response_content = response_content + gap_summary
+
+    msg = AIMessage(content=response_content)
     await _emit_builder_state(config, artifact_type, draft, [], True)
     return {
         "messages": [msg],

@@ -727,3 +727,36 @@ async def test_gather_type_llm_error_returns_friendly_message():
         result = await _gather_type_node(state, _mock_config())
 
     assert "trouble" in result["messages"][0].content.lower() or "having" in result["messages"][0].content.lower()
+
+
+def test_format_gap_summary_with_gaps():
+    """Gap summary message shows resolved steps with ✅ and missing steps with plain language."""
+    from agents.artifact_builder import _format_gap_summary
+
+    resolved = [
+        {"intent": "fetch tasks", "tool": "project.list_tasks"},
+    ]
+    gaps = [
+        {"intent": "send Slack message", "tool": "MISSING:send-slack-message"},
+        {"intent": "post to Teams", "tool": "MISSING:teams-post-message"},
+    ]
+    summary = _format_gap_summary(resolved, gaps)
+    # Resolved steps must appear with plain tool name and ✅ icon
+    assert "fetch tasks" in summary
+    assert "project.list_tasks" in summary
+    # Missing steps must use "No tool found for:" phrasing (locked decision)
+    assert "No tool found for:" in summary
+    assert "send Slack message" in summary
+    assert "post to Teams" in summary
+    # Suggested name for each gap
+    assert "send-slack-message" in summary
+    assert "teams-post-message" in summary
+    assert "draft" in summary.lower() or "Draft" in summary
+    assert "Tool Builder" in summary
+
+
+def test_format_gap_summary_no_gaps():
+    """Gap summary returns empty string when no gaps."""
+    from agents.artifact_builder import _format_gap_summary
+    assert _format_gap_summary([], []) == ""
+    assert _format_gap_summary(None, None) == ""
