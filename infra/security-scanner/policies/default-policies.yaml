@@ -1,0 +1,16 @@
+# Security scanner scoring policy
+# Scores start at 100 and penalties are subtracted.
+# Final score is clamped to [0, 100].
+scoring:
+  bandit_high: -30       # Each HIGH severity bandit issue
+  bandit_medium: -15     # Each MEDIUM severity bandit issue
+  bandit_low: -5         # Each LOW severity bandit issue
+  cve_critical: -40      # Each CRITICAL CVE from pip-audit
+  cve_high: -20          # Each HIGH CVE from pip-audit (default for unknown severity)
+  cve_medium: -10        # Each MEDIUM CVE from pip-audit
+  secret_detected: -50   # Any hardcoded secret detected (one-time penalty)
+
+thresholds:
+  approve: 70    # score >= 70 → approve (auto-activate)
+  review: 40     # score 40-69 → pending_review (human review required)
+  reject: 0      # score < 40 → reject (blocked)

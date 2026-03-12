@@ -154,6 +154,22 @@ services:
     networks:
       - blitz-net
 
+  # Security scanner microservice — runs pip-audit, bandit, detect-secrets
+  security-scanner:
+    build:
+      context: ./infra/security-scanner
+      dockerfile: Dockerfile
+    ports:
+      - "8003:8003"
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - blitz-net
+
   celery-worker:
     build: ./backend
     depends_on:

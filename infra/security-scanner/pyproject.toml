@@ -1,0 +1,17 @@
+[project]
+name = "security-scanner"
+version = "1.0.0"
+description = "Standalone security scanning microservice — runs pip-audit, bandit, detect-secrets as subprocesses"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "pip-audit",
+    "bandit",
+    "detect-secrets",
+    "pydantic-settings",
+    "structlog",
+    "httpx",
+    "asyncpg",
+    "sqlalchemy",
+    "pyyaml",
+]
