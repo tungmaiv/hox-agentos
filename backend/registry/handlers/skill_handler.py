@@ -18,7 +18,34 @@ class SkillHandler(RegistryHandler):
     """Handler for skill registry entries."""
 
     async def on_create(self, entry: object, session: AsyncSession) -> None:
-        """Log creation — no side effects for MVP."""
+        """Call Docker security scanner then log creation."""
+        try:
+            from security.scan_client import scan_skill_with_fallback
+
+            config = getattr(entry, "config", {}) or {}
+            skill_data = {
+                "name": getattr(entry, "name", "unknown"),
+                "instruction_markdown": config.get("instruction_markdown", ""),
+                "scripts": config.get("instruction_markdown", ""),
+                "requirements": config.get("requirements", ""),
+            }
+            scan_result = await scan_skill_with_fallback(skill_data)
+            # JSONB mutation: reassign full dict to trigger SQLAlchemy dirty-tracking
+            updated_config = {
+                **config,
+                "security_score": scan_result.get("score"),
+                "security_report": scan_result,
+            }
+            entry.config = updated_config  # type: ignore[attr-defined]
+            session.add(entry)
+            # Do NOT commit here — caller (UnifiedRegistryService.create_entry) owns the transaction
+        except Exception as exc:
+            # Non-fatal: skill is saved even if scan fails
+            logger.warning(
+                "skill_handler_scan_failed",
+                name=getattr(entry, "name", None),
+                error=str(exc),
+            )
         logger.info(
             "registry_skill_created",
             name=getattr(entry, "name", None),
