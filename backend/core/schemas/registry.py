@@ -423,3 +423,45 @@ class SkillShareEntry(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# ---------------------------------------------------------------------------
+# Unified Registry schemas (registry_entries table)
+# ---------------------------------------------------------------------------
+
+
+class RegistryEntryCreate(BaseModel):
+    """Create a new unified registry entry."""
+
+    type: Literal["agent", "skill", "tool", "mcp_server"]
+    name: str
+    display_name: str | None = None
+    description: str | None = None
+    config: dict[str, Any] = {}
+    status: str = "draft"
+
+
+class RegistryEntryUpdate(BaseModel):
+    """Update an existing registry entry (partial update)."""
+
+    display_name: str | None = None
+    description: str | None = None
+    config: dict[str, Any] | None = None
+    status: str | None = None
+
+
+class RegistryEntryResponse(BaseModel):
+    """Full representation of a registry entry."""
+
+    id: uuid.UUID
+    type: str
+    name: str
+    display_name: str | None
+    description: str | None
+    config: dict[str, Any]
+    status: str
+    owner_id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
