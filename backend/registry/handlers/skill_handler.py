@@ -46,6 +46,18 @@ class SkillHandler(RegistryHandler):
                 name=getattr(entry, "name", None),
                 error=str(exc),
             )
+
+        # Enforce draft status when tool_gaps are present
+        config = getattr(entry, "config", {}) or {}
+        tool_gaps = config.get("tool_gaps", [])
+        if tool_gaps:
+            entry.status = "draft"  # type: ignore[attr-defined]
+            logger.warning(
+                "skill_saved_with_tool_gaps",
+                name=getattr(entry, "name", None),
+                gap_count=len(tool_gaps),
+            )
+
         logger.info(
             "registry_skill_created",
             name=getattr(entry, "name", None),

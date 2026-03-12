@@ -243,6 +243,15 @@ async def update_entry(
     session: AsyncSession = Depends(get_db),
 ) -> RegistryEntryResponse:
     """Update an existing registry entry. Requires registry:manage permission."""
+    # Gate: prevent activation when skill has unresolved tool_gaps
+    if body.status == "active":
+        existing = await _registry_service.get_entry(session, entry_id)
+        if existing and (existing.config or {}).get("tool_gaps"):
+            raise HTTPException(
+                status_code=422,
+                detail="Skill has unresolved tool gaps. Create missing tools first.",
+            )
+
     try:
         entry = await _registry_service.update_entry(session, entry_id, body)
     except ValueError as exc:
