@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-12T11:23:38.774Z"
+last_updated: "2026-03-12T19:07:10.784Z"
 progress:
-  total_phases: 10
+  total_phases: 11
   completed_phases: 9
-  total_plans: 40
-  completed_plans: 41
+  total_plans: 43
+  completed_plans: 42
 ---
 
 # Project State
@@ -22,10 +22,10 @@ See: .planning/PROJECT.md (updated 2026-03-11)
 
 ## Current Position
 
-Phase: 24 (Unified Registry + MCP Platform Enhancement + Skill Import Adapters)
-Plan: 06 of 06 complete — Phase 24 COMPLETE
-Status: Phase 24 complete — all 6 plans done
-Last activity: 2026-03-12 - Completed 24-06 — Admin 4-tab layout + Registry hub + LLM config API + Scan Results tab; human verification approved
+Phase: 25 (Skill Builder Tool Resolver)
+Plan: 01 of 01 complete — Phase 25 Plan 01 COMPLETE
+Status: Phase 25 in progress — plan 01 of 01 done
+Last activity: 2026-03-12 - Completed 25-01 — resolve_tools node, ArtifactBuilderState extension, graph wiring
 
 Progress: [##########] ~100%
 
@@ -158,6 +158,10 @@ v1.3 roadmap decisions:
 - [Phase 24]: [24-07]: astext JSONB accessor skipped in SQLite tests — Python-level filter used for handler_type check (SQLite JSON lacks PostgreSQL JSONB operators)
 - [Phase 24]: [24-07]: skill_handler.on_create() uses lazy import guard for scan_client — avoids circular import, matches import_service.py pattern
 - [Phase 24]: [24-07]: openapi_bridge auth_token stored as hex string in config — bytes not JSON-serializable in JSONB column
+- [25-01]: resolved_tools: list[dict] | None — None means not yet run, [] means ran with no matches (guard: state.get('resolved_tools') is None)
+- [25-01]: blitz/fast (not blitz/master) for resolver — bounded matching task, faster/cheaper than complex reasoning
+- [25-01]: resolver falls back to empty lists on ANY exception — must never propagate errors into builder graph
+- [25-01]: required_permissions derived from resolved_tools in generate node, injected into draft before LLM generates content
 
 ### Pending Todos
 
@@ -213,9 +217,10 @@ v1.3 roadmap decisions:
 | Phase 24 P06 | 633 | 3 tasks | 13 files |
 | Phase 24 P06 | 633 | 4 tasks | 13 files |
 | Phase 24 P07 | 285 | 3 tasks | 4 files |
+| Phase 25 P01 | 4 | 3 tasks | 4 files |
 
 ## Session Continuity
 
-Last session: 2026-03-11
-Stopped at: v1.3 milestone completed and archived. Ready for /gsd:new-milestone.
-Resume file: N/A — milestone complete
+Last session: 2026-03-12
+Stopped at: Completed 25-01-PLAN.md — resolve_tools node implemented, graph wired
+Resume file: N/A — plan complete
