@@ -95,17 +95,27 @@ skipped: 2
 ## Gaps
 
 - truth: "GET /api/admin/system/health returns security_scanner_available: true/false"
-  status: failed
+  status: fixed
   reason: "User reported: GET /api/admin/system/health returns 404 Not Found — endpoint does not exist"
   severity: major
   test: 12
-  artifacts: []
-  missing: []
+  root_cause: "GET /health route was never added to admin_system.py — SecurityScanClient.health_check() existed but was not exposed"
+  artifacts:
+    - path: "backend/api/routes/admin_system.py"
+      issue: "Missing GET /health route"
+  missing:
+    - "Added GET /health endpoint calling SecurityScanClient.health_check()"
+  fix_commit: "5476350"
 
 - truth: "POST /api/registry/import returns 422 on SkillImportError (invalid SKILL.md content), not 500"
-  status: failed
+  status: fixed
   reason: "User reported: HTTP URL import returns 500 when content is not a valid SKILL.md — SkillImportError not caught in route handler"
   severity: major
   test: 13
-  artifacts: []
-  missing: []
+  root_cause: "SkillImportError inherits from Exception (not ValueError), so the route's except ValueError clause did not catch it — bubbled as 500"
+  artifacts:
+    - path: "backend/api/routes/registry.py"
+      issue: "import_skill() try/except missing SkillImportError catch"
+  missing:
+    - "Added except SkillImportError → 422 before the ValueError clause"
+  fix_commit: "5476350"
