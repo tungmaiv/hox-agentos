@@ -3,6 +3,12 @@
 Covers CRUD operations, unique constraint enforcement, default values,
 is_active flag, last_seen_at, and user_artifact_permission for all 6 new
 tables. Also validates Pydantic schema cross-field validation.
+
+Also covers the new unified RegistryEntry ORM model:
+  - test_registry_entry_create
+  - test_registry_entry_unique_type_name
+  - test_registry_entry_soft_delete
+  - test_registry_entry_status_values
 """
 import uuid
 from datetime import datetime, timezone
@@ -29,6 +35,7 @@ from core.schemas.registry import (
     ToolDefinitionCreate,
     ToolDefinitionResponse,
 )
+from registry.models import RegistryEntry  # noqa: F401 — registers table in Base.metadata
 
 
 @pytest.fixture
@@ -474,3 +481,103 @@ def test_schema_from_attributes():
     """Response schemas support from_attributes for ORM conversion."""
     assert AgentDefinitionResponse.model_config.get("from_attributes") is True
     assert ToolDefinitionResponse.model_config.get("from_attributes") is True
+
+
+# ─── RegistryEntry (unified registry model) ─────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_registry_entry_create(session: AsyncSession):
+    """Insert a RegistryEntry and assert id is generated."""
+    owner = uuid.uuid4()
+    entry = RegistryEntry(
+        type="tool",
+        name="test_tool",
+        config={"handler_function": "tools.test"},
+        owner_id=owner,
+        status="draft",
+    )
+    session.add(entry)
+    await session.commit()
+    await session.refresh(entry)
+
+    assert entry.id is not None
+    assert entry.type == "tool"
+    assert entry.name == "test_tool"
+    assert entry.config == {"handler_function": "tools.test"}
+    assert entry.owner_id == owner
+    assert entry.status == "draft"
+
+
+@pytest.mark.asyncio
+async def test_registry_entry_unique_type_name(session: AsyncSession):
+    """Same (type, name) pair cannot be inserted twice."""
+    owner = uuid.uuid4()
+    entry1 = RegistryEntry(
+        type="skill",
+        name="duplicate_skill",
+        config={},
+        owner_id=owner,
+        status="draft",
+    )
+    entry2 = RegistryEntry(
+        type="skill",
+        name="duplicate_skill",
+        config={},
+        owner_id=uuid.uuid4(),
+        status="active",
+    )
+    session.add(entry1)
+    await session.commit()
+
+    session.add(entry2)
+    with pytest.raises(IntegrityError):
+        await session.commit()
+
+
+@pytest.mark.asyncio
+async def test_registry_entry_soft_delete(session: AsyncSession):
+    """Set deleted_at, assert non-null."""
+    owner = uuid.uuid4()
+    entry = RegistryEntry(
+        type="agent",
+        name="soft_delete_agent",
+        config={"handler_module": "agents.test"},
+        owner_id=owner,
+        status="active",
+    )
+    session.add(entry)
+    await session.commit()
+
+    assert entry.deleted_at is None
+
+    entry.deleted_at = datetime.now(timezone.utc)
+    await session.commit()
+    await session.refresh(entry)
+
+    assert entry.deleted_at is not None
+
+
+@pytest.mark.asyncio
+async def test_registry_entry_status_values(session: AsyncSession):
+    """Verify status column accepts draft, active, archived."""
+    owner = uuid.uuid4()
+
+    for i, status_val in enumerate(["draft", "active", "archived"]):
+        entry = RegistryEntry(
+            type="mcp_server",
+            name=f"test_mcp_{status_val}_{i}",
+            config={"url": f"http://example.com/{i}"},
+            owner_id=owner,
+            status=status_val,
+        )
+        session.add(entry)
+
+    await session.commit()
+
+    result = await session.execute(
+        select(RegistryEntry).where(RegistryEntry.type == "mcp_server")
+    )
+    rows = result.scalars().all()
+    found_statuses = {r.status for r in rows}
+    assert {"draft", "active", "archived"}.issubset(found_statuses)
