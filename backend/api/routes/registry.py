@@ -4,6 +4,7 @@ Unified Registry API — /api/registry/* CRUD endpoints.
 GET    /api/registry/          — list entries; query params: type, status (registry:read)
 GET    /api/registry/{id}      — get one entry (registry:read)
 POST   /api/registry/          — create entry (registry:manage)
+POST   /api/registry/import    — import skill from external source (registry:manage)
 PUT    /api/registry/{id}      — update entry (registry:manage)
 DELETE /api/registry/{id}      — soft delete (registry:manage)
 
@@ -15,6 +16,8 @@ from uuid import UUID
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.db import get_db
@@ -24,9 +27,11 @@ from core.schemas.registry import (
     RegistryEntryResponse,
     RegistryEntryUpdate,
 )
+from registry.models import McpServerCatalog
 from registry.service import UnifiedRegistryService
 from security.deps import get_current_user
 from security.rbac import has_permission
+from skills.import_service import UnifiedImportService
 
 logger = structlog.get_logger(__name__)
 
@@ -81,6 +86,101 @@ async def list_entries(
         count=len(entries),
     )
     return [RegistryEntryResponse.model_validate(e) for e in entries]
+
+
+# ── MCP server catalog ───────────────────────────────────────────────────
+
+
+@router.get("/mcp-catalog")
+async def list_mcp_catalog(
+    user: UserContext = Depends(_require_read),
+    session: AsyncSession = Depends(get_db),
+) -> list[dict]:
+    """List all pre-built MCP server catalog entries (ordered by name).
+
+    Returns the catalog of known installable MCP servers. These are not yet
+    installed — installation creates a registry_entries row.
+    """
+    result = await session.execute(
+        select(McpServerCatalog).order_by(McpServerCatalog.name)
+    )
+    entries = result.scalars().all()
+    return [
+        {
+            "id": str(e.id),
+            "name": e.name,
+            "display_name": e.display_name,
+            "description": e.description,
+            "package_manager": e.package_manager,
+            "package_name": e.package_name,
+            "command": e.command,
+            "args": e.args,
+            "env_vars": e.env_vars,
+            "created_at": e.created_at.isoformat() if e.created_at else None,
+        }
+        for e in entries
+    ]
+
+
+# ── Import skill from external source ────────────────────────────────────
+
+
+class ImportSkillRequest(BaseModel):
+    """Request body for importing a skill from an external URL or URI."""
+
+    source: str  # URL or claude-market:// URI
+    source_type: str | None = None  # optional hint (not used currently)
+
+
+class ImportSkillResponse(BaseModel):
+    """Response after successfully importing a skill."""
+
+    id: UUID
+    name: str
+    status: str
+    security_score: int | None = None
+
+
+_import_service = UnifiedImportService()
+
+
+@router.post("/import", status_code=201, response_model=ImportSkillResponse)
+async def import_skill(
+    request: ImportSkillRequest,
+    user: UserContext = Depends(_require_manage),
+    session: AsyncSession = Depends(get_db),
+) -> ImportSkillResponse:
+    """Import a skill from an external source (URL, GitHub, claude-market://).
+
+    Detects the appropriate adapter, validates source, fetches and normalizes
+    the skill, runs a security scan (if available), and creates a registry entry.
+
+    Requires registry:manage permission (it-admin role).
+    """
+    try:
+        entry = await _import_service.import_skill(
+            source=request.source,
+            session=session,
+            owner_id=user["user_id"],
+        )
+        await session.commit()
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except NotImplementedError as exc:
+        raise HTTPException(status_code=501, detail=str(exc)) from exc
+
+    logger.info(
+        "registry_skill_imported_api",
+        user_id=str(user["user_id"]),
+        entry_id=str(entry.id),
+        source=request.source,
+    )
+    return ImportSkillResponse(
+        id=entry.id,
+        name=entry.name,
+        status=entry.status,
+        security_score=entry.config.get("security_score") if entry.config else None,
+    )
 
 
 # ── Get one entry ─────────────────────────────────────────────────────────
