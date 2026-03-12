@@ -106,7 +106,7 @@ Full v1.3 phase details archived: `.planning/milestones/v1.3-ROADMAP.md`
 | 22. Skill Platform D — Sharing | v1.3 | 3/3 | ✅ Complete | 2026-03-08 |
 | 23. Skill Platform E — Builder | v1.3 | 4/4 | ✅ Complete | 2026-03-10 |
 | 24. Unified Registry, MCP Platform & Skill Import Adapters | 7/7 | Complete   | 2026-03-12 | — |
-| 25. Skill Builder Tool Resolver | 2/3 | In Progress|  | — |
+| 25. Skill Builder Tool Resolver | 3/3 | Complete   | 2026-03-12 | — |
 
 ### Phase 24: Unified Registry, MCP Platform Enhancement & Skill Import Adapters
 
@@ -134,4 +134,4 @@ Plans:
 **Goal:** Eliminate hardcoded tool list and LLM-guessed tool names in the procedural skill builder. Insert a `resolve_tools` LangGraph node that maps each workflow step to a verified tool from the live registry. Skills with unresolved tool gaps are saved as `draft` and blocked from activation. When the missing tool is created, auto-promote the skill to `pending_activation` for admin review.
 **Requirements**: Design doc: `docs/plans/2026-03-13-tool-resolver-design.md`; Implementation plan: `docs/plans/2026-03-13-tool-resolver-implementation.md`
 **Depends on:** Phase 24
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
