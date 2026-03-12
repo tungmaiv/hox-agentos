@@ -165,6 +165,10 @@ v1.3 roadmap decisions:
 - [Phase 25]: [25-02]: activation gate uses pre-fetch get_entry before update call — Pattern A chosen over post-update check (simpler, no rollback needed)
 - [Phase 25]: [25-02]: _format_gap_summary returns empty string for None/empty gaps — safe default for non-skill artifact types
 - [Phase 25]: [25-02]: ToolHandler gap matching uses substring check (tool_slug in gap_slug) — handles dot-to-hyphen normalization correctly
+- [tool-resolver]: resolve_tools node runs blitz/fast before generate_skill_content for procedural skills only — fallback to empty lists on error preserves existing instructional skill behavior
+- [tool-resolver]: tool_gaps gap matching uses slug-based substring match (tool name dots/underscores → hyphens) — sufficient for MVP, can upgrade to semantic match later
+- [tool-resolver]: pending_activation is enforced by SkillHandler.on_create() (draft force) + registry route gate (422 on activate) + ToolHandler.on_create() (auto-promote) — three enforcement points
+- [tool-resolver]: bell icon uses useEffect + plain fetch (not SWR) — count changes infrequently; refreshes on nav (component remount)
 
 ### Pending Todos
 

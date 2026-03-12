@@ -210,8 +210,13 @@ async def create_entry(
     body: RegistryEntryCreate,
     user: UserContext = Depends(_require_manage),
     session: AsyncSession = Depends(get_db),
-) -> RegistryEntryResponse:
-    """Create a new registry entry. Requires registry:manage permission."""
+) -> dict:
+    """Create a new registry entry. Requires registry:manage permission.
+
+    When the entry type is "tool", the response includes an ``unblocked_skills``
+    field listing skills that are now in ``pending_activation`` status (promoted
+    automatically by ToolHandler.on_create after resolving their tool gaps).
+    """
     try:
         entry = await _registry_service.create_entry(
             session,
@@ -229,7 +234,24 @@ async def create_entry(
         type=entry.type,
         name=entry.name,
     )
-    return RegistryEntryResponse.model_validate(entry)
+
+    response = RegistryEntryResponse.model_validate(entry).model_dump()
+
+    # When a tool is created, include skills that were auto-promoted to pending_activation
+    if entry.type == "tool":
+        pending_skills = await _registry_service.list_entries(
+            session,
+            type="skill",
+            status="pending_activation",
+        )
+        response["unblocked_skills"] = [
+            {"id": str(s.id), "name": s.name}
+            for s in pending_skills[:5]
+        ]
+    else:
+        response["unblocked_skills"] = []
+
+    return response
 
 
 # ── Update entry ──────────────────────────────────────────────────────────
