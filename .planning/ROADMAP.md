@@ -106,7 +106,7 @@ Full v1.3 phase details archived: `.planning/milestones/v1.3-ROADMAP.md`
 | 22. Skill Platform D — Sharing | v1.3 | 3/3 | ✅ Complete | 2026-03-08 |
 | 23. Skill Platform E — Builder | v1.3 | 4/4 | ✅ Complete | 2026-03-10 |
 | 24. Unified Registry, MCP Platform & Skill Import Adapters | 7/7 | Complete   | 2026-03-12 | — |
-| 25. Skill Builder Tool Resolver | 3/3 | Complete   | 2026-03-12 | — |
+| 25. Skill Builder Tool Resolver | 3/3 | Complete    | 2026-03-12 | — |
 
 ### Phase 24: Unified Registry, MCP Platform Enhancement & Skill Import Adapters
 
