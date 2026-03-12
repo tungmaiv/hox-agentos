@@ -1,14 +1,14 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.3
-milestone_name: Production Readiness & Skill Platform
-status: complete
-last_updated: "2026-03-11T16:30:00.000Z"
+milestone: v1.0
+milestone_name: milestone
+status: unknown
+last_updated: "2026-03-12T02:06:18.565Z"
 progress:
-  total_phases: 9
-  completed_phases: 9
-  total_plans: 34
-  completed_plans: 34
+  total_phases: 10
+  completed_phases: 8
+  total_plans: 39
+  completed_plans: 35
 ---
 
 # Project State
@@ -159,6 +159,9 @@ v1.3 roadmap decisions:
 - [Phase 23-03]: [23-03]: Route /search-similar declared before /{repo_id} pattern to avoid FastAPI routing conflict
 - [Phase 23-03]: [23-03]: Fork action is optimistic frontend-only — copies name+description into draft, sets fork_source; builder agent re-validates on next message
 - [Phase 23]: [23-04]: Human verification approved — builder-save security gate + SecurityReportCard flow verified end-to-end
+- [Phase 24]: [24-01]: Empty CREDENTIAL_ENCRYPTION_KEY allowed; non-empty must be 64-char hex (32 bytes AES-256) — validated via model_validator(mode='after')
+- [Phase 24]: [24-01]: fetchWithRetry in auth.ts returns null (not throws) on retry exhaustion — auth.ts must never throw or Next.js reports Server error Configuration
+- [Phase 24]: [24-01]: Cache-Control header on internal provider-config endpoint injected via FastAPI Response parameter — response_model handles body only, not headers
 
 ### Pending Todos
 
@@ -210,6 +213,7 @@ v1.3 roadmap decisions:
 | Phase 23 P02 | 6 | 2 tasks | 8 files |
 | Phase 23 P03 | 8 | 2 tasks | 5 files |
 | Phase 23 P04 | 45 | 3 tasks | 4 files |
+| Phase 24 P01 | 3 | 2 tasks | 5 files |
 
 ## Session Continuity
 

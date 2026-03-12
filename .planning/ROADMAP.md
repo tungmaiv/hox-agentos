@@ -74,7 +74,7 @@ Full v1.3 phase details archived: `.planning/milestones/v1.3-ROADMAP.md`
 
 ## Progress
 
-**Execution Order:** 1 → 2 → 2.1 → 3 → 3.1 → 4 → 4.1 → 5 → 5.1 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21 → 22 → 23
+**Execution Order:** 1 → 2 → 2.1 → 3 → 3.1 → 4 → 4.1 → 5 → 5.1 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21 → 22 → 23 → 24
 
 | Phase | Milestone | Plans | Status | Completed |
 |-------|-----------|-------|--------|-----------|
@@ -105,3 +105,24 @@ Full v1.3 phase details archived: `.planning/milestones/v1.3-ROADMAP.md`
 | 21. Skill Platform C — Security | v1.3 | 4/4 | ✅ Complete | 2026-03-08 |
 | 22. Skill Platform D — Sharing | v1.3 | 3/3 | ✅ Complete | 2026-03-08 |
 | 23. Skill Platform E — Builder | v1.3 | 4/4 | ✅ Complete | 2026-03-10 |
+| 24. Unified Registry, MCP Platform & Skill Import Adapters | 1/6 | In Progress|  | — |
+
+### Phase 24: Unified Registry, MCP Platform Enhancement & Skill Import Adapters
+
+**Goal:** Unify all entity management (agents/skills/tools/MCP) into a single registry; add public MCP server support via stdio transport; build pluggable skill import adapters; replace WeightedSecurityScanner with standalone Docker security scan service; consolidate admin UI to 4 tabs; make LLM model/provider configurable in admin.
+**Requirements**: docs/enhancements/ proposals (unified-registry-proposal.md, mcp-server-enhancement-proposal.md, skill-import-adapter-framework.md, security-scan-module/00-specification.md); STATE.md Pending Todos
+**Depends on:** Phase 23
+**Plans:** 1/6 plans executed
+
+Architecture decisions:
+- MCP servers → migrate to unified `registry_entries` table (Option B)
+- Security Scanner → replace WeightedSecurityScanner with Docker MCP service (Option A)
+- Auto-generate MCP from OpenAPI → included in plan 24-03
+
+Plans:
+- [ ] 24-01: Tech Debt — SWR/Server Component build fix, Keycloak SSO error, CREDENTIAL_ENCRYPTION_KEY, page load performance (PLAN.md created 2026-03-12)
+- [ ] 24-02: Unified Registry Foundation — `registry_entries` table, migrate agents/skills/tools/mcp_servers, strategy handlers, unified API routes `/api/registry/*` (PLAN.md created 2026-03-12)
+- [ ] 24-03: MCP Platform Enhancement — `StdioMCPClient`, `MCPInstaller` (npm/pip), MCP catalog (3 servers: Context7, Fetch, Filesystem), OpenAPI bridge registry type (PLAN.md created 2026-03-12)
+- [ ] 24-04: Skill Import Adapters — base adapter interface, SkillRepoAdapter refactor, ClaudeMarketAdapter, GitHubAdapter, `UnifiedImportService` with security gate step (PLAN.md created 2026-03-12)
+- [ ] 24-05: Security Scan Module — `infra/security-scanner/` Docker service (pip-audit, bandit, detect-secrets), `SecurityScanClient`, fallback to in-process scanner, admin re-scan trigger (PLAN.md created 2026-03-12)
+- [ ] 24-06: Admin UI & LLM Config — unified 4-tab admin layout (Registry/Access/System/Build), Registry hub with counts, LLM model + provider configurable via LiteLLM API (PLAN.md created 2026-03-12)
