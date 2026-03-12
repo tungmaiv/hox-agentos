@@ -569,6 +569,112 @@ async def test_gather_details_llm_error_returns_friendly_message():
     assert result["artifact_draft"] == {"name": "existing"}
 
 
+@pytest.mark.asyncio
+async def test_resolve_tools_node_matches_known_tool():
+    """resolve_tools node maps a step intent to a matching tool from the registry."""
+    from agents.artifact_builder import _resolve_tools_node
+    from langchain_core.messages import HumanMessage
+
+    state = {
+        "messages": [HumanMessage(content="build a skill")],
+        "artifact_type": "skill",
+        "artifact_draft": {
+            "name": "daily-standup",
+            "description": "Fetch tasks and send summary",
+            "skill_type": "procedural",
+        },
+        "resolved_tools": None,
+        "tool_gaps": None,
+        "validation_errors": [],
+        "is_complete": False,
+    }
+
+    mock_llm_response = (
+        '[{"intent": "fetch tasks", "tool": "project.list_tasks", '
+        '"args_hint": {"date": "yesterday"}, "permissions": ["tool:project"]}]'
+    )
+
+    with patch("agents.artifact_builder._fetch_tool_reference_block", new_callable=AsyncMock, return_value="- **project.list_tasks**: Lists tasks"):
+        with patch("agents.artifact_builder.get_llm") as mock_get_llm:
+            mock_llm = MagicMock()
+            mock_llm.ainvoke = AsyncMock(return_value=MagicMock(content=mock_llm_response))
+            mock_get_llm.return_value = mock_llm
+
+            result = await _resolve_tools_node(state, _mock_config())
+
+    assert result["resolved_tools"] is not None
+    assert len(result["resolved_tools"]) == 1
+    assert result["resolved_tools"][0]["tool"] == "project.list_tasks"
+    assert result["tool_gaps"] == []
+
+
+@pytest.mark.asyncio
+async def test_resolve_tools_node_flags_missing_tool():
+    """resolve_tools node flags steps with no matching tool as MISSING."""
+    from agents.artifact_builder import _resolve_tools_node
+    from langchain_core.messages import HumanMessage
+
+    state = {
+        "messages": [HumanMessage(content="build a skill")],
+        "artifact_type": "skill",
+        "artifact_draft": {
+            "name": "slack-notifier",
+            "description": "Send Slack message",
+            "skill_type": "procedural",
+        },
+        "resolved_tools": None,
+        "tool_gaps": None,
+        "validation_errors": [],
+        "is_complete": False,
+    }
+
+    mock_llm_response = (
+        '[{"intent": "send Slack message", "tool": "MISSING:send-slack-message", '
+        '"args_hint": {}, "permissions": []}]'
+    )
+
+    with patch("agents.artifact_builder._fetch_tool_reference_block", new_callable=AsyncMock, return_value=""):
+        with patch("agents.artifact_builder.get_llm") as mock_get_llm:
+            mock_llm = MagicMock()
+            mock_llm.ainvoke = AsyncMock(return_value=MagicMock(content=mock_llm_response))
+            mock_get_llm.return_value = mock_llm
+
+            result = await _resolve_tools_node(state, _mock_config())
+
+    assert result["tool_gaps"] is not None
+    assert len(result["tool_gaps"]) == 1
+    assert result["tool_gaps"][0]["tool"].startswith("MISSING:")
+    assert result["resolved_tools"] == []
+
+
+@pytest.mark.asyncio
+async def test_resolve_tools_node_falls_back_on_llm_error():
+    """resolve_tools node falls through with empty lists on LLM error — no crash."""
+    from agents.artifact_builder import _resolve_tools_node
+    from langchain_core.messages import HumanMessage
+
+    state = {
+        "messages": [HumanMessage(content="build")],
+        "artifact_type": "skill",
+        "artifact_draft": {"name": "x", "skill_type": "procedural"},
+        "resolved_tools": None,
+        "tool_gaps": None,
+        "validation_errors": [],
+        "is_complete": False,
+    }
+
+    with patch("agents.artifact_builder._fetch_tool_reference_block", new_callable=AsyncMock, return_value=""):
+        with patch("agents.artifact_builder.get_llm") as mock_get_llm:
+            mock_llm = MagicMock()
+            mock_llm.ainvoke = AsyncMock(side_effect=Exception("LLM unavailable"))
+            mock_get_llm.return_value = mock_llm
+
+            result = await _resolve_tools_node(state, _mock_config())
+
+    assert result["resolved_tools"] == []
+    assert result["tool_gaps"] == []
+
+
 def test_artifact_builder_state_has_resolver_fields():
     """ArtifactBuilderState must declare resolved_tools and tool_gaps fields."""
     from agents.state.artifact_builder_types import ArtifactBuilderState

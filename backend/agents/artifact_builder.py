@@ -378,6 +378,89 @@ async def _fetch_tool_reference_block() -> str:
         return ""
 
 
+_RESOLVE_TOOLS_PROMPT = """\
+You are a tool resolver. Your only job is to map each workflow step to the best matching tool from the list below.
+
+{tool_reference}
+
+Skill description: {description}
+
+Output a JSON array only — no prose, no explanation, no markdown fences.
+Each element:
+{{
+  "intent": "<what this step does>",
+  "tool": "<exact tool name from list above, or MISSING:<kebab-intent> if no match>",
+  "args_hint": {{<param: value pairs>}},
+  "permissions": [<permission strings from the matching tool, empty list if MISSING>]
+}}
+
+Rules:
+- Use EXACT tool names from the list above only
+- If no tool matches, use "MISSING:" prefix followed by a kebab-case description of the intent
+- Output valid JSON array only — nothing else
+"""
+
+
+async def _resolve_tools_node(
+    state: ArtifactBuilderState, config: RunnableConfig
+) -> dict:
+    """Resolve procedural skill steps to verified registry tool names.
+
+    Runs a single blitz/fast LLM call that maps each step intent to a tool
+    in the registry. Splits results into resolved_tools (matched) and
+    tool_gaps (MISSING). Falls back to empty lists on any error.
+    """
+    draft = state.get("artifact_draft") or {}
+    description = draft.get("description") or draft.get("name") or "unknown skill"
+
+    tool_reference = await _fetch_tool_reference_block()
+
+    prompt = _RESOLVE_TOOLS_PROMPT.format(
+        tool_reference=tool_reference or "(no tools registered yet)",
+        description=description,
+    )
+
+    try:
+        llm = get_llm("blitz/fast")
+        response = await llm.ainvoke([SystemMessage(content=prompt)])
+        content = response.content if isinstance(response.content, str) else str(response.content)
+
+        # Strip markdown fences if model wrapped the output anyway
+        content = content.strip()
+        if content.startswith("```"):
+            content = re.sub(r"^```[a-z]*\n?", "", content)
+            content = re.sub(r"\n?```$", "", content)
+
+        steps: list[dict] = json.loads(content)
+        if not isinstance(steps, list):
+            raise ValueError("Expected JSON array")
+
+        resolved = [s for s in steps if not s.get("tool", "").startswith("MISSING:")]
+        gaps = [s for s in steps if s.get("tool", "").startswith("MISSING:")]
+
+        logger.info(
+            "tool_resolver_complete",
+            resolved_count=len(resolved),
+            gap_count=len(gaps),
+            skill_name=draft.get("name"),
+        )
+        return {
+            "resolved_tools": resolved,
+            "tool_gaps": gaps,
+            "artifact_type": state.get("artifact_type"),
+            "artifact_draft": draft,
+        }
+
+    except Exception as exc:
+        logger.warning("tool_resolver_failed", error=str(exc), skill_name=draft.get("name"))
+        return {
+            "resolved_tools": [],
+            "tool_gaps": [],
+            "artifact_type": state.get("artifact_type"),
+            "artifact_draft": draft,
+        }
+
+
 async def _gather_type_node(state: ArtifactBuilderState, config: RunnableConfig) -> dict:
     """Ask the user what type of artifact they want, or detect from message."""
     messages = state.get("messages", [])
