@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-12T02:06:18.565Z"
+last_updated: "2026-03-12T03:17:44.907Z"
 progress:
   total_phases: 10
   completed_phases: 8
   total_plans: 39
-  completed_plans: 35
+  completed_plans: 38
 ---
 
 # Project State
@@ -23,11 +23,11 @@ See: .planning/PROJECT.md (updated 2026-03-11)
 ## Current Position
 
 Phase: 24 of 24 (Unified Registry + MCP Platform Enhancement) — In Progress
-Plan: 02 of 06 complete (Tasks 1+2a+2b+3 done — registry_entries table, /api/registry/* routes, frontend pages)
-Status: Phase 24 plan 02 complete — unified registry foundation done. Plans 03-06 pending.
-Last activity: 2026-03-12 - Completed 24-02 — unified registry table, /api/registry/* CRUD routes, gateway/tool_registry.py deleted, frontend admin pages migrated
+Plan: 03 of 06 complete (StdioMCPClient, MCPInstaller, mcp_server_catalog migration, OpenAPI bridge registry support)
+Status: Phase 24 plan 03 complete — stdio MCP transport + catalog done. Plans 04-06 pending.
+Last activity: 2026-03-12 - Completed 24-03 — StdioMCPClient (JSON-RPC over subprocess), MCPInstaller, migration 030, /api/registry/mcp-catalog
 
-Progress: [#########░] ~65%
+Progress: [#########░] ~68%
 
 ## Performance Metrics
 
@@ -162,6 +162,9 @@ v1.3 roadmap decisions:
 - [Phase 24]: [24-01]: Empty CREDENTIAL_ENCRYPTION_KEY allowed; non-empty must be 64-char hex (32 bytes AES-256) — validated via model_validator(mode='after')
 - [Phase 24]: [24-01]: fetchWithRetry in auth.ts returns null (not throws) on retry exhaustion — auth.ts must never throw or Next.js reports Server error Configuration
 - [Phase 24]: [24-01]: Cache-Control header on internal provider-config endpoint injected via FastAPI Response parameter — response_model handles body only, not headers
+- [Phase 24]: [24-04]: can_handle() is synchronous in all adapters — URL pattern matching needs no I/O
+- [Phase 24]: [24-04]: patch(..., create=True) required for scan_skill_with_fallback mock when _HAS_SCANNER=False
+- [Phase 24]: [24-04]: NotImplementedError from ClaudeMarketAdapter → HTTP 501 — feature not implemented semantics
 
 ### Pending Todos
 
@@ -214,6 +217,7 @@ v1.3 roadmap decisions:
 | Phase 23 P03 | 8 | 2 tasks | 5 files |
 | Phase 23 P04 | 45 | 3 tasks | 4 files |
 | Phase 24 P01 | 3 | 2 tasks | 5 files |
+| Phase 24 P04 | 8 | 2 tasks | 10 files |
 
 ## Session Continuity
 
