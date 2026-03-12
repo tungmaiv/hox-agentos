@@ -105,14 +105,14 @@ Full v1.3 phase details archived: `.planning/milestones/v1.3-ROADMAP.md`
 | 21. Skill Platform C — Security | v1.3 | 4/4 | ✅ Complete | 2026-03-08 |
 | 22. Skill Platform D — Sharing | v1.3 | 3/3 | ✅ Complete | 2026-03-08 |
 | 23. Skill Platform E — Builder | v1.3 | 4/4 | ✅ Complete | 2026-03-10 |
-| 24. Unified Registry, MCP Platform & Skill Import Adapters | — | 7 plans (6+1 gap) | In Progress | — |
+| 24. Unified Registry, MCP Platform & Skill Import Adapters | 7/7 | Complete   | 2026-03-12 | — |
 
 ### Phase 24: Unified Registry, MCP Platform Enhancement & Skill Import Adapters
 
 **Goal:** Unify all entity management (agents/skills/tools/MCP) into a single registry; add public MCP server support via stdio transport; build pluggable skill import adapters; replace WeightedSecurityScanner with standalone Docker security scan service; consolidate admin UI to 4 tabs; make LLM model/provider configurable in admin.
 **Requirements**: docs/enhancements/ proposals (unified-registry-proposal.md, mcp-server-enhancement-proposal.md, skill-import-adapter-framework.md, security-scan-module/00-specification.md); STATE.md Pending Todos
 **Depends on:** Phase 23
-**Plans:** 7 plans (6 original + 1 gap-closure)
+**Plans:** 7/7 plans complete
 
 Architecture decisions:
 - MCP servers → migrate to unified `registry_entries` table (Option B)

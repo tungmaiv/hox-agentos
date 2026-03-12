@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-12T08:29:33.441Z"
+last_updated: "2026-03-12T11:23:38.774Z"
 progress:
   total_phases: 10
   completed_phases: 9
-  total_plans: 39
-  completed_plans: 40
+  total_plans: 40
+  completed_plans: 41
 ---
 
 # Project State
@@ -155,6 +155,9 @@ v1.3 roadmap decisions:
 - [Phase 24]: [24-06]: Sub-nav for Access/System/Build rendered in parent layout.tsx — avoids duplicate nav rendering, single source of truth
 - [Phase 24]: [24-06]: Registry hub is Server Component fetching counts via Promise.all — no SWR to avoid prerender bug
 - [Phase 24]: [24-06]: admin_llm.py uses _require_admin dependency matching admin_memory.py pattern — consistent tool:admin gate
+- [Phase 24]: [24-07]: astext JSONB accessor skipped in SQLite tests — Python-level filter used for handler_type check (SQLite JSON lacks PostgreSQL JSONB operators)
+- [Phase 24]: [24-07]: skill_handler.on_create() uses lazy import guard for scan_client — avoids circular import, matches import_service.py pattern
+- [Phase 24]: [24-07]: openapi_bridge auth_token stored as hex string in config — bytes not JSON-serializable in JSONB column
 
 ### Pending Todos
 
@@ -208,6 +211,7 @@ v1.3 roadmap decisions:
 | Phase 23 P04 | 45 | 3 tasks | 4 files |
 | Phase 24 P06 | 633 | 3 tasks | 13 files |
 | Phase 24 P06 | 633 | 4 tasks | 13 files |
+| Phase 24 P07 | 285 | 3 tasks | 4 files |
 
 ## Session Continuity
 
