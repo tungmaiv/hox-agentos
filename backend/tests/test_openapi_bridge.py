@@ -28,6 +28,7 @@ from core.db import Base
 # Import all models so that Base.metadata has them registered before create_all()
 from core.models.mcp_server import McpServer  # noqa: F401
 from core.models.tool_definition import ToolDefinition  # noqa: F401
+from registry.models import RegistryEntry  # noqa: F401
 
 
 # ---------------------------------------------------------------------------
@@ -522,9 +523,12 @@ class TestRegisterOpenAPIEndpoints:
     async def test_creates_mcp_server_and_tool_definitions(
         self, db_session: AsyncSession
     ) -> None:
-        """Creates McpServer row + ToolDefinition rows with handler_type='openapi_proxy'."""
+        """Creates RegistryEntry mcp_server row + RegistryEntry tool rows with handler_type='openapi_proxy'."""
+        from sqlalchemy import select
+
         from openapi_bridge.schemas import EndpointInfo, ParameterInfo
         from openapi_bridge.service import register_openapi_endpoints
+        from registry.models import RegistryEntry
 
         endpoints = [
             EndpointInfo(
@@ -557,31 +561,30 @@ class TestRegisterOpenAPIEndpoints:
                 session=db_session,
             )
 
-        from sqlalchemy import select
-
-        from core.models.mcp_server import McpServer
-        from core.models.tool_definition import ToolDefinition
-
-        # Check McpServer row created
+        # Check RegistryEntry mcp_server row created
         server_result = await db_session.execute(
-            select(McpServer).where(McpServer.name == "test_api")
+            select(RegistryEntry).where(
+                RegistryEntry.type == "mcp_server",
+                RegistryEntry.name == "test_api",
+            )
         )
         server = server_result.scalar_one_or_none()
         assert server is not None
-        assert server.url == "https://api.example.com/v1"
-        assert server.openapi_spec_url == "https://api.example.com/openapi.json"
+        assert server.config["url"] == "https://api.example.com/v1"
+        assert server.config["openapi_spec_url"] == "https://api.example.com/openapi.json"
 
-        # Check ToolDefinition rows created
+        # Check RegistryEntry tool rows created
         tools_result = await db_session.execute(
-            select(ToolDefinition).where(
-                ToolDefinition.handler_type == "openapi_proxy"
+            select(RegistryEntry).where(
+                RegistryEntry.type == "tool",
             )
         )
         tools = tools_result.scalars().all()
+        tools = [t for t in tools if t.config.get("handler_type") == "openapi_proxy"]
         assert len(tools) == 1
         assert tools[0].name == "test_api.get_user"
-        assert tools[0].config_json is not None
-        assert tools[0].config_json["method"] == "GET"
+        assert tools[0].config is not None
+        assert tools[0].config["method"] == "GET"
 
         # Check result
         assert result.server_id == str(server.id)

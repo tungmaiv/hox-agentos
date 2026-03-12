@@ -1,25 +1,27 @@
 """
-OpenAPI Bridge service layer — registers OpenAPI endpoints as tool definitions.
+OpenAPI Bridge service layer — registers OpenAPI endpoints as registry entries.
 
 register_openapi_endpoints():
-  1. Creates a McpServer row for the OpenAPI server
-  2. Optionally encrypts the API key and stores it in auth_token
-  3. For each selected endpoint, creates a ToolDefinition with handler_type='openapi_proxy'
-  4. The config_json on each tool contains the routing info needed by the proxy
-  5. Invalidates the tool cache so new tools are immediately discoverable
+  1. Creates a RegistryEntry with type='mcp_server' for the OpenAPI server
+  2. Optionally encrypts the API key and stores it as hex string in config
+  3. For each selected endpoint, creates a RegistryEntry with type='tool'
+     and handler_type='openapi_proxy' in config
+  4. The config on each tool entry contains the routing info needed by the proxy
 
 Security:
   - API key encrypted with AES-256-GCM via encrypt_token() before storage
-  - auth_token field stores iv + ciphertext (same convention as mcp_servers route)
+  - auth_token_hex field stores iv+ciphertext as hex string (bytes not JSON-serializable)
   - Never logs the api_key value
 """
 import re
+import uuid
 from typing import Any
 
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from openapi_bridge.schemas import EndpointInfo, RegisterResponse
+from registry.models import RegistryEntry
 from security.credentials import encrypt_token
 
 logger = structlog.get_logger(__name__)
@@ -105,7 +107,7 @@ def _build_tool_config_json(
     auth_header: str | None,
 ) -> dict[str, Any]:
     """
-    Build the config_json for a ToolDefinition with handler_type='openapi_proxy'.
+    Build the config for a tool RegistryEntry with handler_type='openapi_proxy'.
 
     The proxy runtime reads this to know how to build the HTTP request.
     """
@@ -155,10 +157,6 @@ async def register_openapi_endpoints(
     Raises:
         sqlalchemy.exc.IntegrityError: if server_name already exists
     """
-    from core.models.mcp_server import McpServer
-    from core.models.tool_definition import ToolDefinition
-    from registry.service import invalidate_tool_cache
-
     # Optionally encrypt the API key
     auth_token_bytes: bytes | None = None
     if auth_value:
@@ -166,17 +164,29 @@ async def register_openapi_endpoints(
         # Store as iv + ciphertext (same convention as mcp_servers route)
         auth_token_bytes = iv + ciphertext
 
-    # Create the McpServer row
-    server = McpServer(
+    # Store auth_token as hex string in config (bytes not JSON-serializable)
+    auth_token_hex: str | None = None
+    if auth_token_bytes:
+        auth_token_hex = auth_token_bytes.hex()
+
+    # Create RegistryEntry with type='mcp_server'
+    server_entry = RegistryEntry(
+        type="mcp_server",
         name=server_name,
-        url=base_url,
-        openapi_spec_url=spec_url,
-        auth_token=auth_token_bytes,
-        is_active=True,
+        display_name=server_name,
+        description=f"OpenAPI bridge for {base_url}",
+        config={
+            "url": base_url,
+            "openapi_spec_url": spec_url,
+            "auth_type": auth_type,
+            "auth_token_hex": auth_token_hex,
+            "auth_header": auth_header,
+        },
         status="active",
+        owner_id=uuid.uuid4(),  # system-owned; no user context in service layer
     )
-    session.add(server)
-    await session.flush()  # Get the server.id without committing
+    session.add(server_entry)
+    await session.flush()  # get server_entry.id without committing
 
     logger.info(
         "openapi_server_created",
@@ -185,32 +195,31 @@ async def register_openapi_endpoints(
         endpoint_count=len(endpoints),
     )
 
-    # Create ToolDefinition rows for each endpoint
+    # Create RegistryEntry rows with type='tool' for each endpoint
     tools_created = 0
     for endpoint in endpoints:
         tool_name = _endpoint_tool_name(server_name, endpoint)
         input_schema = _build_input_schema(endpoint)
         config_json = _build_tool_config_json(endpoint, base_url, auth_type, auth_header)
 
-        tool = ToolDefinition(
+        tool_entry = RegistryEntry(
+            type="tool",
             name=tool_name,
             display_name=endpoint.summary or tool_name,
             description=endpoint.description or endpoint.summary,
-            version="1.0.0",
-            handler_type="openapi_proxy",
-            mcp_server_id=server.id,
-            input_schema=input_schema,
-            config_json=config_json,
-            is_active=True,
+            config={
+                "handler_type": "openapi_proxy",
+                "mcp_server_entry_id": str(server_entry.id),
+                "input_schema": input_schema,
+                **config_json,
+            },
             status="active",
+            owner_id=server_entry.owner_id,
         )
-        session.add(tool)
+        session.add(tool_entry)
         tools_created += 1
 
     await session.commit()
-
-    # Refresh tool cache so new tools are immediately callable
-    invalidate_tool_cache()
 
     logger.info(
         "openapi_tools_registered",
@@ -219,6 +228,6 @@ async def register_openapi_endpoints(
     )
 
     return RegisterResponse(
-        server_id=str(server.id),
+        server_id=str(server_entry.id),
         tools_created=tools_created,
     )
