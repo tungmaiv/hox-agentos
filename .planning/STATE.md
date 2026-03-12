@@ -22,12 +22,12 @@ See: .planning/PROJECT.md (updated 2026-03-11)
 
 ## Current Position
 
-Phase: 23 of 23 (Skill Platform E — Enhanced Builder) — Complete
-Plan: 04 of 04 complete (Tasks 1+2+3 done, human-verify approved)
-Status: Phase 23 complete — all 4 plans done (23-01 through 23-04). v1.3 milestone ready for final UAT.
-Last activity: 2026-03-11 - Completed quick-8 — login page auto-reloads on stale CSRF token instead of showing misleading invalid-password error
+Phase: 24 of 24 (Unified Registry + MCP Platform Enhancement) — In Progress
+Plan: 02 of 06 complete (Tasks 1+2a+2b+3 done — registry_entries table, /api/registry/* routes, frontend pages)
+Status: Phase 24 plan 02 complete — unified registry foundation done. Plans 03-06 pending.
+Last activity: 2026-03-12 - Completed 24-02 — unified registry table, /api/registry/* CRUD routes, gateway/tool_registry.py deleted, frontend admin pages migrated
 
-Progress: [#########░] ~61%
+Progress: [#########░] ~65%
 
 ## Performance Metrics
 
