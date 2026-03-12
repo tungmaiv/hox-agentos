@@ -1,18 +1,31 @@
 "use client";
 /**
- * Admin Skills page — CRUD management for skill definitions.
- *
- * Phase 24: migrated from /api/admin/skills to /api/registry?type=skill.
+ * Admin Skills page — list + card view, search, type/status filters, pagination.
  */
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import Link from "next/link";
 import type { RegistryEntry, RegistryEntryCreate } from "@/lib/admin-types";
 import { mapArraySnakeToCamel } from "@/lib/admin-types";
+
+type ViewMode = "list" | "card";
+const PAGE_SIZE_OPTIONS = [10, 25, 50];
 
 export default function AdminSkillsPage() {
   const [items, setItems] = useState<RegistryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+
+  // Toolbar state
+  const [search, setSearch] = useState("");
+  const [filterType, setFilterType] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
+
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+
   const [formData, setFormData] = useState<RegistryEntryCreate>({
     type: "skill",
     name: "",
@@ -37,9 +50,27 @@ export default function AdminSkillsPage() {
     }
   }, []);
 
-  useEffect(() => {
-    void fetchSkills();
-  }, [fetchSkills]);
+  useEffect(() => { void fetchSkills(); }, [fetchSkills]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => { setPage(1); }, [search, filterType, filterStatus, pageSize]);
+
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase();
+    return items.filter((item) => {
+      const matchSearch =
+        !q ||
+        item.name.toLowerCase().includes(q) ||
+        (item.displayName ?? "").toLowerCase().includes(q);
+      const matchType =
+        !filterType || (item.config.skill_type as string) === filterType;
+      const matchStatus = !filterStatus || item.status === filterStatus;
+      return matchSearch && matchType && matchStatus;
+    });
+  }, [items, search, filterType, filterStatus]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   const handleCreate = async () => {
     try {
@@ -61,14 +92,7 @@ export default function AdminSkillsPage() {
         throw new Error(body.detail ?? `HTTP ${res.status}`);
       }
       setShowCreate(false);
-      setFormData({
-        type: "skill",
-        name: "",
-        displayName: null,
-        description: null,
-        config: { skill_type: "instructional" },
-        status: "draft",
-      });
+      setFormData({ type: "skill", name: "", displayName: null, description: null, config: { skill_type: "instructional" }, status: "draft" });
       void fetchSkills();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Create failed");
@@ -77,50 +101,115 @@ export default function AdminSkillsPage() {
 
   const handleStatusChange = async (id: string, status: string) => {
     try {
-      const res = await fetch(`/api/registry/${id}`, {
+      await fetch(`/api/registry/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       void fetchSkills();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Status update failed");
-    }
+    } catch { setError("Status update failed"); }
   };
 
   const handleDelete = async (id: string) => {
     try {
-      const res = await fetch(`/api/registry/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      await fetch(`/api/registry/${id}`, { method: "DELETE" });
       void fetchSkills();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Delete failed");
-    }
+    } catch { setError("Delete failed"); }
   };
 
-  if (loading) {
-    return <div className="text-gray-500 py-8">Loading skills...</div>;
-  }
+  const StatusBadge = ({ status }: { status: string }) => {
+    const cls =
+      status === "active" ? "bg-green-100 text-green-700"
+      : status === "pending_activation" ? "bg-orange-100 text-orange-700"
+      : status === "draft" ? "bg-gray-100 text-gray-600"
+      : status === "archived" ? "bg-gray-100 text-gray-500"
+      : "bg-yellow-100 text-yellow-700";
+    const label =
+      status === "pending_activation" ? "pending activation" : status;
+    return (
+      <span className={`px-2 py-0.5 rounded text-xs font-medium ${cls}`}>
+        {label}
+      </span>
+    );
+  };
+
+  const handleActivate = async (id: string) => {
+    try {
+      await fetch(`/api/registry/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "active" }),
+      });
+      void fetchSkills();
+    } catch { setError("Activation failed"); }
+  };
+
+  const RowActions = ({ item }: { item: RegistryEntry }) => (
+    <div className="flex gap-2 items-center">
+      {item.status === "pending_activation" && (
+        <button
+          onClick={() => void handleActivate(item.id)}
+          className="px-2 py-0.5 rounded text-xs font-medium bg-blue-600 text-white hover:bg-blue-700"
+        >
+          Activate
+        </button>
+      )}
+      {item.status !== "active" && item.status !== "pending_activation" && (
+        <button onClick={() => void handleStatusChange(item.id, "active")} className="text-xs text-green-600 hover:text-green-800">Activate</button>
+      )}
+      {item.status === "active" && (
+        <button onClick={() => void handleStatusChange(item.id, "archived")} className="text-xs text-red-600 hover:text-red-800">Archive</button>
+      )}
+      <button onClick={() => void handleDelete(item.id)} className="text-xs text-gray-400 hover:text-gray-600">Delete</button>
+    </div>
+  );
+
+  if (loading) return <div className="text-gray-500 py-8">Loading skills...</div>;
 
   return (
     <div>
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-gray-900">Skill Definitions</h2>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors"
-        >
+        <button onClick={() => setShowCreate(true)} className="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors">
           Create Skill
         </button>
       </div>
 
-      {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-600">
-          {error}
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <input
+          type="search" value={search} onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search skills..."
+          className="flex-1 min-w-[180px] text-sm border border-gray-300 rounded-md px-3 py-1.5 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        />
+        <select value={filterType} onChange={(e) => setFilterType(e.target.value)}
+          className="text-sm border border-gray-300 rounded-md px-2 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="">All types</option>
+          <option value="instructional">Instructional</option>
+          <option value="procedural">Procedural</option>
+        </select>
+        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
+          className="text-sm border border-gray-300 rounded-md px-2 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="">All statuses</option>
+          <option value="active">Active</option>
+          <option value="pending_activation">Pending Activation</option>
+          <option value="draft">Draft</option>
+          <option value="archived">Archived</option>
+        </select>
+        <div className="flex border border-gray-300 rounded-md overflow-hidden">
+          <button onClick={() => setViewMode("list")} title="List view"
+            className={`px-2.5 py-1.5 transition-colors ${viewMode === "list" ? "bg-blue-600 text-white" : "bg-white text-gray-500 hover:bg-gray-50"}`}>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
+          </button>
+          <button onClick={() => setViewMode("card")} title="Card view"
+            className={`px-2.5 py-1.5 transition-colors ${viewMode === "card" ? "bg-blue-600 text-white" : "bg-white text-gray-500 hover:bg-gray-50"}`}>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
+          </button>
         </div>
-      )}
+      </div>
+
+      {error && <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-600">{error}</div>}
 
       {/* Create dialog */}
       {showCreate && (
@@ -129,76 +218,42 @@ export default function AdminSkillsPage() {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs text-gray-600 mb-1">Name *</label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full text-sm border border-gray-300 rounded px-2 py-1 text-gray-900 bg-white"
-                placeholder="daily_summary"
-              />
+              <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="w-full text-sm border border-gray-300 rounded px-2 py-1 text-gray-900 bg-white" placeholder="daily_summary" />
             </div>
             <div>
               <label className="block text-xs text-gray-600 mb-1">Display Name</label>
-              <input
-                type="text"
-                value={formData.displayName ?? ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, displayName: e.target.value || null })
-                }
-                className="w-full text-sm border border-gray-300 rounded px-2 py-1 text-gray-900 bg-white"
-                placeholder="Daily Summary"
-              />
+              <input type="text" value={formData.displayName ?? ""} onChange={(e) => setFormData({ ...formData, displayName: e.target.value || null })}
+                className="w-full text-sm border border-gray-300 rounded px-2 py-1 text-gray-900 bg-white" placeholder="Daily Summary" />
             </div>
             <div className="col-span-2">
               <label className="block text-xs text-gray-600 mb-1">Description</label>
-              <input
-                type="text"
-                value={formData.description ?? ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value || null })
-                }
-                className="w-full text-sm border border-gray-300 rounded px-2 py-1 text-gray-900 bg-white"
-                placeholder="Generates a daily summary of emails and calendar events"
-              />
+              <input type="text" value={formData.description ?? ""} onChange={(e) => setFormData({ ...formData, description: e.target.value || null })}
+                className="w-full text-sm border border-gray-300 rounded px-2 py-1 text-gray-900 bg-white" placeholder="Generates a daily summary..." />
             </div>
             <div>
               <label className="block text-xs text-gray-600 mb-1">Skill Type</label>
-              <select
-                value={(formData.config?.skill_type as string) ?? "instructional"}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    config: { ...formData.config, skill_type: e.target.value },
-                  })
-                }
-                className="w-full text-sm border border-gray-300 rounded px-2 py-1 text-gray-700 bg-white"
-              >
+              <select value={(formData.config?.skill_type as string) ?? "instructional"}
+                onChange={(e) => setFormData({ ...formData, config: { ...formData.config, skill_type: e.target.value } })}
+                className="w-full text-sm border border-gray-300 rounded px-2 py-1 text-gray-700 bg-white">
                 <option value="instructional">Instructional</option>
                 <option value="procedural">Procedural</option>
               </select>
             </div>
           </div>
-          <div className="flex items-center gap-2 mt-4">
-            <button
-              onClick={handleCreate}
-              className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition-colors"
-            >
-              Create
-            </button>
-            <button
-              onClick={() => setShowCreate(false)}
-              className="px-3 py-1.5 bg-gray-100 text-gray-700 text-xs font-medium rounded hover:bg-gray-200 transition-colors"
-            >
-              Cancel
-            </button>
+          <div className="flex gap-2 mt-4">
+            <button onClick={handleCreate} className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition-colors">Create</button>
+            <button onClick={() => setShowCreate(false)} className="px-3 py-1.5 bg-gray-100 text-gray-700 text-xs font-medium rounded hover:bg-gray-200 transition-colors">Cancel</button>
           </div>
         </div>
       )}
 
-      {/* Table */}
-      {items.length === 0 ? (
-        <div className="text-gray-400 text-sm py-6 text-center">No skills found.</div>
-      ) : (
+      {/* Content */}
+      {filtered.length === 0 ? (
+        <div className="text-gray-400 text-sm py-6 text-center">
+          {search || filterType || filterStatus ? "No skills match the current filters." : "No skills found."}
+        </div>
+      ) : viewMode === "list" ? (
         <table className="w-full text-sm text-left">
           <thead>
             <tr className="border-b border-gray-200 text-xs text-gray-500 uppercase">
@@ -209,55 +264,76 @@ export default function AdminSkillsPage() {
             </tr>
           </thead>
           <tbody>
-            {items.map((item) => (
+            {paginated.map((item) => (
               <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50">
-                <td className="py-2 pr-4 font-mono text-gray-900">{item.name}</td>
                 <td className="py-2 pr-4">
-                  <span className="text-xs text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded">
-                    {(item.config.skill_type as string) ?? "instructional"}
-                  </span>
+                  <Link href={`/admin/skills/${item.id}`} className="font-mono text-gray-900 hover:text-blue-600 transition-colors">{item.name}</Link>
                 </td>
                 <td className="py-2 pr-4">
-                  <span
-                    className={`px-2 py-0.5 rounded text-xs font-medium ${
-                      item.status === "active"
-                        ? "bg-green-100 text-green-700"
-                        : item.status === "archived"
-                        ? "bg-gray-100 text-gray-500"
-                        : "bg-yellow-100 text-yellow-700"
-                    }`}
-                  >
-                    {item.status}
-                  </span>
+                  <span className="text-xs text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded">{(item.config.skill_type as string) ?? "instructional"}</span>
                 </td>
-                <td className="py-2 flex gap-2">
-                  {item.status !== "active" && (
-                    <button
-                      onClick={() => void handleStatusChange(item.id, "active")}
-                      className="text-xs text-green-600 hover:text-green-800"
-                    >
-                      Activate
-                    </button>
-                  )}
-                  {item.status === "active" && (
-                    <button
-                      onClick={() => void handleStatusChange(item.id, "archived")}
-                      className="text-xs text-red-600 hover:text-red-800"
-                    >
-                      Archive
-                    </button>
-                  )}
-                  <button
-                    onClick={() => void handleDelete(item.id)}
-                    className="text-xs text-gray-400 hover:text-gray-600"
-                  >
-                    Delete
-                  </button>
+                <td className="py-2 pr-4">
+                  <div className="flex items-center gap-1">
+                    <StatusBadge status={item.status} />
+                    {item.status === "draft" && Array.isArray((item.config as Record<string, unknown>).tool_gaps) && ((item.config as Record<string, unknown>).tool_gaps as unknown[]).length > 0 && (
+                      <span
+                        title={`${((item.config as Record<string, unknown>).tool_gaps as unknown[]).length} unresolved tool gap(s)`}
+                        className="cursor-help text-yellow-500"
+                      >
+                        ⚠️
+                      </span>
+                    )}
+                  </div>
                 </td>
+                <td className="py-2"><RowActions item={item} /></td>
               </tr>
             ))}
           </tbody>
         </table>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {paginated.map((item) => (
+            <div key={item.id} className="bg-white border border-gray-200 rounded-lg p-4 flex flex-col gap-3 hover:shadow-sm transition-shadow">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <Link href={`/admin/skills/${item.id}`} className="font-mono text-sm font-medium text-gray-900 hover:text-blue-600 transition-colors truncate block">{item.name}</Link>
+                  {item.displayName && <p className="text-xs text-gray-500 mt-0.5">{item.displayName}</p>}
+                </div>
+                <StatusBadge status={item.status} />
+              </div>
+              {item.description && <p className="text-xs text-gray-500 line-clamp-2">{item.description}</p>}
+              <div className="flex items-center justify-between mt-auto pt-2 border-t border-gray-100">
+                <span className="text-xs text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded">{(item.config.skill_type as string) ?? "instructional"}</span>
+                <RowActions item={item} />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {filtered.length > 0 && (
+        <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-200">
+          <span className="text-xs text-gray-500">
+            Showing {Math.min((page - 1) * pageSize + 1, filtered.length)}–{Math.min(page * pageSize, filtered.length)} of {filtered.length}
+          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500">Rows:</span>
+            <select value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))}
+              className="text-xs border border-gray-300 rounded px-1.5 py-1 bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500">
+              {PAGE_SIZE_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
+              className="px-2 py-1 text-xs border border-gray-300 rounded bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+              ‹ Prev
+            </button>
+            <span className="text-xs text-gray-600 min-w-[60px] text-center">{page} / {totalPages}</span>
+            <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+              className="px-2 py-1 text-xs border border-gray-300 rounded bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+              Next ›
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
