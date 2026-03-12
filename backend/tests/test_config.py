@@ -175,3 +175,63 @@ def test_get_llm_unknown_alias_passes_through() -> None:
     assert llm.model_name == "custom/my-model", (
         f"Expected model to pass through unchanged, got: '{llm.model_name}'"
     )
+
+
+# ---------------------------------------------------------------------------
+# Tests for CREDENTIAL_ENCRYPTION_KEY validation (24-01)
+# ---------------------------------------------------------------------------
+
+
+def _minimal_env_with_key(key: str) -> dict[str, str]:
+    """Minimal env with custom credential_encryption_key."""
+    return {
+        **_minimal_env(),
+        "CREDENTIAL_ENCRYPTION_KEY": key,
+    }
+
+
+def test_valid_64_char_hex_key_passes() -> None:
+    """Settings accepts a valid 64-char hex string (32 bytes AES-256)."""
+    valid_key = "a" * 64
+    env = _minimal_env_with_key(valid_key)
+    with patch.dict("os.environ", env, clear=True):
+        from core.config import Settings
+
+        s = Settings()
+
+    assert s.credential_encryption_key == valid_key
+
+
+def test_invalid_key_too_short_raises() -> None:
+    """Settings raises ValueError when key is too short."""
+    import pytest
+
+    env = _minimal_env_with_key("abc")
+    with patch.dict("os.environ", env, clear=True):
+        from core.config import Settings
+
+        with pytest.raises(ValueError, match="64-char hex"):
+            Settings()
+
+
+def test_empty_key_passes() -> None:
+    """Settings accepts an empty CREDENTIAL_ENCRYPTION_KEY (key is optional)."""
+    env = _minimal_env_with_key("")
+    with patch.dict("os.environ", env, clear=True):
+        from core.config import Settings
+
+        s = Settings()
+
+    assert s.credential_encryption_key == ""
+
+
+def test_non_hex_raises() -> None:
+    """Settings raises ValueError when key contains non-hex characters."""
+    import pytest
+
+    env = _minimal_env_with_key("g" * 64)
+    with patch.dict("os.environ", env, clear=True):
+        from core.config import Settings
+
+        with pytest.raises(ValueError):
+            Settings()
