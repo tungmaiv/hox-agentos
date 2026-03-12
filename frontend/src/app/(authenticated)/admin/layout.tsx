@@ -1,71 +1,88 @@
+"use client";
 /**
- * Admin dashboard layout with role-based access control.
+ * Admin dashboard layout with role-based access control and 4-tab grouped navigation.
  *
- * Server Component that checks user session for admin roles.
- * Non-admin users see a 403 message. Admin/developer users see
- * a tab navigation with links to artifact management pages.
+ * Client Component — needs usePathname() to highlight active tab and show sub-nav.
+ *
+ * 4-tab structure:
+ *   Registry — hub page with entity counts + navigation links
+ *   Access   — Users, Permissions, Credentials sub-nav
+ *   System   — Config, Identity, LLM, Memory sub-nav
+ *   Build    — Artifact Builder, Skill Store, Create sub-nav
  */
-import { auth } from "@/auth";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 
-const ADMIN_TABS = [
-  { label: "Agents",      href: "/admin/agents" },
-  { label: "Tools",       href: "/admin/tools" },
-  { label: "Skills",      href: "/admin/skills" },
-  { label: "MCP Servers", href: "/admin/mcp-servers" },
+// ---------------------------------------------------------------------------
+// Tab / sub-nav definitions
+// ---------------------------------------------------------------------------
+
+const REGISTRY_PATHS = ["/admin/agents", "/admin/skills", "/admin/tools", "/admin/mcp-servers"];
+
+const ACCESS_SUBNAV = [
+  { label: "Users", href: "/admin/users" },
   { label: "Permissions", href: "/admin/permissions" },
-  { label: "Identity",    href: "/admin/identity" },   // between Permissions and Config (IDCFG-04)
-  { label: "Config",      href: "/admin/config" },
-  { label: "Memory",      href: "/admin/memory" },
   { label: "Credentials", href: "/admin/credentials" },
-  { label: "Users",       href: "/admin/users" },
+];
+const ACCESS_PATHS = ACCESS_SUBNAV.map((s) => s.href);
+
+const SYSTEM_SUBNAV = [
+  { label: "Config", href: "/admin/config" },
+  { label: "Identity", href: "/admin/identity" },
+  { label: "LLM", href: "/admin/system/llm" },
+  { label: "Memory", href: "/admin/memory" },
+];
+const SYSTEM_PATHS = ["/admin/config", "/admin/identity", "/admin/system", "/admin/memory"];
+
+const BUILD_SUBNAV = [
+  { label: "Artifact Builder", href: "/admin/builder" },
   { label: "Skill Store", href: "/admin/skill-store" },
-  { label: "AI Builder",  href: "/admin/create" },
-  { label: "Builder+",    href: "/admin/builder" },
-] as const;
+  { label: "Create", href: "/admin/create" },
+];
+const BUILD_PATHS = BUILD_SUBNAV.map((s) => s.href);
+
+const TOP_TABS = [
+  { label: "Registry", href: "/admin", matchPaths: REGISTRY_PATHS, exactMatch: true },
+  { label: "Access", href: "/admin/users", matchPaths: ACCESS_PATHS, exactMatch: false },
+  { label: "System", href: "/admin/config", matchPaths: SYSTEM_PATHS, exactMatch: false },
+  { label: "Build", href: "/admin/create", matchPaths: BUILD_PATHS, exactMatch: false },
+];
 
 /** Roles that grant access to the admin dashboard. */
 const ADMIN_ROLES = ["it-admin", "admin", "developer"];
 
-export default async function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  // Middleware guarantees only authenticated users reach this layout.
-  // The session will always be non-null here; null-safe access is kept
-  // for TypeScript satisfaction only.
-  const session = await auth();
+// ---------------------------------------------------------------------------
+// Helper: determine which top-level tab is active
+// ---------------------------------------------------------------------------
 
-  // Check for admin/developer roles in the session token.
-  // Keycloak realm roles are stored in the JWT; next-auth exposes them
-  // differently depending on the mapper config. We check the token
-  // for realm_roles (flat list from custom scope mapper).
+function getActiveTab(pathname: string): "registry" | "access" | "system" | "build" {
+  if (ACCESS_PATHS.some((p) => pathname.startsWith(p))) return "access";
+  if (SYSTEM_PATHS.some((p) => pathname.startsWith(p))) return "system";
+  if (BUILD_PATHS.some((p) => pathname.startsWith(p))) return "build";
+  return "registry";
+}
+
+// ---------------------------------------------------------------------------
+// Layout component
+// ---------------------------------------------------------------------------
+
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const { data: session } = useSession();
+
+  // Role check — mirrors server-side logic; backend RBAC is the final gate
   const token = session as unknown as Record<string, unknown>;
-  const realmRoles = (token.realmRoles ?? token.realm_roles ?? []) as string[];
-
-  // Also check standard Keycloak role location
-  const realmAccess = token.realm_access as
-    | { roles?: string[] }
-    | undefined;
-  const allRoles = [
-    ...realmRoles,
-    ...(realmAccess?.roles ?? []),
-  ];
-
+  const realmRoles = (token?.realmRoles ?? token?.realm_roles ?? []) as string[];
+  const realmAccess = token?.realm_access as { roles?: string[] } | undefined;
+  const allRoles = [...realmRoles, ...(realmAccess?.roles ?? [])];
   const hasAdminRole = allRoles.some((role) => ADMIN_ROLES.includes(role));
 
-  // Only grant access when an admin role is explicitly present.
-  // Backend RBAC (RBAC gate 2) is the final enforcement gate; this is defense-in-depth.
-  const allowAccess = hasAdminRole;
-
-  if (!allowAccess) {
+  if (session !== undefined && !hasAdminRole) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="text-center p-8">
-          <h1 className="text-2xl font-semibold text-red-600 mb-2">
-            Access Denied
-          </h1>
+          <h1 className="text-2xl font-semibold text-red-600 mb-2">Access Denied</h1>
           <p className="text-gray-500 mb-4">
             You do not have permission to access the admin dashboard.
           </p>
@@ -83,6 +100,18 @@ export default async function AdminLayout({
     );
   }
 
+  const activeTab = getActiveTab(pathname);
+
+  // Sub-nav items for the active tab (null = Registry, which has no sub-nav)
+  const subNav =
+    activeTab === "access"
+      ? ACCESS_SUBNAV
+      : activeTab === "system"
+      ? SYSTEM_SUBNAV
+      : activeTab === "build"
+      ? BUILD_SUBNAV
+      : null;
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Top header */}
@@ -95,32 +124,64 @@ export default async function AdminLayout({
             >
               &larr; Back to Chat
             </Link>
-            <h1 className="text-lg font-semibold text-gray-900">
-              Admin Dashboard
-            </h1>
+            <h1 className="text-lg font-semibold text-gray-900">Admin Dashboard</h1>
           </div>
-          <div className="text-sm text-gray-500">
-            {session?.user?.email ?? "Admin"}
-          </div>
+          <div className="text-sm text-gray-500">{session?.user?.email ?? "Admin"}</div>
         </div>
       </header>
 
-      {/* Tab navigation */}
+      {/* Primary 4-tab navigation */}
       <nav className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="flex gap-0 overflow-x-auto">
-            {ADMIN_TABS.map((tab) => (
-              <Link
-                key={tab.href}
-                href={tab.href}
-                className="px-4 py-3 text-sm font-medium text-gray-600 hover:text-blue-600 hover:border-b-2 hover:border-blue-600 transition-colors whitespace-nowrap border-b-2 border-transparent"
-              >
-                {tab.label}
-              </Link>
-            ))}
+          <div className="flex gap-0">
+            {TOP_TABS.map((tab) => {
+              const isActive = tab.exactMatch
+                ? activeTab === "registry"
+                : activeTab === tab.label.toLowerCase();
+              return (
+                <Link
+                  key={tab.href}
+                  href={tab.href}
+                  className={`px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap border-b-2 ${
+                    isActive
+                      ? "text-blue-600 border-blue-600"
+                      : "text-gray-600 border-transparent hover:text-blue-600 hover:border-blue-300"
+                  }`}
+                >
+                  {tab.label}
+                </Link>
+              );
+            })}
           </div>
         </div>
       </nav>
+
+      {/* Secondary sub-navigation (Access / System / Build tabs only) */}
+      {subNav && (
+        <nav className="bg-white border-b border-gray-100">
+          <div className="max-w-7xl mx-auto px-6">
+            <div className="flex gap-1 py-2">
+              {subNav.map((item) => {
+                const isSubActive =
+                  pathname === item.href || pathname.startsWith(item.href + "/");
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                      isSubActive
+                        ? "bg-blue-100 text-blue-700"
+                        : "text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </nav>
+      )}
 
       {/* Page content */}
       <main className="max-w-7xl mx-auto px-6 py-6">{children}</main>
