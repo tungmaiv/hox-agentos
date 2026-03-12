@@ -1,14 +1,14 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.3
-milestone_name: Production Readiness & Skill Platform
-status: complete
-last_updated: "2026-03-11T16:30:00.000Z"
+milestone: v1.0
+milestone_name: milestone
+status: unknown
+last_updated: "2026-03-12T03:52:37.360Z"
 progress:
-  total_phases: 9
+  total_phases: 10
   completed_phases: 9
-  total_plans: 34
-  completed_plans: 34
+  total_plans: 39
+  completed_plans: 40
 ---
 
 # Project State
@@ -151,6 +151,10 @@ v1.3 roadmap decisions:
 - [Phase 23-03]: [23-03]: Route /search-similar declared before /{repo_id} pattern to avoid FastAPI routing conflict
 - [Phase 23-03]: [23-03]: Fork action is optimistic frontend-only — copies name+description into draft, sets fork_source; builder agent re-validates on next message
 - [Phase 23]: [23-04]: Human verification approved — builder-save security gate + SecurityReportCard flow verified end-to-end
+- [Phase 24]: [24-06]: Admin layout.tsx converted to Client Component to use usePathname() for active tab detection — required for sub-nav visibility based on current route
+- [Phase 24]: [24-06]: Sub-nav for Access/System/Build rendered in parent layout.tsx — avoids duplicate nav rendering, single source of truth
+- [Phase 24]: [24-06]: Registry hub is Server Component fetching counts via Promise.all — no SWR to avoid prerender bug
+- [Phase 24]: [24-06]: admin_llm.py uses _require_admin dependency matching admin_memory.py pattern — consistent tool:admin gate
 
 ### Pending Todos
 
@@ -202,6 +206,7 @@ v1.3 roadmap decisions:
 | Phase 23 P02 | 6 | 2 tasks | 8 files |
 | Phase 23 P03 | 8 | 2 tasks | 5 files |
 | Phase 23 P04 | 45 | 3 tasks | 4 files |
+| Phase 24 P06 | 633 | 3 tasks | 13 files |
 
 ## Session Continuity
 
