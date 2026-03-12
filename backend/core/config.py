@@ -87,6 +87,25 @@ class Settings(BaseSettings):
     teams_gateway_url: str = "http://teams-gateway:9003"
 
     @model_validator(mode="after")
+    def validate_encryption_key(self) -> "Settings":
+        """Validate CREDENTIAL_ENCRYPTION_KEY when set: must be a 64-char hex string (32 bytes AES-256)."""
+        key = self.credential_encryption_key
+        if key:
+            try:
+                decoded = bytes.fromhex(key)
+            except ValueError:
+                raise ValueError(
+                    "CREDENTIAL_ENCRYPTION_KEY must be a 64-char hex string (32 bytes AES-256) "
+                    "— contains non-hex characters"
+                )
+            if len(decoded) != 32:
+                raise ValueError(
+                    f"CREDENTIAL_ENCRYPTION_KEY must be a 64-char hex string (32 bytes AES-256) "
+                    f"— got {len(decoded)} bytes"
+                )
+        return self
+
+    @model_validator(mode="after")
     def derive_keycloak_urls(self) -> "Settings":
         """Derive JWKS and issuer URLs from keycloak_url and keycloak_realm.
         Skipped when keycloak_url is empty (local-only mode).
