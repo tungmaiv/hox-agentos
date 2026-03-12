@@ -33,6 +33,31 @@ interface KeycloakProviderConfig {
   issuer?: string;
 }
 
+// ---------------------------------------------------------------------------
+// Retry helper with exponential backoff (Hypothesis 2 — auth.ts resilience)
+// ---------------------------------------------------------------------------
+
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit,
+  maxAttempts = 3
+): Promise<Response | null> {
+  let delay = 500;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      const res = await fetch(url, options);
+      if (res.ok) return res;
+    } catch {
+      // Network error — retry
+    }
+    if (attempt < maxAttempts - 1) {
+      await new Promise<void>((r) => setTimeout(r, delay));
+      delay *= 2;
+    }
+  }
+  return null;
+}
+
 async function fetchKeycloakProviderConfig(): Promise<KeycloakProviderConfig> {
   const backendUrl =
     process.env.BACKEND_URL ??
@@ -46,7 +71,7 @@ async function fetchKeycloakProviderConfig(): Promise<KeycloakProviderConfig> {
   }
 
   try {
-    const res = await fetch(
+    const res = await fetchWithRetry(
       `${backendUrl}/api/internal/keycloak/provider-config`,
       {
         headers: { "X-Internal-Key": internalKey },
@@ -54,7 +79,7 @@ async function fetchKeycloakProviderConfig(): Promise<KeycloakProviderConfig> {
         cache: "no-store",
       }
     );
-    if (!res.ok) return { enabled: false };
+    if (!res) return { enabled: false };
     return (await res.json()) as KeycloakProviderConfig;
   } catch {
     // Backend not reachable at startup — fall back to local-only

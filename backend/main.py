@@ -119,6 +119,44 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             "embedding_sidecar_startup_check_failed", error=str(exc)
         )
 
+    # Hypothesis 1 — pre-warm Keycloak config cache at startup.
+    # Ensures get_keycloak_config() returns from cache (not DB) on first auth request.
+    # Non-fatal: backend starts even when DB is temporarily unreachable.
+    try:
+        from security.keycloak_config import get_keycloak_config as _get_kc_config
+
+        await _get_kc_config()
+        import structlog as _structlog
+        _structlog.get_logger(__name__).info("keycloak_config_prewarm_success")
+    except Exception as exc:
+        import structlog as _structlog
+        _structlog.get_logger(__name__).warning(
+            "keycloak_config_prewarm_failed", error=str(exc)
+        )
+
+    # Hypothesis 5 — pre-warm JWKS cache at startup so the first auth request
+    # does not pay the Keycloak round-trip latency.
+    # Non-fatal: backend starts even when Keycloak is not yet ready.
+    try:
+        from security.keycloak_config import get_keycloak_config as _get_kc_for_jwks
+        from security.jwt import _fetch_jwks_from_remote
+
+        _kc = await _get_kc_for_jwks()
+        if _kc is not None and _kc.enabled:
+            import structlog as _structlog
+            try:
+                await _fetch_jwks_from_remote(_kc)
+                _structlog.get_logger(__name__).info("jwks_prewarm=success")
+            except Exception as exc:
+                _structlog.get_logger(__name__).warning(
+                    "jwks_prewarm=failed", error=str(exc)
+                )
+    except Exception as exc:
+        import structlog as _structlog
+        _structlog.get_logger(__name__).warning(
+            "jwks_prewarm_setup_failed", error=str(exc)
+        )
+
     yield
     # Shutdown cleanup (nothing needed for MVP)
 

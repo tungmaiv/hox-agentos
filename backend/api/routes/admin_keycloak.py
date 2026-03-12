@@ -26,7 +26,7 @@ from typing import Any
 
 import httpx
 import structlog
-from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Response
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -460,6 +460,7 @@ async def disable_sso(
     "/api/internal/keycloak/provider-config", response_model=InternalProviderConfig
 )
 async def internal_provider_config(
+    response: Response,
     x_internal_key: str | None = Header(default=None, alias="X-Internal-Key"),
 ) -> InternalProviderConfig:
     """
@@ -467,6 +468,9 @@ async def internal_provider_config(
 
     Called by auth.ts during Next.js initialization. Protected by X-Internal-Key
     shared secret. Never exposed through Next.js to the browser.
+
+    Cache-Control: max-age=60, s-maxage=60 — reduces startup SSR round-trips
+    (Hypothesis 3 — page load performance).
 
     Returns: {"enabled": false} when Keycloak is not configured.
              {"enabled": true, "client_id": ..., "client_secret": ..., "issuer": ...} when configured.
@@ -478,6 +482,10 @@ async def internal_provider_config(
     kc = await get_keycloak_config()
     if kc is None or not kc.enabled:
         return InternalProviderConfig(enabled=False)
+
+    # Cache for 60 seconds — matches KeycloakConfigResolver TTL.
+    # Reduces repeated startup fetches when Next.js re-initializes workers.
+    response.headers["Cache-Control"] = "max-age=60, s-maxage=60"
 
     return InternalProviderConfig(
         enabled=True,
