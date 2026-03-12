@@ -1,9 +1,9 @@
 """
 MCP Tool Registry -- startup discovery + runtime gated execution.
 
-MCPToolRegistry.refresh() is called at FastAPI startup. It loads all active
-mcp_servers from the DB, calls tools/list on each, and upserts discovered
-tools into the tool_definitions table (DB-backed registry).
+MCPToolRegistry.refresh() is called at FastAPI startup. It loads active
+mcp_server entries from registry_entries, calls tools/list on each, and upserts
+discovered tools back into registry_entries.
 
 call_mcp_tool() executes an MCP tool call through all 3 security gates:
   Gate 1 (JWT): caller's route handler validates the JWT via Depends(get_current_user)
@@ -13,23 +13,23 @@ call_mcp_tool() executes an MCP tool call through all 3 security gates:
 After all gates pass, the call is forwarded to the appropriate MCPClient.
 Every call attempt is audit-logged regardless of allow/deny outcome.
 
-Phase 6 evolution:
-- refresh() filters by status='active' (not legacy is_active)
-- Discovered tools upserted into tool_definitions table
-- Disabled servers evict their clients from _clients cache
+Phase 24 evolution:
+- refresh() now reads from registry_entries (type='mcp_server', status='active')
+  instead of the dropped mcp_servers table
+- Discovered tools upserted into registry_entries (type='tool')
+- get_tool() / update_tool_last_seen() imported from registry.service
 """
 import time
 from typing import Any
 
 import structlog
 from fastapi import HTTPException
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.logging import get_audit_logger
 from core.models.user import UserContext
-from gateway.tool_registry import get_tool, register_tool
 from mcp.client import MCPClient
+from registry.service import get_tool, update_tool_last_seen
 from security.acl import check_tool_acl
 from security.rbac import has_permission
 
@@ -44,65 +44,113 @@ class MCPToolRegistry:
     @classmethod
     async def refresh(cls) -> None:
         """
-        Called at startup. Loads active mcp_servers from DB (status='active'),
-        calls tools/list on each, upserts discovered tools into tool_definitions.
+        Called at startup. Loads active mcp_server entries from registry_entries,
+        calls tools/list on each, and upserts discovered tools into registry_entries.
 
-        Servers that are unreachable at startup are logged and skipped --
+        Servers that are unreachable at startup are logged and skipped —
         they can be manually re-registered later without a full restart.
-
-        Phase 6: filters by status='active' instead of is_active=True.
-        Disabled servers have their clients evicted from the cache.
         """
         from core.db import async_session
-        from core.models.mcp_server import McpServer
-        from security.credentials import decrypt_token
+        from registry.models import RegistryEntry
+        from sqlalchemy import select
 
         async with async_session() as session:
             async with session.begin():
-                # Load all servers to evict disabled ones
-                all_result = await session.execute(select(McpServer))
-                all_servers = all_result.scalars().all()
+                result = await session.execute(
+                    select(RegistryEntry).where(
+                        RegistryEntry.type == "mcp_server",
+                        RegistryEntry.deleted_at.is_(None),
+                    )
+                )
+                all_servers = result.scalars().all()
 
-        # Evict clients for disabled/inactive servers
+        # Evict clients for non-active servers
         for server in all_servers:
             if server.status != "active" and server.name in _clients:
                 del _clients[server.name]
-                logger.info("mcp_client_evicted", server=server.name, status=server.status)
+                logger.info(
+                    "mcp_client_evicted",
+                    server=server.name,
+                    status=server.status,
+                )
 
-        # Only process active servers
         active_servers = [s for s in all_servers if s.status == "active"]
 
         for server in active_servers:
             try:
-                auth_token: str | None = None
-                if server.auth_token:
-                    raw = server.auth_token
-                    iv = raw[:12]
-                    ciphertext = raw[12:]
-                    auth_token = decrypt_token(ciphertext, iv)
+                cfg = server.config or {}
+                url = cfg.get("url")
+                if not url:
+                    logger.warning(
+                        "mcp_server_no_url",
+                        server=server.name,
+                    )
+                    continue
 
-                client = MCPClient(server_url=server.url, auth_token=auth_token)
+                # Decrypt auth_token_hex if present
+                auth_token: str | None = None
+                auth_token_hex = cfg.get("auth_token_hex")
+                if auth_token_hex:
+                    try:
+                        from security.credentials import decrypt_token
+
+                        raw = bytes.fromhex(auth_token_hex)
+                        iv = raw[:12]
+                        ciphertext = raw[12:]
+                        auth_token = decrypt_token(ciphertext, iv)
+                    except Exception as exc:
+                        logger.warning(
+                            "mcp_auth_token_decrypt_failed",
+                            server=server.name,
+                            error=str(exc),
+                        )
+
+                client = MCPClient(server_url=url, auth_token=auth_token)
                 _clients[server.name] = client
                 tools = await client.list_tools()
 
-                # Upsert discovered tools into tool_definitions table
-                async with async_session() as session:
-                    try:
+                # Upsert discovered tools into registry_entries
+                async with async_session() as upsert_session:
+                    async with upsert_session.begin():
+                        from datetime import datetime, timezone
+                        from uuid import uuid4
+
                         for tool in tools:
                             tool_name = f"{server.name}.{tool['name']}"
-                            await register_tool(
-                                session,
-                                name=tool_name,
-                                description=tool.get("description", ""),
-                                required_permissions=[f"{server.name}:read"],
-                                mcp_server=server.name,
-                                mcp_tool=tool["name"],
-                                handler_type="mcp",
-                                mcp_server_id=server.id,
+                            # Check if entry already exists
+                            existing_result = await upsert_session.execute(
+                                select(RegistryEntry).where(
+                                    RegistryEntry.type == "tool",
+                                    RegistryEntry.name == tool_name,
+                                    RegistryEntry.deleted_at.is_(None),
+                                )
                             )
-                    except Exception:
-                        await session.rollback()
-                        raise
+                            existing = existing_result.scalar_one_or_none()
+
+                            tool_config = {
+                                "handler_type": "mcp",
+                                "mcp_server_id": str(server.id),
+                                "mcp_tool_name": tool["name"],
+                                "required_permissions": [f"{server.name}:read"],
+                                "sandbox_required": False,
+                            }
+
+                            if existing is not None:
+                                existing.config = tool_config
+                                existing.status = "active"
+                                existing.description = tool.get("description", "")
+                                existing.updated_at = datetime.now(timezone.utc)
+                            else:
+                                new_tool = RegistryEntry(
+                                    id=uuid4(),
+                                    type="tool",
+                                    name=tool_name,
+                                    description=tool.get("description", ""),
+                                    config=tool_config,
+                                    status="active",
+                                    owner_id=server.owner_id,
+                                )
+                                upsert_session.add(new_tool)
 
                 logger.info(
                     "mcp_tools_registered",
@@ -156,7 +204,7 @@ async def call_mcp_tool(
             status_code=404, detail=f"Tool '{tool_name}' not registered"
         )
 
-    # Gate 2: RBAC -- check each required permission
+    # Gate 2: RBAC — check each required permission
     for permission in tool_def.get("required_permissions", []):
         if not await has_permission(user, permission, db_session):
             elapsed = int(time.monotonic() * 1000) - start_ms
@@ -172,7 +220,7 @@ async def call_mcp_tool(
                 status_code=403, detail=f"Missing permission: {permission}"
             )
 
-    # Gate 3: ACL -- check per-user override in tool_acl table
+    # Gate 3: ACL — check per-user override in tool_acl table
     allowed = await check_tool_acl(user["user_id"], tool_name, db_session)
     elapsed = int(time.monotonic() * 1000) - start_ms
     audit_logger.info(
@@ -186,13 +234,10 @@ async def call_mcp_tool(
     if not allowed:
         raise HTTPException(status_code=403, detail="Tool call denied by ACL")
 
-    # All gates passed -- call the MCP server
+    # All gates passed — call the MCP server
     server_name = tool_def["mcp_server"]
     mcp_tool_name = tool_def["mcp_tool"]
     client = _get_client(server_name)
-
-    # Update last_seen_at on successful dispatch (fire-and-forget, no error propagation)
-    from gateway.tool_registry import update_tool_last_seen
 
     result = await client.call_tool(mcp_tool_name, arguments)
 

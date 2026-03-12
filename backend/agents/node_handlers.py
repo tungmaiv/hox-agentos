@@ -28,7 +28,7 @@ from agents.condition_evaluator import evaluate_condition
 from agents.workflow_state import WorkflowState
 from core.db import get_session
 from core.logging import timed
-from gateway.tool_registry import get_tool
+from registry.service import get_tool
 from mcp.registry import call_mcp_tool
 from sandbox.executor import SandboxExecutor
 from sandbox.policies import DEFAULT_TIMEOUT

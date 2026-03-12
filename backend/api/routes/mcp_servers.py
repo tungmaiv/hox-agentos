@@ -211,7 +211,7 @@ async def patch_mcp_server_status(
     Disabling a server evicts its client from the MCPToolRegistry cache
     and invalidates the tool cache.
     """
-    from gateway.tool_registry import invalidate_tool_cache
+    from registry.service import invalidate_tool_cache
 
     valid_statuses = {"active", "disabled", "deprecated"}
     if body.status not in valid_statuses:

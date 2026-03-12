@@ -233,7 +233,7 @@ async def _master_node(state: BlitzState) -> dict[str, list[BaseMessage]]:
     try:
         async with get_session() as session:
             async with session.begin():
-                from gateway.tool_registry import list_tools
+                from registry.service import list_tools
                 tool_names = await list_tools(session)
                 if tool_names:
                     available_tools_str = (

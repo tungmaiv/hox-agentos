@@ -322,44 +322,32 @@ def test_graceful_removal_returns_workflow_count(admin_client: TestClient) -> No
 
 
 def test_patch_status_invalidates_cache(admin_client: TestClient) -> None:
-    """patch_tool_status() evicts the tool's cache entry immediately after commit.
+    """patch_tool_status() returns 200 and disables the tool.
 
-    Regression: before the fix, the tool remained in _tool_cache for up to 60s
-    after being disabled via PATCH /api/admin/tools/{id}/status.
+    Note: the old gateway.tool_registry._tool_cache no longer exists — the
+    unified registry (registry_entries) is queried directly on each call.
+    Cache eviction regression tests are no longer applicable.
     """
-    import gateway.tool_registry as tr
-
     # Create a tool
     r = admin_client.post("/api/admin/tools", json={"name": "cache_test_patch_tool"})
     assert r.status_code == 201
-    tool_name = r.json()["name"]
-
-    # Manually seed the cache to simulate a cache hit from a prior get_tool() call
-    tr._tool_cache[tool_name] = {"name": tool_name, "status": "active"}
-
-    # Disable the tool via PATCH /status — this must evict the cache entry
     tool_id = r.json()["id"]
+
+    # Disable the tool via PATCH /status — must return 200
     resp = admin_client.patch(
         f"/api/admin/tools/{tool_id}/status",
         json={"status": "disabled"},
     )
     assert resp.status_code == 200
 
-    # After the PATCH, the cache entry must be gone
-    assert tool_name not in tr._tool_cache, (
-        f"Expected '{tool_name}' to be evicted from _tool_cache after patch_tool_status(), "
-        f"but it is still present. Disabled tools are callable for up to 60s (regression)."
-    )
-
 
 def test_activate_version_invalidates_cache(admin_client: TestClient) -> None:
-    """activate_tool_version() evicts the tool's cache entry immediately after commit.
+    """activate_tool_version() returns 200 after activating a version.
 
-    Regression: before the fix, the previously-active version remained in cache
-    for up to 60s after being deactivated by PATCH /api/admin/tools/{id}/activate.
+    Note: the old gateway.tool_registry._tool_cache no longer exists — the
+    unified registry (registry_entries) is queried directly on each call.
+    Cache eviction regression tests are no longer applicable.
     """
-    import gateway.tool_registry as tr
-
     # Create two versions of the same tool
     r1 = admin_client.post(
         "/api/admin/tools", json={"name": "cache_test_activate_tool", "version": "1.0.0"}
@@ -369,21 +357,11 @@ def test_activate_version_invalidates_cache(admin_client: TestClient) -> None:
         "/api/admin/tools", json={"name": "cache_test_activate_tool", "version": "1.1.0"}
     )
     assert r2.status_code == 201
-    tool_name = r1.json()["name"]
     id_v2 = r2.json()["id"]
 
-    # Seed cache with stale v1.0.0 data
-    tr._tool_cache[tool_name] = {"name": tool_name, "version": "1.0.0", "is_active": True}
-
-    # Activate v1.1.0 — must evict cache entry (keyed by tool name, not version)
+    # Activate v1.1.0 — must return 200
     resp = admin_client.patch(f"/api/admin/tools/{id_v2}/activate")
     assert resp.status_code == 200
-
-    # Cache entry for this tool must be gone after activation
-    assert tool_name not in tr._tool_cache, (
-        f"Expected '{tool_name}' to be evicted from _tool_cache after activate_tool_version(), "
-        f"but stale version data remains. Old version stays callable for up to 60s (regression)."
-    )
 
 # ---------------------------------------------------------------------------
 # activate-stub endpoint (SKBLD-03)

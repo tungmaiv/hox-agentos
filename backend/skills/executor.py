@@ -26,7 +26,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.config import get_llm
 from core.logging import get_audit_logger
-from gateway.tool_registry import get_tool
+from registry.service import get_tool
 from security.acl import check_tool_acl
 from skills.safe_eval import safe_eval_condition
 

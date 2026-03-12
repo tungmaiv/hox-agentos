@@ -23,7 +23,6 @@ from api.routes import (
     credentials,
     health,
     memory_settings,
-    mcp_servers,
     system_config,
     tools,
     user_instructions,
@@ -31,6 +30,7 @@ from api.routes import (
     user_skills,
     user_tools,
 )
+from api.routes.registry import router as registry_router
 from api.routes.admin_keycloak import router as admin_keycloak_router
 from api.routes.admin_skill_sharing import router as admin_skill_sharing_router
 from api.routes.admin_local_users import router as admin_local_users_router
@@ -57,40 +57,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     FastAPI lifespan context manager.
     Runs startup logic before the first request, cleanup on shutdown.
     """
-    # Seed tool_definitions from legacy hardcoded registry (first boot only).
-    # Then refresh the in-process cache so tool dispatch works immediately.
-    try:
-        from core.db import async_session
-        from gateway.tool_registry import _refresh_tool_cache, seed_tool_definitions_from_registry
-
-        async with async_session() as session:
-            try:
-                await seed_tool_definitions_from_registry(session)
-                await _refresh_tool_cache(session)
-            except Exception:
-                await session.rollback()
-                raise
-    except Exception as exc:
-        import structlog
-
-        structlog.get_logger(__name__).warning(
-            "tool_seed_failed", error=str(exc)
-        )
-
-    # Discover and register MCP tools from active mcp_servers DB rows.
-    # Servers unreachable at startup are skipped with a warning log — they
-    # can be retried later without a restart.
-    try:
-        from mcp.registry import MCPToolRegistry
-
-        await MCPToolRegistry.refresh()
-    except Exception as exc:
-        # Never block startup on MCP discovery failure (DB may be empty)
-        import structlog
-
-        structlog.get_logger(__name__).warning(
-            "mcp_refresh_failed", error=str(exc)
-        )
+    # Unified registry is DB-backed (registry_entries table); no startup seeding needed.
+    # Tool dispatch reads directly from registry_entries via UnifiedRegistryService.get_tool().
 
     # Remove any sandbox containers that survived a previous unclean shutdown.
     # Runs in a thread to avoid blocking the event loop (Docker SDK is synchronous).
@@ -223,11 +191,8 @@ def create_app() -> FastAPI:
     # Note: router already includes /api prefix in its definition
     app.include_router(system_config.router)
 
-    # MCP server CRUD — GET/POST/DELETE /api/admin/mcp-servers (admin-only)
-    # Note: router already includes /api prefix in its definition
-    app.include_router(mcp_servers.router)
-
     # Admin agent CRUD — /api/admin/agents (registry:manage permission)
+    # NOTE: kept for backward compat with existing admin UI; new code uses /api/registry/*
     app.include_router(admin_agents.router)
 
     # Admin tool CRUD — /api/admin/tools (registry:manage permission)
@@ -300,6 +265,9 @@ def create_app() -> FastAPI:
     # User:  /api/skill-repos/browse, /api/skill-repos/import (chat)
     app.include_router(skill_repos_admin_router)
     app.include_router(skill_repos_user_router)
+
+    # Unified registry CRUD — /api/registry/* (replaces old scattered admin routes)
+    app.include_router(registry_router)
 
     return app
 

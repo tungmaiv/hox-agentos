@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.logging import get_audit_logger
 from core.models.mcp_server import McpServer
 from core.models.user import UserContext
-from gateway.tool_registry import get_tool, update_tool_last_seen
+from registry.service import get_tool, update_tool_last_seen
 from mcp.registry import call_mcp_tool
 from openapi_bridge.proxy import call_openapi_tool
 from security.acl import check_tool_acl

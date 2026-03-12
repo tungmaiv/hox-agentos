@@ -266,3 +266,104 @@ class UnifiedRegistryService:
             tool_count=len(tools),
         )
         return tools
+
+
+# ── Module-level compatibility functions ─────────────────────────────────────
+# These replace the module-level functions from gateway/tool_registry.py.
+# Use these in files that previously imported from gateway.tool_registry.
+# Example: from registry.service import get_tool
+
+
+_service_singleton = UnifiedRegistryService()
+
+
+async def get_tool(
+    name: str, session: AsyncSession | None = None
+) -> "dict | None":
+    """
+    Get a tool definition by name from registry_entries (active tools only).
+
+    Drop-in replacement for gateway.tool_registry.get_tool().
+    Requires a session to query the DB (session=None returns None for safety).
+    """
+    if session is None:
+        logger.debug("get_tool_called_without_session", name=name)
+        return None
+
+    result = await session.execute(
+        select(RegistryEntry).where(
+            RegistryEntry.type == "tool",
+            RegistryEntry.name == name,
+            RegistryEntry.status == "active",
+            RegistryEntry.deleted_at.is_(None),
+        )
+    )
+    entry = result.scalar_one_or_none()
+    if entry is None:
+        return None
+
+    cfg = entry.config or {}
+    mcp_server: str | None = None
+    if cfg.get("handler_type") == "mcp" and "." in entry.name:
+        mcp_server = entry.name.split(".")[0]
+
+    required_permissions: list[str] = cfg.get("required_permissions", [])
+    input_schema = cfg.get("input_schema") or {}
+    if not required_permissions and isinstance(input_schema, dict):
+        required_permissions = input_schema.get("required_permissions", [])
+
+    return {
+        "name": entry.name,
+        "description": entry.description or "",
+        "handler_type": cfg.get("handler_type", "backend"),
+        "handler_module": cfg.get("handler_module"),
+        "handler_function": cfg.get("handler_function"),
+        "handler_code": cfg.get("handler_code"),
+        "sandbox_required": cfg.get("sandbox_required", False),
+        "mcp_server_id": cfg.get("mcp_server_id"),
+        "mcp_tool": cfg.get("mcp_tool_name"),
+        "mcp_server": mcp_server,
+        "required_permissions": required_permissions,
+        "config_json": cfg.get("config_json"),
+    }
+
+
+async def list_tools(session: AsyncSession | None = None) -> "list[str]":
+    """
+    Return list of all active tool names.
+
+    Drop-in replacement for gateway.tool_registry.list_tools().
+    """
+    if session is None:
+        return []
+
+    result = await session.execute(
+        select(RegistryEntry.name).where(
+            RegistryEntry.type == "tool",
+            RegistryEntry.status == "active",
+            RegistryEntry.deleted_at.is_(None),
+        )
+    )
+    return list(result.scalars().all())
+
+
+async def update_tool_last_seen(name: str, session: AsyncSession) -> None:
+    """
+    No-op compatibility stub for update_tool_last_seen.
+
+    The old tool_registry tracked last_seen_at on ToolDefinition rows.
+    In the unified registry, last_seen_at is not tracked at tool-call level
+    (it would require an UPDATE on every tool call, which is expensive).
+    Post-MVP: consider adding last_seen_at to RegistryEntry and batch-updating.
+    """
+    logger.debug("update_tool_last_seen_noop", name=name)
+
+
+def invalidate_tool_cache() -> None:
+    """No-op compatibility stub — unified registry has no separate cache to invalidate."""
+    logger.debug("invalidate_tool_cache_noop")
+
+
+def invalidate_tool_cache_entry(name: str) -> None:
+    """No-op compatibility stub — unified registry has no separate cache to invalidate."""
+    logger.debug("invalidate_tool_cache_entry_noop", name=name)

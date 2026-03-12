@@ -29,7 +29,7 @@ from core.schemas.registry import (
     ToolDefinitionResponse,
     ToolDefinitionUpdate,
 )
-from gateway.tool_registry import invalidate_tool_cache_entry
+from registry.service import invalidate_tool_cache_entry
 from security.deps import get_current_user
 from security.rbac import has_permission
 

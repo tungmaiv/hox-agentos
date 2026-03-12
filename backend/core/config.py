@@ -86,6 +86,9 @@ class Settings(BaseSettings):
     whatsapp_gateway_url: str = "http://whatsapp-gateway:9002"
     teams_gateway_url: str = "http://teams-gateway:9003"
 
+    # Security scanner MCP service — used by plan 24-05 scan_skill_with_fallback
+    security_scanner_url: str = "http://security-scanner:8003"
+
     @model_validator(mode="after")
     def validate_encryption_key(self) -> "Settings":
         """Validate CREDENTIAL_ENCRYPTION_KEY when set: must be a 64-char hex string (32 bytes AES-256)."""

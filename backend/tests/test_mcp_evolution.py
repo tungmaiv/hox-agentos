@@ -136,7 +136,7 @@ async def test_status_patch_updates_db(session: AsyncSession) -> None:
 
     with (
         patch("api.routes.mcp_servers.MCPToolRegistry") as mock_registry,
-        patch("gateway.tool_registry.invalidate_tool_cache"),
+        patch("registry.service.invalidate_tool_cache"),
     ):
         mock_registry.evict_client = MagicMock()
 
@@ -166,7 +166,7 @@ async def test_status_patch_evicts_client_on_disable(session: AsyncSession) -> N
 
     with (
         patch("api.routes.mcp_servers.MCPToolRegistry") as mock_registry,
-        patch("gateway.tool_registry.invalidate_tool_cache") as mock_invalidate,
+        patch("registry.service.invalidate_tool_cache") as mock_invalidate,
     ):
         mock_registry.evict_client = MagicMock()
 
@@ -209,14 +209,14 @@ async def test_refresh_skips_disabled_servers() -> None:
     disabled_server = MagicMock()
     disabled_server.name = "disabled-server"
     disabled_server.status = "disabled"
-    disabled_server.auth_token = None
+    disabled_server.config = {}
 
     active_server = MagicMock()
     active_server.name = "active-server"
-    active_server.url = "http://active:8000"
     active_server.status = "active"
-    active_server.auth_token = None
+    active_server.config = {"url": "http://active:8000"}
     active_server.id = uuid.uuid4()
+    active_server.owner_id = uuid.uuid4()
 
     mock_session = AsyncMock()
     mock_result = MagicMock()
@@ -242,7 +242,6 @@ async def test_refresh_skips_disabled_servers() -> None:
     with (
         patch("core.db.async_session", mock_session_factory),
         patch("mcp.registry.MCPClient", return_value=mock_client),
-        patch("mcp.registry.register_tool", new_callable=AsyncMock),
     ):
         # Pre-populate disabled server in cache to test eviction
         _clients["disabled-server"] = MagicMock()

@@ -157,7 +157,7 @@ async def register_openapi_endpoints(
     """
     from core.models.mcp_server import McpServer
     from core.models.tool_definition import ToolDefinition
-    from gateway.tool_registry import invalidate_tool_cache
+    from registry.service import invalidate_tool_cache
 
     # Optionally encrypt the API key
     auth_token_bytes: bytes | None = None

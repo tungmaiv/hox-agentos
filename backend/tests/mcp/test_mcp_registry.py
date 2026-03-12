@@ -98,7 +98,7 @@ async def test_call_mcp_tool_succeeds_with_all_gates() -> None:
         ) as mock_acl,
         patch("mcp.registry._get_client") as mock_get_client,
         patch("mcp.registry.audit_logger"),
-        patch("gateway.tool_registry.update_tool_last_seen", new_callable=AsyncMock),
+        patch("registry.service.update_tool_last_seen", new_callable=AsyncMock),
     ):
         mock_get_tool.return_value = {
             "required_permissions": ["crm:read"],
@@ -142,7 +142,7 @@ async def test_call_mcp_tool_logs_every_attempt() -> None:
         ) as mock_acl,
         patch("mcp.registry._get_client") as mock_get_client,
         patch("mcp.registry.audit_logger") as mock_audit,
-        patch("gateway.tool_registry.update_tool_last_seen", new_callable=AsyncMock),
+        patch("registry.service.update_tool_last_seen", new_callable=AsyncMock),
     ):
         mock_get_tool.return_value = {
             "required_permissions": [],
