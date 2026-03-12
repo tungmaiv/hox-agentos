@@ -92,14 +92,13 @@ def upgrade() -> None:
                     WHEN is_active THEN 'active'
                     ELSE 'archived'
                 END,
-                :sys_owner::uuid,
+                '00000000-0000-0000-0000-000000000001'::uuid,
                 created_at,
                 updated_at
             FROM agent_definitions
             ON CONFLICT (type, name) DO NOTHING
             """
-        ),
-        {"sys_owner": _SYSTEM_OWNER},
+    )
     )
 
     # ── Migrate skill_definitions → registry_entries ─────────────────────
@@ -144,14 +143,13 @@ def upgrade() -> None:
                     WHEN is_active THEN 'active'
                     ELSE 'archived'
                 END,
-                COALESCE(created_by, :sys_owner::uuid),
+                COALESCE(created_by, '00000000-0000-0000-0000-000000000001'::uuid),
                 created_at,
                 updated_at
             FROM skill_definitions
             ON CONFLICT (type, name) DO NOTHING
             """
-        ),
-        {"sys_owner": _SYSTEM_OWNER},
+    )
     )
 
     # ── Migrate tool_definitions → registry_entries ───────────────────────
@@ -187,14 +185,13 @@ def upgrade() -> None:
                     WHEN is_active THEN 'active'
                     ELSE 'archived'
                 END,
-                :sys_owner::uuid,
+                '00000000-0000-0000-0000-000000000001'::uuid,
                 created_at,
                 updated_at
             FROM tool_definitions
             ON CONFLICT (type, name) DO NOTHING
             """
-        ),
-        {"sys_owner": _SYSTEM_OWNER},
+    )
     )
 
     # ── Migrate mcp_servers → registry_entries ────────────────────────────
@@ -227,14 +224,13 @@ def upgrade() -> None:
                     WHEN is_active THEN 'active'
                     ELSE 'archived'
                 END,
-                :sys_owner::uuid,
+                '00000000-0000-0000-0000-000000000001'::uuid,
                 created_at,
                 created_at
             FROM mcp_servers
             ON CONFLICT (type, name) DO NOTHING
             """
-        ),
-        {"sys_owner": _SYSTEM_OWNER},
+    )
     )
 
     # ── Drop old tables ───────────────────────────────────────────────────
