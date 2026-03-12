@@ -2,71 +2,103 @@
 /**
  * Admin Tools page — CRUD management for tool definitions.
  *
- * Same pattern as agents page, with additional columns for
- * handler_type and sandbox_required.
- * Name search (300ms debounce) + handler_type dropdown filter.
+ * Phase 24: migrated from /api/admin/tools to /api/registry?type=tool.
+ * Shows name, handler type (from config), status.
  */
-import { useState, useEffect } from "react";
-import { useAdminArtifacts } from "@/hooks/use-admin-artifacts";
-import type { ToolDefinition, ToolDefinitionCreate } from "@/lib/admin-types";
-import { ArtifactTable } from "@/components/admin/artifact-table";
-import { ArtifactCardGrid } from "@/components/admin/artifact-card-grid";
-import { ViewToggle, useViewMode } from "@/components/admin/view-toggle";
+import { useState, useEffect, useCallback } from "react";
+import type { RegistryEntry, RegistryEntryCreate } from "@/lib/admin-types";
+import { mapArraySnakeToCamel } from "@/lib/admin-types";
 
 export default function AdminToolsPage() {
-  const [viewMode, setViewMode] = useViewMode();
+  const [items, setItems] = useState<RegistryEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
-  const [formData, setFormData] = useState<ToolDefinitionCreate>({
+  const [formData, setFormData] = useState<RegistryEntryCreate>({
+    type: "tool",
     name: "",
+    displayName: null,
+    description: null,
+    config: { handler_type: "backend" },
+    status: "draft",
   });
 
-  // Filter state
-  const [toolSearch, setToolSearch] = useState("");
-  const [debouncedToolSearch, setDebouncedToolSearch] = useState("");
-  const [filterHandlerType, setFilterHandlerType] = useState("");
+  const fetchTools = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/registry?type=tool", { cache: "no-store" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = (await res.json()) as unknown[];
+      setItems(mapArraySnakeToCamel<RegistryEntry>(data));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load tools");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedToolSearch(toolSearch), 300);
-    return () => clearTimeout(t);
-  }, [toolSearch]);
-
-  // Build server-side filter params — re-fetches when any filter changes
-  const filterParams: Record<string, string> = {};
-  if (debouncedToolSearch) filterParams.name = debouncedToolSearch;
-  if (filterHandlerType) filterParams.handler_type = filterHandlerType;
-
-  const { items, loading, error, create, patchStatus, activateVersion } =
-    useAdminArtifacts<ToolDefinition>("tools", filterParams);
+    void fetchTools();
+  }, [fetchTools]);
 
   const handleCreate = async () => {
-    const result = await create(formData);
-    if (result) {
+    try {
+      const payload = {
+        type: formData.type,
+        name: formData.name,
+        display_name: formData.displayName || null,
+        description: formData.description || null,
+        config: formData.config ?? { handler_type: "backend" },
+        status: formData.status ?? "draft",
+      };
+      const res = await fetch("/api/registry", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { detail?: string };
+        throw new Error(body.detail ?? `HTTP ${res.status}`);
+      }
       setShowCreate(false);
-      setFormData({ name: "" });
+      setFormData({
+        type: "tool",
+        name: "",
+        displayName: null,
+        description: null,
+        config: { handler_type: "backend" },
+        status: "draft",
+      });
+      void fetchTools();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Create failed");
     }
   };
 
-  const extraColumns = [
-    {
-      key: "handlerType",
-      label: "Handler",
-      render: (item: ToolDefinition) => (
-        <span className="text-xs text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded">
-          {item.handlerType}
-        </span>
-      ),
-    },
-    {
-      key: "sandboxRequired",
-      label: "Sandbox",
-      render: (item: ToolDefinition) =>
-        item.sandboxRequired ? (
-          <span className="text-xs text-orange-600">Required</span>
-        ) : (
-          <span className="text-xs text-gray-400">No</span>
-        ),
-    },
-  ];
+  const handleStatusChange = async (id: string, status: string) => {
+    try {
+      const res = await fetch(`/api/registry/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      void fetchTools();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Status update failed");
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      const res = await fetch(`/api/registry/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      void fetchTools();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Delete failed");
+    }
+  };
 
   if (loading) {
     return <div className="text-gray-500 py-8">Loading tools...</div>;
@@ -74,38 +106,15 @@ export default function AdminToolsPage() {
 
   return (
     <div>
-      {/* Filter bar */}
-      <div className="flex flex-wrap items-center gap-2 mb-4">
-        <input
-          type="text"
-          value={toolSearch}
-          onChange={(e) => setToolSearch(e.target.value)}
-          placeholder="Search by name..."
-          className="flex-1 min-w-40 text-sm border border-gray-300 rounded px-2 py-1.5 text-gray-900 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-        />
-        <select
-          value={filterHandlerType}
-          onChange={(e) => setFilterHandlerType(e.target.value)}
-          className="text-sm border border-gray-300 rounded px-2 py-1.5 text-gray-700 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-        >
-          <option value="">All types</option>
-          <option value="backend">Backend</option>
-          <option value="mcp">MCP</option>
-          <option value="sandbox">Sandbox</option>
-        </select>
-      </div>
-
+      {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-gray-900">Tool Definitions</h2>
-        <div className="flex items-center gap-3">
-          <ViewToggle value={viewMode} onChange={setViewMode} />
-          <button
-            onClick={() => setShowCreate(true)}
-            className="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors"
-          >
-            Create Tool
-          </button>
-        </div>
+        <button
+          onClick={() => setShowCreate(true)}
+          className="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors"
+        >
+          Create Tool
+        </button>
       </div>
 
       {error && (
@@ -114,6 +123,7 @@ export default function AdminToolsPage() {
         </div>
       )}
 
+      {/* Create dialog */}
       {showCreate && (
         <div className="mb-6 p-4 bg-white border border-gray-200 rounded-lg">
           <h3 className="text-sm font-semibold text-gray-900 mb-3">New Tool</h3>
@@ -132,9 +142,9 @@ export default function AdminToolsPage() {
               <label className="block text-xs text-gray-600 mb-1">Display Name</label>
               <input
                 type="text"
-                value={formData.display_name ?? ""}
+                value={formData.displayName ?? ""}
                 onChange={(e) =>
-                  setFormData({ ...formData, display_name: e.target.value || null })
+                  setFormData({ ...formData, displayName: e.target.value || null })
                 }
                 className="w-full text-sm border border-gray-300 rounded px-2 py-1 text-gray-900 bg-white"
                 placeholder="Fetch Emails"
@@ -155,11 +165,11 @@ export default function AdminToolsPage() {
             <div>
               <label className="block text-xs text-gray-600 mb-1">Handler Type</label>
               <select
-                value={formData.handler_type ?? "backend"}
+                value={(formData.config?.handler_type as string) ?? "backend"}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    handler_type: e.target.value as "backend" | "mcp" | "sandbox",
+                    config: { ...formData.config, handler_type: e.target.value },
                   })
                 }
                 className="w-full text-sm border border-gray-300 rounded px-2 py-1 text-gray-700 bg-white"
@@ -168,30 +178,6 @@ export default function AdminToolsPage() {
                 <option value="mcp">MCP</option>
                 <option value="sandbox">Sandbox</option>
               </select>
-            </div>
-            <div>
-              <label className="block text-xs text-gray-600 mb-1">Version</label>
-              <input
-                type="text"
-                value={formData.version ?? "1.0.0"}
-                onChange={(e) => setFormData({ ...formData, version: e.target.value })}
-                className="w-full text-sm border border-gray-300 rounded px-2 py-1 text-gray-900 bg-white"
-                placeholder="1.0.0"
-              />
-            </div>
-            <div className="col-span-2 flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="sandbox_required"
-                checked={formData.sandbox_required ?? false}
-                onChange={(e) =>
-                  setFormData({ ...formData, sandbox_required: e.target.checked })
-                }
-                className="w-4 h-4 text-blue-600 rounded border-gray-300"
-              />
-              <label htmlFor="sandbox_required" className="text-xs text-gray-600">
-                Requires sandbox execution
-              </label>
             </div>
           </div>
           <div className="flex items-center gap-2 mt-4">
@@ -211,31 +197,69 @@ export default function AdminToolsPage() {
         </div>
       )}
 
-      {viewMode === "table" ? (
-        <ArtifactTable
-          items={items}
-          columns={extraColumns}
-          onPatchStatus={patchStatus}
-          onActivateVersion={activateVersion}
-        />
+      {/* Table */}
+      {items.length === 0 ? (
+        <div className="text-gray-400 text-sm py-6 text-center">No tools found.</div>
       ) : (
-        <ArtifactCardGrid
-          items={items}
-          renderExtra={(item) => (
-            <div className="flex items-center gap-2">
-              <span className="bg-gray-100 px-1.5 py-0.5 rounded">
-                {item.handlerType}
-              </span>
-              {item.sandboxRequired && (
-                <span className="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded">
-                  Sandbox
-                </span>
-              )}
-            </div>
-          )}
-          onPatchStatus={patchStatus}
-          onActivateVersion={activateVersion}
-        />
+        <table className="w-full text-sm text-left">
+          <thead>
+            <tr className="border-b border-gray-200 text-xs text-gray-500 uppercase">
+              <th className="py-2 pr-4">Name</th>
+              <th className="py-2 pr-4">Handler</th>
+              <th className="py-2 pr-4">Status</th>
+              <th className="py-2">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((item) => (
+              <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50">
+                <td className="py-2 pr-4 font-mono text-gray-900">{item.name}</td>
+                <td className="py-2 pr-4">
+                  <span className="text-xs text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded">
+                    {(item.config.handler_type as string) ?? "backend"}
+                  </span>
+                </td>
+                <td className="py-2 pr-4">
+                  <span
+                    className={`px-2 py-0.5 rounded text-xs font-medium ${
+                      item.status === "active"
+                        ? "bg-green-100 text-green-700"
+                        : item.status === "archived"
+                        ? "bg-gray-100 text-gray-500"
+                        : "bg-yellow-100 text-yellow-700"
+                    }`}
+                  >
+                    {item.status}
+                  </span>
+                </td>
+                <td className="py-2 flex gap-2">
+                  {item.status !== "active" && (
+                    <button
+                      onClick={() => void handleStatusChange(item.id, "active")}
+                      className="text-xs text-green-600 hover:text-green-800"
+                    >
+                      Activate
+                    </button>
+                  )}
+                  {item.status === "active" && (
+                    <button
+                      onClick={() => void handleStatusChange(item.id, "archived")}
+                      className="text-xs text-red-600 hover:text-red-800"
+                    >
+                      Archive
+                    </button>
+                  )}
+                  <button
+                    onClick={() => void handleDelete(item.id)}
+                    className="text-xs text-gray-400 hover:text-gray-600"
+                  >
+                    Delete
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
     </div>
   );

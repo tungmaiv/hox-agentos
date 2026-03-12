@@ -223,6 +223,44 @@ export interface ArtifactBase {
 // Utility: snake_case to camelCase mapper
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Unified registry types (Phase 24)
+// ---------------------------------------------------------------------------
+
+/** Mirrors backend RegistryEntryResponse Pydantic schema. */
+export interface RegistryEntry {
+  id: string;
+  type: "agent" | "skill" | "tool" | "mcp_server";
+  name: string;
+  displayName: string | null;
+  description: string | null;
+  config: Record<string, unknown>;
+  status: string;
+  ownerId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Create payload for POST /api/registry */
+export interface RegistryEntryCreate {
+  type: "agent" | "skill" | "tool" | "mcp_server";
+  name: string;
+  displayName?: string | null;
+  description?: string | null;
+  config?: Record<string, unknown>;
+  status?: string;
+}
+
+/** Update payload for PUT /api/registry/{id} */
+export interface RegistryEntryUpdate {
+  displayName?: string | null;
+  description?: string | null;
+  config?: Record<string, unknown>;
+  status?: string;
+}
+
+// ---------------------------------------------------------------------------
+
 /** Convert a snake_case key to camelCase. */
 function snakeToCamel(key: string): string {
   return key.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());

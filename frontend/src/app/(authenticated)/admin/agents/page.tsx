@@ -2,30 +2,89 @@
 /**
  * Admin Agents page — CRUD management for agent definitions.
  *
- * Uses useAdminArtifacts<AgentDefinition>("agents") for data.
- * Supports table/card view toggle and create dialog.
+ * Phase 24: migrated from /api/admin/agents to /api/registry?type=agent.
  */
-import { useState } from "react";
-import { useAdminArtifacts } from "@/hooks/use-admin-artifacts";
-import type { AgentDefinition, AgentDefinitionCreate } from "@/lib/admin-types";
-import { ArtifactTable } from "@/components/admin/artifact-table";
-import { ArtifactCardGrid } from "@/components/admin/artifact-card-grid";
-import { ViewToggle, useViewMode } from "@/components/admin/view-toggle";
+import { useState, useEffect, useCallback } from "react";
+import type { RegistryEntry, RegistryEntryCreate } from "@/lib/admin-types";
+import { mapArraySnakeToCamel } from "@/lib/admin-types";
 
 export default function AdminAgentsPage() {
-  const { items, loading, error, create, patchStatus, activateVersion } =
-    useAdminArtifacts<AgentDefinition>("agents");
-  const [viewMode, setViewMode] = useViewMode();
+  const [items, setItems] = useState<RegistryEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
-  const [formData, setFormData] = useState<AgentDefinitionCreate>({
+  const [formData, setFormData] = useState<RegistryEntryCreate>({
+    type: "agent",
     name: "",
+    displayName: null,
+    description: null,
+    config: {},
+    status: "draft",
   });
 
+  const fetchAgents = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/registry?type=agent", {
+        cache: "no-store",
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = (await res.json()) as unknown[];
+      setItems(mapArraySnakeToCamel<RegistryEntry>(data));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load agents");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetchAgents();
+  }, [fetchAgents]);
+
   const handleCreate = async () => {
-    const result = await create(formData as unknown as Record<string, unknown>);
-    if (result) {
+    try {
+      const payload = {
+        type: formData.type,
+        name: formData.name,
+        display_name: formData.displayName || null,
+        description: formData.description || null,
+        config: formData.config ?? {},
+        status: formData.status ?? "draft",
+      };
+      const res = await fetch("/api/registry", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setShowCreate(false);
-      setFormData({ name: "" });
+      setFormData({
+        type: "agent",
+        name: "",
+        displayName: null,
+        description: null,
+        config: {},
+        status: "draft",
+      });
+      void fetchAgents();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Create failed");
+    }
+  };
+
+  const handleDisable = async (id: string) => {
+    try {
+      const res = await fetch(`/api/registry/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "archived" }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      void fetchAgents();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Status update failed");
     }
   };
 
@@ -38,15 +97,12 @@ export default function AdminAgentsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-gray-900">Agent Definitions</h2>
-        <div className="flex items-center gap-3">
-          <ViewToggle value={viewMode} onChange={setViewMode} />
-          <button
-            onClick={() => setShowCreate(true)}
-            className="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors"
-          >
-            Create Agent
-          </button>
-        </div>
+        <button
+          onClick={() => setShowCreate(true)}
+          className="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors"
+        >
+          Create Agent
+        </button>
       </div>
 
       {error && (
@@ -74,9 +130,9 @@ export default function AdminAgentsPage() {
               <label className="block text-xs text-gray-600 mb-1">Display Name</label>
               <input
                 type="text"
-                value={formData.display_name ?? ""}
+                value={formData.displayName ?? ""}
                 onChange={(e) =>
-                  setFormData({ ...formData, display_name: e.target.value || null })
+                  setFormData({ ...formData, displayName: e.target.value || null })
                 }
                 className="w-full text-sm border border-gray-300 rounded px-2 py-1 text-gray-900 bg-white"
                 placeholder="Email Agent"
@@ -92,40 +148,6 @@ export default function AdminAgentsPage() {
                 }
                 className="w-full text-sm border border-gray-300 rounded px-2 py-1 text-gray-900 bg-white"
                 placeholder="Handles email-related tasks"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-600 mb-1">Handler Module</label>
-              <input
-                type="text"
-                value={formData.handler_module ?? ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, handler_module: e.target.value || null })
-                }
-                className="w-full text-sm border border-gray-300 rounded px-2 py-1 text-gray-900 bg-white"
-                placeholder="agents.subagents.email_agent"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-600 mb-1">Handler Function</label>
-              <input
-                type="text"
-                value={formData.handler_function ?? ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, handler_function: e.target.value || null })
-                }
-                className="w-full text-sm border border-gray-300 rounded px-2 py-1 text-gray-900 bg-white"
-                placeholder="handle_email"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-600 mb-1">Version</label>
-              <input
-                type="text"
-                value={formData.version ?? "1.0.0"}
-                onChange={(e) => setFormData({ ...formData, version: e.target.value })}
-                className="w-full text-sm border border-gray-300 rounded px-2 py-1 text-gray-900 bg-white"
-                placeholder="1.0.0"
               />
             </div>
           </div>
@@ -146,19 +168,51 @@ export default function AdminAgentsPage() {
         </div>
       )}
 
-      {/* Views */}
-      {viewMode === "table" ? (
-        <ArtifactTable
-          items={items}
-          onPatchStatus={patchStatus}
-          onActivateVersion={activateVersion}
-        />
+      {/* Table */}
+      {items.length === 0 ? (
+        <div className="text-gray-400 text-sm py-6 text-center">No agents found.</div>
       ) : (
-        <ArtifactCardGrid
-          items={items}
-          onPatchStatus={patchStatus}
-          onActivateVersion={activateVersion}
-        />
+        <table className="w-full text-sm text-left">
+          <thead>
+            <tr className="border-b border-gray-200 text-xs text-gray-500 uppercase">
+              <th className="py-2 pr-4">Name</th>
+              <th className="py-2 pr-4">Display Name</th>
+              <th className="py-2 pr-4">Status</th>
+              <th className="py-2">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((item) => (
+              <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50">
+                <td className="py-2 pr-4 font-mono text-gray-900">{item.name}</td>
+                <td className="py-2 pr-4 text-gray-600">{item.displayName ?? "-"}</td>
+                <td className="py-2 pr-4">
+                  <span
+                    className={`px-2 py-0.5 rounded text-xs font-medium ${
+                      item.status === "active"
+                        ? "bg-green-100 text-green-700"
+                        : item.status === "archived"
+                        ? "bg-gray-100 text-gray-500"
+                        : "bg-yellow-100 text-yellow-700"
+                    }`}
+                  >
+                    {item.status}
+                  </span>
+                </td>
+                <td className="py-2">
+                  {item.status === "active" && (
+                    <button
+                      onClick={() => void handleDisable(item.id)}
+                      className="text-xs text-red-600 hover:text-red-800"
+                    >
+                      Archive
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
     </div>
   );
