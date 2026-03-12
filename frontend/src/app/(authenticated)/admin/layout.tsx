@@ -10,6 +10,7 @@
  *   System   — Config, Identity, LLM, Memory sub-nav
  *   Build    — Artifact Builder, Skill Store, Create sub-nav
  */
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -71,6 +72,34 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const { data: session } = useSession();
 
+  // Bell icon state — pending_activation skills
+  const [pendingCount, setPendingCount] = useState(0);
+  const [bellOpen, setBellOpen] = useState(false);
+  const [pendingSkills, setPendingSkills] = useState<Array<{ id: string; name: string }>>([]);
+
+  useEffect(() => {
+    const fetchPending = async () => {
+      try {
+        const token = (session as unknown as Record<string, unknown>)?.access_token as string | undefined;
+        if (!token) return;
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL ?? ""}/api/registry?type=skill&status=pending_activation`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+            cache: "no-store",
+          }
+        );
+        if (!res.ok) return;
+        const data = (await res.json()) as Array<{ id: string; name: string }>;
+        setPendingCount(data.length);
+        setPendingSkills(data);
+      } catch {
+        // Bell is non-critical — swallow errors
+      }
+    };
+    void fetchPending();
+  }, [session]);
+
   // Role check — mirrors server-side logic; backend RBAC is the final gate
   const token = session as unknown as Record<string, unknown>;
   const realmRoles = (token?.realmRoles ?? token?.realm_roles ?? []) as string[];
@@ -126,12 +155,44 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </Link>
             <h1 className="text-lg font-semibold text-gray-900">Admin Dashboard</h1>
           </div>
-          <div className="text-sm text-gray-500">{session?.user?.email ?? "Admin"}</div>
+          <div className="flex items-center gap-3">
+            {/* Pending skills bell */}
+            <div className="relative">
+              <button
+                onClick={() => setBellOpen((prev) => !prev)}
+                className="relative p-1 rounded hover:bg-gray-100 transition-colors"
+                title="Skills pending activation"
+              >
+                🔔
+                {pendingCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center leading-none">
+                    {pendingCount}
+                  </span>
+                )}
+              </button>
+              {bellOpen && pendingCount > 0 && (
+                <div className="absolute right-0 mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-2">
+                  <p className="text-xs font-semibold text-gray-500 mb-1 px-2">Skills pending activation</p>
+                  {pendingSkills.map((skill) => (
+                    <a
+                      key={skill.id}
+                      href="/admin/skills"
+                      className="block text-sm text-gray-700 hover:bg-gray-50 px-2 py-1 rounded"
+                      onClick={() => setBellOpen(false)}
+                    >
+                      {skill.name}
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="text-sm text-gray-500">{session?.user?.email ?? "Admin"}</div>
+          </div>
         </div>
       </header>
 
       {/* Primary 4-tab navigation */}
-      <nav className="bg-white border-b border-gray-200">
+      <nav className="relative z-10 bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex gap-0">
             {TOP_TABS.map((tab) => {
@@ -158,7 +219,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* Secondary sub-navigation (Access / System / Build tabs only) */}
       {subNav && (
-        <nav className="bg-white border-b border-gray-100">
+        <nav className="bg-gray-50 border-b border-gray-200">
           <div className="max-w-7xl mx-auto px-6">
             <div className="flex gap-1 py-2">
               {subNav.map((item) => {
