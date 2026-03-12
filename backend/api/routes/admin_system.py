@@ -38,46 +38,51 @@ async def _run_batch_scan(user_id: str) -> None:
     from sqlalchemy import select
 
     from core.db import async_session
-    from core.models.skill_definition import SkillDefinition
+    from registry.models import RegistryEntry
     from security.scan_client import SecurityScanClient, scan_skill_with_fallback
 
     scan_client = SecurityScanClient()
     async with async_session() as scan_session:
         result = await scan_session.execute(
-            select(SkillDefinition).where(
-                SkillDefinition.status == "active",
-                SkillDefinition.is_active.is_(True),
+            select(RegistryEntry).where(
+                RegistryEntry.type == "skill",
+                RegistryEntry.status == "active",
+                RegistryEntry.deleted_at.is_(None),
             )
         )
-        skills = result.scalars().all()
+        entries = result.scalars().all()
         logger.info(
             "rescan_skills_start",
-            count=len(skills),
+            count=len(entries),
             user_id=user_id,
         )
-        for skill in skills:
+        for entry in entries:
             try:
+                config = entry.config or {}
                 skill_data = {
-                    "name": skill.name,
-                    "scripts": skill.instruction_markdown or "",
-                    "instruction_markdown": skill.instruction_markdown or "",
-                    "requirements": "",
+                    "name": entry.name,
+                    "scripts": config.get("instruction_markdown", ""),
+                    "instruction_markdown": config.get("instruction_markdown", ""),
+                    "requirements": config.get("requirements", ""),
                 }
                 scan_result = await scan_skill_with_fallback(skill_data, scan_client)
-                skill.security_score = scan_result.get("score")
-                existing_report = skill.security_report or {}
-                skill.security_report = {**existing_report, **scan_result}
-                skill.updated_at = datetime.now(timezone.utc)
-                scan_session.add(skill)
+                updated_config = {
+                    **config,
+                    "security_score": scan_result.get("score"),
+                    "security_report": scan_result,
+                }
+                entry.config = updated_config
+                entry.updated_at = datetime.now(timezone.utc)
+                scan_session.add(entry)
             except Exception as exc:
                 logger.warning(
                     "rescan_skill_failed",
-                    skill_id=str(skill.id),
-                    skill_name=skill.name,
+                    skill_id=str(entry.id),
+                    skill_name=entry.name,
                     error=str(exc),
                 )
         await scan_session.commit()
-        logger.info("rescan_skills_complete", count=len(skills))
+        logger.info("rescan_skills_complete", count=len(entries))
 
 
 @router.post("/rescan-skills", status_code=202)
