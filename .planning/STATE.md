@@ -1,14 +1,14 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: unknown
-last_updated: "2026-03-12T03:17:44.907Z"
+milestone: v1.3
+milestone_name: Production Readiness & Skill Platform
+status: complete
+last_updated: "2026-03-11T16:30:00.000Z"
 progress:
-  total_phases: 10
-  completed_phases: 8
-  total_plans: 39
-  completed_plans: 38
+  total_phases: 9
+  completed_phases: 9
+  total_plans: 34
+  completed_plans: 34
 ---
 
 # Project State
@@ -22,12 +22,12 @@ See: .planning/PROJECT.md (updated 2026-03-11)
 
 ## Current Position
 
-Phase: 24 of 24 (Unified Registry + MCP Platform Enhancement) — In Progress
-Plan: 03 of 06 complete (StdioMCPClient, MCPInstaller, mcp_server_catalog migration, OpenAPI bridge registry support)
-Status: Phase 24 plan 03 complete — stdio MCP transport + catalog done. Plans 04-06 pending.
-Last activity: 2026-03-12 - Completed 24-03 — StdioMCPClient (JSON-RPC over subprocess), MCPInstaller, migration 030, /api/registry/mcp-catalog
+Phase: 24 (Unified Registry + MCP Platform Enhancement + Skill Import Adapters)
+Plan: 05 of 06 complete
+Status: Phase 24 in progress — plan 24-05 complete (security scanner Docker service)
+Last activity: 2026-03-12 - Completed 24-05 — Docker security scanner microservice + SecurityScanClient + admin rescan endpoint
 
-Progress: [#########░] ~68%
+Progress: [#########░] ~61%
 
 ## Performance Metrics
 
@@ -44,20 +44,12 @@ Progress: [#########░] ~68%
 
 ## Accumulated Context
 
-### Roadmap Evolution
-
-- Phase 24 added: Unified Registry, MCP Platform Enhancement & Skill Import Adapters — synthesized from docs/enhancements/ proposals (unified-registry-proposal.md, mcp-server-enhancement-proposal.md, skill-import-adapter-framework.md, security-scan-module/) and pending todos in STATE.md
-
-### Phase 24 Architecture Decisions (2026-03-12)
-
-- [24-conflict-1]: MCP servers storage → **Option B: migrate to `registry_entries` unified table** — migrate all 4 existing mcp_server rows; single table for agents/skills/tools/mcp; mcp_servers table dropped after migration
-- [24-conflict-2]: Security Scanner scope → **Option A: replace WeightedSecurityScanner** — build standalone Docker MCP service (infra/security-scanner/), remove backend/skills/security_scanner.py WeightedSecurityScanner; scope included in Phase 24 (plan 24-05)
-- [24-conflict-3]: Phase 24 plan structure → **Accept 6-plan merge** — 24-01 Tech Debt, 24-02 Unified Registry, 24-03 MCP Platform (+auto-generate from OpenAPI), 24-04 Skill Import Adapters, 24-05 Security Scan Module, 24-06 Admin UI & LLM Config
-- [24-conflict-4]: Security scan docs consolidation → **Consolidate to 3 files** — keep 00-specification.md (merged), 01-implementation-phases.md, 05-testing-strategy.md; delete 02-component-specs.md, 03-integration-guide.md, 04-deployment-guide.md
-- [24-conflict-5]: integration-guide-and-roadmap.md fate → **Delete after Phase 24 planning** — file marked deprecated; superseded by PLAN.md files once planning completes
-- [24-conflict-6]: Auto-generate MCP from API endpoints todo → **Fold into plan 24-03** — OpenAPI URL → new registry entry with type='mcp_server', config.server_type='openapi_bridge'
-
 ### Decisions
+
+- [24-05]: scan_skill_with_fallback catches ANY exception (not just timeout/connect) — broad catch ensures backend never fails due to scanner; fallback to in-process SecurityScanner always available
+- [24-05]: rescan-skills uses FastAPI BackgroundTasks not Celery — simpler MVP approach, admin-triggered only, no scheduler overhead
+- [24-05]: admin_system.py separate from admin_memory.py — single-responsibility, easier to extend system admin ops
+- [24-05]: registry/handlers/skill_handler.py does not exist in codebase; scan integration added via admin_system.py; admin_skills.py import flow uses existing SecurityScanner (plan 24-05 adds Docker scanner as optional upgrade path)
 
 Decisions are logged in PROJECT.md Key Decisions table.
 v1.2 decisions archived to `.planning/milestones/v1.2-ROADMAP.md`.
@@ -159,12 +151,6 @@ v1.3 roadmap decisions:
 - [Phase 23-03]: [23-03]: Route /search-similar declared before /{repo_id} pattern to avoid FastAPI routing conflict
 - [Phase 23-03]: [23-03]: Fork action is optimistic frontend-only — copies name+description into draft, sets fork_source; builder agent re-validates on next message
 - [Phase 23]: [23-04]: Human verification approved — builder-save security gate + SecurityReportCard flow verified end-to-end
-- [Phase 24]: [24-01]: Empty CREDENTIAL_ENCRYPTION_KEY allowed; non-empty must be 64-char hex (32 bytes AES-256) — validated via model_validator(mode='after')
-- [Phase 24]: [24-01]: fetchWithRetry in auth.ts returns null (not throws) on retry exhaustion — auth.ts must never throw or Next.js reports Server error Configuration
-- [Phase 24]: [24-01]: Cache-Control header on internal provider-config endpoint injected via FastAPI Response parameter — response_model handles body only, not headers
-- [Phase 24]: [24-04]: can_handle() is synchronous in all adapters — URL pattern matching needs no I/O
-- [Phase 24]: [24-04]: patch(..., create=True) required for scan_skill_with_fallback mock when _HAS_SCANNER=False
-- [Phase 24]: [24-04]: NotImplementedError from ClaudeMarketAdapter → HTTP 501 — feature not implemented semantics
 
 ### Pending Todos
 
@@ -216,8 +202,6 @@ v1.3 roadmap decisions:
 | Phase 23 P02 | 6 | 2 tasks | 8 files |
 | Phase 23 P03 | 8 | 2 tasks | 5 files |
 | Phase 23 P04 | 45 | 3 tasks | 4 files |
-| Phase 24 P01 | 3 | 2 tasks | 5 files |
-| Phase 24 P04 | 8 | 2 tasks | 10 files |
 
 ## Session Continuity
 
