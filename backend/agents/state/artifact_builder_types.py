@@ -52,3 +52,10 @@ class ArtifactBuilderState(TypedDict):
     fork_source: str | None
     # Python stub text generated for tool artifacts (SKBLD-03)
     handler_code: str | None
+    # Tool Resolver Node — populated for procedural skills only ────────────
+    # Steps successfully matched to registry tools:
+    # Each dict: {intent, tool, args_hint, permissions}
+    resolved_tools: list[dict] | None
+    # Steps with no matching tool (MISSING:intent-name):
+    # Each dict: {intent, tool, args_hint, required_permissions}
+    tool_gaps: list[dict] | None

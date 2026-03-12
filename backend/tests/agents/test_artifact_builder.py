@@ -569,6 +569,14 @@ async def test_gather_details_llm_error_returns_friendly_message():
     assert result["artifact_draft"] == {"name": "existing"}
 
 
+def test_artifact_builder_state_has_resolver_fields():
+    """ArtifactBuilderState must declare resolved_tools and tool_gaps fields."""
+    from agents.state.artifact_builder_types import ArtifactBuilderState
+    annotations = ArtifactBuilderState.__annotations__
+    assert "resolved_tools" in annotations, "resolved_tools field missing"
+    assert "tool_gaps" in annotations, "tool_gaps field missing"
+
+
 @pytest.mark.asyncio
 async def test_gather_type_llm_error_returns_friendly_message():
     """gather_type handles LLM errors gracefully when no type detected."""
