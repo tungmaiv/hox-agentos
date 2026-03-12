@@ -498,3 +498,40 @@ def test_github_raw_url_conversion(importer: SkillImporter) -> None:
     github_url = "https://github.com/user/repo/blob/main/skill.yaml"
     raw_url = SkillImporter._github_to_raw_url(github_url)
     assert raw_url == "https://raw.githubusercontent.com/user/repo/main/skill.yaml"
+
+
+# ── SkillRepoAdapter tests ──────────────────────────────────────────────────────
+
+
+class TestSkillRepoAdapter:
+    """Tests for SkillRepoAdapter — wraps existing SkillImporter."""
+
+    def test_skill_repo_can_handle_http_url(self) -> None:
+        """can_handle('https://example.com/skill.md') returns True."""
+        from skills.adapters.skill_repo import SkillRepoAdapter
+        adapter = SkillRepoAdapter()
+        assert adapter.can_handle("https://example.com/skill.md") is True
+
+    @pytest.mark.asyncio
+    async def test_skill_repo_adapter_wraps_importer(self) -> None:
+        """SkillRepoAdapter.fetch_and_normalize(url) delegates to SkillImporter and returns NormalizedSkill."""
+        from skills.adapters.skill_repo import SkillRepoAdapter
+        from skills.adapters.base import NormalizedSkill
+
+        adapter = SkillRepoAdapter()
+        skill_dict = {
+            "name": "test-skill",
+            "description": "A test skill",
+            "version": "1.0.0",
+            "skill_type": "instructional",
+            "instruction_markdown": "Do something useful.",
+            "source_type": "imported",
+        }
+        with patch("skills.adapters.skill_repo.SkillImporter.import_from_url", new_callable=AsyncMock,
+                   return_value=skill_dict):
+            result = await adapter.fetch_and_normalize("https://example.com/skill.md")
+
+        assert isinstance(result, NormalizedSkill)
+        assert result.name == "test-skill"
+        assert result.description == "A test skill"
+        assert result.source_type == "direct_url"
