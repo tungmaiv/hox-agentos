@@ -74,7 +74,7 @@ Full v1.3 phase details archived: `.planning/milestones/v1.3-ROADMAP.md`
 
 ## Progress
 
-**Execution Order:** 1 → 2 → 2.1 → 3 → 3.1 → 4 → 4.1 → 5 → 5.1 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21 → 22 → 23 → 24
+**Execution Order:** 1 → 2 → 2.1 → 3 → 3.1 → 4 → 4.1 → 5 → 5.1 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21 → 22 → 23 → 24 → 25
 
 | Phase | Milestone | Plans | Status | Completed |
 |-------|-----------|-------|--------|-----------|
@@ -106,6 +106,7 @@ Full v1.3 phase details archived: `.planning/milestones/v1.3-ROADMAP.md`
 | 22. Skill Platform D — Sharing | v1.3 | 3/3 | ✅ Complete | 2026-03-08 |
 | 23. Skill Platform E — Builder | v1.3 | 4/4 | ✅ Complete | 2026-03-10 |
 | 24. Unified Registry, MCP Platform & Skill Import Adapters | 7/7 | Complete   | 2026-03-12 | — |
+| 25. Skill Builder Tool Resolver | — | 0/0 | 🔲 Planned | — |
 
 ### Phase 24: Unified Registry, MCP Platform Enhancement & Skill Import Adapters
 
@@ -127,3 +128,10 @@ Plans:
 - [x] 24-05: Security Scan Module — `infra/security-scanner/` Docker service (pip-audit, bandit, detect-secrets), `SecurityScanClient`, fallback to in-process scanner, admin re-scan trigger
 - [x] 24-06: Admin UI & LLM Config — unified 4-tab admin layout (Registry/Access/System/Build), Registry hub with counts, LLM model + provider configurable via LiteLLM API
 - [ ] 24-07: Gap Closure — fix runtime blockers: rescan-skills uses RegistryEntry, skill_handler wires scan, openapi_bridge writes RegistryEntry rows
+
+### Phase 25: Skill Builder Tool Resolver
+
+**Goal:** Eliminate hardcoded tool list and LLM-guessed tool names in the procedural skill builder. Insert a `resolve_tools` LangGraph node that maps each workflow step to a verified tool from the live registry. Skills with unresolved tool gaps are saved as `draft` and blocked from activation. When the missing tool is created, auto-promote the skill to `pending_activation` for admin review.
+**Requirements**: Design doc: `docs/plans/2026-03-13-tool-resolver-design.md`; Implementation plan: `docs/plans/2026-03-13-tool-resolver-implementation.md`
+**Depends on:** Phase 24
+**Plans:** TBD
