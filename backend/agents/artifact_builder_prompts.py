@@ -32,7 +32,7 @@ def get_system_prompt(artifact_type: str) -> str:
     return load_prompt(f"artifact_builder_{artifact_type}")
 
 
-def get_skill_generation_prompt(artifact_type: str, draft: dict) -> str:
+def get_skill_generation_prompt(artifact_type: str, draft: dict, tool_reference: str = "") -> str:
     """Return the system prompt for the generate_skill_content node.
 
     Instructs the LLM to generate full, executable content for an artifact based
@@ -48,6 +48,9 @@ def get_skill_generation_prompt(artifact_type: str, draft: dict) -> str:
     Args:
         artifact_type: "skill" or "tool"
         draft: Current artifact draft dict (must have name and description)
+        tool_reference: Optional markdown block listing active tools and their permissions.
+            Injected into skill prompts so the LLM can match skill requirements to
+            the exact permission strings used by the registry.
 
     Returns:
         System prompt string for the LLM.
@@ -89,14 +92,24 @@ def get_skill_generation_prompt(artifact_type: str, draft: dict) -> str:
         )
 
     # Default: instructional skill
+    tool_ref_section = f"\n{tool_reference}\n" if tool_reference else ""
+    perm_instruction = (
+        "\n6. Set required_permissions based on what tools the skill actually uses. "
+        "Select ONLY from the exact permission strings listed in the Available Tools section above. "
+        "Do NOT invent permission strings."
+        if tool_reference
+        else ""
+    )
     return (
         "You are an expert technical writer helping create skill instructions for the Blitz AgentOS platform.\n\n"
-        f"Generate clear, detailed instructions for the following skill:\n{draft_context}\n"
+        f"Generate clear, detailed instructions for the following skill:\n{draft_context}"
+        f"{tool_ref_section}\n"
         "Requirements:\n"
         "1. Start with a top-level heading: `# {name}`\n"
         "2. Include a brief overview paragraph.\n"
         "3. Add a `## Usage` section explaining how to trigger/use the skill.\n"
         "4. Add a `## What it does` section with step-by-step explanation.\n"
         "5. Keep the tone professional and concise.\n"
+        f"{perm_instruction}\n"
         "\nOutput ONLY the markdown content starting with `# `. No code blocks or preamble."
     )

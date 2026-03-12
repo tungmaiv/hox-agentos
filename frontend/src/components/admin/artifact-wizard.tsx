@@ -135,7 +135,15 @@ function WizardInner() {
         JSON.stringify(pending.form_required_permissions) !==
           JSON.stringify(formState.required_permissions)
       ) {
-        updates.required_permissions = pending.form_required_permissions;
+        // Normalize: keep only exact known permission strings (LLMs sometimes add suffixes like ".read")
+        const KNOWN_PERMS = new Set([
+          "tool:email","tool:calendar","tool:project","tool:crm",
+          "mcp:read","mcp:write","registry:read","registry:manage",
+          "memory:read","memory:write","admin:read","admin:write",
+        ]);
+        updates.required_permissions = pending.form_required_permissions.filter(
+          (p: string) => KNOWN_PERMS.has(p)
+        );
         changedFields.add("required_permissions");
       }
       if (pending.form_sandbox_required != null && pending.form_sandbox_required !== formState.sandbox_required) {

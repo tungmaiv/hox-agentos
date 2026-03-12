@@ -31,6 +31,7 @@ from agents.artifact_builder_validation import validate_artifact_draft
 from agents.state.artifact_builder_types import ArtifactBuilderState
 from copilotkit.langgraph import copilotkit_emit_state
 from core.config import get_llm
+from core.db import get_session
 
 logger = structlog.get_logger(__name__)
 
@@ -153,7 +154,7 @@ def _try_extract_fill_form_args(content: str) -> dict | None:
                             ):
                                 args = parsed.get("arguments") or parsed.get("args") or {}
                                 if isinstance(args, dict):
-                                    return args
+                                    return {k: v for k, v in args.items() if k not in _FILL_FORM_ONLY_ARGS}
                         except json.JSONDecodeError:
                             pass
                         break
@@ -162,6 +163,9 @@ def _try_extract_fill_form_args(content: str) -> dict | None:
 
     return None
 
+
+# fill_form args that should NOT be merged into artifact_draft (they set UI/state only)
+_FILL_FORM_ONLY_ARGS = frozenset({"artifact_type"})
 
 # Mapping from fill_form arg names to co-agent state field names.
 _FILL_FORM_ARG_TO_STATE: dict[str, str] = {
@@ -328,6 +332,52 @@ async def _emit_builder_state(
     await copilotkit_emit_state(config, state)
 
 
+async def _fetch_tool_reference_block() -> str:
+    """Fetch active tools from registry and format as a reference block for the LLM.
+
+    Returns a markdown section listing each tool's name, description, and
+    required_permissions so the LLM can match skill requirements to the correct
+    permission strings instead of guessing.
+
+    Returns an empty string on any DB error (non-fatal — LLM falls back to its defaults).
+    """
+    try:
+        from sqlalchemy import select
+
+        from registry.models import RegistryEntry
+
+        async with get_session() as session:
+            result = await session.execute(
+                select(RegistryEntry).where(
+                    RegistryEntry.type == "tool",
+                    RegistryEntry.status == "active",
+                    RegistryEntry.deleted_at.is_(None),
+                )
+            )
+            tools = list(result.scalars().all())
+
+        if not tools:
+            return ""
+
+        lines = [
+            "\n\n## Available Tools in This AgentOS Instance",
+            "Use this list to determine which permissions the skill needs.",
+            "Match what the skill does to the tools below, then select the exact permission strings shown.",
+            "",
+        ]
+        for t in tools:
+            config = t.config or {}
+            perms: list[str] = config.get("required_permissions") or []
+            perm_str = ", ".join(f"`{p}`" for p in perms) if perms else "none"
+            desc = t.description or "(no description)"
+            lines.append(f"- **{t.name}**: {desc} — requires: {perm_str}")
+
+        return "\n".join(lines)
+    except Exception as exc:
+        logger.warning("tool_reference_fetch_failed", error=str(exc))
+        return ""
+
+
 async def _gather_type_node(state: ArtifactBuilderState, config: RunnableConfig) -> dict:
     """Ask the user what type of artifact they want, or detect from message."""
     messages = state.get("messages", [])
@@ -401,6 +451,12 @@ async def _gather_details_node(state: ArtifactBuilderState, config: RunnableConf
 
     sys_prompt = get_system_prompt(artifact_type)
 
+    # For skill artifacts, inject the active tool list so the LLM can reason
+    # about which permissions the skill actually needs.
+    tool_reference = ""
+    if artifact_type == "skill":
+        tool_reference = await _fetch_tool_reference_block()
+
     draft_context = (
         f"\n\nCurrent artifact_draft so far:\n```json\n{json.dumps(current_draft, indent=2)}\n```\n"
         f"Continue asking questions for missing fields. When you have enough information "
@@ -411,6 +467,9 @@ async def _gather_details_node(state: ArtifactBuilderState, config: RunnableConf
         else "\n\nNo fields collected yet. Start by asking about the artifact's purpose and name. "
              "You can call the fill_form tool to update the frontend form fields as you gather information."
     )
+
+    if tool_reference:
+        draft_context += tool_reference
 
     try:
         llm = get_llm("blitz/master").bind_tools([fill_form])
@@ -468,6 +527,10 @@ async def _validate_and_present_node(state: ArtifactBuilderState, config: Runnab
     """Validate the artifact draft against its Pydantic schema."""
     artifact_type = state["artifact_type"]
     draft = dict(state.get("artifact_draft") or {})
+
+    # Strip non-schema fields that may have leaked from fill_form args into the draft.
+    for _k in _FILL_FORM_ONLY_ARGS:
+        draft.pop(_k, None)
 
     # Normalize required fields that the LLM may omit but can be safely defaulted.
     if artifact_type == "skill":
@@ -601,7 +664,11 @@ async def _generate_skill_content_node(
     artifact_type = state.get("artifact_type", "skill")
     draft = state.get("artifact_draft") or {}
 
-    prompt = get_skill_generation_prompt(artifact_type, draft)
+    tool_reference = ""
+    if artifact_type == "skill":
+        tool_reference = await _fetch_tool_reference_block()
+
+    prompt = get_skill_generation_prompt(artifact_type, draft, tool_reference)
     llm = get_llm("blitz/master")
 
     try:

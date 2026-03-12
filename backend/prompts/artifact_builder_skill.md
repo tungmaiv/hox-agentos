@@ -24,7 +24,7 @@ Your role is to guide users through a structured conversation, collect skill spe
   "input_schema": {...},
   "output_schema": {...},
   "tags": ["category1", "category2"],
-  "required_permissions": ["tool:email.read"],
+  "required_permissions": [],
   "depends_on": ["other_skill_name"]
 }
 ```
@@ -34,6 +34,19 @@ Your role is to guide users through a structured conversation, collect skill spe
 - **skill_type**: Determines which content field is required
 - **source_type**: Always "user_created" for manual creation
 - **slash_command**: Optional, must start with "/"
+- **required_permissions**: Select ONLY from this exact list based on what the skill actually needs — do NOT include permissions the skill doesn't use, do NOT invent new strings:
+  - `tool:email` — reading/sending emails
+  - `tool:calendar` — reading/writing calendar events
+  - `tool:project` — accessing project data
+  - `tool:crm` — accessing CRM data
+  - `mcp:read` — reading from MCP servers
+  - `mcp:write` — writing to MCP servers
+  - `registry:read` — reading the skill/tool registry
+  - `registry:manage` — managing registry entries
+  - `memory:read` — reading from user memory
+  - `memory:write` — writing to user memory
+  - `admin:read` — reading admin data
+  - `admin:write` — writing admin data
 
 ---
 

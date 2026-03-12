@@ -161,6 +161,7 @@ v1.3 roadmap decisions:
 
 ### Pending Todos
 
+- [ ] [SKILL-BUILDER] Feature 2 — Runtime permission approval/escalation (HITL): when a skill/agent tries to use a tool the user lacks permission for, pause execution, notify admin via UI, allow one-click approval, then resume. Significant HITL feature — own phase required. Design: intercept at Gate 3 ACL check, emit pending_permission event to frontend, admin approves in real-time, Gate 3 re-checks.
 - [ ] Start WhatsApp Business API verification process (takes 1-4 weeks, needed for future live testing)
 - [ ] Add CREDENTIAL_ENCRYPTION_KEY to production .env before OAuth flows (deferred to v1.4)
 - [ ] [POST-MVP] HashiCorp Vault for secret management
