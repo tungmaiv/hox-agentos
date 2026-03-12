@@ -34,6 +34,7 @@ from api.routes.registry import router as registry_router
 from api.routes.admin_keycloak import router as admin_keycloak_router
 from api.routes.admin_skill_sharing import router as admin_skill_sharing_router
 from api.routes.admin_local_users import router as admin_local_users_router
+from api.routes.admin_llm import router as admin_llm_router
 from api.routes.admin_memory import router as admin_memory_router
 from api.routes.admin_system import router as admin_system_router
 from api.routes.auth_local import router as auth_local_router
@@ -217,6 +218,9 @@ def create_app() -> FastAPI:
 
     # Admin credential management — /api/admin/credentials (registry:manage permission)
     app.include_router(admin_credentials.router)
+
+    # Admin LLM model config — GET/POST/DELETE /api/admin/llm/models (tool:admin permission)
+    app.include_router(admin_llm_router)
 
     # Admin memory reindex — POST /api/admin/memory/reindex (tool:admin permission)
     app.include_router(admin_memory_router)
