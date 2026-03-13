@@ -440,20 +440,28 @@ export function ArtifactWizardForm({
             {formState.skill_type === "procedural" ? (
               <FieldWrapper label="Procedure Steps">
                 {(() => {
-                  const proc = aiArtifactDraft?.procedure_json as { steps?: Array<{ step?: number; tool?: string; prompt?: string }> } | undefined;
+                  const proc = aiArtifactDraft?.procedure_json as { steps?: Array<{ step?: number; name?: string; tool?: string; prompt?: string; args?: Record<string, unknown>; save_as?: string }> } | undefined;
                   const steps = proc?.steps;
                   if (steps && steps.length > 0) {
                     return (
-                      <ol className="space-y-1.5 text-xs text-gray-700 border border-gray-200 rounded-md p-2 bg-gray-50">
-                        {steps.map((s, i) => (
+                      <ol className="space-y-2 text-xs text-gray-700 border border-gray-200 rounded-md p-2 bg-gray-50">
+                        {steps.map((s, i) => {
+                          const desc = s.prompt ?? (s.name ? s.name.replace(/_/g, " ") : undefined);
+                          const argSummary = s.args && Object.keys(s.args).length > 0
+                            ? Object.entries(s.args).map(([k, v]) => `${k}: ${String(v)}`).join(", ")
+                            : null;
+                          return (
                           <li key={i} className="flex gap-2">
                             <span className="flex-shrink-0 w-5 h-5 rounded-full bg-blue-100 text-blue-700 font-semibold text-center leading-5">{s.step ?? i + 1}</span>
-                            <div>
+                            <div className="min-w-0">
                               <span className="font-mono text-blue-600">{s.tool}</span>
-                              {s.prompt && <p className="text-gray-500 mt-0.5">{s.prompt}</p>}
+                              {desc && <p className="text-gray-500 mt-0.5 capitalize">{desc}</p>}
+                              {argSummary && <p className="text-gray-400 mt-0.5 font-mono truncate">{argSummary}</p>}
+                              {s.save_as && <p className="text-green-600 mt-0.5">→ saves as <span className="font-mono">${s.save_as}</span></p>}
                             </div>
                           </li>
-                        ))}
+                          );
+                        })}
                       </ol>
                     );
                   }
