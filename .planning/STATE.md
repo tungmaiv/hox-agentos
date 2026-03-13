@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-13T03:59:23.349Z"
+last_updated: "2026-03-13T18:37:13.739Z"
 progress:
   total_phases: 11
   completed_phases: 10
-  total_plans: 45
-  completed_plans: 46
+  total_plans: 46
+  completed_plans: 47
 ---
 
 # Project State
@@ -175,6 +175,7 @@ v1.3 roadmap decisions:
 - [Phase 25-05]: formState.skill_type (not hardcoded 'instructional') drives skill_type in POST payload; procedure_json sourced from aiArtifactDraft co-agent state for procedural skills
 - [Phase 25-04]: builder_save writes RegistryEntry (type=skill) via UnifiedRegistryService — fixes 500 from dropped skill_definitions table
 - [Phase 25-04]: test_security_gate.py patch target is security.scan_client.scan_skill_with_fallback — SkillHandler uses lazy import in on_create, patch at definition site
+- [Phase 25]: create_skill sets status=draft — activation is always an explicit admin action via /activate endpoint
 
 ### Pending Todos
 
@@ -235,6 +236,7 @@ v1.3 roadmap decisions:
 | Phase 25 P03 | 15 | 3 tasks | 4 files |
 | Phase 25 P05 | 5 | 2 tasks | 2 files |
 | Phase 25 P04 | 241 | 2 tasks | 2 files |
+| Phase 25 P06 | 8 | 1 tasks | 3 files |
 
 ## Session Continuity
 
