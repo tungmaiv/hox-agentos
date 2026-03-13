@@ -557,10 +557,14 @@ async def _gather_type_node(state: ArtifactBuilderState, config: RunnableConfig)
                         "artifact_type": detected,
                         "artifact_draft": {},
                     }
-                form_updates = _args_to_form_updates(
-                    _try_extract_fill_form_args(response.content) or {}
-                )
+                text_fill_args = _try_extract_fill_form_args(response.content)
+                form_updates = _args_to_form_updates(text_fill_args or {})
                 updated_draft = _extract_draft_from_response(response.content, {})
+                # Merge text-format fill_form args into draft so route_after_gather_type
+                # sees name+description even when the model outputs a text-format tool call
+                if text_fill_args:
+                    draft_from_fill = {k: v for k, v in text_fill_args.items() if k not in _FILL_FORM_ONLY_ARGS and v is not None}
+                    updated_draft = {**draft_from_fill, **updated_draft}
                 form_updates = _merge_draft_into_form(updated_draft, form_updates)
                 await _emit_builder_state(config, detected, updated_draft, [], False, form_updates or None)
                 return {
@@ -584,13 +588,16 @@ async def _gather_type_node(state: ArtifactBuilderState, config: RunnableConfig)
                 "would you like to create? (agent, tool, skill, or MCP server)"
             )],
         }
-    form_updates = _args_to_form_updates(
-        _try_extract_fill_form_args(response.content) or {}
-    )
+    text_fill_args = _try_extract_fill_form_args(response.content)
+    form_updates = _args_to_form_updates(text_fill_args or {})
     if form_updates:
         detected_type = form_updates.pop("artifact_type", None)
-        await _emit_builder_state(config, detected_type, {}, [], False, form_updates or None)
-        return {"messages": [response], "artifact_type": detected_type, **form_updates}
+        # Build a minimal draft from fill_form args so routing has name+description
+        draft_from_fill: dict = {}
+        if text_fill_args:
+            draft_from_fill = {k: v for k, v in text_fill_args.items() if k not in _FILL_FORM_ONLY_ARGS and v is not None}
+        await _emit_builder_state(config, detected_type, draft_from_fill or {}, [], False, form_updates or None)
+        return {"messages": [response], "artifact_type": detected_type, "artifact_draft": draft_from_fill or {}, **form_updates}
     return {"messages": [response]}
 
 
@@ -641,6 +648,14 @@ async def _gather_details_node(state: ArtifactBuilderState, config: RunnableConf
 
     updated_draft = _extract_draft_from_response(response.content, current_draft)
 
+    # Also parse text-format fill_form calls (for models that output tool calls as text)
+    text_fill_args = _try_extract_fill_form_args(response.content)
+    # Merge text-format fill_form args into draft so fields like name/description are
+    # captured even when the model outputs a text-format tool call instead of JSON blocks
+    if text_fill_args:
+        draft_from_fill = {k: v for k, v in text_fill_args.items() if k not in _FILL_FORM_ONLY_ARGS and v is not None}
+        updated_draft = {**draft_from_fill, **updated_draft}
+
     looks_complete = _DRAFT_COMPLETE_MARKER in response.content
 
     # If the LLM claims the draft is complete, run validation immediately.
@@ -652,10 +667,7 @@ async def _gather_details_node(state: ArtifactBuilderState, config: RunnableConf
         if validation_errors:
             looks_complete = False
 
-    # Also parse text-format fill_form calls (for models that output tool calls as text)
-    form_updates = _args_to_form_updates(
-        _try_extract_fill_form_args(response.content) or {}
-    )
+    form_updates = _args_to_form_updates(text_fill_args or {})
     # Merge draft fields into form_updates so the form reflects the latest draft
     # (handles models that update artifact_draft without calling fill_form)
     form_updates = _merge_draft_into_form(updated_draft, form_updates)
@@ -824,6 +836,17 @@ async def _generate_skill_content_node(
     artifact_type = state.get("artifact_type", "skill")
     draft = state.get("artifact_draft") or {}
 
+    # Safety guard: cannot generate content without name and description
+    if not draft.get("name") or not draft.get("description"):
+        return {
+            "messages": [AIMessage(
+                content="To generate skill instructions I need a name and description first. "
+                "What should this skill be called, and what should it do?"
+            )],
+            "artifact_type": artifact_type,
+            "artifact_draft": draft,
+        }
+
     tool_reference = ""
     if artifact_type == "skill":
         tool_reference = await _fetch_tool_reference_block()
@@ -964,6 +987,9 @@ def create_artifact_builder_graph() -> CompiledStateGraph:
         if atype == "tool":
             if state.get("handler_code"):
                 return "validate_and_present"
+            # Need name+description before generating tool stub
+            if not draft.get("name") or not draft.get("description"):
+                return END
             return "generate_skill_content"
         if atype == "skill":
             skill_type = draft.get("skill_type", "instructional")
@@ -971,6 +997,9 @@ def create_artifact_builder_graph() -> CompiledStateGraph:
                 return "validate_and_present"
             if skill_type != "procedural" and draft.get("instruction_markdown"):
                 return "validate_and_present"
+            # Need name+description before generating skill content
+            if not draft.get("name") or not draft.get("description"):
+                return END
             # Procedural without content → resolve tools first
             if skill_type == "procedural":
                 return "resolve_tools"
