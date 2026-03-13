@@ -54,6 +54,7 @@ interface BuilderCoAgentState {
   form_sandbox_required?: boolean | null;
   form_entry_point?: string | null;
   form_url?: string | null;
+  form_auth_token?: string | null;
   form_instruction_markdown?: string | null;
   handler_code?: string | null;
   // Derived from artifact_draft for conditional form rendering
@@ -131,6 +132,10 @@ function WizardInner() {
         updates.url = pending.form_url;
         changedFields.add("url");
       }
+      if (pending.form_auth_token != null && pending.form_auth_token !== formState.auth_token) {
+        updates.auth_token = pending.form_auth_token;
+        changedFields.add("auth_token");
+      }
       if (
         pending.form_required_permissions != null &&
         JSON.stringify(pending.form_required_permissions) !==
@@ -167,9 +172,16 @@ function WizardInner() {
         updates.skill_type = resolvedSkillType;
       }
 
-      // Update artifact_type if AI set it
+      // Update artifact_type if AI set it; reset form when switching types
       if (pending.artifact_type && pending.artifact_type !== artifactType) {
         setArtifactType(pending.artifact_type);
+        // Clear type-specific form fields so the new type starts blank —
+        // skip applying `updates` since they contain stale fields from the old type
+        setFormState({ ...EMPTY_FORM });
+        setAiFilledFields(new Set());
+        setAiHandlerCode(null);
+        setAiArtifactDraft(null);
+        return; // don't merge old-type fields into fresh form
       }
       // Capture generated handler stub for tool save payload
       if (pending.handler_code != null) {
@@ -291,6 +303,8 @@ function WizardInner() {
         payload.sandbox_required = formState.sandbox_required;
         if (payload.skill_type === "procedural") {
           payload.procedure_json = (aiArtifactDraft?.procedure_json as Record<string, unknown> | null | undefined) ?? null;
+          payload.tool_gaps = (aiArtifactDraft?.tool_gaps as unknown[] | null | undefined) ?? null;
+          payload.resolved_tools = (aiArtifactDraft?.resolved_tools as unknown[] | null | undefined) ?? null;
         }
         break;
       case "mcp_server":

@@ -502,3 +502,133 @@ def test_validate_skill_not_found(admin_client: TestClient) -> None:
     fake_id = str(uuid4())
     resp = admin_client.post(f"/api/admin/skills/{fake_id}/validate")
     assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Issue fixes: soft-delete filter + import/review/security-report via RegistryEntry
+# ---------------------------------------------------------------------------
+
+_SAFE_SKILL_MD = """\
+---
+name: import-test-skill
+description: A safe instructional skill for import tests
+version: 1.0.0
+---
+# Import Test Skill
+Do the thing safely.
+"""
+
+
+def test_list_skills_excludes_soft_deleted(admin_client: TestClient) -> None:
+    """Soft-deleted skills must not appear in GET /api/admin/skills."""
+    create_resp = admin_client.post(
+        "/api/admin/skills",
+        json={
+            "name": "delete-me-skill",
+            "skill_type": "instructional",
+            "instruction_markdown": "# Delete me",
+        },
+    )
+    assert create_resp.status_code == 201
+    skill_id = create_resp.json()["id"]
+
+    del_resp = admin_client.delete(f"/api/registry/{skill_id}")
+    assert del_resp.status_code == 204
+
+    list_resp = admin_client.get("/api/admin/skills")
+    assert list_resp.status_code == 200
+    ids = [s["id"] for s in list_resp.json()]
+    assert skill_id not in ids, "Soft-deleted skill must not appear in list"
+
+
+def test_import_skill_appears_in_list(admin_client: TestClient) -> None:
+    """POST /api/admin/skills/import writes to RegistryEntry — result visible in GET /api/admin/skills."""
+    import_resp = admin_client.post(
+        "/api/admin/skills/import",
+        json={"content": _SAFE_SKILL_MD},
+    )
+    assert import_resp.status_code == 201
+    skill_id = import_resp.json()["skill"]["id"]
+
+    list_resp = admin_client.get("/api/admin/skills")
+    assert list_resp.status_code == 200
+    ids = [s["id"] for s in list_resp.json()]
+    assert skill_id in ids, "Imported skill must appear in list after import"
+
+
+def test_review_skill_approve_via_registry_entry(admin_client: TestClient) -> None:
+    """POST /api/admin/skills/{id}/review works on RegistryEntry IDs after import."""
+    skill_md = """\
+---
+name: review-approve-skill
+description: Skill for review-approve test
+version: 1.0.0
+---
+# Review Approve
+Test review approve path.
+"""
+    import_resp = admin_client.post(
+        "/api/admin/skills/import",
+        json={"content": skill_md},
+    )
+    assert import_resp.status_code == 201
+    skill_id = import_resp.json()["skill"]["id"]
+
+    review_resp = admin_client.post(
+        f"/api/admin/skills/{skill_id}/review",
+        json={"decision": "approve"},
+    )
+    assert review_resp.status_code == 200
+    assert review_resp.json()["decision"] == "approve"
+    assert review_resp.json()["status"] == "active"
+
+
+def test_review_skill_reject_via_registry_entry(admin_client: TestClient) -> None:
+    """POST /api/admin/skills/{id}/review reject path works on RegistryEntry IDs."""
+    skill_md = """\
+---
+name: review-reject-skill
+description: Skill for review-reject test
+version: 1.0.0
+---
+# Review Reject
+Test review reject path.
+"""
+    import_resp = admin_client.post(
+        "/api/admin/skills/import",
+        json={"content": skill_md},
+    )
+    assert import_resp.status_code == 201
+    skill_id = import_resp.json()["skill"]["id"]
+
+    review_resp = admin_client.post(
+        f"/api/admin/skills/{skill_id}/review",
+        json={"decision": "reject", "notes": "Malicious content"},
+    )
+    assert review_resp.status_code == 200
+    assert review_resp.json()["decision"] == "reject"
+    assert review_resp.json()["status"] == "rejected"
+
+
+def test_get_security_report_via_registry_entry(admin_client: TestClient) -> None:
+    """GET /api/admin/skills/{id}/security-report returns report stored in RegistryEntry config."""
+    skill_md = """\
+---
+name: security-report-skill
+description: Skill for security report test
+version: 1.0.0
+---
+# Security Report Skill
+Test security report path.
+"""
+    import_resp = admin_client.post(
+        "/api/admin/skills/import",
+        json={"content": skill_md},
+    )
+    assert import_resp.status_code == 201
+    skill_id = import_resp.json()["skill"]["id"]
+
+    report_resp = admin_client.get(f"/api/admin/skills/{skill_id}/security-report")
+    assert report_resp.status_code == 200
+    data = report_resp.json()
+    assert "score" in data

@@ -74,9 +74,8 @@ router = APIRouter(prefix="/api/admin/skills", tags=["admin-skills"])
 
 def _entry_to_skill_response(entry: Any) -> "SkillDefinitionResponse":
     """Build a SkillDefinitionResponse from a RegistryEntry."""
-    from datetime import datetime
     cfg: dict[str, Any] = entry.config or {}
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     return SkillDefinitionResponse(
         id=entry.id,
         name=entry.name,
@@ -137,7 +136,10 @@ async def list_skills(
     """List all skill definitions with optional filters."""
     from sqlalchemy import asc, desc, or_
 
-    stmt = select(RegistryEntry).where(RegistryEntry.type == "skill")
+    stmt = select(RegistryEntry).where(
+        RegistryEntry.type == "skill",
+        RegistryEntry.deleted_at.is_(None),
+    )
     if status is not None:
         stmt = stmt.where(RegistryEntry.status == status)
     if skill_type is not None:
@@ -367,58 +369,59 @@ async def import_skill(
     # Step 3: Security scan
     report = await scanner.scan(skill_data, source_url=body.source_url)
 
-    # Step 4: Create with pending_review status (quarantine)
-    skill = SkillDefinition(
+    # Step 4: Create with pending_review status (quarantine) via RegistryEntry
+    from uuid import UUID as _UUID
+    security_report_data = {
+        "score": report.score,
+        "factors": report.factors,
+        "recommendation": report.recommendation,
+        "injection_matches": report.injection_matches,
+    }
+    entry_config: dict[str, Any] = {
+        "version": skill_data.get("version", "1.0.0"),
+        "skill_type": skill_data.get("skill_type", "instructional"),
+        "slash_command": skill_data.get("slash_command"),
+        "source_type": "imported",
+        "instruction_markdown": skill_data.get("instruction_markdown"),
+        "procedure_json": skill_data.get("procedure_json"),
+        "input_schema": skill_data.get("input_schema"),
+        "output_schema": skill_data.get("output_schema"),
+        "license": skill_data.get("license"),
+        "compatibility": skill_data.get("compatibility"),
+        "metadata_json": skill_data.get("metadata_json"),
+        "allowed_tools": skill_data.get("allowed_tools"),
+        "tags": skill_data.get("tags"),
+        "category": skill_data.get("category"),
+        "source_url": skill_data.get("source_url"),
+        "security_score": report.score,
+        "security_report": security_report_data,
+    }
+    entry_config = {k: v for k, v in entry_config.items() if v is not None}
+    entry = RegistryEntry(
+        type="skill",
         name=skill_data["name"],
         display_name=skill_data.get("display_name"),
         description=skill_data.get("description"),
-        version=skill_data.get("version", "1.0.0"),
-        skill_type=skill_data.get("skill_type", "instructional"),
-        slash_command=skill_data.get("slash_command"),
-        source_type="imported",
-        instruction_markdown=skill_data.get("instruction_markdown"),
-        procedure_json=skill_data.get("procedure_json"),
-        input_schema=skill_data.get("input_schema"),
-        output_schema=skill_data.get("output_schema"),
-        license=skill_data.get("license"),
-        compatibility=skill_data.get("compatibility"),
-        metadata_json=skill_data.get("metadata_json"),
-        allowed_tools=skill_data.get("allowed_tools"),
-        tags=skill_data.get("tags"),
-        category=skill_data.get("category"),
-        source_url=skill_data.get("source_url"),
+        config=entry_config,
         status="pending_review",
-        is_active=False,
-        security_score=report.score,
-        security_report={
-            "score": report.score,
-            "factors": report.factors,
-            "recommendation": report.recommendation,
-            "injection_matches": report.injection_matches,
-        },
-        created_by=user["user_id"],
+        owner_id=_UUID(str(user["user_id"])),
     )
-    session.add(skill)
+    session.add(entry)
     await session.commit()
-    await session.refresh(skill)
+    await session.refresh(entry)
 
     logger.info(
         "admin_skill_imported",
-        skill_id=str(skill.id),
-        name=skill.name,
+        skill_id=str(entry.id),
+        name=entry.name,
         security_score=report.score,
         recommendation=report.recommendation,
         user_id=str(user["user_id"]),
     )
 
     return {
-        "skill": SkillDefinitionResponse.model_validate(skill).model_dump(mode="json"),
-        "security_report": {
-            "score": report.score,
-            "factors": report.factors,
-            "recommendation": report.recommendation,
-            "injection_matches": report.injection_matches,
-        },
+        "skill": _entry_to_skill_response(entry).model_dump(mode="json"),
+        "security_report": security_report_data,
     }
 
 
@@ -461,56 +464,57 @@ async def import_skill_zip(
     report = await scanner.scan(skill_data, source_url=skill_data.get("source_url"))
 
     # Step 5: Persist with pending_review status
-    skill = SkillDefinition(
+    from uuid import UUID as _UUID
+    security_report_data = {
+        "score": report.score,
+        "factors": report.factors,
+        "recommendation": report.recommendation,
+        "injection_matches": report.injection_matches,
+    }
+    zip_entry_config: dict[str, Any] = {
+        "version": skill_data.get("version", "1.0.0"),
+        "skill_type": skill_data.get("skill_type", "instructional"),
+        "slash_command": skill_data.get("slash_command"),
+        "source_type": "imported",
+        "instruction_markdown": skill_data.get("instruction_markdown"),
+        "procedure_json": skill_data.get("procedure_json"),
+        "input_schema": skill_data.get("input_schema"),
+        "output_schema": skill_data.get("output_schema"),
+        "license": skill_data.get("license"),
+        "compatibility": skill_data.get("compatibility"),
+        "metadata_json": skill_data.get("metadata_json"),
+        "allowed_tools": skill_data.get("allowed_tools"),
+        "tags": skill_data.get("tags"),
+        "category": skill_data.get("category"),
+        "source_url": skill_data.get("source_url"),
+        "security_score": report.score,
+        "security_report": security_report_data,
+    }
+    zip_entry_config = {k: v for k, v in zip_entry_config.items() if v is not None}
+    zip_entry = RegistryEntry(
+        type="skill",
         name=skill_data["name"],
         display_name=skill_data.get("display_name"),
         description=skill_data.get("description"),
-        version=skill_data.get("version", "1.0.0"),
-        skill_type=skill_data.get("skill_type", "instructional"),
-        slash_command=skill_data.get("slash_command"),
-        source_type="imported",
-        instruction_markdown=skill_data.get("instruction_markdown"),
-        procedure_json=skill_data.get("procedure_json"),
-        input_schema=skill_data.get("input_schema"),
-        output_schema=skill_data.get("output_schema"),
-        license=skill_data.get("license"),
-        compatibility=skill_data.get("compatibility"),
-        metadata_json=skill_data.get("metadata_json"),
-        allowed_tools=skill_data.get("allowed_tools"),
-        tags=skill_data.get("tags"),
-        category=skill_data.get("category"),
-        source_url=skill_data.get("source_url"),
+        config=zip_entry_config,
         status="pending_review",
-        is_active=False,
-        security_score=report.score,
-        security_report={
-            "score": report.score,
-            "factors": report.factors,
-            "recommendation": report.recommendation,
-            "injection_matches": report.injection_matches,
-        },
-        created_by=user["user_id"],
+        owner_id=_UUID(str(user["user_id"])),
     )
-    session.add(skill)
+    session.add(zip_entry)
     await session.commit()
-    await session.refresh(skill)
+    await session.refresh(zip_entry)
 
     logger.info(
         "admin_skill_zip_imported",
-        skill_id=str(skill.id),
-        name=skill.name,
+        skill_id=str(zip_entry.id),
+        name=zip_entry.name,
         security_score=report.score,
         user_id=str(user["user_id"]),
     )
 
     return {
-        "skill": SkillDefinitionResponse.model_validate(skill).model_dump(mode="json"),
-        "security_report": {
-            "score": report.score,
-            "factors": report.factors,
-            "recommendation": report.recommendation,
-            "injection_matches": report.injection_matches,
-        },
+        "skill": _entry_to_skill_response(zip_entry).model_dump(mode="json"),
+        "security_report": security_report_data,
     }
 
 
@@ -876,38 +880,33 @@ async def review_skill(
 ) -> dict[str, Any]:
     """Approve or reject a quarantined skill."""
     result = await session.execute(
-        select(SkillDefinition).where(SkillDefinition.id == skill_id)
+        select(RegistryEntry).where(
+            RegistryEntry.id == skill_id,
+            RegistryEntry.type == "skill",
+            RegistryEntry.deleted_at.is_(None),
+        )
     )
-    skill = result.scalar_one_or_none()
-    if skill is None:
+    entry = result.scalar_one_or_none()
+    if entry is None:
         raise HTTPException(status_code=404, detail="Skill not found")
 
-    if skill.status != "pending_review":
+    if entry.status != "pending_review":
         raise HTTPException(
             status_code=409,
-            detail=f"Skill is not pending review (current status: {skill.status})",
+            detail=f"Skill is not pending review (current status: {entry.status})",
         )
 
-    now = datetime.now(timezone.utc)
-
     if body.decision == "approve":
-        skill.status = "active"
-        skill.is_active = True
-        skill.reviewed_by = user["user_id"]
-        skill.reviewed_at = now
+        entry.status = "active"
     elif body.decision == "reject":
-        skill.status = "rejected"
-        skill.reviewed_by = user["user_id"]
-        skill.reviewed_at = now
-        # Store rejection notes in security_report
-        if body.notes and skill.security_report:
-            skill.security_report = {
-                **skill.security_report,
-                "rejection_notes": body.notes,
-            }
+        entry.status = "rejected"
+        if body.notes:
+            sr = dict((entry.config or {}).get("security_report") or {})
+            sr["rejection_notes"] = body.notes
+            entry.config = {**(entry.config or {}), "security_report": sr}
 
     await session.commit()
-    await session.refresh(skill)
+    await session.refresh(entry)
 
     logger.info(
         "admin_skill_reviewed",
@@ -919,7 +918,7 @@ async def review_skill(
     return {
         "skill_id": str(skill_id),
         "decision": body.decision,
-        "status": skill.status,
+        "status": entry.status,
     }
 
 
@@ -931,16 +930,21 @@ async def get_security_report(
 ) -> dict[str, Any]:
     """Get stored security scan report for a skill."""
     result = await session.execute(
-        select(SkillDefinition).where(SkillDefinition.id == skill_id)
+        select(RegistryEntry).where(
+            RegistryEntry.id == skill_id,
+            RegistryEntry.type == "skill",
+            RegistryEntry.deleted_at.is_(None),
+        )
     )
-    skill = result.scalar_one_or_none()
-    if skill is None:
+    entry = result.scalar_one_or_none()
+    if entry is None:
         raise HTTPException(status_code=404, detail="Skill not found")
 
-    if skill.security_report is None:
+    security_report = (entry.config or {}).get("security_report")
+    if security_report is None:
         raise HTTPException(
             status_code=404,
             detail="No security report available for this skill",
         )
 
-    return skill.security_report
+    return security_report

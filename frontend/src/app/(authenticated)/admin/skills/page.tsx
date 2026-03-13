@@ -154,7 +154,7 @@ export default function AdminSkillsPage() {
           Activate
         </button>
       )}
-      {item.status !== "active" && item.status !== "pending_activation" && (
+      {item.status !== "active" && item.status !== "pending_activation" && !((item.config as Record<string, unknown> | undefined)?.tool_gaps as unknown[])?.length && (
         <button onClick={() => void handleStatusChange(item.id, "active")} className="text-xs text-green-600 hover:text-green-800">Activate</button>
       )}
       {item.status === "active" && (
