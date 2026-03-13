@@ -52,7 +52,7 @@ severity: blocker
 
 total: 7
 passed: 1
-issues: 2
+issues: 3
 pending: 0
 skipped: 4
 
@@ -86,3 +86,16 @@ skipped: 4
     - "builder_save re-scan path: replace select(SkillDefinition) with registry_service.get_entry() + update_entry()"
     - "BuilderSaveResponse: read skill_id/status/security_report from RegistryEntry.id/.status/.config fields"
     - "SecurityScanner block (lines 469-479) can be removed — SkillHandler.on_create() already runs scan internally"
+
+- truth: "Artifact wizard sends the correct skill_type (instructional vs procedural) selected by the user"
+  status: failed
+  reason: "User reported: different issues — wizard sends skill_type='instructional' even when form shows Procedure Steps, causing 422 validation error on POST /api/admin/skills"
+  severity: major
+  test: 7-additional
+  root_cause: "artifact-wizard.tsx:277 hardcodes `payload.skill_type = 'instructional'` for ALL skills in the case 'skill' switch branch. formState.form_skill_type (synced from artifact_draft.skill_type) is never used when building the payload."
+  artifacts:
+    - path: "frontend/src/components/admin/artifact-wizard.tsx"
+      issue: "Line 277: payload.skill_type = 'instructional' — hardcoded, ignores formState.form_skill_type which holds the user-selected type (procedural/instructional)"
+  missing:
+    - "Change line 277 to: payload.skill_type = formState.form_skill_type || 'instructional'"
+    - "Ensure procedure_json is included in payload when skill_type === 'procedural' (formState.procedure_json or artifact_draft.procedure_json)"
