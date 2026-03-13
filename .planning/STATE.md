@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-13T03:52:13.134Z"
+last_updated: "2026-03-13T03:54:58.544Z"
 progress:
   total_phases: 11
-  completed_phases: 9
+  completed_phases: 10
   total_plans: 45
-  completed_plans: 45
+  completed_plans: 46
 ---
 
 # Project State
@@ -173,6 +173,8 @@ v1.3 roadmap decisions:
 - [Phase 25]: bell icon in admin layout uses useEffect + plain fetch (not SWR) — refreshes on session change (component remount on nav), non-critical errors swallowed
 - [Phase 25-05]: Bell dropdown gated on bellOpen only (not bellOpen && pendingCount > 0) — empty state always visible on click
 - [Phase 25-05]: formState.skill_type (not hardcoded 'instructional') drives skill_type in POST payload; procedure_json sourced from aiArtifactDraft co-agent state for procedural skills
+- [Phase 25-04]: builder_save writes RegistryEntry (type=skill) via UnifiedRegistryService — fixes 500 from dropped skill_definitions table
+- [Phase 25-04]: test_security_gate.py patch target is security.scan_client.scan_skill_with_fallback — SkillHandler uses lazy import in on_create, patch at definition site
 
 ### Pending Todos
 
@@ -232,9 +234,10 @@ v1.3 roadmap decisions:
 | Phase 25 P02 | 4 | 3 tasks | 8 files |
 | Phase 25 P03 | 15 | 3 tasks | 4 files |
 | Phase 25 P05 | 5 | 2 tasks | 2 files |
+| Phase 25 P04 | 241 | 2 tasks | 2 files |
 
 ## Session Continuity
 
 Last session: 2026-03-13
-Stopped at: Completed 25-03-PLAN.md — frontend badges, bell icon, unblocked_skills API response
+Stopped at: Completed 25-04-PLAN.md — builder_save migrated to UnifiedRegistryService, UAT blocker fixed
 Resume file: N/A — phase 25 complete
