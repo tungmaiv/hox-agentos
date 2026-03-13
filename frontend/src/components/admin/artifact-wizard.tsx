@@ -358,6 +358,7 @@ function WizardInner() {
           formState={formState}
           artifactType={artifactType}
           aiFilledFields={aiFilledFields}
+          aiArtifactDraft={aiArtifactDraft}
           onFormChange={handleFormChange}
           onArtifactTypeChange={handleArtifactTypeChange}
           onCancel={handleCancel}

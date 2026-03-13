@@ -57,6 +57,8 @@ interface ArtifactWizardFormProps {
   artifactType: string | null;
   /** Field names to pulse with blue highlight (from AI fill_form calls). */
   aiFilledFields: Set<string>;
+  /** Full artifact_draft from AI co-agent — used to show procedure_json steps. */
+  aiArtifactDraft?: Record<string, unknown> | null;
   onFormChange: (updates: Partial<FormState>) => void;
   onArtifactTypeChange: (type: string) => void;
   /** Called when Cancel is clicked — parent resets form state. */
@@ -100,7 +102,8 @@ const ARTIFACT_TYPES = [
 
 function buildSubmitPayload(
   formState: FormState,
-  artifactType: string | null
+  artifactType: string | null,
+  aiArtifactDraft?: Record<string, unknown> | null,
 ): Record<string, unknown> {
   const base: Record<string, unknown> = {
     name: formState.name,
@@ -124,16 +127,24 @@ function buildSubmitPayload(
         sandbox_required: formState.sandbox_required,
         required_permissions: formState.required_permissions,
       };
-    case "skill":
-      return {
+    case "skill": {
+      const skillType = formState.skill_type || "instructional";
+      const payload: Record<string, unknown> = {
         ...base,
-        skill_type: formState.skill_type || "instructional",
+        skill_type: skillType,
         source_type: "user_created",
-        instruction_markdown: formState.instruction_markdown || undefined,
         entry_point: formState.entry_point || undefined,
         required_permissions: formState.required_permissions,
         sandbox_required: formState.sandbox_required || undefined,
       };
+      if (skillType === "procedural") {
+        const procJson = aiArtifactDraft?.procedure_json;
+        if (procJson) payload.procedure_json = procJson;
+      } else {
+        payload.instruction_markdown = formState.instruction_markdown || undefined;
+      }
+      return payload;
+    }
     case "mcp_server":
       return {
         ...base,
@@ -224,6 +235,7 @@ export function ArtifactWizardForm({
   formState,
   artifactType,
   aiFilledFields,
+  aiArtifactDraft,
   onFormChange,
   onArtifactTypeChange,
   onCancel,
@@ -427,10 +439,26 @@ export function ArtifactWizardForm({
             <SectionLabel>Skill Settings</SectionLabel>
             {formState.skill_type === "procedural" ? (
               <FieldWrapper label="Procedure Steps">
-                <p className="text-xs text-gray-500 py-2">
-                  Procedural skill — steps are defined in the JSON draft (procedure_json.steps).
-                  No instruction markdown required.
-                </p>
+                {(() => {
+                  const proc = aiArtifactDraft?.procedure_json as { steps?: Array<{ step?: number; tool?: string; prompt?: string }> } | undefined;
+                  const steps = proc?.steps;
+                  if (steps && steps.length > 0) {
+                    return (
+                      <ol className="space-y-1.5 text-xs text-gray-700 border border-gray-200 rounded-md p-2 bg-gray-50">
+                        {steps.map((s, i) => (
+                          <li key={i} className="flex gap-2">
+                            <span className="flex-shrink-0 w-5 h-5 rounded-full bg-blue-100 text-blue-700 font-semibold text-center leading-5">{s.step ?? i + 1}</span>
+                            <div>
+                              <span className="font-mono text-blue-600">{s.tool}</span>
+                              {s.prompt && <p className="text-gray-500 mt-0.5">{s.prompt}</p>}
+                            </div>
+                          </li>
+                        ))}
+                      </ol>
+                    );
+                  }
+                  return <p className="text-xs text-gray-400 py-2">AI is designing the steps…</p>;
+                })()}
               </FieldWrapper>
             ) : (
               <FieldWrapper
@@ -504,7 +532,7 @@ export function ArtifactWizardForm({
           <div>
             <SectionLabel>JSON Preview</SectionLabel>
             <pre className="bg-gray-50 border border-gray-200 rounded-md p-3 text-xs font-mono overflow-auto max-h-48 text-gray-700">
-              {JSON.stringify(buildSubmitPayload(formState, artifactType), null, 2)}
+              {JSON.stringify(buildSubmitPayload(formState, artifactType, aiArtifactDraft), null, 2)}
             </pre>
           </div>
         )}
