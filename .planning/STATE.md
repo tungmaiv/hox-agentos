@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-12T19:25:54.189Z"
+last_updated: "2026-03-13T03:52:13.134Z"
 progress:
   total_phases: 11
-  completed_phases: 10
-  total_plans: 43
-  completed_plans: 44
+  completed_phases: 9
+  total_plans: 45
+  completed_plans: 45
 ---
 
 # Project State
@@ -171,6 +171,8 @@ v1.3 roadmap decisions:
 - [tool-resolver]: bell icon uses useEffect + plain fetch (not SWR) — count changes infrequently; refreshes on nav (component remount)
 - [Phase 25]: pending_activation badge uses orange/amber (bg-orange-100 text-orange-700) in admin skills table — distinct from draft (grey) and yellow unknown fallback
 - [Phase 25]: bell icon in admin layout uses useEffect + plain fetch (not SWR) — refreshes on session change (component remount on nav), non-critical errors swallowed
+- [Phase 25-05]: Bell dropdown gated on bellOpen only (not bellOpen && pendingCount > 0) — empty state always visible on click
+- [Phase 25-05]: formState.skill_type (not hardcoded 'instructional') drives skill_type in POST payload; procedure_json sourced from aiArtifactDraft co-agent state for procedural skills
 
 ### Pending Todos
 
@@ -229,6 +231,7 @@ v1.3 roadmap decisions:
 | Phase 25 P01 | 4 | 3 tasks | 4 files |
 | Phase 25 P02 | 4 | 3 tasks | 8 files |
 | Phase 25 P03 | 15 | 3 tasks | 4 files |
+| Phase 25 P05 | 5 | 2 tasks | 2 files |
 
 ## Session Continuity
 
