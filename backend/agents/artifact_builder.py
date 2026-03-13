@@ -62,6 +62,7 @@ def fill_form(
     sandbox_required: bool | None = None,
     entry_point: str | None = None,
     url: str | None = None,
+    auth_token: str | None = None,
     version: str | None = None,
     instruction_markdown: str | None = None,
 ) -> str:
@@ -78,7 +79,7 @@ def fill_form(
             "required_permissions": required_permissions, "model_alias": model_alias,
             "system_prompt": system_prompt, "handler_module": handler_module,
             "sandbox_required": sandbox_required, "entry_point": entry_point,
-            "url": url, "version": version,
+            "url": url, "auth_token": auth_token, "version": version,
             "instruction_markdown": instruction_markdown,
         }.items() if v is not None
     }
@@ -97,6 +98,11 @@ def _route_intent(state: ArtifactBuilderState) -> str:
     if state.get("artifact_type") is None:
         return "gather_type"
     if state.get("is_complete"):
+        # If user sent a follow-up message after completion, let gather_details
+        # handle it — the AI may want to switch artifact type (e.g. "now create skill")
+        # or handle edit requests. validate_and_present ignores user messages.
+        if messages and isinstance(messages[-1], HumanMessage):
+            return "gather_details"
         return "validate_and_present"
 
     # Route to content generation when we have name+description but no content yet.
@@ -159,7 +165,10 @@ def _try_extract_fill_form_args(content: str) -> dict | None:
                             ):
                                 args = parsed.get("arguments") or parsed.get("args") or {}
                                 if isinstance(args, dict):
-                                    return {k: v for k, v in args.items() if k not in _FILL_FORM_ONLY_ARGS}
+                                    # Return ALL args including artifact_type —
+                                    # _FILL_FORM_ONLY_ARGS filtering happens later
+                                    # when merging into artifact_draft, not here.
+                                    return dict(args)
                         except json.JSONDecodeError:
                             pass
                         break
@@ -182,6 +191,7 @@ _FILL_FORM_ARG_TO_STATE: dict[str, str] = {
     "handler_module": "form_handler_module",
     "entry_point": "form_entry_point",
     "url": "form_url",
+    "auth_token": "form_auth_token",
     "required_permissions": "form_required_permissions",
     "sandbox_required": "form_sandbox_required",
     "instruction_markdown": "form_instruction_markdown",
@@ -212,6 +222,7 @@ _DRAFT_TO_FORM: dict[str, str] = {
     "handler_module": "form_handler_module",
     "entry_point": "form_entry_point",
     "url": "form_url",
+    "auth_token": "form_auth_token",
     "required_permissions": "form_required_permissions",
     "sandbox_required": "form_sandbox_required",
     "instruction_markdown": "form_instruction_markdown",
@@ -563,6 +574,8 @@ async def _gather_type_node(state: ArtifactBuilderState, config: RunnableConfig)
                     }
                 text_fill_args = _try_extract_fill_form_args(response.content)
                 form_updates = _args_to_form_updates(text_fill_args or {})
+                # Remove artifact_type from form_updates — keyword-detected type wins
+                form_updates.pop("artifact_type", None)
                 updated_draft = _extract_draft_from_response(response.content, {})
                 # Merge text-format fill_form args into draft so route_after_gather_type
                 # sees name+description even when the model outputs a text-format tool call
@@ -672,6 +685,30 @@ async def _gather_details_node(state: ArtifactBuilderState, config: RunnableConf
             looks_complete = False
 
     form_updates = _args_to_form_updates(text_fill_args or {})
+
+    # Detect artifact type switch (AI called fill_form(artifact_type=X) for a new type).
+    # When switching, reset draft + clear all form fields so the frontend starts fresh.
+    new_artifact_type = (text_fill_args or {}).get("artifact_type")
+    if new_artifact_type and new_artifact_type != artifact_type:
+        _all_form_fields = [
+            "form_name", "form_description", "form_version",
+            "form_url", "form_auth_token", "form_instruction_markdown",
+            "form_skill_type", "form_model_alias", "form_system_prompt",
+            "form_handler_module", "form_entry_point",
+            "form_sandbox_required", "form_required_permissions",
+        ]
+        form_updates = {"artifact_type": new_artifact_type}
+        for _f in _all_form_fields:
+            form_updates[_f] = None
+        await _emit_builder_state(config, new_artifact_type, {}, [], False, form_updates)
+        return {
+            "messages": [response],
+            "artifact_type": new_artifact_type,
+            "artifact_draft": {},
+            "is_complete": False,
+            **form_updates,
+        }
+
     # Merge draft fields into form_updates so the form reflects the latest draft
     # (handles models that update artifact_draft without calling fill_form)
     form_updates = _merge_draft_into_form(updated_draft, form_updates)
@@ -787,8 +824,24 @@ async def _fill_form_node(state: ArtifactBuilderState, config: RunnableConfig) -
                         form_state_updates["form_entry_point"] = args["entry_point"]
                     if args.get("url") is not None:
                         form_state_updates["form_url"] = args["url"]
+                    if args.get("auth_token") is not None:
+                        form_state_updates["form_auth_token"] = args["auth_token"]
                     if args.get("artifact_type") is not None:
-                        form_state_updates["artifact_type"] = args["artifact_type"]
+                        new_type = args["artifact_type"]
+                        form_state_updates["artifact_type"] = new_type
+                        # Reset when switching to a different artifact type
+                        if new_type != state.get("artifact_type"):
+                            form_state_updates["is_complete"] = False
+                            form_state_updates["artifact_draft"] = {}
+                            # Clear all form fields so the new type starts fresh
+                            for _f in [
+                                "form_name", "form_description", "form_version",
+                                "form_url", "form_auth_token", "form_instruction_markdown",
+                                "form_skill_type", "form_model_alias", "form_system_prompt",
+                                "form_handler_module", "form_entry_point",
+                                "form_sandbox_required", "form_required_permissions",
+                            ]:
+                                form_state_updates[_f] = None
                     if args.get("instruction_markdown") is not None:
                         form_state_updates["form_instruction_markdown"] = args["instruction_markdown"]
                     if args.get("skill_type") is not None:
@@ -811,6 +864,7 @@ async def _fill_form_node(state: ArtifactBuilderState, config: RunnableConfig) -
         "form_sandbox_required": state.get("form_sandbox_required"),
         "form_entry_point": state.get("form_entry_point"),
         "form_url": state.get("form_url"),
+        "form_auth_token": state.get("form_auth_token"),
         "form_instruction_markdown": state.get("form_instruction_markdown"),
         "form_skill_type": state.get("form_skill_type"),
     }

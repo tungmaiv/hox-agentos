@@ -3,6 +3,7 @@ MCP server CRUD API -- admin management of MCP server registry.
 
 GET    /api/admin/mcp-servers              -- list all registered MCP servers
 POST   /api/admin/mcp-servers              -- register a new MCP server
+GET    /api/admin/mcp-servers/check-name   -- check name availability
 DELETE /api/admin/mcp-servers/{id}         -- remove a registered MCP server
 GET    /api/admin/mcp-servers/{id}/health  -- check MCP server reachability
 PATCH  /api/admin/mcp-servers/{id}/status  -- update server status
@@ -10,6 +11,10 @@ PATCH  /api/admin/mcp-servers/{id}/status  -- update server status
 Security: admin-only via Gate 2 RBAC (tool:admin permission).
 Auth tokens are AES-256-GCM encrypted before storage; raw token is never logged.
 user_id for audit logging comes from JWT -- never from the request body.
+
+Migration note (Phase 24+): storage uses registry_entries (unified registry).
+The old mcp_servers table was dropped; entries live in registry_entries with type='mcp_server'.
+Auth tokens are hex-encoded encrypted blobs stored in config['auth_token_hex'].
 """
 import time
 from typing import Any
@@ -22,10 +27,11 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.db import get_db
-from core.models.mcp_server import McpServer
 from core.models.user import UserContext
-from core.schemas.registry import McpServerCreate
+from core.schemas.registry import McpServerCreate, RegistryEntryCreate
 from mcp.registry import MCPToolRegistry
+from registry.models import RegistryEntry
+from registry.service import UnifiedRegistryService, invalidate_tool_cache
 from security.deps import get_current_user
 from security.rbac import has_permission
 
@@ -50,25 +56,32 @@ class StatusPatch(BaseModel):
     status: str  # "active", "disabled", "deprecated"
 
 
+def _entry_to_response(entry: RegistryEntry) -> dict[str, Any]:
+    cfg: dict[str, Any] = entry.config or {}
+    return {
+        "id": str(entry.id),
+        "name": entry.name,
+        "url": cfg.get("url", ""),
+        "is_active": entry.status == "active",
+        "status": entry.status,
+    }
+
+
 @router.get("")
 async def list_mcp_servers(
     user: UserContext = Depends(_require_admin),
     session: AsyncSession = Depends(get_db),
 ) -> list[dict[str, Any]]:
     """Return all registered MCP servers. Auth tokens are never returned."""
-    result = await session.execute(select(McpServer))
+    result = await session.execute(
+        select(RegistryEntry).where(
+            RegistryEntry.type == "mcp_server",
+            RegistryEntry.deleted_at.is_(None),
+        )
+    )
     servers = result.scalars().all()
     logger.info("mcp_servers_listed", user_id=str(user["user_id"]), count=len(servers))
-    return [
-        {
-            "id": str(s.id),
-            "name": s.name,
-            "url": s.url,
-            "is_active": s.is_active,
-            "status": s.status,
-        }
-        for s in servers
-    ]
+    return [_entry_to_response(s) for s in servers]
 
 
 @router.post("")
@@ -78,25 +91,26 @@ async def create_mcp_server(
     session: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
     """Register a new MCP server. Encrypts auth_token with AES-256-GCM before storage."""
-    from security.credentials import encrypt_token
+    config: dict[str, Any] = {"url": body.url, "is_active": True}
 
-    auth_token_bytes: bytes | None = None
     if body.auth_token:
-        # Embed IV (12 bytes) at the front of the stored blob: iv + ciphertext
+        from security.credentials import encrypt_token
         ciphertext, iv = encrypt_token(body.auth_token)
         auth_token_bytes = iv + ciphertext
+        config["auth_token_hex"] = auth_token_bytes.hex()
 
-    server = McpServer(
+    svc = UnifiedRegistryService()
+    entry_data = RegistryEntryCreate(
+        type="mcp_server",
         name=body.name,
-        url=body.url,
-        auth_token=auth_token_bytes,
+        description=body.description if hasattr(body, "description") else None,
+        config=config,
+        status="active",
     )
-    session.add(server)
+    entry = await svc.create_entry(session, entry_data, owner_id=user["user_id"])
     await session.commit()
-    await session.refresh(server)
 
     # Hot-register: make new server's tools immediately callable without restart.
-    # refresh() is idempotent -- best-effort; server is already persisted if this fails.
     try:
         await MCPToolRegistry.refresh()
     except Exception as exc:
@@ -107,13 +121,7 @@ async def create_mcp_server(
         name=body.name,
         user_id=str(user["user_id"]),
     )
-    return {
-        "id": str(server.id),
-        "name": server.name,
-        "url": server.url,
-        "is_active": server.is_active,
-        "status": server.status,
-    }
+    return _entry_to_response(entry)
 
 
 @router.get("/check-name")
@@ -123,7 +131,6 @@ async def check_mcp_server_name(
     session: AsyncSession = Depends(get_db),
 ) -> dict[str, bool]:
     """Returns {"available": true/false} for the given MCP server name (case-insensitive)."""
-    from registry.models import RegistryEntry
     count = await session.scalar(
         select(func.count()).where(
             RegistryEntry.type == "mcp_server",
@@ -142,16 +149,23 @@ async def delete_mcp_server(
 ) -> dict[str, str]:
     """Remove a registered MCP server by ID."""
     result = await session.execute(
-        select(McpServer).where(McpServer.id == server_id)
+        select(RegistryEntry).where(
+            RegistryEntry.id == server_id,
+            RegistryEntry.type == "mcp_server",
+            RegistryEntry.deleted_at.is_(None),
+        )
     )
-    server = result.scalar_one_or_none()
-    if server is None:
+    entry = result.scalar_one_or_none()
+    if entry is None:
         raise HTTPException(status_code=404, detail="Server not found")
 
-    # Evict client before deletion
-    MCPToolRegistry.evict_client(server.name)
+    try:
+        MCPToolRegistry.evict_client(entry.name)
+    except Exception:
+        pass
 
-    await session.delete(server)
+    from datetime import datetime
+    entry.deleted_at = datetime.utcnow()
     await session.commit()
     logger.info(
         "mcp_server_deleted",
@@ -167,25 +181,25 @@ async def check_mcp_server_health(
     user: UserContext = Depends(_require_admin),
     session: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
-    """
-    Check reachability of an MCP server.
-
-    Makes an HTTP GET to {server_url}/health with a 5s timeout.
-    Returns reachable status and latency.
-    """
+    """Check reachability of an MCP server."""
     import httpx
 
     result = await session.execute(
-        select(McpServer).where(McpServer.id == server_id)
+        select(RegistryEntry).where(
+            RegistryEntry.id == server_id,
+            RegistryEntry.type == "mcp_server",
+            RegistryEntry.deleted_at.is_(None),
+        )
     )
-    server = result.scalar_one_or_none()
-    if server is None:
+    entry = result.scalar_one_or_none()
+    if entry is None:
         raise HTTPException(status_code=404, detail="Server not found")
 
+    url = (entry.config or {}).get("url", "")
     start = time.monotonic()
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
-            resp = await client.get(f"{server.url}/health")
+            resp = await client.get(f"{url}/health")
             latency_ms = int((time.monotonic() - start) * 1000)
             reachable = resp.status_code < 500
     except Exception:
@@ -194,7 +208,7 @@ async def check_mcp_server_health(
 
     return {
         "server_id": str(server_id),
-        "name": server.name,
+        "name": entry.name,
         "reachable": reachable,
         "latency_ms": latency_ms,
     }
@@ -207,15 +221,7 @@ async def patch_mcp_server_status(
     user: UserContext = Depends(_require_admin),
     session: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
-    """
-    Update an MCP server's status.
-
-    Valid statuses: active, disabled, deprecated.
-    Disabling a server evicts its client from the MCPToolRegistry cache
-    and invalidates the tool cache.
-    """
-    from registry.service import invalidate_tool_cache
-
+    """Update an MCP server's status."""
     valid_statuses = {"active", "disabled", "deprecated"}
     if body.status not in valid_statuses:
         raise HTTPException(
@@ -224,31 +230,33 @@ async def patch_mcp_server_status(
         )
 
     result = await session.execute(
-        select(McpServer).where(McpServer.id == server_id)
+        select(RegistryEntry).where(
+            RegistryEntry.id == server_id,
+            RegistryEntry.type == "mcp_server",
+            RegistryEntry.deleted_at.is_(None),
+        )
     )
-    server = result.scalar_one_or_none()
-    if server is None:
+    entry = result.scalar_one_or_none()
+    if entry is None:
         raise HTTPException(status_code=404, detail="Server not found")
 
-    old_status = server.status
-    server.status = body.status
+    old_status = entry.status
+    entry.status = body.status
     await session.commit()
 
-    # If disabled/deprecated, evict client and invalidate tool cache
     if body.status != "active":
-        MCPToolRegistry.evict_client(server.name)
+        try:
+            MCPToolRegistry.evict_client(entry.name)
+        except Exception:
+            pass
         invalidate_tool_cache()
 
     logger.info(
         "mcp_server_status_updated",
         server_id=str(server_id),
-        name=server.name,
+        name=entry.name,
         old_status=old_status,
         new_status=body.status,
         user_id=str(user["user_id"]),
     )
-    return {
-        "id": str(server_id),
-        "name": server.name,
-        "status": body.status,
-    }
+    return _entry_to_response(entry)

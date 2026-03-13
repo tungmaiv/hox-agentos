@@ -204,8 +204,12 @@ async def test_create_mcp_server_calls_refresh_after_commit() -> None:
 
     with (
         patch("api.routes.mcp_servers.MCPToolRegistry") as mock_registry_cls,
+        patch("api.routes.mcp_servers.UnifiedRegistryService") as mock_svc_cls,
     ):
         mock_registry_cls.refresh = AsyncMock()
+        mock_svc = AsyncMock()
+        mock_svc.create_entry = AsyncMock(return_value=mock_server_obj)
+        mock_svc_cls.return_value = mock_svc
 
         await create_mcp_server(body=body, user=admin_user, session=mock_session)
 

@@ -80,7 +80,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   useEffect(() => {
     const fetchPending = async () => {
       try {
-        const token = (session as unknown as Record<string, unknown>)?.access_token as string | undefined;
+        const token = session?.accessToken;
         if (!token) return;
         const res = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL ?? ""}/api/registry?type=skill&status=pending_activation`,

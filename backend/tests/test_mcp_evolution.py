@@ -13,7 +13,7 @@ from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from core.db import Base
-from core.models.mcp_server import McpServer
+from registry.models import RegistryEntry
 
 
 @pytest.fixture
@@ -37,19 +37,20 @@ async def _seed_server(
     name: str = "test-server",
     url: str = "http://mcp-test:9000",
     status: str = "active",
-) -> McpServer:
-    """Insert an MCP server row."""
-    server = McpServer(
+) -> RegistryEntry:
+    """Insert an MCP server registry entry."""
+    entry = RegistryEntry(
         id=uuid.uuid4(),
+        type="mcp_server",
         name=name,
-        url=url,
+        config={"url": url, "is_active": status == "active"},
         status=status,
-        is_active=status == "active",
+        owner_id=uuid.uuid4(),
     )
-    session.add(server)
+    session.add(entry)
     await session.commit()
-    await session.refresh(server)
-    return server
+    await session.refresh(entry)
+    return entry
 
 
 # ── Health-check endpoint ────────────────────────────────────────────────
@@ -60,7 +61,7 @@ async def test_health_check_reachable(session: AsyncSession) -> None:
     """Health-check returns reachable=True when server responds with 200."""
     from api.routes.mcp_servers import check_mcp_server_health
 
-    server = await _seed_server(session, url="http://mcp-test:9000")
+    entry = await _seed_server(session, url="http://mcp-test:9000")
 
     mock_response = MagicMock()
     mock_response.status_code = 200
@@ -74,7 +75,7 @@ async def test_health_check_reachable(session: AsyncSession) -> None:
 
         admin = MagicMock()
         result = await check_mcp_server_health(
-            server_id=server.id,
+            server_id=entry.id,
             user=admin,
             session=session,
         )
@@ -89,7 +90,7 @@ async def test_health_check_unreachable(session: AsyncSession) -> None:
     """Health-check returns reachable=False when server is unreachable."""
     from api.routes.mcp_servers import check_mcp_server_health
 
-    server = await _seed_server(session, url="http://mcp-test:9000")
+    entry = await _seed_server(session, url="http://mcp-test:9000")
 
     with patch("httpx.AsyncClient") as mock_client_cls:
         mock_client = AsyncMock()
@@ -100,7 +101,7 @@ async def test_health_check_unreachable(session: AsyncSession) -> None:
 
         admin = MagicMock()
         result = await check_mcp_server_health(
-            server_id=server.id,
+            server_id=entry.id,
             user=admin,
             session=session,
         )
@@ -132,16 +133,12 @@ async def test_status_patch_updates_db(session: AsyncSession) -> None:
     from api.routes.mcp_servers import StatusPatch, patch_mcp_server_status
     from sqlalchemy import select
 
-    server = await _seed_server(session, status="active")
+    entry = await _seed_server(session, status="active")
 
-    with (
-        patch("api.routes.mcp_servers.MCPToolRegistry") as mock_registry,
-        patch("registry.service.invalidate_tool_cache"),
-    ):
-        mock_registry.evict_client = MagicMock()
-
+    with patch("mcp.registry.MCPToolRegistry.evict_client"), \
+         patch("api.routes.mcp_servers.invalidate_tool_cache"):
         result = await patch_mcp_server_status(
-            server_id=server.id,
+            server_id=entry.id,
             body=StatusPatch(status="disabled"),
             user=MagicMock(),
             session=session,
@@ -151,7 +148,7 @@ async def test_status_patch_updates_db(session: AsyncSession) -> None:
 
     # Verify DB was updated
     db_result = await session.execute(
-        select(McpServer).where(McpServer.id == server.id)
+        select(RegistryEntry).where(RegistryEntry.id == entry.id)
     )
     updated = db_result.scalar_one()
     assert updated.status == "disabled"
@@ -162,22 +159,18 @@ async def test_status_patch_evicts_client_on_disable(session: AsyncSession) -> N
     """Disabling a server evicts its client from MCPToolRegistry cache."""
     from api.routes.mcp_servers import StatusPatch, patch_mcp_server_status
 
-    server = await _seed_server(session, name="evict-me")
+    entry = await _seed_server(session, name="evict-me")
 
-    with (
-        patch("api.routes.mcp_servers.MCPToolRegistry") as mock_registry,
-        patch("registry.service.invalidate_tool_cache") as mock_invalidate,
-    ):
-        mock_registry.evict_client = MagicMock()
-
+    with patch("mcp.registry.MCPToolRegistry.evict_client") as mock_evict, \
+         patch("api.routes.mcp_servers.invalidate_tool_cache") as mock_invalidate:
         await patch_mcp_server_status(
-            server_id=server.id,
+            server_id=entry.id,
             body=StatusPatch(status="disabled"),
             user=MagicMock(),
             session=session,
         )
 
-        mock_registry.evict_client.assert_called_once_with("evict-me")
+        mock_evict.assert_called_once_with("evict-me")
         mock_invalidate.assert_called_once()
 
 
@@ -186,11 +179,11 @@ async def test_status_patch_invalid_status(session: AsyncSession) -> None:
     """Invalid status value returns 400."""
     from api.routes.mcp_servers import StatusPatch, patch_mcp_server_status
 
-    server = await _seed_server(session)
+    entry = await _seed_server(session)
 
     with pytest.raises(HTTPException) as exc_info:
         await patch_mcp_server_status(
-            server_id=server.id,
+            server_id=entry.id,
             body=StatusPatch(status="invalid"),
             user=MagicMock(),
             session=session,

@@ -39,6 +39,7 @@ class ArtifactBuilderState(TypedDict):
     form_sandbox_required: bool | None
     form_entry_point: str | None
     form_url: str | None
+    form_auth_token: str | None
     form_instruction_markdown: str | None
     form_skill_type: str | None
     # Name of clone source artifact (for context-aware AI greeting)

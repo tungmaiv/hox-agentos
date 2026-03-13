@@ -3,29 +3,29 @@ model_list:
   # Switched from qwen3.5:cloud (hit weekly usage limit) to local qwen2.5 models
   - model_name: blitz-master
     litellm_params:
-      model: ollama/qwen2.5:7b
+      model: ollama/glm-5:cloud
       api_base: http://host.docker.internal:11434
 
   - model_name: blitz-fast
     litellm_params:
-      model: ollama/qwen2.5:7b
+      model: ollama/qwen3.5:cloud
       api_base: http://host.docker.internal:11434
 
   - model_name: blitz-coder
     litellm_params:
-      model: ollama/qwen2.5-coder:7b
+      model: ollama/kimi-k2.5:cloud
       api_base: http://host.docker.internal:11434
 
   - model_name: blitz-summarizer
     litellm_params:
-      model: ollama/qwen2.5:7b
+      model: ollama/qwen3.5:cloud
       api_base: http://host.docker.internal:11434
 
   # Cloud fallback — free OpenRouter model, used when Ollama is unavailable.
   # Prefixed with "fb-" to avoid name collisions with primary entries.
   - model_name: fb-openrouter-free
     litellm_params:
-      model: openrouter/arcee-ai/trinity-large-preview:free
+      model: openrouter/z-ai/glm-4.5-air:free
       api_key: os.environ/OPENROUTER_API_KEY
 
 router_settings:

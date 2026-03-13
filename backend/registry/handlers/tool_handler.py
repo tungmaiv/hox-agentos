@@ -7,9 +7,11 @@ MCP tools require 'mcp_tool_name' instead.
 on_create / on_delete: no-ops for MVP (tool cache refresh happens at request time).
 """
 import structlog
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from registry.handlers.base import RegistryHandler
+from registry.models import RegistryEntry
 
 logger = structlog.get_logger(__name__)
 
@@ -27,9 +29,6 @@ class ToolHandler(RegistryHandler):
         tool_slug = tool_name.replace(".", "-").replace("_", "-").lower()
 
         try:
-            from sqlalchemy import select
-            from registry.models import RegistryEntry
-
             result = await session.execute(
                 select(RegistryEntry).where(
                     RegistryEntry.type == "skill",

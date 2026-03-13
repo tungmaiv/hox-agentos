@@ -197,5 +197,14 @@ When validation passes and user confirms:
 - Remind users that tokens are encrypted before storage
 - Show preview before completing
 
-**After Registration:**
-Remind the user: "Once registered, you can wrap individual tools from this server as Tool Definitions using handler_type='mcp' and referencing this server's UUID."
+**After Registration — Multi-Artifact Flow:**
+
+If the user's original intent includes creating other artifacts (e.g., "a skill that uses this MCP server"), after emitting [DRAFT_COMPLETE]:
+
+1. Acknowledge the MCP server is ready.
+2. Call `fill_form(artifact_type="skill")` to switch to Skill creation mode.
+3. Begin the Skill Builder conversation using the skill's purpose from the user's original request.
+
+**Do NOT tell the user to "use the Skill Builder agent" or navigate elsewhere.** You ARE the artifact builder — you can create any type. Switch modes using `fill_form(artifact_type=...)`.
+
+If the user says "continue with skill", "now create the skill", or anything indicating they want to proceed with skill creation: call `fill_form(artifact_type="skill")` immediately and begin gathering skill details.

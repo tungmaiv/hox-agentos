@@ -225,6 +225,52 @@ def test_crud_flow(admin_client: TestClient) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Tool-gaps gate on registry update
+# ---------------------------------------------------------------------------
+
+
+def test_update_entry_blocked_when_skill_has_tool_gaps(admin_client: TestClient) -> None:
+    """PUT /api/registry/{id} returns 422 when attempting status='active' on a skill with tool_gaps."""
+    # Create a skill entry (instructional skills don't require procedure_json)
+    create_resp = admin_client.post(
+        "/api/registry",
+        json={
+            "type": "skill",
+            "name": "registry_gapped_skill",
+            "config": {
+                "skill_type": "instructional",
+                "instruction_markdown": "# test",
+            },
+            "status": "draft",
+        },
+    )
+    assert create_resp.status_code == 201, create_resp.text
+    entry_id = create_resp.json()["id"]
+
+    # Inject tool_gaps via a config-only update (no status change — gate not triggered)
+    inject_resp = admin_client.put(
+        f"/api/registry/{entry_id}",
+        json={"config": {"tool_gaps": [{"step": 1, "tool": "MISSING:do-something"}]}},
+    )
+    assert inject_resp.status_code == 200
+
+    # Attempting to activate should now be blocked
+    blocked_resp = admin_client.put(
+        f"/api/registry/{entry_id}",
+        json={"status": "active"},
+    )
+    assert blocked_resp.status_code == 422
+    assert "tool gaps" in blocked_resp.json()["detail"].lower()
+
+    # Other status changes (non-active) are allowed
+    ok_resp = admin_client.put(
+        f"/api/registry/{entry_id}",
+        json={"status": "archived"},
+    )
+    assert ok_resp.status_code == 200
+
+
+# ---------------------------------------------------------------------------
 # 404 behavior
 # ---------------------------------------------------------------------------
 

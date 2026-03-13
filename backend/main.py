@@ -23,6 +23,7 @@ from api.routes import (
     credentials,
     health,
     memory_settings,
+    mcp_servers,
     system_config,
     tools,
     user_instructions,
@@ -199,6 +200,10 @@ def create_app() -> FastAPI:
 
     # Admin tool CRUD — /api/admin/tools (registry:manage permission)
     app.include_router(admin_tools.router)
+
+    # Admin MCP server CRUD — /api/admin/mcp-servers (tool:admin permission)
+    # check-name MUST be registered before /{server_id} to avoid UUID routing collision
+    app.include_router(mcp_servers.router)
 
     # Skill export — GET /api/admin/skills/{id}/export (registry:manage permission)
     # MUST be registered before admin_skills.router to prevent FastAPI routing collision:
