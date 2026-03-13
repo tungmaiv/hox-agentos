@@ -1,9 +1,9 @@
 ---
-status: complete
+status: resolved
 phase: 25-skill-builder-tool-resolver
-source: [25-01-SUMMARY.md, 25-02-SUMMARY.md, 25-03-SUMMARY.md]
+source: [25-01-SUMMARY.md, 25-02-SUMMARY.md, 25-03-SUMMARY.md, 25-04-SUMMARY.md, 25-05-SUMMARY.md]
 started: 2026-03-13T00:00:00Z
-updated: 2026-03-13T00:05:00Z
+updated: 2026-03-13T12:00:00Z
 ---
 
 ## Current Test
@@ -59,43 +59,19 @@ skipped: 4
 ## Gaps
 
 - truth: "Clicking the bell icon in admin nav opens a dropdown listing pending_activation skills"
-  status: failed
-  reason: "User reported: I click to the bell but nothing happened"
+  status: resolved
+  reason: "Fixed in plan 25-05 — bell dropdown now renders whenever bellOpen is true (not gated on pendingCount > 0). Empty-state message shown when no pending skills."
   severity: minor
   test: 5
-  root_cause: "layout.tsx:173 — dropdown gated on `bellOpen && pendingCount > 0`. With 0 pending skills, clicking toggles bellOpen but dropdown never renders. No empty state shown."
-  artifacts:
-    - path: "frontend/src/app/(authenticated)/admin/layout.tsx"
-      issue: "Line 173: {bellOpen && pendingCount > 0 && (...)} — dropdown never renders when pendingCount === 0, no empty state feedback"
-  missing:
-    - "Show empty-state dropdown ('No skills pending activation') when bellOpen && pendingCount === 0"
 
 - truth: "Artifact builder saves new skills via registry_entries (unified registry from phase 24)"
-  status: failed
-  reason: "User reported: I cant save the skill 500 error"
+  status: resolved
+  reason: "Fixed in plan 25-04 — builder_save migrated from SkillDefinition ORM (dropped table) to UnifiedRegistryService.create_entry() / update_entry(). 929 tests passing."
   severity: blocker
   test: 7
-  root_cause: "builder_save endpoint in backend/api/routes/admin_skills.py (lines 512-539) still constructs SkillDefinition ORM object and inserts into the dropped `skill_definitions` table. The entire admin_skills.py route file was not migrated to use UnifiedRegistryService/RegistryEntry when phase 24 unified the registry."
-  artifacts:
-    - path: "backend/api/routes/admin_skills.py"
-      issue: "Lines 512-539: builder_save creates SkillDefinition(...) instead of RegistryEntry. Also lines 488-507 (re-scan), 78-202 (list), 295 (import), 388 (import_zip) all query dropped table."
-    - path: "backend/core/models/skill_definition.py"
-      issue: "SkillDefinition ORM model maps to __tablename__ = 'skill_definitions' (dropped)"
-  missing:
-    - "builder_save new-skill path: replace SkillDefinition(...) with RegistryEntryCreate(type='skill', config={skill_type, instruction_markdown, tool_gaps, ...}) → call UnifiedRegistryService.create_entry()"
-    - "builder_save re-scan path: replace select(SkillDefinition) with registry_service.get_entry() + update_entry()"
-    - "BuilderSaveResponse: read skill_id/status/security_report from RegistryEntry.id/.status/.config fields"
-    - "SecurityScanner block (lines 469-479) can be removed — SkillHandler.on_create() already runs scan internally"
 
 - truth: "Artifact wizard sends the correct skill_type (instructional vs procedural) selected by the user"
-  status: failed
-  reason: "User reported: different issues — wizard sends skill_type='instructional' even when form shows Procedure Steps, causing 422 validation error on POST /api/admin/skills"
+  status: resolved
+  reason: "Fixed in plan 25-05 — artifact-wizard now uses formState.skill_type instead of hardcoded 'instructional'. procedure_json sourced from aiArtifactDraft for procedural skills."
   severity: major
   test: 7-additional
-  root_cause: "artifact-wizard.tsx:277 hardcodes `payload.skill_type = 'instructional'` for ALL skills in the case 'skill' switch branch. formState.form_skill_type (synced from artifact_draft.skill_type) is never used when building the payload."
-  artifacts:
-    - path: "frontend/src/components/admin/artifact-wizard.tsx"
-      issue: "Line 277: payload.skill_type = 'instructional' — hardcoded, ignores formState.form_skill_type which holds the user-selected type (procedural/instructional)"
-  missing:
-    - "Change line 277 to: payload.skill_type = formState.form_skill_type || 'instructional'"
-    - "Ensure procedure_json is included in payload when skill_type === 'procedural' (formState.procedure_json or artifact_draft.procedure_json)"
