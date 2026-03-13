@@ -54,6 +54,7 @@ def fill_form(
     name: str | None = None,
     description: str | None = None,
     artifact_type: str | None = None,
+    skill_type: str | None = None,
     required_permissions: list[str] | None = None,
     model_alias: str | None = None,
     system_prompt: str | None = None,
@@ -73,6 +74,7 @@ def fill_form(
     filled = {
         k: v for k, v in {
             "name": name, "description": description, "artifact_type": artifact_type,
+            "skill_type": skill_type,
             "required_permissions": required_permissions, "model_alias": model_alias,
             "system_prompt": system_prompt, "handler_module": handler_module,
             "sandbox_required": sandbox_required, "entry_point": entry_point,
@@ -183,6 +185,7 @@ _FILL_FORM_ARG_TO_STATE: dict[str, str] = {
     "required_permissions": "form_required_permissions",
     "sandbox_required": "form_sandbox_required",
     "instruction_markdown": "form_instruction_markdown",
+    "skill_type": "form_skill_type",
     # artifact_type is stored directly (no "form_" prefix)
     "artifact_type": "artifact_type",
 }
@@ -212,6 +215,7 @@ _DRAFT_TO_FORM: dict[str, str] = {
     "required_permissions": "form_required_permissions",
     "sandbox_required": "form_sandbox_required",
     "instruction_markdown": "form_instruction_markdown",
+    "skill_type": "form_skill_type",
 }
 
 
@@ -782,6 +786,12 @@ async def _fill_form_node(state: ArtifactBuilderState, config: RunnableConfig) -
                         form_state_updates["artifact_type"] = args["artifact_type"]
                     if args.get("instruction_markdown") is not None:
                         form_state_updates["form_instruction_markdown"] = args["instruction_markdown"]
+                    if args.get("skill_type") is not None:
+                        form_state_updates["form_skill_type"] = args["skill_type"]
+                        # Also update artifact_draft so routing sees the skill_type
+                        current_art_draft = dict(state.get("artifact_draft") or {})
+                        current_art_draft["skill_type"] = args["skill_type"]
+                        form_state_updates["artifact_draft"] = current_art_draft
             break
 
     # Merge into existing form state
@@ -797,6 +807,7 @@ async def _fill_form_node(state: ArtifactBuilderState, config: RunnableConfig) -
         "form_entry_point": state.get("form_entry_point"),
         "form_url": state.get("form_url"),
         "form_instruction_markdown": state.get("form_instruction_markdown"),
+        "form_skill_type": state.get("form_skill_type"),
     }
     merged = {**current_form, **form_state_updates}
 
@@ -952,6 +963,36 @@ async def _generate_skill_content_node(
     return result
 
 
+def _route_after_gather_details(state: ArtifactBuilderState) -> str:
+    """Auto-advance to content generation once name+description are collected."""
+    draft = state.get("artifact_draft") or {}
+    atype = state.get("artifact_type")
+
+    # Still need name and description before generating content
+    if not draft.get("name") or not draft.get("description"):
+        return END
+
+    if atype == "skill":
+        skill_type = draft.get("skill_type", "instructional")
+        if skill_type == "procedural":
+            if draft.get("procedure_json"):
+                return "validate_and_present"
+            if state.get("resolved_tools") is None:
+                return "resolve_tools"
+            return "generate_skill_content"
+        else:
+            if draft.get("instruction_markdown"):
+                return "validate_and_present"
+            return "generate_skill_content"
+
+    if atype == "tool":
+        if state.get("handler_code"):
+            return "validate_and_present"
+        return "generate_skill_content"
+
+    return END
+
+
 def create_artifact_builder_graph() -> CompiledStateGraph:
     """Build and compile the artifact builder LangGraph."""
     graph = StateGraph(ArtifactBuilderState)
@@ -1016,7 +1057,16 @@ def create_artifact_builder_graph() -> CompiledStateGraph:
             END: END,
         },
     )
-    graph.add_edge("gather_details", END)
+    graph.add_conditional_edges(
+        "gather_details",
+        _route_after_gather_details,
+        {
+            "generate_skill_content": "generate_skill_content",
+            "validate_and_present": "validate_and_present",
+            "resolve_tools": "resolve_tools",
+            END: END,
+        },
+    )
     graph.add_edge("validate_and_present", END)
     graph.add_edge("fill_form_node", END)
     graph.add_edge("resolve_tools", "generate_skill_content")

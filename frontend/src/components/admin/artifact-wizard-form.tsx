@@ -127,7 +127,7 @@ function buildSubmitPayload(
     case "skill":
       return {
         ...base,
-        skill_type: "instructional",
+        skill_type: formState.skill_type || "instructional",
         source_type: "user_created",
         instruction_markdown: formState.instruction_markdown || undefined,
         entry_point: formState.entry_point || undefined,

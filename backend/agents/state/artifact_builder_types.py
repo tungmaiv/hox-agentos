@@ -40,6 +40,7 @@ class ArtifactBuilderState(TypedDict):
     form_entry_point: str | None
     form_url: str | None
     form_instruction_markdown: str | None
+    form_skill_type: str | None
     # Name of clone source artifact (for context-aware AI greeting)
     clone_source_name: str | None
     # Phase 23 — Enhanced builder fields ──────────────────────────────────────

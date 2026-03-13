@@ -155,12 +155,16 @@ function WizardInner() {
         updates.instruction_markdown = pending.form_instruction_markdown;
         changedFields.add("instruction_markdown");
       }
-      // Sync skill_type from artifact_draft so form can conditionally show procedure/instruction UI
+      // Sync skill_type from artifact_draft or form_skill_type state
       const draftSkillType = typeof pending.artifact_draft?.skill_type === "string"
         ? pending.artifact_draft.skill_type
         : null;
-      if (draftSkillType != null && draftSkillType !== formState.skill_type) {
-        updates.skill_type = draftSkillType;
+      const formSkillType = typeof pending.form_skill_type === "string"
+        ? pending.form_skill_type
+        : null;
+      const resolvedSkillType = draftSkillType ?? formSkillType;
+      if (resolvedSkillType != null && resolvedSkillType !== formState.skill_type) {
+        updates.skill_type = resolvedSkillType;
       }
 
       // Update artifact_type if AI set it

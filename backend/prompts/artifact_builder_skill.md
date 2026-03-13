@@ -85,7 +85,7 @@ A strict sequence of tool calls. Good for:
 - If user mentions "analyze", "summarize", "review", "check" → recommend instructional
 - Default to instructional unless clear automation need
 
-**Output:** Store `skill_type` in artifact_draft.
+**Output:** Store `skill_type` in artifact_draft AND call `fill_form` with `skill_type` parameter set to `"procedural"` or `"instructional"` as determined.
 
 ---
 
