@@ -31,6 +31,8 @@ from core.models.skill_definition import SkillDefinition
 from core.models.user import UserContext
 from core.schemas.registry import (
     BulkStatusUpdate,
+    RegistryEntryCreate,
+    RegistryEntryUpdate,
     SecurityReportResponse,
     SkillDefinitionCreate,
     SkillDefinitionResponse,
@@ -39,6 +41,7 @@ from core.schemas.registry import (
     SkillReviewRequest,
     StatusUpdate,
 )
+from registry.service import UnifiedRegistryService
 
 # ---------------------------------------------------------------------------
 # Builder-save request/response models
@@ -59,6 +62,9 @@ from security.rbac import has_permission
 from skills.importer import SkillImportError, SkillImporter
 from skills.security_scanner import SecurityScanner
 from skills.validator import SkillValidator
+
+# Module-level singleton for unified registry operations
+_registry_service = UnifiedRegistryService()
 
 logger = structlog.get_logger(__name__)
 
@@ -444,111 +450,118 @@ async def builder_save(
     user: UserContext = Depends(_require_registry_manager),
     session: AsyncSession = Depends(get_db),
 ) -> BuilderSaveResponse:
-    """Save a skill draft from the builder with security gate.
+    """Save a skill draft from the builder to the unified registry.
 
-    Runs SecurityScanner synchronously before writing to DB.
-    - "approve" recommendation → status=active, is_active=True
-    - "review" or "reject" recommendation → status=pending_review, is_active=False
+    Writes a RegistryEntry row (type='skill') via UnifiedRegistryService.
+    SkillHandler.on_create() runs the security scan and enforces draft status
+    when tool_gaps are present.
 
-    If skill_id is provided, updates the existing skill (re-scan on edit).
-    Otherwise creates a new SkillDefinition row.
+    If skill_id is provided, updates the existing RegistryEntry (re-scan on edit).
+    Otherwise creates a new RegistryEntry row.
     """
+    from uuid import UUID as _UUID
+
     from core.logging import get_audit_logger
 
     audit_logger = get_audit_logger()
 
-    # Determine source_url from skill_data (for forked skills)
-    skill_data = body.skill_data
-    source_url: str | None = skill_data.get("source_url") or None
-    if not source_url:
-        fork_source = skill_data.get("fork_source", "")
-        if fork_source and "@" in fork_source:
-            source_url = fork_source.split("@", 1)[-1] or None
-
-    # Run security scan (async — may invoke LLM for sub-80 scores)
-    scanner = SecurityScanner()
-    report = await scanner.scan(skill_data, source_url=source_url)
-
-    # Determine activation status from recommendation
-    if report.recommendation == "approve":
-        status = "active"
-        is_active = True
-    else:
-        # "review" or "reject" → quarantine
-        status = "pending_review"
-        is_active = False
-
-    security_report_dict: dict[str, Any] = {
-        "score": report.score,
-        "factors": report.factors,
-        "recommendation": report.recommendation,
-        "injection_matches": report.injection_matches,
-    }
-
     if body.skill_id is not None:
-        # Re-scan of existing skill — update in place
-        from uuid import UUID as _UUID
+        # Re-scan of existing RegistryEntry — update config then re-run scan
         try:
             existing_id = _UUID(body.skill_id)
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid skill_id UUID")
 
-        result = await session.execute(
-            select(SkillDefinition).where(SkillDefinition.id == existing_id)
-        )
-        skill = result.scalar_one_or_none()
-        if skill is None:
+        entry = await _registry_service.get_entry(session, existing_id)
+        if entry is None:
             raise HTTPException(status_code=404, detail="Skill not found")
 
-        skill.status = status
-        skill.is_active = is_active
-        skill.security_score = report.score
-        skill.security_report = security_report_dict
+        skill_data = body.skill_data
+        updated_config: dict[str, Any] = {
+            **(entry.config or {}),
+            "skill_type": skill_data.get("skill_type", (entry.config or {}).get("skill_type")),
+            "instruction_markdown": skill_data.get("instruction_markdown"),
+            "procedure_json": skill_data.get("procedure_json"),
+            "tool_gaps": skill_data.get("tool_gaps"),
+        }
+        updated_config = {k: v for k, v in updated_config.items() if v is not None}
+
+        update_data = RegistryEntryUpdate(config=updated_config)
+        entry = await _registry_service.update_entry(session, existing_id, update_data)
+        if entry is None:
+            raise HTTPException(status_code=404, detail="Skill not found after update")
+
+        # Re-run the security scan manually (update_entry does not call on_create)
+        from security.scan_client import scan_skill_with_fallback
+
+        scan_input = {
+            "name": entry.name,
+            "instruction_markdown": updated_config.get("instruction_markdown", ""),
+            "scripts": updated_config.get("instruction_markdown", ""),
+            "requirements": updated_config.get("requirements", ""),
+        }
+        scan_result = await scan_skill_with_fallback(scan_input)
+        merged_config = {**(entry.config or {}), "security_score": scan_result.get("score"), "security_report": scan_result}
+        entry.config = merged_config
+        session.add(entry)
         await session.commit()
-        await session.refresh(skill)
+        await session.refresh(entry)
     else:
-        # New skill from builder
+        # New skill from builder — write to unified registry
+        skill_data = body.skill_data
+        source_url: str | None = skill_data.get("source_url") or None
+        if not source_url:
+            fork_source = skill_data.get("fork_source", "")
+            if fork_source and "@" in fork_source:
+                source_url = fork_source.split("@", 1)[-1] or None
+
         source_type_val = "imported" if skill_data.get("fork_source") else "user_created"
-        skill = SkillDefinition(
+
+        entry_config: dict[str, Any] = {
+            "skill_type": skill_data.get("skill_type", "instructional"),
+            "instruction_markdown": skill_data.get("instruction_markdown"),
+            "procedure_json": skill_data.get("procedure_json"),
+            "input_schema": skill_data.get("input_schema"),
+            "output_schema": skill_data.get("output_schema"),
+            "license": skill_data.get("license"),
+            "compatibility": skill_data.get("compatibility"),
+            "metadata_json": skill_data.get("metadata_json"),
+            "allowed_tools": skill_data.get("allowed_tools"),
+            "tags": skill_data.get("tags"),
+            "category": skill_data.get("category"),
+            "source_url": source_url,
+            "source_type": source_type_val,
+            "slash_command": skill_data.get("slash_command"),
+            "tool_gaps": skill_data.get("tool_gaps"),
+        }
+        # Remove None values to keep JSONB clean
+        entry_config = {k: v for k, v in entry_config.items() if v is not None}
+
+        create_data = RegistryEntryCreate(
+            type="skill",
             name=skill_data["name"],
             display_name=skill_data.get("display_name"),
             description=skill_data.get("description"),
-            version=skill_data.get("version", "1.0.0"),
-            skill_type=skill_data.get("skill_type", "instructional"),
-            slash_command=skill_data.get("slash_command"),
-            source_type=source_type_val,
-            instruction_markdown=skill_data.get("instruction_markdown"),
-            procedure_json=skill_data.get("procedure_json"),
-            input_schema=skill_data.get("input_schema"),
-            output_schema=skill_data.get("output_schema"),
-            license=skill_data.get("license"),
-            compatibility=skill_data.get("compatibility"),
-            metadata_json=skill_data.get("metadata_json"),
-            allowed_tools=skill_data.get("allowed_tools"),
-            tags=skill_data.get("tags"),
-            category=skill_data.get("category"),
-            source_url=source_url,
-            status=status,
-            is_active=is_active,
-            security_score=report.score,
-            security_report=security_report_dict,
-            created_by=user["user_id"],
+            config=entry_config,
+            status="draft",  # SkillHandler.on_create may force draft based on scan/tool_gaps
         )
-        session.add(skill)
+        owner_id = _UUID(user["user_id"]) if isinstance(user["user_id"], str) else user["user_id"]
+        entry = await _registry_service.create_entry(session, create_data, owner_id=owner_id)
         await session.commit()
-        await session.refresh(skill)
+        await session.refresh(entry)
+
+    security_report_dict = (entry.config or {}).get("security_report") or {}
 
     audit_logger.info(
         "builder_save",
-        skill_id=str(skill.id),
-        recommendation=report.recommendation,
-        score=report.score,
+        skill_id=str(entry.id),
+        score=(entry.config or {}).get("security_score"),
         user_id=str(user["user_id"]),
     )
 
     return BuilderSaveResponse(
-        skill_id=str(skill.id),
-        status=skill.status,
+        skill_id=str(entry.id),
+        status=entry.status,
         security_report=security_report_dict,
     )
 
