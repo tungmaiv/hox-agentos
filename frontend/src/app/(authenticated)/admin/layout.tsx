@@ -170,19 +170,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   </span>
                 )}
               </button>
-              {bellOpen && pendingCount > 0 && (
+              {bellOpen && (
                 <div className="absolute right-0 mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-2">
                   <p className="text-xs font-semibold text-gray-500 mb-1 px-2">Skills pending activation</p>
-                  {pendingSkills.map((skill) => (
-                    <a
-                      key={skill.id}
-                      href="/admin/skills"
-                      className="block text-sm text-gray-700 hover:bg-gray-50 px-2 py-1 rounded"
-                      onClick={() => setBellOpen(false)}
-                    >
-                      {skill.name}
-                    </a>
-                  ))}
+                  {pendingSkills.length === 0 ? (
+                    <p className="text-xs text-gray-400 px-2 py-1">No skills pending activation</p>
+                  ) : (
+                    pendingSkills.map((skill) => (
+                      <a
+                        key={skill.id}
+                        href="/admin/skills"
+                        className="block text-sm text-gray-700 hover:bg-gray-50 px-2 py-1 rounded"
+                        onClick={() => setBellOpen(false)}
+                      >
+                        {skill.name}
+                      </a>
+                    ))
+                  )}
                 </div>
               )}
             </div>
