@@ -132,8 +132,13 @@ def test_skill_lifecycle(integration_db) -> None:
     skill = create_resp.json()
     skill_id = skill["id"]
     assert skill["name"] == "integration-skill"
-    assert skill["status"] == "active"
-    assert skill["is_active"] is True
+    assert skill["status"] == "draft"
+    assert skill["is_active"] is False
+
+    # Activate the skill so employees can access it
+    activate_resp = admin_client.patch(f"/api/admin/skills/{skill_id}/activate")
+    assert activate_resp.status_code == 200
+    assert activate_resp.json()["status"] == "active"
 
     # Step 2: Employee user can see the skill in their list
     app.dependency_overrides[get_current_user] = make_employee_ctx
@@ -318,6 +323,11 @@ def test_instructional_skill_execution(integration_db) -> None:
         },
     )
     assert create_resp.status_code == 201
+    skill_id = create_resp.json()["id"]
+
+    # Activate so employee can run it
+    activate_resp = admin_client.patch(f"/api/admin/skills/{skill_id}/activate")
+    assert activate_resp.status_code == 200
 
     # Employee executes
     app.dependency_overrides[get_current_user] = make_employee_ctx
@@ -366,7 +376,7 @@ def test_uat_12_admin_create_skill(integration_db) -> None:
     assert "id" in body, f"Response body missing 'id' field: {body}"
     skill_id = body["id"]
     assert body["name"] == "uat12-skill"
-    assert body["status"] == "active"
+    assert body["status"] == "draft"
 
     # Step 2: Skill is retrievable via GET /api/admin/skills/{id}
     get_resp = admin_client.get(f"/api/admin/skills/{skill_id}")

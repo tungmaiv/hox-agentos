@@ -231,7 +231,7 @@ async def create_skill(
         display_name=body.display_name,
         description=body.description,
         config=entry_config,
-        status="active",  # on_create downgrades to draft if tool_gaps present
+        status="draft",
     )
     owner_id = _UUID(str(user["user_id"]))
     entry = await _registry_service.create_entry(session, create_data, owner_id=owner_id)
@@ -293,9 +293,26 @@ async def bulk_status_update(
     session: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
     """Bulk update status for multiple skills."""
+    # When activating, exclude skills that still have unresolved tool gaps
+    eligible_ids = list(body.ids)
+    blocked_ids: list[str] = []
+    if body.status == "active":
+        rows = await session.execute(
+            select(RegistryEntry).where(
+                RegistryEntry.id.in_(body.ids), RegistryEntry.type == "skill"
+            )
+        )
+        for entry in rows.scalars().all():
+            if (entry.config or {}).get("tool_gaps"):
+                eligible_ids.remove(entry.id)
+                blocked_ids.append(str(entry.id))
+
+    if not eligible_ids:
+        return {"updated": 0, "status": body.status, "blocked": blocked_ids}
+
     result = await session.execute(
         update(RegistryEntry)
-        .where(RegistryEntry.id.in_(body.ids), RegistryEntry.type == "skill")
+        .where(RegistryEntry.id.in_(eligible_ids), RegistryEntry.type == "skill")
         .values(status=body.status)
     )
     await session.commit()
@@ -304,9 +321,10 @@ async def bulk_status_update(
         "admin_skills_bulk_status",
         status=body.status,
         count=count,
+        blocked=len(blocked_ids),
         user_id=str(user["user_id"]),
     )
-    return {"updated": count, "status": body.status}
+    return {"updated": count, "status": body.status, "blocked": blocked_ids}
 
 
 @router.post("/import", status_code=201)
@@ -555,6 +573,9 @@ async def builder_save(
         scan_result = await scan_skill_with_fallback(scan_input)
         merged_config = {**(entry.config or {}), "security_score": scan_result.get("score"), "security_report": scan_result}
         entry.config = merged_config
+        # Re-enforce draft status if tool_gaps are still present after the update
+        if merged_config.get("tool_gaps"):
+            entry.status = "draft"
         session.add(entry)
         await session.commit()
         await session.refresh(entry)
@@ -730,6 +751,12 @@ async def patch_skill_status(
     if entry is None:
         raise HTTPException(status_code=404, detail="Skill not found")
 
+    if body.status == "active" and (entry.config or {}).get("tool_gaps"):
+        raise HTTPException(
+            status_code=422,
+            detail="Skill has unresolved tool gaps. Create missing tools first.",
+        )
+
     entry.status = body.status
     if hasattr(body, "is_active") and body.is_active is not None:
         entry.config = {**(entry.config or {}), "is_active": body.is_active}
@@ -786,6 +813,12 @@ async def activate_skill_version(
     entry = result.scalar_one_or_none()
     if entry is None:
         raise HTTPException(status_code=404, detail="Skill not found")
+
+    if (entry.config or {}).get("tool_gaps"):
+        raise HTTPException(
+            status_code=422,
+            detail="Skill has unresolved tool gaps. Create missing tools first.",
+        )
 
     entry.status = "active"
     session.add(entry)

@@ -144,7 +144,7 @@ def test_crud_flow(admin_client: TestClient) -> None:
     assert skill["name"] == "test-skill"
     assert skill["skill_type"] == "instructional"
     assert skill["version"] == "1.0.0"
-    assert skill["is_active"] is True
+    assert skill["is_active"] is False
 
     # Get
     get_resp = admin_client.get(f"/api/admin/skills/{skill_id}")
@@ -217,9 +217,26 @@ def test_pending_filter(admin_client: TestClient) -> None:
 # ---------------------------------------------------------------------------
 
 
+def test_create_skill_defaults_to_draft(admin_client: TestClient) -> None:
+    """POST /api/admin/skills returns status='draft' for all new skills."""
+    r = admin_client.post(
+        "/api/admin/skills",
+        json={
+            "name": "draft-default-skill",
+            "version": "1.0.0",
+            "skill_type": "instructional",
+            "instruction_markdown": "# Draft Default Test",
+        },
+    )
+    assert r.status_code == 201
+    data = r.json()
+    assert data["status"] == "draft"
+    assert data["is_active"] is False
+
+
 def test_activate_skill(admin_client: TestClient) -> None:
     """Create a draft skill, activate it — status becomes 'active' and is_active is True."""
-    # Create skill (goes to 'active' by default via create_skill)
+    # Create skill — starts as 'draft'
     r1 = admin_client.post(
         "/api/admin/skills",
         json={
@@ -231,20 +248,125 @@ def test_activate_skill(admin_client: TestClient) -> None:
     )
     assert r1.status_code == 201
     skill_id = r1.json()["id"]
+    assert r1.json()["status"] == "draft"
 
-    # Disable it first
-    admin_client.patch(
-        f"/api/admin/skills/bulk-status",
-        json={"ids": [skill_id], "status": "disabled"},
-    )
-    assert admin_client.get(f"/api/admin/skills/{skill_id}").json()["status"] == "disabled"
-
-    # Activate via /activate endpoint
+    # Activate directly from draft via /activate endpoint
     activate_resp = admin_client.patch(f"/api/admin/skills/{skill_id}/activate")
     assert activate_resp.status_code == 200
     data = activate_resp.json()
     assert data["status"] == "active"
     assert data["is_active"] is True
+
+
+# ---------------------------------------------------------------------------
+# Tool-gaps gate — activation bypass prevention
+# ---------------------------------------------------------------------------
+
+
+def test_activate_endpoint_blocked_by_tool_gaps(admin_client: TestClient) -> None:
+    """PATCH /activate returns 422 when skill has unresolved tool_gaps."""
+    create_resp = admin_client.post(
+        "/api/admin/skills",
+        json={
+            "name": "gated-activate-skill",
+            "version": "1.0.0",
+            "skill_type": "procedural",
+            "procedure_json": {"steps": []},
+        },
+    )
+    assert create_resp.status_code == 201
+    skill_id = create_resp.json()["id"]
+
+    # Inject tool_gaps via the registry update endpoint (merges into existing config)
+    gap_resp = admin_client.put(
+        f"/api/registry/{skill_id}",
+        json={"config": {"tool_gaps": [{"step": 1, "tool": "MISSING:send-slack-message"}]}},
+    )
+    assert gap_resp.status_code == 200
+
+    activate_resp = admin_client.patch(f"/api/admin/skills/{skill_id}/activate")
+    assert activate_resp.status_code == 422
+    assert "tool gaps" in activate_resp.json()["detail"].lower()
+
+
+def test_patch_status_blocked_by_tool_gaps(admin_client: TestClient) -> None:
+    """PATCH /status to 'active' returns 422 when skill has unresolved tool_gaps."""
+    create_resp = admin_client.post(
+        "/api/admin/skills",
+        json={
+            "name": "gated-status-skill",
+            "version": "1.0.0",
+            "skill_type": "procedural",
+            "procedure_json": {"steps": []},
+        },
+    )
+    assert create_resp.status_code == 201
+    skill_id = create_resp.json()["id"]
+
+    # Inject tool_gaps via the registry update endpoint
+    gap_resp = admin_client.put(
+        f"/api/registry/{skill_id}",
+        json={"config": {"tool_gaps": [{"step": 1, "tool": "MISSING:missing-tool"}]}},
+    )
+    assert gap_resp.status_code == 200
+
+    status_resp = admin_client.patch(
+        f"/api/admin/skills/{skill_id}/status", json={"status": "active"}
+    )
+    assert status_resp.status_code == 422
+    assert "tool gaps" in status_resp.json()["detail"].lower()
+
+    # Non-active status transitions are not blocked
+    ok_resp = admin_client.patch(
+        f"/api/admin/skills/{skill_id}/status", json={"status": "disabled"}
+    )
+    assert ok_resp.status_code == 200
+
+
+def test_bulk_status_skips_skills_with_tool_gaps(admin_client: TestClient) -> None:
+    """Bulk activate skips skills with tool_gaps; returns blocked list."""
+    # Skill without gaps — should be activated
+    r1 = admin_client.post(
+        "/api/admin/skills",
+        json={"name": "bulk-clean-skill", "skill_type": "instructional", "instruction_markdown": "# test"},
+    )
+    assert r1.status_code == 201
+    clean_id = r1.json()["id"]
+
+    # Skill with gaps — should be blocked
+    r2 = admin_client.post(
+        "/api/admin/skills",
+        json={"name": "bulk-gapped-skill", "skill_type": "instructional", "instruction_markdown": "# test"},
+    )
+    assert r2.status_code == 201
+    gapped_id = r2.json()["id"]
+
+    # Disable both so we can test re-activation
+    admin_client.patch(
+        "/api/admin/skills/bulk-status",
+        json={"ids": [clean_id, gapped_id], "status": "disabled"},
+    )
+
+    # Inject tool_gaps into gapped skill only
+    gap_resp = admin_client.put(
+        f"/api/registry/{gapped_id}",
+        json={"config": {"tool_gaps": [{"step": 1, "tool": "MISSING:some-tool"}]}},
+    )
+    assert gap_resp.status_code == 200
+
+    # Bulk activate — clean should succeed, gapped should be blocked
+    resp = admin_client.patch(
+        "/api/admin/skills/bulk-status",
+        json={"ids": [clean_id, gapped_id], "status": "active"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["updated"] == 1
+    assert gapped_id in data["blocked"]
+    # Clean skill was activated
+    assert admin_client.get(f"/api/admin/skills/{clean_id}").json()["status"] == "active"
+    # Gapped skill was NOT activated (remains disabled)
+    assert admin_client.get(f"/api/admin/skills/{gapped_id}").json()["status"] == "disabled"
 
 
 # ---------------------------------------------------------------------------
@@ -326,7 +448,7 @@ def test_bulk_status_update(admin_client: TestClient) -> None:
 
     assert admin_client.get(f"/api/admin/skills/{ids[0]}").json()["status"] == "disabled"
     assert admin_client.get(f"/api/admin/skills/{ids[1]}").json()["status"] == "disabled"
-    assert admin_client.get(f"/api/admin/skills/{ids[2]}").json()["status"] == "active"
+    assert admin_client.get(f"/api/admin/skills/{ids[2]}").json()["status"] == "draft"
 
 
 # ---------------------------------------------------------------------------
