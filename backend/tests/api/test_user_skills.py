@@ -27,11 +27,11 @@ from core.db import Base, get_db
 from core.models.agent_definition import AgentDefinition  # noqa: F401
 from core.models.artifact_permission import ArtifactPermission
 from core.models.role_permission import RolePermission  # noqa: F401
-from core.models.skill_definition import SkillDefinition
 from core.models.tool_definition import ToolDefinition  # noqa: F401
 from core.models.user_artifact_permission import UserArtifactPermission  # noqa: F401
 from core.models.user import UserContext
 from main import app
+from registry.models import RegistryEntry
 from security.deps import get_current_user
 
 
@@ -100,52 +100,59 @@ def seeded_client(sqlite_db):
 
     async def _seed():
         async with session_factory() as session:
+            _owner = uuid4()
             # Active instructional skill
-            s1 = SkillDefinition(
+            s1 = RegistryEntry(
+                type="skill",
                 name="morning_digest",
                 display_name="Morning Digest",
                 description="Get your morning briefing",
-                skill_type="instructional",
-                instruction_markdown="# Morning Digest\nCheck your emails and calendar.",
-                slash_command="/morning_digest",
+                config={
+                    "skill_type": "instructional",
+                    "instruction_markdown": "# Morning Digest\nCheck your emails and calendar.",
+                    "slash_command": "/morning_digest",
+                },
                 status="active",
-                is_active=True,
+                owner_id=_owner,
             )
             # Active procedural skill
-            s2 = SkillDefinition(
+            s2 = RegistryEntry(
+                type="skill",
                 name="proc_skill",
                 display_name="Procedural Skill",
                 description="A procedural skill",
-                skill_type="procedural",
-                procedure_json={
-                    "schema_version": "1.0",
-                    "steps": [
-                        {"id": "s1", "type": "tool", "tool": "email.send", "params": {}},
-                    ],
+                config={
+                    "skill_type": "procedural",
+                    "procedure_json": {
+                        "schema_version": "1.0",
+                        "steps": [
+                            {"id": "s1", "type": "tool", "tool": "email.send", "params": {}},
+                        ],
+                    },
+                    "slash_command": "/proc_test",
                 },
-                slash_command="/proc_test",
                 status="active",
-                is_active=True,
+                owner_id=_owner,
             )
             # Disabled skill
-            s3 = SkillDefinition(
+            s3 = RegistryEntry(
+                type="skill",
                 name="disabled_skill",
                 display_name="Disabled Skill",
                 description="This skill is disabled",
-                skill_type="instructional",
-                instruction_markdown="# Disabled",
+                config={"skill_type": "instructional", "instruction_markdown": "# Disabled"},
                 status="disabled",
-                is_active=False,
+                owner_id=_owner,
             )
-            # Inactive skill (active status but not activated version)
-            s4 = SkillDefinition(
+            # Inactive skill — different status so it won't appear in the active list
+            s4 = RegistryEntry(
+                type="skill",
                 name="inactive_skill",
                 display_name="Inactive Skill",
                 description="Not activated version",
-                skill_type="instructional",
-                instruction_markdown="# Inactive",
-                status="active",
-                is_active=False,
+                config={"skill_type": "instructional", "instruction_markdown": "# Inactive"},
+                status="draft",
+                owner_id=_owner,
             )
             session.add_all([s1, s2, s3, s4])
             await session.commit()
@@ -197,17 +204,20 @@ def test_list_skills_shows_all_active_regardless_of_acl(seeded_client) -> None:
 
     async def _deny_skill():
         async with session_factory() as session:
-            # Find morning_digest
+            # Find morning_digest in registry_entries
             from sqlalchemy import select
 
             result = await session.execute(
-                select(SkillDefinition).where(SkillDefinition.name == "morning_digest")
+                select(RegistryEntry).where(
+                    RegistryEntry.name == "morning_digest",
+                    RegistryEntry.type == "skill",
+                )
             )
-            skill = result.scalar_one()
+            entry = result.scalar_one()
             # Deny for employee role — should NOT hide the skill from the list
             perm = ArtifactPermission(
                 artifact_type="skill",
-                artifact_id=skill.id,
+                artifact_id=entry.id,
                 role="employee",
                 allowed=False,
                 status="active",
@@ -292,12 +302,15 @@ def test_run_denied_skill(seeded_client) -> None:
             from sqlalchemy import select
 
             result = await session.execute(
-                select(SkillDefinition).where(SkillDefinition.name == "proc_skill")
+                select(RegistryEntry).where(
+                    RegistryEntry.name == "proc_skill",
+                    RegistryEntry.type == "skill",
+                )
             )
-            skill = result.scalar_one()
+            entry = result.scalar_one()
             perm = ArtifactPermission(
                 artifact_type="skill",
-                artifact_id=skill.id,
+                artifact_id=entry.id,
                 role="employee",
                 allowed=False,
                 status="active",

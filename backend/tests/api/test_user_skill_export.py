@@ -21,11 +21,11 @@ from core.db import Base, get_db
 from core.models.agent_definition import AgentDefinition  # noqa: F401
 from core.models.artifact_permission import ArtifactPermission  # noqa: F401
 from core.models.role_permission import RolePermission  # noqa: F401
-from core.models.skill_definition import SkillDefinition
 from core.models.tool_definition import ToolDefinition  # noqa: F401
 from core.models.user_artifact_permission import UserArtifactPermission  # noqa: F401
 from core.models.user import UserContext
 from main import app
+from registry.models import RegistryEntry
 from security.deps import get_current_user, get_user_db
 
 
@@ -86,14 +86,18 @@ def employee_client(sqlite_db):
 
     async def _seed():
         async with session_factory() as session:
-            skill = SkillDefinition(
+            skill = RegistryEntry(
+                type="skill",
                 name="export-skill",
                 display_name="Export Skill",
                 description="A skill for export testing",
-                skill_type="instructional",
-                instruction_markdown="# Export Skill\nDo something useful.",
+                config={
+                    "skill_type": "instructional",
+                    "instruction_markdown": "# Export Skill\nDo something useful.",
+                    "version": "1.0.0",
+                },
                 status="active",
-                is_active=True,
+                owner_id=_EMPLOYEE_ID,
             )
             session.add(skill)
             await session.commit()
@@ -115,10 +119,13 @@ def _get_skill_id(session_factory) -> str:
     async def _fetch():
         async with session_factory() as session:
             result = await session.execute(
-                select(SkillDefinition).where(SkillDefinition.name == "export-skill")
+                select(RegistryEntry).where(
+                    RegistryEntry.name == "export-skill",
+                    RegistryEntry.type == "skill",
+                )
             )
-            skill = result.scalar_one()
-            return str(skill.id)
+            entry = result.scalar_one()
+            return str(entry.id)
 
     loop = asyncio.new_event_loop()
     try:

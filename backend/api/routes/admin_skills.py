@@ -29,6 +29,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.db import get_db
 from core.models.skill_definition import SkillDefinition
 from core.models.user import UserContext
+from registry.models import RegistryEntry
 from core.schemas.registry import (
     BulkStatusUpdate,
     RegistryEntryCreate,
@@ -71,6 +72,46 @@ logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/api/admin/skills", tags=["admin-skills"])
 
 
+def _entry_to_skill_response(entry: Any) -> "SkillDefinitionResponse":
+    """Build a SkillDefinitionResponse from a RegistryEntry."""
+    from datetime import datetime
+    cfg: dict[str, Any] = entry.config or {}
+    now = datetime.utcnow()
+    return SkillDefinitionResponse(
+        id=entry.id,
+        name=entry.name,
+        display_name=entry.display_name,
+        description=entry.description,
+        version=cfg.get("version", "1.0.0"),
+        is_active=entry.status == "active",
+        status=entry.status,
+        last_seen_at=None,
+        skill_type=cfg.get("skill_type", "instructional"),
+        slash_command=cfg.get("slash_command"),
+        source_type=cfg.get("source_type", "user_created"),
+        instruction_markdown=cfg.get("instruction_markdown"),
+        procedure_json=cfg.get("procedure_json"),
+        input_schema=cfg.get("input_schema"),
+        output_schema=cfg.get("output_schema"),
+        license=cfg.get("license"),
+        compatibility=cfg.get("compatibility"),
+        metadata_json=cfg.get("metadata_json"),
+        allowed_tools=cfg.get("allowed_tools"),
+        tags=cfg.get("tags"),
+        category=cfg.get("category"),
+        source_url=cfg.get("source_url"),
+        is_promoted=bool(cfg.get("is_promoted", False)),
+        security_score=cfg.get("security_score"),
+        security_report=cfg.get("security_report"),
+        reviewed_by=None,
+        reviewed_at=None,
+        created_by=entry.owner_id,
+        created_at=entry.created_at or now,
+        updated_at=entry.updated_at or now,
+        share_count=0,
+    )
+
+
 async def _require_registry_manager(
     user: UserContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
@@ -94,47 +135,44 @@ async def list_skills(
     session: AsyncSession = Depends(get_db),
 ) -> list[SkillDefinitionResponse]:
     """List all skill definitions with optional filters."""
-    from sqlalchemy import asc, desc, text
+    from sqlalchemy import asc, desc, or_
 
-    stmt = select(SkillDefinition)
+    stmt = select(RegistryEntry).where(RegistryEntry.type == "skill")
     if status is not None:
-        stmt = stmt.where(SkillDefinition.status == status)
+        stmt = stmt.where(RegistryEntry.status == status)
     if skill_type is not None:
-        stmt = stmt.where(SkillDefinition.skill_type == skill_type)
+        stmt = stmt.where(RegistryEntry.config["skill_type"].as_string() == skill_type)
     if version is not None:
-        stmt = stmt.where(SkillDefinition.version == version)
+        stmt = stmt.where(RegistryEntry.config["version"].as_string() == version)
     if q:
         stmt = stmt.where(
-            text(
-                "to_tsvector('simple', coalesce(name, '') || ' ' || coalesce(description, '')) "
-                "@@ plainto_tsquery('simple', :q)"
-            ).bindparams(q=q)
+            or_(
+                RegistryEntry.name.ilike(f"%{q}%"),
+                RegistryEntry.description.ilike(f"%{q}%"),
+            )
         )
     if category is not None:
-        stmt = stmt.where(SkillDefinition.category == category)
+        stmt = stmt.where(RegistryEntry.config["category"].as_string() == category)
     if author is not None:
         from uuid import UUID as _UUID
         try:
             author_uuid = _UUID(author)
-            stmt = stmt.where(SkillDefinition.created_by == author_uuid)
+            stmt = stmt.where(RegistryEntry.owner_id == author_uuid)
         except ValueError:
             pass  # invalid UUID — ignore silently
     if sort == "oldest":
-        stmt = stmt.order_by(asc(SkillDefinition.created_at))
-    elif sort == "most_used":
-        stmt = stmt.order_by(desc(SkillDefinition.usage_count))
+        stmt = stmt.order_by(asc(RegistryEntry.created_at))
     else:
-        stmt = stmt.order_by(desc(SkillDefinition.created_at))  # newest (default)
+        stmt = stmt.order_by(desc(RegistryEntry.created_at))  # newest (default); most_used not supported
     result = await session.execute(stmt)
-    skills = result.scalars().all()
+    entries = result.scalars().all()
 
     # Fetch share counts in a single batch query
-    from sqlalchemy import func
     from core.models.user_artifact_permission import UserArtifactPermission
 
-    skill_ids = [s.id for s in skills]
+    entry_ids = [e.id for e in entries]
     share_counts: dict[object, int] = {}
-    if skill_ids:
+    if entry_ids:
         counts_result = await session.execute(
             select(
                 UserArtifactPermission.artifact_id,
@@ -142,18 +180,18 @@ async def list_skills(
             )
             .where(
                 UserArtifactPermission.artifact_type == "skill",
-                UserArtifactPermission.artifact_id.in_(skill_ids),
+                UserArtifactPermission.artifact_id.in_(entry_ids),
                 UserArtifactPermission.status == "active",
             )
             .group_by(UserArtifactPermission.artifact_id)
         )
         share_counts = {row.artifact_id: row.cnt for row in counts_result}
 
-    logger.info("admin_skills_listed", user_id=str(user["user_id"]), count=len(skills))
+    logger.info("admin_skills_listed", user_id=str(user["user_id"]), count=len(entries))
     responses = []
-    for s in skills:
-        r = SkillDefinitionResponse.model_validate(s)
-        r.share_count = share_counts.get(s.id, 0)
+    for entry in entries:
+        r = _entry_to_skill_response(entry)
+        r.share_count = share_counts.get(entry.id, 0)
         responses.append(r)
     return responses
 
@@ -164,38 +202,49 @@ async def create_skill(
     user: UserContext = Depends(_require_registry_manager),
     session: AsyncSession = Depends(get_db),
 ) -> SkillDefinitionResponse:
-    """Create a new skill definition."""
-    skill = SkillDefinition(
+    """Create a new skill definition via unified registry."""
+    from uuid import UUID as _UUID
+
+    entry_config: dict[str, Any] = {
+        "version": body.version,
+        "skill_type": body.skill_type,
+        "slash_command": body.slash_command,
+        "source_type": body.source_type,
+        "instruction_markdown": body.instruction_markdown,
+        "procedure_json": body.procedure_json,
+        "input_schema": body.input_schema,
+        "output_schema": body.output_schema,
+        "license": body.license,
+        "compatibility": body.compatibility,
+        "metadata_json": body.metadata_json,
+        "allowed_tools": body.allowed_tools,
+        "tags": body.tags,
+        "category": body.category,
+        "source_url": body.source_url,
+    }
+    # Remove None values to keep JSONB clean
+    entry_config = {k: v for k, v in entry_config.items() if v is not None}
+
+    create_data = RegistryEntryCreate(
+        type="skill",
         name=body.name,
         display_name=body.display_name,
         description=body.description,
-        version=body.version,
-        skill_type=body.skill_type,
-        slash_command=body.slash_command,
-        source_type=body.source_type,
-        instruction_markdown=body.instruction_markdown,
-        procedure_json=body.procedure_json,
-        input_schema=body.input_schema,
-        output_schema=body.output_schema,
-        license=body.license,
-        compatibility=body.compatibility,
-        metadata_json=body.metadata_json,
-        allowed_tools=body.allowed_tools,
-        tags=body.tags,
-        category=body.category,
-        source_url=body.source_url,
-        created_by=user["user_id"],
+        config=entry_config,
+        status="active",  # on_create downgrades to draft if tool_gaps present
     )
-    session.add(skill)
+    owner_id = _UUID(str(user["user_id"]))
+    entry = await _registry_service.create_entry(session, create_data, owner_id=owner_id)
     await session.commit()
-    await session.refresh(skill)
+    await session.refresh(entry)
+
     logger.info(
         "admin_skill_created",
-        skill_id=str(skill.id),
-        name=skill.name,
+        skill_id=str(entry.id),
+        name=entry.name,
         user_id=str(user["user_id"]),
     )
-    return SkillDefinitionResponse.model_validate(skill)
+    return _entry_to_skill_response(entry)
 
 
 @router.get("/pending")
@@ -203,17 +252,20 @@ async def list_pending_skills(
     user: UserContext = Depends(_require_registry_manager),
     session: AsyncSession = Depends(get_db),
 ) -> list[SkillDefinitionResponse]:
-    """List skills with status='pending_review' for admin review queue."""
+    """List skills with status='pending_activation' for admin review queue."""
     result = await session.execute(
-        select(SkillDefinition).where(SkillDefinition.status == "pending_review")
+        select(RegistryEntry).where(
+            RegistryEntry.type == "skill",
+            RegistryEntry.status == "pending_activation",
+        )
     )
-    skills = result.scalars().all()
+    entries = result.scalars().all()
     logger.info(
         "admin_skills_pending_listed",
         user_id=str(user["user_id"]),
-        count=len(skills),
+        count=len(entries),
     )
-    return [SkillDefinitionResponse.model_validate(s) for s in skills]
+    return [_entry_to_skill_response(entry) for entry in entries]
 
 
 @router.get("/check-name")
@@ -242,8 +294,8 @@ async def bulk_status_update(
 ) -> dict[str, Any]:
     """Bulk update status for multiple skills."""
     result = await session.execute(
-        update(SkillDefinition)
-        .where(SkillDefinition.id.in_(body.ids))
+        update(RegistryEntry)
+        .where(RegistryEntry.id.in_(body.ids), RegistryEntry.type == "skill")
         .values(status=body.status)
     )
     await session.commit()
@@ -577,21 +629,25 @@ async def toggle_skill_promoted(
     Requires registry:manage permission. Returns the updated SkillDefinitionResponse.
     """
     result = await session.execute(
-        select(SkillDefinition).where(SkillDefinition.id == skill_id)
+        select(RegistryEntry).where(
+            RegistryEntry.id == skill_id, RegistryEntry.type == "skill"
+        )
     )
-    skill = result.scalar_one_or_none()
-    if skill is None:
+    entry = result.scalar_one_or_none()
+    if entry is None:
         raise HTTPException(status_code=404, detail="Skill not found")
-    skill.is_promoted = not skill.is_promoted
+    current_promoted = bool((entry.config or {}).get("is_promoted", False))
+    entry.config = {**(entry.config or {}), "is_promoted": not current_promoted}
+    session.add(entry)
     await session.commit()
-    await session.refresh(skill)
+    await session.refresh(entry)
     logger.info(
         "admin_skill_promoted_toggled",
         skill_id=str(skill_id),
-        is_promoted=skill.is_promoted,
+        is_promoted=not current_promoted,
         user_id=str(user["user_id"]),
     )
-    return SkillDefinitionResponse.model_validate(skill)
+    return _entry_to_skill_response(entry)
 
 
 @router.get("/{skill_id}")
@@ -602,12 +658,14 @@ async def get_skill(
 ) -> SkillDefinitionResponse:
     """Get a skill definition by UUID."""
     result = await session.execute(
-        select(SkillDefinition).where(SkillDefinition.id == skill_id)
+        select(RegistryEntry).where(
+            RegistryEntry.id == skill_id, RegistryEntry.type == "skill"
+        )
     )
-    skill = result.scalar_one_or_none()
-    if skill is None:
+    entry = result.scalar_one_or_none()
+    if entry is None:
         raise HTTPException(status_code=404, detail="Skill not found")
-    return SkillDefinitionResponse.model_validate(skill)
+    return _entry_to_skill_response(entry)
 
 
 @router.put("/{skill_id}")
@@ -619,24 +677,35 @@ async def update_skill(
 ) -> SkillDefinitionResponse:
     """Update a skill definition's fields."""
     result = await session.execute(
-        select(SkillDefinition).where(SkillDefinition.id == skill_id)
+        select(RegistryEntry).where(
+            RegistryEntry.id == skill_id, RegistryEntry.type == "skill"
+        )
     )
-    skill = result.scalar_one_or_none()
-    if skill is None:
+    entry = result.scalar_one_or_none()
+    if entry is None:
         raise HTTPException(status_code=404, detail="Skill not found")
 
     update_data = body.model_dump(exclude_unset=True)
-    for field, value in update_data.items():
-        setattr(skill, field, value)
 
+    # Top-level RegistryEntry columns
+    if "display_name" in update_data:
+        entry.display_name = update_data.pop("display_name")
+    if "description" in update_data:
+        entry.description = update_data.pop("description")
+
+    # Remaining fields go into config JSONB
+    if update_data:
+        entry.config = {**(entry.config or {}), **update_data}
+
+    session.add(entry)
     await session.commit()
-    await session.refresh(skill)
+    await session.refresh(entry)
     logger.info(
         "admin_skill_updated",
         skill_id=str(skill_id),
         user_id=str(user["user_id"]),
     )
-    return SkillDefinitionResponse.model_validate(skill)
+    return _entry_to_skill_response(entry)
 
 
 @router.patch("/{skill_id}/status")
@@ -653,13 +722,18 @@ async def patch_skill_status(
     referencing this skill so the admin can assess impact.
     """
     result = await session.execute(
-        select(SkillDefinition).where(SkillDefinition.id == skill_id)
+        select(RegistryEntry).where(
+            RegistryEntry.id == skill_id, RegistryEntry.type == "skill"
+        )
     )
-    skill = result.scalar_one_or_none()
-    if skill is None:
+    entry = result.scalar_one_or_none()
+    if entry is None:
         raise HTTPException(status_code=404, detail="Skill not found")
 
-    skill.status = body.status
+    entry.status = body.status
+    if hasattr(body, "is_active") and body.is_active is not None:
+        entry.config = {**(entry.config or {}), "is_active": body.is_active}
+    session.add(entry)
     await session.commit()
 
     # Graceful removal: count active workflow runs referencing this skill
@@ -673,7 +747,7 @@ async def patch_skill_status(
             )
             runs = run_result.scalars().all()
             for run in runs:
-                if run.initial_state and skill.name in str(run.initial_state):
+                if run.initial_state and entry.name in str(run.initial_state):
                     active_workflow_runs += 1
         except Exception:
             pass
@@ -699,37 +773,34 @@ async def activate_skill_version(
     session: AsyncSession = Depends(get_db),
 ) -> SkillDefinitionResponse:
     """
-    Activate a specific skill version — deactivates all other versions of the same name.
+    Activate a specific skill — sets status to 'active'.
 
-    Enables version rollback.
+    In the unified registry each skill name is unique (type+name UNIQUE constraint),
+    so there is only one entry per skill name; no multi-version deactivation needed.
     """
     result = await session.execute(
-        select(SkillDefinition).where(SkillDefinition.id == skill_id)
+        select(RegistryEntry).where(
+            RegistryEntry.id == skill_id, RegistryEntry.type == "skill"
+        )
     )
-    skill = result.scalar_one_or_none()
-    if skill is None:
+    entry = result.scalar_one_or_none()
+    if entry is None:
         raise HTTPException(status_code=404, detail="Skill not found")
 
-    # Deactivate all versions of the same skill name
-    await session.execute(
-        update(SkillDefinition)
-        .where(SkillDefinition.name == skill.name)
-        .values(is_active=False)
-    )
-
-    # Activate this specific version
-    skill.is_active = True
+    entry.status = "active"
+    session.add(entry)
     await session.commit()
-    await session.refresh(skill)
+    await session.refresh(entry)
 
+    cfg = entry.config or {}
     logger.info(
         "admin_skill_version_activated",
         skill_id=str(skill_id),
-        name=skill.name,
-        version=skill.version,
+        name=entry.name,
+        version=cfg.get("version", "1.0.0"),
         user_id=str(user["user_id"]),
     )
-    return SkillDefinitionResponse.model_validate(skill)
+    return _entry_to_skill_response(entry)
 
 
 @router.post("/{skill_id}/validate")
@@ -740,16 +811,19 @@ async def validate_skill(
 ) -> dict[str, Any]:
     """Dry-run validate a skill's procedure_json using SkillValidator."""
     result = await session.execute(
-        select(SkillDefinition).where(SkillDefinition.id == skill_id)
+        select(RegistryEntry).where(
+            RegistryEntry.id == skill_id, RegistryEntry.type == "skill"
+        )
     )
-    skill = result.scalar_one_or_none()
-    if skill is None:
+    entry = result.scalar_one_or_none()
+    if entry is None:
         raise HTTPException(status_code=404, detail="Skill not found")
 
+    cfg = entry.config or {}
     errors: list[str] = []
-    if skill.skill_type == "procedural" and skill.procedure_json:
+    if cfg.get("skill_type") == "procedural" and cfg.get("procedure_json"):
         validator = SkillValidator()
-        errors = validator.validate_procedure(skill.procedure_json)
+        errors = validator.validate_procedure(cfg["procedure_json"])
 
     logger.info(
         "admin_skill_validated",

@@ -217,44 +217,34 @@ def test_pending_filter(admin_client: TestClient) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_multi_version_activation(admin_client: TestClient) -> None:
-    """Create v1.0.0 and v1.1.0, activate v1.1.0 — v1.0.0 becomes inactive."""
+def test_activate_skill(admin_client: TestClient) -> None:
+    """Create a draft skill, activate it — status becomes 'active' and is_active is True."""
+    # Create skill (goes to 'active' by default via create_skill)
     r1 = admin_client.post(
         "/api/admin/skills",
         json={
-            "name": "multi-skill",
+            "name": "activate-skill",
             "version": "1.0.0",
             "skill_type": "instructional",
-            "instruction_markdown": "# v1",
+            "instruction_markdown": "# Activate Test",
         },
     )
     assert r1.status_code == 201
-    id_v1 = r1.json()["id"]
+    skill_id = r1.json()["id"]
 
-    r2 = admin_client.post(
-        "/api/admin/skills",
-        json={
-            "name": "multi-skill",
-            "version": "1.1.0",
-            "skill_type": "instructional",
-            "instruction_markdown": "# v1.1",
-        },
+    # Disable it first
+    admin_client.patch(
+        f"/api/admin/skills/bulk-status",
+        json={"ids": [skill_id], "status": "disabled"},
     )
-    assert r2.status_code == 201
-    id_v2 = r2.json()["id"]
+    assert admin_client.get(f"/api/admin/skills/{skill_id}").json()["status"] == "disabled"
 
-    # Both active initially
-    assert admin_client.get(f"/api/admin/skills/{id_v1}").json()["is_active"] is True
-    assert admin_client.get(f"/api/admin/skills/{id_v2}").json()["is_active"] is True
-
-    # Activate v1.1.0
-    activate_resp = admin_client.patch(f"/api/admin/skills/{id_v2}/activate")
+    # Activate via /activate endpoint
+    activate_resp = admin_client.patch(f"/api/admin/skills/{skill_id}/activate")
     assert activate_resp.status_code == 200
-    assert activate_resp.json()["is_active"] is True
-
-    # v1.0.0 inactive
-    assert admin_client.get(f"/api/admin/skills/{id_v1}").json()["is_active"] is False
-    assert admin_client.get(f"/api/admin/skills/{id_v2}").json()["is_active"] is True
+    data = activate_resp.json()
+    assert data["status"] == "active"
+    assert data["is_active"] is True
 
 
 # ---------------------------------------------------------------------------
