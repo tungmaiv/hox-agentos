@@ -708,19 +708,23 @@ async def _validate_and_present_node(state: ArtifactBuilderState, config: Runnab
 
     errors = validate_artifact_draft(artifact_type, draft)
 
+    # Build form_updates from the draft so the frontend form is populated
+    form_updates = _merge_draft_into_form(draft, {})
+
     if errors:
         error_text = "\n".join(f"- {e}" for e in errors)
         msg = AIMessage(
             content=f"I found some issues with the definition:\n\n{error_text}\n\n"
             f"Let me help fix these. What would you like to adjust?"
         )
-        await _emit_builder_state(config, artifact_type, draft, errors, False)
+        await _emit_builder_state(config, artifact_type, draft, errors, False, form_updates)
         return {
             "messages": [msg],
             "artifact_type": artifact_type,
             "artifact_draft": draft,
             "validation_errors": errors,
             "is_complete": False,
+            **form_updates,
         }
 
     draft_json = json.dumps(draft, indent=2)
@@ -739,13 +743,14 @@ async def _validate_and_present_node(state: ArtifactBuilderState, config: Runnab
         response_content = response_content + gap_summary
 
     msg = AIMessage(content=response_content)
-    await _emit_builder_state(config, artifact_type, draft, [], True)
+    await _emit_builder_state(config, artifact_type, draft, [], True, form_updates)
     return {
         "messages": [msg],
         "artifact_type": artifact_type,
         "artifact_draft": draft,
         "validation_errors": [],
         "is_complete": True,
+        **form_updates,
     }
 
 
