@@ -1,5 +1,5 @@
 ---
-status: complete
+status: diagnosed
 phase: 25-skill-builder-tool-resolver
 source: [25-01-SUMMARY.md, 25-02-SUMMARY.md, 25-03-SUMMARY.md, 25-04-SUMMARY.md, 25-05-SUMMARY.md]
 started: 2026-03-14T00:00:00Z
@@ -74,5 +74,11 @@ skipped: 4
   reason: "User reported: newly saved skill slack-summary shows active (green) badge, not draft (grey)"
   severity: major
   test: 3
-  artifacts: []
-  missing: []
+  root_cause: "POST /api/admin/skills (create_skill) passes status='active' to RegistryEntryCreate (admin_skills.py line 234). SkillHandler.on_create() only downgrades to draft when tool_gaps is non-empty — it never touches status for gap-free skills. The artifact wizard calls POST /api/admin/skills, not builder-save."
+  artifacts:
+    - path: "backend/api/routes/admin_skills.py"
+      issue: "Line 234: status='active' should be status='draft'"
+  missing:
+    - "Change status='active' to status='draft' in create_skill endpoint (admin_skills.py line 234)"
+    - "Add test to test_admin_skills.py asserting POST /api/admin/skills returns status='draft'"
+  debug_session: "ad4cc3c45381eeae6"
