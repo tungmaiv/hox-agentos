@@ -71,6 +71,7 @@ function WizardInner() {
   const [aiFilledFields, setAiFilledFields] = useState<Set<string>>(new Set());
   const [cloneSourceName, setCloneSourceName] = useState<string | null>(null);
   const [aiHandlerCode, setAiHandlerCode] = useState<string | null>(null);
+  const [aiArtifactDraft, setAiArtifactDraft] = useState<Record<string, unknown> | null>(null);
 
   // Ref to buffer co-agent state updates — avoids setState during render phase
   const pendingStateRef = useRef<BuilderCoAgentState | null>(null);
@@ -169,6 +170,10 @@ function WizardInner() {
       // Capture generated handler stub for tool save payload
       if (pending.handler_code != null) {
         setAiHandlerCode(pending.handler_code);
+      }
+      // Capture full artifact_draft for procedural skill procedure_json
+      if (pending.artifact_draft != null) {
+        setAiArtifactDraft(pending.artifact_draft);
       }
 
       if (Object.keys(updates).length > 0) {
@@ -274,12 +279,15 @@ function WizardInner() {
         if (aiHandlerCode) payload.handler_code = aiHandlerCode;
         break;
       case "skill":
-        payload.skill_type = "instructional";
+        payload.skill_type = formState.skill_type || "instructional";
         payload.source_type = "user_created";
         payload.instruction_markdown = formState.instruction_markdown || undefined;
         payload.entry_point = formState.entry_point || undefined;
         payload.required_permissions = formState.required_permissions;
         payload.sandbox_required = formState.sandbox_required;
+        if (payload.skill_type === "procedural") {
+          payload.procedure_json = (aiArtifactDraft?.procedure_json as Record<string, unknown> | null | undefined) ?? null;
+        }
         break;
       case "mcp_server":
         payload.url = formState.url;
@@ -325,7 +333,7 @@ function WizardInner() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [artifactType, formState]);
+  }, [artifactType, formState, aiHandlerCode, aiArtifactDraft]);
 
   // Chat initial message depends on mode (fresh vs clone)
   const chatInitial = cloneSourceName
