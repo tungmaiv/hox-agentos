@@ -79,7 +79,75 @@ Transform AgentOS user management into an enterprise-grade identity system with 
 
 ---
 
-### 4. Security Scan Module
+### 4. Admin Console LLM Configuration ⭐ NEW
+
+**Status:** ✅ Design Complete  
+**Priority:** High  
+**Target:** v1.4
+
+Transform LiteLLM configuration from file-based, restart-required workflow into a dynamic, UI-driven operational experience. Features a pluggable module architecture that enables runtime model management, fallback chains, health monitoring, and cost tracking—all from the Admin Console.
+
+**Key Capabilities:**
+- Runtime model management (add/edit/remove without restart)
+- One-click model connectivity testing
+- Visual fallback chain builder with condition-based routing
+- Real-time health monitoring with latency/error metrics
+- Cost tracking with budget alerts and quotas
+- Pluggable BaseModule architecture for future extensions
+- Scales from 100 users (Docker Compose) to 5,000+ (Kubernetes)
+
+**Documentation:**
+- [00-specification.md](admin-console-llm-config/00-specification.md) - Complete design specification
+
+---
+
+### 5. AgentOS Dashboard & Mission Control ⭐ NEW
+
+**Status:** ✅ Design Complete  
+**Priority:** High  
+**Target:** v1.4
+
+A comprehensive operational dashboard providing real-time visibility into agent activities, workflow executions, system health, and memory management. Drawing inspiration from OpenClaw Dashboard implementations, this creates a unified Mission Control interface integrated into the AgentOS frontend.
+
+**Key Capabilities:**
+- Real-time activity feed of agent actions and workflow executions
+- Flow execution monitor with step-by-step drill-down and error analysis
+- Agent management with optional 3D office visualization
+- Memory browser with full-text and semantic search
+- Deep integration with existing Phase 8 observability (Prometheus, Grafana, Loki)
+- WebSocket-based real-time updates
+- Unified interface for both admins and end users
+
+**Documentation:**
+- [00-specification.md](agentos-dashboard-mission-control/00-specification.md) - Complete design specification
+
+---
+
+### 6. Scheduler Engine & UI ⭐ NEW
+
+**Status:** ✅ Design Complete  
+**Priority:** High  
+**Target:** v1.4
+
+A comprehensive scheduler management interface that transforms AgentOS's existing Celery-based background task system into a fully visible, manageable, and interactive scheduling platform. Features global scheduler view, per-workflow schedule management, visual cron builder, and multi-channel alerting.
+
+**Key Capabilities:**
+- Global scheduler view for operations (/scheduler)
+- Per-workflow schedule tab for user management
+- Interactive visual cron builder with timezone support
+- Job execution history with drill-down details
+- Real-time queue monitoring (Celery queue depth, worker status)
+- Multi-channel alerting (in-app, Telegram, email) for job failures
+- Manual "Run Now" for ad-hoc execution
+- Enable/disable jobs with one click
+- Step-by-step execution visibility
+
+**Documentation:**
+- [00-specification.md](scheduler-engine-ui/00-specification.md) - Complete design specification
+
+---
+
+### 7. Security Scan Module
 
 **Status:** Planning Complete  
 **Priority:** High  
@@ -138,4 +206,4 @@ When proposing new enhancements:
 ---
 
 **Maintained by:** Blitz AgentOS Architecture Team  
-**Last Updated:** 2026-03-14
+**Last Updated:** 2026-03-16
