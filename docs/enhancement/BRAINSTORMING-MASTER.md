@@ -3,9 +3,9 @@
 ## Quick Stats
 
 - **Total Topics:** 24
-- **✅ Completed:** 13 topics (with full design documents)
+- **✅ Completed:** 14 topics (with full design documents)
 - **🔵 In-Progress:** 1 topic (design partial, needs completion)
-- **🟡 Pending:** 7 topics (ready for brainstorming)
+- **🟡 Pending:** 6 topics (ready for brainstorming)
 - **🟡 Future:** 3 topics (deferred to v1.6+)
 
 ---
@@ -14,22 +14,24 @@
 
 ### New Session: Ready to Start
 
-**Session Date:** 2026-03-14
+**Session Date:** 2026-03-17
 
-**Previous Session: Session 7 (2026-03-17) ✅ COMPLETED
+**Previous Session: Session 8 (2026-03-17) ✅ COMPLETED**
 
 **Topics Completed This Session:**
-- Topic #18: Email System & Channel Notifications ✅
+- Topic #20: Projects/Spaces ✅
 
 **Key Decisions Made This Session:**
-- Sidecar pattern for email adapter
-- Hybrid authentication (OAuth + IMAP/SMTP)
-- Centralized NotificationService for 8 notification types
-- Per-notification-type channel preferences (email + telegram + whatsapp + in-app)
-- System-wide email settings (admin-enforced SMTP)
-- UserCredential table for encrypted storage (AES-256-GCM)
-- Email templates via Jinja2 (HTML + plain text)
-- 7 implementation phases (foundation → sidecar → templates → linking → inbound → events → monitoring)
+- Unified Project Model (Approach A): Single `projects` table with nullable `workspace_id`
+- NotebookLM features: Notes, files, markdown, chat with sources, AI insights, organized sections
+- Granular permission model (Option B): view, edit, full with role hierarchy
+- Opt-in public visibility: Owner marks project as public for workspace members
+- Personal projects can be shared to workspaces (no copy, remains personal)
+- Archive: Complete freeze (no access except restore)
+- Backup/Restore: ZIP format, auto-rename on conflict, admin/owner only
+- pgvector semantic search (bge-m3, 1024-dim) for project sources
+- Celery async operations: embedding generation, AI insights, backup/restore
+- 5 implementation phases (foundation → notebookLM core → chat & insights → advanced → polish)
 
 ### Deferred Discussions (To Resume in Topic #21)
 
@@ -45,16 +47,14 @@
 - **Next Steps:** Resume MCP vs CLI-Anything discussion during Topic #21 brainstorming
 
 **Files Created This Session:**
-- `docs/enhancement/topics/18-email-system-channel-notifications/00-specification.md` (COMPREHENSIVE DESIGN - 14 SECTIONS)
+- `docs/enhancement/topics/20-projects-spaces/00-specification.md` (COMPREHENSIVE DESIGN - 9 SECTIONS)
 
 **Files Modified This Session:**
 - `docs/enhancement/BRAINSTORMING-MASTER.md` (UPDATED)
 - `docs/enhancement/BRAINSTORMING-INDEX.md` (UPDATED)
--11 completed design docs moved to `topics/` folders
 
 **Git Commits:**
-- `a7a4f10 refactor: shard BRAINSTORMING-TRACKING.md into topic folders`
-- `c70e5ae refactor: remove empty enhancement directories`
+- (Pending commit)
 
 ---
 
@@ -68,9 +68,9 @@ All context preserved in MASTER.md and INDEX.md
 
 | Status | Count | Topics |
 |--------|-------|--------|--------|
-| **✅ Completed** | 12 | Topics #1, #4, #5, #6, #7, #8, #12, #13, #14, #15, #16, #18 |
+| **✅ Completed** | 13 | Topics #1, #4, #5, #6, #7, #8, #12, #13, #14, #15, #16, #18, #20 |
 | **🔵 In-Progress** | 1 | Topic #9 (design partial, needs completion) |
-| **🟡 Pending** | 8 | Topics #19-24 (ready for brainstorming) |
+| **🟡 Pending** | 7 | Topics #19, #21-24 (ready for brainstorming) |
 | **🟡 Future** | 3 | Topics #2, #3, #17 (deferred to v1.6+) |
 | **Total** | **24** | All enhancement topics |
 
@@ -84,11 +84,11 @@ All context preserved in MASTER.md and INDEX.md
 |---|-------|---------|--------|--------|
 | 9 | Runtime Multi-Agent Orchestration | 🔵 IN-PROGRESS | Architecture decision made (Option B: Extend LangGraph) - Detailed design needed |
 
-### Pending 🟡 (7 topics)
+### Pending 🟡 (6 topics)
 
 | # | Topic | Priority | Target | Description |
 |---|-------|----------|--------|--------|
-| 20 | Projects/Spaces | High | v1.7+ | Organizational workspaces for team collaboration |
+| 19 | Storage Service | High | v1.7+ | Unified storage abstraction with MinIO/S3 support |
 | 21 | Universal Integration | Medium | v1.7+ | Generic adapter framework for external systems |
 | 22 | MCP Server Creation Skill | Medium | v1.7+ | Natural language skill to auto-generate MCP servers |
 | 23 | Plugin Templates | Low | v1.7+ | Pre-built templates for common plugin patterns |
@@ -235,6 +235,7 @@ All topics are documented and ready for detailed design discussions. User can go
 | 16 | Multi-Agent Tab Architecture | [specification](./topics/16-multi-agent-tab-architecture/00-specification.md) | v1.4 | ✅ Complete |
 | 18 | Email System & Channel Notifications | [specification](./topics/18-email-system-channel-notifications/00-specification.md) | v1.7+ | ✅ Complete |
 | 19 | Storage Service | [specification](./topics/19-storage-service/00-specification.md) | v1.7+ | ✅ Complete |
+| 20 | Projects/Spaces | [specification](./topics/20-projects-spaces/00-specification.md) | v1.7+ | ✅ Complete |
 
 ---
 
@@ -251,7 +252,6 @@ All topics are documented and ready for detailed design discussions. User can go
 | # | Topic | Priority | Target | Description |
 |---|-------|----------|---------|-------------|
 | 19 | Storage Service | High | v1.7+ | Unified storage abstraction with MinIO/S3 support |
-| 20 | Projects/Spaces | High | v1.7+ | Organizational workspaces for team collaboration |
 | 21 | Universal Integration | Medium | v1.7+ | Generic adapter framework for external systems |
 | 22 | MCP Server Creation Skill | Medium | v1.7+ | Natural language skill to auto-generate MCP servers |
 | 23 | Plugin Templates | Low | v1.7+ | Pre-built templates for common plugin patterns |
@@ -277,10 +277,10 @@ All topics are documented and ready for detailed design discussions. User can go
 ### v1.5 Topics (1 in-progress)
 - 09: Runtime Multi-Agent Orchestration (LangGraph Extension) - Architecture decision made, needs detailed design
 
-### v1.7+ Topics (2 completed, 5 pending)
+### v1.7+ Topics (3 completed, 4 pending)
 - 18: Email System & Channel Notifications ✅ Complete
 - 19: Storage Service ✅ Complete
-- 20: Projects/Spaces (High priority, organizational)
+- 20: Projects/Spaces ✅ Complete
 - 21: Universal Integration
 - 22: MCP Server Creation Skill
 - 23: Plugin Templates
@@ -294,6 +294,19 @@ All topics are documented and ready for detailed design discussions. User can go
 ---
 
 ## Recent Sessions
+
+### Session 8 (2026-03-17): Projects/Spaces ✅
+- **Topic #20:** Projects/Spaces
+- **Status:** ✅ Completed
+- **Design Doc:** [00-specification.md](./topics/20-projects-spaces/00-specification.md)
+- **Key Decisions:**
+  - Unified Project Model (Approach A): Single `projects` table with nullable `workspace_id`
+  - NotebookLM features: Notes, files, markdown, chat with sources, AI insights
+  - Granular permission model: view, edit, full (Option B)
+  - Opt-in public visibility: Owner marks project as public for workspace members
+  - Personal projects can be shared to workspaces (no copy, remains personal)
+  - Archive: Complete freeze (no access except restore)
+  - Backup/Restore: ZIP format, auto-rename on conflict
 
 ### Session 7 (2026-03-17): Email System ✅
 - **Topic #18:** Email System & Channel Notifications
