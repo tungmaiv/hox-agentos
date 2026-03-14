@@ -3,9 +3,9 @@
 ## Quick Stats
 
 - **Total Topics:** 24
-- **✅ Completed:** 12 topics (with full design documents)
+- **✅ Completed:** 13 topics (with full design documents)
 - **🔵 In-Progress:** 1 topic (design partial, needs completion)
-- **🟡 Pending:** 8 topics (ready for brainstorming)
+- **🟡 Pending:** 7 topics (ready for brainstorming)
 - **🟡 Future:** 3 topics (deferred to v1.6+)
 
 ---
@@ -84,11 +84,10 @@ All context preserved in MASTER.md and INDEX.md
 |---|-------|---------|--------|--------|
 | 9 | Runtime Multi-Agent Orchestration | 🔵 IN-PROGRESS | Architecture decision made (Option B: Extend LangGraph) - Detailed design needed |
 
-### Pending 🟡 (8 topics)
+### Pending 🟡 (7 topics)
 
 | # | Topic | Priority | Target | Description |
-|---|-------|----------|--------|--------|--------|
-| 19 | Storage Service | High | v1.7+ | Unified storage abstraction with MinIO/S3 support |
+|---|-------|----------|--------|--------|
 | 20 | Projects/Spaces | High | v1.7+ | Organizational workspaces for team collaboration |
 | 21 | Universal Integration | Medium | v1.7+ | Generic adapter framework for external systems |
 | 22 | MCP Server Creation Skill | Medium | v1.7+ | Natural language skill to auto-generate MCP servers |
@@ -121,16 +120,10 @@ All context preserved in MASTER.md and INDEX.md
 ### 🚀 RECOMMENDED NEXT STEPS
 
 **Option A: Continue Brainstorming**
-1. **Topic #19:** Storage Service — High priority, foundational (CURRENT FOCUS)
-    - Architecture-01: Dedicated storage service + MCP-inspired adapter pattern
-    - Unified storage abstraction (MinIO/S3/Azure support)
-    - DB-only folder structure (File, Folder, FileShare, MemoryFileLink tables)
-    - 2000-3000 user scalability
-
-2. **Topic #20:** Projects/Spaces — High priority, organizational
+1. **Topic #20:** Projects/Spaces — High priority, organizational
     - Organizational workspaces for team collaboration, resource isolation, project-level analytics
 
-3. **Topic #21:** Universal Integration — Medium priority, framework design
+2. **Topic #21:** Universal Integration — Medium priority, framework design
     - ⚠️ **Resume MCP vs CLI-Anything discussion here**
     - Design universal adapter framework for both MCP and CLI-Anything
     - Create unified security model, streaming support, error handling
@@ -240,6 +233,7 @@ All topics are documented and ready for detailed design discussions. User can go
 | 15 | Scheduler Engine & UI | [specification](./topics/15-scheduler-engine-ui/00-specification.md) | v1.4 | ✅ Complete |
 | 16 | Multi-Agent Tab Architecture | [specification](./topics/16-multi-agent-tab-architecture/00-specification.md) | v1.4 | ✅ Complete |
 | 18 | Email System & Channel Notifications | [specification](./topics/18-email-system-channel-notifications/00-specification.md) | v1.7+ | ✅ Complete |
+| 19 | Storage Service | [specification](./topics/19-storage-service/00-specification.md) | v1.7+ | ✅ Complete |
 
 ---
 
@@ -282,9 +276,9 @@ All topics are documented and ready for detailed design discussions. User can go
 ### v1.5 Topics (1 in-progress)
 - 09: Runtime Multi-Agent Orchestration (LangGraph Extension) - Architecture decision made, needs detailed design
 
-### v1.7+ Topics (1 completed, 8 pending)
+### v1.7+ Topics (2 completed, 5 pending)
 - 18: Email System & Channel Notifications ✅ Complete
-- 19: Storage Service (High priority, foundational)
+- 19: Storage Service ✅ Complete
 - 20: Projects/Spaces (High priority, organizational)
 - 21: Universal Integration
 - 22: MCP Server Creation Skill
