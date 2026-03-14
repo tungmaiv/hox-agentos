@@ -230,6 +230,7 @@ This document tracks all brainstorming topics for v1.4 and beyond. Each topic mo
 | 12 | Advanced User & Group Management | ✅ COMPLETED | High | v1.4 | 1 Phase |
 | 13 | User Experience Enhancement | ✅ COMPLETED | Medium | v1.4 | 1 Phase |
 | 14 | AgentOS Dashboard & Mission Control | ✅ COMPLETED | High | v1.4 | 1.5 Phases |
+| 15 | Scheduler Engine & UI | ✅ COMPLETED | High | v1.4 | 1 Phase |
 
 ---
 
@@ -362,6 +363,81 @@ Single light theme with no customization; no user avatars; no personal profiles;
 
 #### Estimated Effort
 1 Phase (6 weeks)
+
+---
+
+### 15. Scheduler Engine & UI
+
+**Status:** ✅ COMPLETED  
+**Completed Date:** 2026-03-16  
+**Design Doc:** [docs/enhancement/scheduler-engine-ui/00-specification.md](./scheduler-engine-ui/00-specification.md)  
+
+#### Problem Statement
+Existing Celery-based scheduling has no UI for visualization or management. Users cannot see scheduled jobs, monitor queue status, or configure schedules visually.
+
+#### Target State (To-Be)
+- Global scheduler view at /scheduler for operations
+- Per-workflow schedule tab for user management
+- Visual cron builder with timezone and holiday support
+- Real-time queue monitoring for Celery
+- Multi-channel alerting (in-app, Telegram, email)
+- Execution history with filtering and drill-down
+
+#### Key Decisions Made
+
+| Decision | Current | Target | Rationale |
+|----------|---------|--------|-----------|
+| **Approach** | Celery only | Extend Celery with UI | Lower risk, leverages existing infrastructure |
+| **Interface** | None | Dual UI (global + per-workflow) | Serves both ops and end users |
+| **Cron Builder** | Text input | Visual interactive builder | User-friendly, reduces errors |
+| **Monitoring** | CLI only | Real-time queue dashboard | Operational visibility |
+
+#### Technical Approach
+- Extend existing Celery infrastructure (no replacement)
+- Backend API aggregation layer for job data
+- Global scheduler view for operations team
+- Per-workflow schedule tab integrated in workflow UI
+- Interactive cron builder with live preview
+- Redis Pub/Sub for real-time queue updates
+- Multi-channel alert routing based on user preferences
+
+#### Features
+
+**Global Scheduler View:**
+- All scheduled jobs list with filtering
+- Job status indicators
+- Enable/disable toggles
+- Manual trigger ("Run Now")
+
+**Per-Workflow Scheduling:**
+- Schedule tab in workflow editor
+- Cron expression builder
+- Timezone selection
+- Holiday exclusion rules
+
+**Queue Monitoring:**
+- Real-time Celery queue depth
+- Worker status
+- Task processing rates
+- Failed task count
+
+**Execution History:**
+- Job run logs
+- Success/failure status
+- Duration tracking
+- Retry functionality
+
+#### Success Criteria
+- [ ] Global scheduler view at /scheduler
+- [ ] Per-workflow schedule tab functional
+- [ ] Visual cron builder with preview
+- [ ] Real-time queue monitoring
+- [ ] Multi-channel alerting working
+- [ ] Execution history with drill-down
+- [ ] RBAC enforced throughout
+
+#### Estimated Effort
+1 Phase (5 weeks)
 
 ---
 
