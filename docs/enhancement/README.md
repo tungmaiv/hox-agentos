@@ -35,7 +35,28 @@ Transform Gate 3 (Tool ACL) from binary deny into escalatable Human-in-the-Loop 
 
 ---
 
-### 2. Security Scan Module
+### 2. Admin Registry Edit UI ⭐ NEW
+
+**Status:** ✅ Design Complete  
+**Priority:** High  
+**Target:** v1.4
+
+Create comprehensive detail and edit pages for all registry types (agents, tools, MCP servers, skills) with form-based editing instead of raw JSON. Include test/preview functionality for MCP server connections and dual pagination for better navigation.
+
+**Key Capabilities:**
+- Form-based editing for all registry configuration (no more JSON-only)
+- Detail pages for agents, tools, MCP servers (skills enhanced)
+- Name/slug immutable (display name editable)
+- MCP server connection test before saving
+- Dual pagination (top + bottom) on all list pages
+- Consistent navigation patterns across all registry types
+
+**Documentation:**
+- [00-specification.md](admin-registry-edit-ui/00-specification.md) - Complete design specification
+
+---
+
+### 3. Security Scan Module
 
 **Status:** Planning Complete  
 **Priority:** High  

@@ -33,7 +33,7 @@ This document tracks all brainstorming topics for v1.4 and beyond. Each topic mo
 | 3 | HashiCorp Vault Integration | 🟡 PENDING | Low | Post-MVP | 1 Phase |
 | 4 | Admin Console LLM Configuration | 🟡 PENDING | High | v1.4 | 0.5 Phase |
 | 5 | GitHub Repository Skill Sources | 🟡 PENDING | Medium | v1.4 | 0.5 Phase |
-| 6 | Frontend Build Optimization (SWR) | 🟡 PENDING | High | v1.4 | Quick Fix |
+| 6 | Admin Registry Edit UI (expanded from SWR) | ✅ COMPLETED | High | v1.4 | 0.5-1 Phase |
 | 7 | Keycloak SSO Hardening | 🟡 PENDING | High | v1.4 | 0.5 Phase |
 | 8 | Analytics & Observability Dashboard | 🟡 PENDING | Medium | v1.4 | 1 Phase |
 | 9 | Multi-Agent Orchestration | 🟡 PENDING | Low | v1.5 | 2 Phases |
@@ -93,9 +93,80 @@ Currently, when a skill/workflow attempts to use a tool the user lacks permissio
 
 ---
 
+### 2. Admin Registry Edit UI (Topic #6 Expanded)
+
+**Status:** ✅ COMPLETED  
+**Completed Date:** 2026-03-14  
+**Design Doc:** [docs/enhancement/admin-registry-edit-ui/00-specification.md](./admin-registry-edit-ui/00-specification.md)  
+**Original Topic:** Frontend Build Optimization (SWR) — Scope expanded to full Admin UI feature  
+
+#### Problem Statement
+Admin registry pages (agents, tools, MCP servers) lack detail pages and form-based editing. Skills page shows raw JSON only. No way to test MCP server connections before saving. Inconsistent UX across registry types.
+
+#### Current State (As-Is)
+- **Skills**: Detail page exists but shows JSON only, no form editing
+- **Agents**: List view only, no detail page, no editing
+- **Tools**: List view only, no detail page, no editing
+- **MCP Servers**: List view only, no detail page, no editing
+- **Pagination**: Only at bottom of lists
+
+#### Target State (To-Be)
+- **All registry types** have detail pages with consistent layout
+- **Form-based editing** for all configuration (not JSON-only)
+- **Name/slug is immutable** (display name editable)
+- **Test functionality** for MCP servers (connection test)
+- **Dual pagination** at top AND bottom of lists
+- **Consistent navigation** with back links
+
+#### Key Decisions Made
+
+| Decision | Current | Target | Rationale |
+|----------|---------|--------|-----------|
+| **Name editable** | N/A | ❌ No (immutable) | Name is identifier, changing breaks references |
+| **Display fields** | Raw JSON | ✅ Form fields | User-friendly, reduces errors |
+| **Edit mode** | N/A | Inline toggle | Simple UX, no page navigation |
+| **Test functionality** | None | MCP connection test | Prevent misconfiguration |
+| **Bulk edit** | N/A | ❌ Not supported | Adds complexity, individual edits are safer |
+| **Pagination** | Bottom only | Top + Bottom | Better UX for long lists |
+
+#### Field Priority (Phased)
+
+**Phase 1 (Core):**
+- Display Name, Description, Status (all types)
+
+**Phase 2 (Type-Specific):**
+- **Agents**: System prompt, allowed tools, memory config
+- **Tools**: Handler type, required permissions, sandbox flag
+- **MCP Servers**: URL, transport, auth, health check
+- **Skills**: Instructions/procedure, required tools
+
+**Phase 3 (Advanced):**
+- Metadata, icons, documentation links
+
+#### Technical Approach
+- Create `[id]/page.tsx` for agents, tools, mcp-servers
+- Enhance existing skills detail page with forms
+- Shared components: `RegistryDetailLayout`, `RegistryEditForm`
+- Type-specific form components for config fields
+- Backend test endpoint: `POST /api/admin/mcp-servers/{id}/test`
+
+#### Success Criteria
+- [ ] All 4 registry types have detail pages
+- [ ] Form-based editing (not JSON-only)
+- [ ] Name immutable, display name editable
+- [ ] MCP server connection test functionality
+- [ ] Pagination at top AND bottom
+- [ ] Consistent back navigation
+- [ ] Form validation with inline errors
+
+#### Estimated Effort
+0.5-1 Phase (5 plans)
+
+---
+
 ## Pending Topics
 
-### 2. WhatsApp Business API Integration
+### 3. WhatsApp Business API Integration
 
 **Status:** 🟡 PENDING  
 **Source:** STATE.md Pending Todos  
@@ -125,7 +196,7 @@ Full WhatsApp Business API integration as a channel gateway. Currently Telegram 
 
 ---
 
-### 3. HashiCorp Vault Integration
+### 4. HashiCorp Vault Integration
 
 **Status:** 🟡 PENDING  
 **Source:** STATE.md Pending Todos + Architecture discussions  
@@ -155,7 +226,7 @@ Replace AES-256 encrypted DB storage with HashiCorp Vault for enterprise-grade s
 
 ---
 
-### 4. Admin Console LLM Configuration
+### 5. Admin Console LLM Configuration
 
 **Status:** 🟡 PENDING  
 **Source:** STATE.md Pending Todos  
@@ -215,35 +286,7 @@ Allow importing skills directly from GitHub repositories. Currently only `agents
 
 ---
 
-### 6. Frontend Build Optimization (SWR in Server Components)
-
-**Status:** 🟡 PENDING  
-**Source:** STATE.md Pending Todos (TECH-DEBT)  
-**Priority:** High  
-**Target:** v1.4  
-**Type:** Bug Fix  
-
-#### Brief Description
-Fix SWR hooks causing prerender crashes on settings pages (`/settings/integrations`, `/settings/memory`). Error: SWR context undefined during static export.
-
-#### Root Cause
-SWR hooks destructure (`const { data } = useSWR(...)`) runs during static export where SWR context is undefined.
-
-#### Current State
-- `pnpm build` fails on affected pages
-- Workaround: manual build skip
-
-#### Target State
-- Add `"use client"` directive to affected pages, OR
-- Move SWR calls into client sub-components
-- Clean build without errors
-
-#### Estimated Effort
-Quick Fix (1-2 hours)
-
----
-
-### 7. Keycloak SSO Hardening
+### 6. Keycloak SSO Hardening
 
 **Status:** 🟡 PENDING  
 **Source:** STATE.md Pending Todos (TECH-DEBT)  
@@ -271,7 +314,7 @@ Fix Keycloak SSO login returning "Server error — Configuration" (`/api/auth/er
 
 ---
 
-### 8. Analytics & Observability Dashboard
+### 7. Analytics & Observability Dashboard
 
 **Status:** 🟡 PENDING  
 **Source:** Architecture discussions  
@@ -302,7 +345,7 @@ Comprehensive analytics dashboard showing system usage, performance metrics, aud
 
 ---
 
-### 9. Multi-Agent Orchestration
+### 8. Multi-Agent Orchestration
 
 **Status:** 🟡 PENDING  
 **Source:** Architecture vision  
@@ -336,7 +379,7 @@ Enable agents to spawn sub-agents and coordinate complex workflows. Currently si
 
 ## Additional Topics (From STATE.md)
 
-### 10. CREDENTIAL_ENCRYPTION_KEY Production Setup
+### 9. CREDENTIAL_ENCRYPTION_KEY Production Setup
 
 **Status:** 🟡 PENDING  
 **Source:** STATE.md Pending Todos  
@@ -347,7 +390,7 @@ Enable agents to spawn sub-agents and coordinate complex workflows. Currently si
 
 ---
 
-### 11. LLM Model Switch Back to qwen3.5:cloud
+### 10. LLM Model Switch Back to qwen3.5:cloud
 
 **Status:** 🟡 PENDING  
 **Source:** STATE.md Pending Todos  
@@ -364,7 +407,7 @@ When starting next brainstorming session, consider:
 
 ### High Priority (v1.4 Must-Have)
 1. ✅ Runtime Permission Approval (DONE)
-2. Frontend Build Optimization (Quick win)
+2. ✅ Admin Registry Edit UI (DONE)
 3. Keycloak SSO Hardening (Stability)
 4. Admin Console LLM Configuration (Ops improvement)
 
@@ -403,9 +446,11 @@ For each topic:
 
 ---
 
-**Next Recommended Topic:** Frontend Build Optimization (SWR) — Quick win, high impact, minimal effort
+**Next Recommended Topic:** Keycloak SSO Hardening — Critical stability fix
 
 **Alternative:** Admin Console LLM Configuration — High ops value, medium effort
+
+**Quick Win:** GitHub Repository Skill Sources — Developer experience improvement
 
 ---
 
