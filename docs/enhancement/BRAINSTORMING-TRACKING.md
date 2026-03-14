@@ -3,76 +3,138 @@
 **Project:** Blitz AgentOS  
 **Milestone:** v1.4 Planning  
 **Created:** 2026-03-14  
-**Last Updated:** 2026-03-14  
+**Last Updated:** 2026-03-16  
 
 ---
 
 ## 🔄 SESSION HANDOVER
 
-**Session Date:** 2026-03-14  
+### Previous Session: 2026-03-14
+
+**Session Status:** ✅ COMPLETED  
+**Total Topics Completed:** 3  
+
+**Topics:**
+1. Runtime Permission Approval (HITL) ✅
+2. Admin Registry Edit UI ✅  
+3. Advanced User & Group Management ✅
+
+---
+
+### Session: 2026-03-15
+
+**Session Status:** ✅ COMPLETED  
+**Total Topics Completed This Session:** 1  
+
+**Topic:** User Experience Enhancement (#13) — Added to pending
+
+---
+
+### Session 1: 2026-03-16 (Morning)
+
+**Session Status:** ✅ COMPLETED  
+**Total Topics Completed This Session:** 1  
+
+**Topic #14: AgentOS Dashboard & Mission Control** ✅
+- Comprehensive operational dashboard for agent visibility
+- Real-time activity feed with WebSocket updates
+- Flow execution monitor with step-by-step drill-down
+- Agent management with optional 3D office visualization
+- Memory browser with full-text and semantic search
+- Analysis of 3 reference repositories (OpenClaw Dashboard variants)
+- Deep integration with Phase 8 observability infrastructure
+- **Design Doc:** `docs/enhancement/agentos-dashboard-mission-control/00-specification.md`
+
+---
+
+### Session 2: 2026-03-16 (Afternoon)
+
 **Session Status:** ✅ COMPLETED - Ready for next session  
-**Total Topics Completed This Session:** 3  
+**Total Topics Completed This Session:** 1  
 
-### 📋 What Was Accomplished
+**Topic #15: Scheduler Engine & UI** ✅
 
-This brainstorming session completed **3 major v1.4 feature designs**:
+---
 
-1. **Topic #1: Runtime Permission Approval (HITL)** ✅
-   - Transform Gate 3 from binary deny to escalatable approval
-   - Auto-approve rule engine with conditions
-   - Configurable timeout with escalation
-   - Works in both Keycloak and local auth modes
-   - **Design Doc:** `docs/enhancement/runtime-permission-approval/00-specification.md`
+### Session 3: 2026-03-16 (Evening)
 
-2. **Topic #6: Admin Registry Edit UI** ✅
-   - Expanded from simple SWR fix to comprehensive Admin UI feature
-   - Detail pages for agents, tools, MCP servers (skills enhanced)
-   - Form-based editing instead of JSON-only
-   - MCP server connection testing
-   - Dual pagination (top + bottom)
-   - **Design Doc:** `docs/enhancement/admin-registry-edit-ui/00-specification.md`
+**Session Status:** ✅ COMPLETED - Ready for next session  
+**Total Topics Completed This Session:** 1  
 
-3. **Topic #12: Advanced User & Group Management** ✅
-   - Enterprise-grade identity system design
-   - Direct group permissions (removed role indirection)
-   - Global Groups (external IDP mirror) + Local Groups (permissions)
-   - Keycloak/AD/LDAP integration with auto-provisioning
-   - Group detail pages with Members/Permissions/Settings tabs
-   - "Manage Groups" modal for user assignment
-   - **Design Doc:** `docs/enhancement/advanced-user-group-management/00-specification.md`
+**Topic #8: Analytics & Observability Dashboard** ✅
+- Comprehensive analytics and observability system
+- Dual-mode architecture: Grafana UI + Embedded Next.js panels
+- Six analytics categories: Usage, Performance, Costs, Agents, Security, Overview
+- Hybrid query strategy: Materialized views for history + Direct queries for real-time
+- 6-week implementation timeline (1 Phase)
+- Consistent with Topic #14 Dashboard architecture
+- **Design Doc:** `docs/enhancement/analytics-observability-dashboard/00-specification.md`
+- Comprehensive scheduler management interface
+- Global scheduler view for operations (/scheduler)
+- Per-workflow schedule tab for user management
+- Full interactive cron builder with timezone and holiday support
+- Real-time queue monitoring for Celery
+- Multi-channel alerting (in-app, Telegram, email)
+- Execution history with drill-down and retry capability
+- Extends existing Celery infrastructure (no replacement)
+- **Design Doc:** `docs/enhancement/scheduler-engine-ui/00-specification.md`
 
-### 🎯 Key Decisions Made
+### 🎯 Key Decisions Made (Recent Sessions)
 
 | Topic | Critical Decisions |
 |-------|-------------------|
-| **HITL** | Permission duration: session/72h/permanent; Approver: `system:admin` permission (not role); Full context for admin decisions |
-| **Registry UI** | Name immutable (identifier), display name editable; Inline edit mode (not separate pages); Test functionality for MCP |
-| **User/Group** | Groups get permissions directly (no roles); Global (external) vs Local (permissions) separation; Modal-based group assignment |
+| **Dashboard** | Integrated approach in Next.js; Backend API aggregation; WebSocket for real-time; Leverages Phase 8 observability |
+| **Scheduler** | Celery-centric approach (extend, don't replace); Dual UI (global + per-workflow); Full visual cron builder; Multi-channel alerting |
+| **LLM Config** | Sidecar architecture with BaseModule; HTTP communication with circuit breaker; CLI execution + custom hooks; Zero-downtime module updates |
+| **Architecture** | Generic module pattern reusable for Security Scanner, Analytics, and future features |
+| **Scale Path** | Start with Docker Compose sidecars; migrate to Kubernetes Deployments with HPA |
+| **Analytics** | Dual-mode (Grafana + Embedded); Hybrid query strategy (materialized views + direct); 6 analytics categories; Tremor React for charts |
+
+### 🔄 Architecture Evolution
+
+**New Patterns Introduced:**
+- **BaseModule Framework:** Abstract class for all AgentOS modules
+- **Module Sidecars:** Independent services in Docker Compose/K8s
+- **Resilient Communication:** Circuit breaker + retry patterns
+- **Dashboard Aggregation:** Unified API layer for multiple data sources
+- **Scheduler Management:** Extend Celery with management API and UI
+- **Hybrid Analytics Query:** Materialized views for history + Direct queries for real-time
+- **Dual-Mode Visualization:** Grafana for ops + Embedded panels for users
+
+**Impact on Future Topics:**
+- Security Scan Module can use same BaseModule pattern
+- Analytics Module fits sidecar architecture
+- All future modules follow consistent pattern
+- Dashboard and Scheduler provide operational foundation
+- Analytics patterns reusable for future reporting features
 
 ### 📊 Current Status
 
-**Completed ✅ (3):**
+**Completed ✅ (7):**
 - #1 Runtime Permission Approval (HITL)
+- #4 Admin Console LLM Configuration
 - #6 Admin Registry Edit UI  
+- #8 Analytics & Observability Dashboard
 - #12 Advanced User & Group Management
+- #14 AgentOS Dashboard & Mission Control
+- #15 Scheduler Engine & UI
 
-**Pending 🟡 (7):**
+**Pending 🟡 (5):**
 - #2 WhatsApp Business API Integration (Medium)
-- #4 Admin Console LLM Configuration (High) ⭐ **RECOMMENDED NEXT**
 - #5 GitHub Repository Skill Sources (Medium)
 - #7 Keycloak SSO Hardening (High) ⭐ **RECOMMENDED NEXT**
-- #8 Analytics & Observability Dashboard (Medium)
 - #9 HashiCorp Vault Integration (Low)
 - #10 Multi-Agent Orchestration (Low)
+- #13 User Experience Enhancement (Medium)
 
 ### 🚀 Recommended Next Steps
 
 **For Next Session:**
 
 **Option A: Continue Brainstorming**
-- Topic #7: Keycloak SSO Hardening (Critical stability fix)
-- Topic #4: Admin Console LLM Configuration (High ops value)
+- Topic #7: Keycloak SSO Hardening (Critical stability fix) ⭐ **RECOMMENDED**
 - Topic #5: GitHub Repository Skill Sources (Quick win)
+- Topic #13: User Experience Enhancement (UI polish)
 
 **Option B: Start Implementation**
 - Create PLAN.md files for completed topics
@@ -85,9 +147,9 @@ This brainstorming session completed **3 major v1.4 feature designs**:
 
 ### 📁 Files Modified This Session
 
-- `docs/enhancement/runtime-permission-approval/00-specification.md` (NEW)
-- `docs/enhancement/admin-registry-edit-ui/00-specification.md` (NEW)
-- `docs/enhancement/advanced-user-group-management/00-specification.md` (NEW)
+- `docs/enhancement/agentos-dashboard-mission-control/00-specification.md` (NEW)
+- `docs/enhancement/scheduler-engine-ui/00-specification.md` (NEW)
+- `docs/enhancement/analytics-observability-dashboard/00-specification.md` (NEW)
 - `docs/enhancement/BRAINSTORMING-TRACKING.md` (UPDATED)
 - `docs/enhancement/README.md` (UPDATED)
 
@@ -98,16 +160,31 @@ This brainstorming session completed **3 major v1.4 feature designs**:
 2. **External Identity:** Global Groups (read-only) map to Local Groups (permission-bearing)
 3. **HITL:** Permission-based approval (`system:admin`) not role-based
 4. **Registry UI:** Inline edit mode preferred over separate pages
+5. **Module Architecture:** Sidecar pattern with BaseModule abstract class
+6. **Module Communication:** HTTP with circuit breaker and retry patterns
+7. **Scale Path:** Docker Compose → Swarm → Kubernetes for 100 to 5,000 users
+8. **Dashboard:** Integrated in Next.js; API aggregation layer; WebSocket real-time updates
+9. **Scheduler:** Extend existing Celery (don't replace); Dual UI (global + per-workflow); Full visual cron builder
+10. **Analytics:** Dual-mode (Grafana UI + Embedded panels); Hybrid query (materialized views + direct); Tremor React charts
 
 **Technical Debt Notes:**
 - Old `local_group_roles` table to be deprecated in favor of `group_permissions`
 - Migration strategy defined for User/Group topic
 - SWR build issue superseded by comprehensive Admin Registry UI
+- BaseModule framework to be built in Phase 1 of LLM Config implementation
+- Security Scanner module can reuse BaseModule pattern once established
+- Dashboard leverages Phase 8 observability (Prometheus, Loki, Grafana)
+- Scheduler extends existing Celery infrastructure (no migration needed)
+- Analytics materialized views need concurrent refresh monitoring
+- Grafana dashboards need version control (JSON export/import)
 
 **Open Questions for Future:**
 - Keycloak SSO error handling specifics (for Topic #7)
-- LLM provider fallback strategies (for Topic #4)
 - WhatsApp Business verification timeline (for Topic #2)
+- Module versioning and compatibility strategy
+- Circuit breaker tuning parameters
+- Dashboard 3D visualization performance optimization
+- Scheduler holiday exclusion data source
 
 ---
 
@@ -139,17 +216,75 @@ This document tracks all brainstorming topics for v1.4 and beyond. Each topic mo
 | 1 | Runtime Permission Approval (HITL) | ✅ COMPLETED | High | v1.4 | 1 Phase |
 | 2 | WhatsApp Business API Integration | 🟡 PENDING | Medium | v1.4 | 1 Phase |
 | 3 | HashiCorp Vault Integration | 🟡 PENDING | Low | Post-MVP | 1 Phase |
-| 4 | Admin Console LLM Configuration | 🟡 PENDING | High | v1.4 | 0.5 Phase |
+| 4 | Admin Console LLM Configuration | ✅ COMPLETED | High | v1.4 | 0.5 Phase |
 | 5 | GitHub Repository Skill Sources | 🟡 PENDING | Medium | v1.4 | 0.5 Phase |
 | 6 | Admin Registry Edit UI (expanded from SWR) | ✅ COMPLETED | High | v1.4 | 0.5-1 Phase |
 | 7 | Keycloak SSO Hardening | 🟡 PENDING | High | v1.4 | 0.5 Phase |
-| 8 | Analytics & Observability Dashboard | 🟡 PENDING | Medium | v1.4 | 1 Phase |
+| 8 | Analytics & Observability Dashboard | ✅ COMPLETED | Medium | v1.4 | 1 Phase |
 | 9 | Multi-Agent Orchestration | 🟡 PENDING | Low | v1.5 | 2 Phases |
 | 12 | Advanced User & Group Management | ✅ COMPLETED | High | v1.4 | 1 Phase |
+| 13 | User Experience Enhancement | 🟡 PENDING | Medium | v1.4 | 1 Phase |
+| 14 | AgentOS Dashboard & Mission Control | ✅ COMPLETED | High | v1.4 | 1.5 Phases |
 
 ---
 
 ## Completed Topics
+
+### 8. Analytics & Observability Dashboard
+
+**Status:** ✅ COMPLETED  
+**Completed Date:** 2026-03-16  
+**Design Doc:** [docs/enhancement/analytics-observability-dashboard/00-specification.md](./analytics-observability-dashboard/00-specification.md)  
+
+#### Problem Statement
+No visibility into usage trends, performance metrics, costs, or security auditing. Ad-hoc database queries required for any analysis.
+
+#### Target State (To-Be)
+- Comprehensive analytics with 6 categories: Usage, Performance, Costs, Agents, Security, Overview
+- Dual-mode architecture: Standalone Grafana (port 3001) + Embedded panels in Next.js
+- Hybrid query strategy: Materialized views for history, direct queries for real-time
+- Time-range filtering (24h, 7d, 30d, 90d, custom)
+- Export capabilities (CSV/PDF)
+
+#### Key Decisions Made
+
+| Decision | Current | Target | Rationale |
+|----------|---------|--------|-----------|
+| **Architecture** | No analytics | Dual-mode (Grafana + Embedded) | Serves both ops teams and end users |
+| **Query Strategy** | Direct queries only | Hybrid (matviews + direct) | Performance for history, freshness for recent |
+| **Chart Library** | None | Tremor React | Pre-built analytics components, matches design system |
+| **Data Sources** | Separate systems | Unified aggregation layer | Single API for all analytics |
+| **Access Control** | Grafana only | JWT + RBAC in embedded views | Consistent with AgentOS security model |
+
+#### Technical Approach
+- PostgreSQL materialized views refreshed every 15 minutes (concurrently)
+- Celery job for view refresh scheduling
+- `AnalyticsService` class for data aggregation from Prometheus, Loki, PostgreSQL
+- Grafana HTTP API for embedded panel data
+- Tremor React components for charts
+- Redis caching (30s TTL) for real-time queries
+
+#### Analytics Categories
+
+1. **Usage Analytics** - DAU/MAU, feature adoption, session duration, retention
+2. **Performance Analytics** - API latency (p50/p95/p99), error rates, resource utilization
+3. **Cost Analytics** - Token usage, spend by model/user, budget tracking
+4. **Agent Effectiveness** - Success rates, completion times, error breakdowns
+5. **Security & Audit** - Login patterns, permission changes, anomalies
+6. **Overview** - Key metrics summary, trends, recent alerts
+
+#### Success Criteria
+- [ ] All 6 analytics pages accessible at `/admin/analytics/*`
+- [ ] Overview page loads in < 3 seconds
+- [ ] Materialized views refresh every 15 minutes
+- [ ] Time range filtering works (24h, 7d, 30d, 90d, custom)
+- [ ] Grafana accessible at port 3001
+- [ ] Export to CSV works for all tables
+
+#### Estimated Effort
+1 Phase (6 weeks)
+
+---
 
 ### 1. Runtime Permission Approval (HITL)
 
@@ -358,6 +493,118 @@ Permissions → User Access
 
 #### Estimated Effort
 1 Phase (6 plans)
+
+---
+
+### 4. Admin Console LLM Configuration with Pluggable Module Architecture
+
+**Status:** ✅ COMPLETED  
+**Completed Date:** 2026-03-15  
+**Design Doc:** [docs/enhancement/admin-console-llm-config/00-specification.md](./admin-console-llm-config/00-specification.md)  
+
+#### Problem Statement
+LiteLLM configuration requires editing YAML files and restarting containers. No runtime model management, no visibility into model health or costs, and no fallback chain configuration.
+
+#### Current State (As-Is)
+- **Configuration:** Edit `infra/litellm/config.yaml` manually
+- **Apply Changes:** Restart LiteLLM container (downtime)
+- **Testing:** Manual API calls to verify connectivity
+- **Monitoring:** Check logs manually
+- **Cost Tracking:** Not available
+- **Fallbacks:** Static YAML only
+
+#### Target State (To-Be)
+- **Configuration:** Admin UI with forms and validation
+- **Apply Changes:** Runtime via API (zero downtime)
+- **Testing:** One-click connectivity test
+- **Monitoring:** Real-time health dashboard
+- **Cost Tracking:** Budget alerts and usage quotas
+- **Fallbacks:** Visual chain builder with conditions
+
+#### Key Decisions Made
+
+| Decision | Current | Target | Rationale |
+|----------|---------|--------|-----------|
+| **Architecture** | Monolithic backend | Pluggable sidecar modules | Independent scaling and upgrades |
+| **BaseModule** | None | Abstract class with CLI hooks | Reusable pattern for all modules |
+| **Communication** | Direct function calls | HTTP with circuit breaker | Resilience and scalability |
+| **Scale Path** | Docker Compose only | Compose → Swarm → K8s | Growth from 100 to 5,000 users |
+| **Custom Logic** | None | Overrideable methods | Flexibility for complex operations |
+
+#### Architecture Highlights
+
+**Pluggable Module Pattern:**
+```
+┌─────────────────┐     ┌────────────────────────────────┐
+│   Backend       │◀───▶│  Module Sidecars (scalable)    │
+│  ┌───────────┐  │ HTTP│  ┌──────────────────────────┐  │
+│  │BaseClient │  │     │  │  BaseModule (abstract)   │  │
+│  │ - Circuit │  │     │  │  ┌──────────────────┐    │  │
+│  │   breaker │  │     │  │  │ execute_cli()    │    │  │
+│  │ - Retry   │  │     │  │  │ health_check()   │    │  │
+│  └───────────┘  │     │  │  └──────────────────┘    │  │
+└─────────────────┘     │  │  ┌──────────────────┐    │  │
+                        │  │  │ Custom Methods   │    │  │
+                        │  │  │ (overrideable)   │    │  │
+                        │  │  └──────────────────┘    │  │
+                        │  └──────────────────────────┘  │
+                        └────────────────────────────────┘
+```
+
+**Key Features:**
+- **BaseModule:** Abstract class with CLI execution + custom code hooks
+- **Sidecar Pattern:** Each module is separate container/service
+- **Horizontal Scaling:** Modules can have N replicas
+- **Technology Diversity:** Different languages per module
+- **Zero-Downtime Updates:** Restart modules independently
+
+#### Module Commands
+
+**LiteLLM Config Module (7 commands):**
+1. `add_model` - Add new LLM with validation
+2. `remove_model` - Remove existing model
+3. `list_models` - List all configured models
+4. `test_model` - Test connectivity
+5. `update_model` - Update configuration
+6. `get_model_health` - Health status
+7. `get_metrics` - Usage metrics
+
+#### UI Components
+
+- **Models Page:** CRUD operations, search, filter, pagination
+- **Fallbacks Page:** Visual chain builder with drag-and-drop
+- **Health Page:** Real-time monitoring with latency charts
+- **Costs Page:** Budget tracking, quotas, usage alerts
+
+#### Database Schema
+
+- `module_metadata` - Registered modules with health status
+- `llm_usage_stats` - Aggregated daily usage per model
+- `fallback_chains` - Fallback chain configurations
+- `model_quotas` - Quota settings per model
+
+#### Implementation Phases
+
+1. **Base Framework:** BaseModule, client, registry, resilience patterns
+2. **LiteLLM Module:** Sidecar service with 7 commands
+3. **Backend Integration:** API routes, discovery, permissions
+4. **Frontend Models:** Model CRUD with forms
+5. **Frontend Advanced:** Fallbacks, health, costs
+6. **Testing & Docs:** E2E tests, documentation, admin guide
+
+#### Success Criteria
+
+- [ ] Add model via UI in <5 seconds
+- [ ] Zero downtime for configuration changes
+- [ ] One-click model connectivity test
+- [ ] Real-time health dashboard
+- [ ] Budget alerts at 80%/90%/100%
+- [ ] Module restart doesn't affect backend
+- [ ] Works with Docker Compose (MVP)
+- [ ] Migration path to Kubernetes documented
+
+#### Estimated Effort
+2-3 weeks (7 phases)
 
 ---
 
@@ -574,6 +821,70 @@ Enable agents to spawn sub-agents and coordinate complex workflows. Currently si
 
 ---
 
+### 13. User Experience Enhancement (UI Theme + User Profile)
+
+**Status:** 🟡 PENDING  
+**Source:** User feedback / Product vision  
+**Priority:** Medium  
+**Target:** v1.4  
+**Dependencies:** None  
+**Estimated Effort:** 1 Phase (0.5 Theme + 0.5 Profile)
+
+#### Brief Description
+Comprehensive user experience improvements combining UI theme system with full user profile management. Transforms AgentOS from a functional but utilitarian interface into a polished, personalized user experience.
+
+**Two Components:**
+1. **UI Theme System** - Dark/light mode, color palettes, design system foundation
+2. **Full User Profile** - Avatar, bio, preferences, notification settings
+
+#### Open Questions
+- Theme persistence: localStorage vs database vs both?
+- Avatar storage: local filesystem vs S3-compatible vs database?
+- Theme scope: global only or per-workspace/per-chat?
+- Default theme: follow system preference or fixed default?
+- User profile fields: minimal vs comprehensive?
+- Profile visibility: public (to org) vs private?
+
+#### Current State
+- Single light theme (default)
+- No user profile page (only basic info in settings)
+- No avatar support
+- No theme switching
+- User preferences not persisted
+
+#### Target State
+- **Theme System:**
+  - Dark/Light mode toggle with system detection
+  - Color palette customization (primary, secondary, accent)
+  - Component consistency across all pages
+  - Theme persistence across sessions
+  - Smooth transitions between themes
+  
+- **User Profile:**
+  - Dedicated profile page (`/profile` or `/settings/profile`)
+  - Avatar upload with crop/resize
+  - Display name (editable, separate from Keycloak username)
+  - Bio/Description field
+  - Contact preferences
+  - Notification settings (email, in-app, channels)
+  - User-specific settings (language, timezone, theme preference)
+  - Profile visibility controls
+
+#### Success Criteria
+- [ ] Toggle between dark/light modes
+- [ ] Theme follows system preference by default
+- [ ] Theme persists across browser sessions
+- [ ] All components respect theme settings
+- [ ] Smooth theme transitions (no flash)
+- [ ] User can upload avatar
+- [ ] User can edit display name
+- [ ] User can write bio/description
+- [ ] User can manage notification preferences
+- [ ] User settings persist to database
+- [ ] Profile page accessible from user menu
+
+---
+
 ## Additional Topics (From STATE.md)
 
 ### 9. CREDENTIAL_ENCRYPTION_KEY Production Setup
@@ -606,19 +917,20 @@ When starting next brainstorming session, consider:
 1. ✅ Runtime Permission Approval (HITL)
 2. ✅ Admin Registry Edit UI
 3. ✅ Advanced User & Group Management
+4. ✅ Admin Console LLM Configuration (Pluggable module architecture)
+5. ✅ Analytics & Observability Dashboard
 
 ### High Priority (v1.4 Must-Have)
-4. Keycloak SSO Hardening (Stability)
-5. Admin Console LLM Configuration (Ops improvement)
+5. Keycloak SSO Hardening (Stability) ⭐ **NEXT RECOMMENDED**
 
 ### Medium Priority (v1.4 Should-Have)
 6. WhatsApp Business API Integration (Channel expansion)
 7. GitHub Repository Skill Sources (Developer experience)
-8. Analytics & Observability Dashboard (Ops visibility)
+8. User Experience Enhancement (UI Theme + User Profile)
 
 ### Low Priority (Post-v1.4)
-9. HashiCorp Vault Integration (Enterprise feature)
-10. Multi-Agent Orchestration (v1.5 vision)
+10. HashiCorp Vault Integration (Enterprise feature)
+11. Multi-Agent Orchestration (v1.5 vision)
 
 ---
 
@@ -646,11 +958,174 @@ For each topic:
 
 ---
 
+## 📝 SESSION SUMMARY (2026-03-16) — Analytics Dashboard
+
+**Topics Completed:** Analytics & Observability Dashboard (#8)
+
+**Brainstorming Highlights:**
+- Defined dual-mode architecture (Grafana + Embedded panels)
+- Selected hybrid query strategy (materialized views + direct queries)
+- Identified 6 analytics categories covering all operational needs
+- Chose Tremor React for chart components
+- Designed 6-page analytics hub structure
+- Ensured consistency with Topic #14 Dashboard architecture
+
+**Architecture Decisions:**
+- Grafana HTTP API + Custom Components (not iframe embedding)
+- Hybrid approach: Materialized views for history, direct queries for real-time
+- PostgreSQL materialized views with concurrent refresh
+- Redis caching layer for performance
+- Tremor React chart library for professional defaults
+
+**Completed Topics Now: 7**
+- #1, #4, #6, #8, #12, #14, #15
+
+**Remaining Pending: 5**
+- #7 Keycloak SSO Hardening (Critical - Recommended Next)
+- #2, #5, #13 (Medium priority)
+- #9, #10 (Low priority)
+
+---
+
 **Next Recommended Topic:** Keycloak SSO Hardening — Critical stability fix
 
-**Alternative:** Admin Console LLM Configuration — High ops value, medium effort
+**Alternatives:**
+- User Experience Enhancement — Polish the UI, improve user satisfaction
+- GitHub Repository Skill Sources — Developer experience improvement
 
-**Quick Win:** GitHub Repository Skill Sources — Developer experience improvement
+---
+
+## 🆕 NEW TOPIC ADDED
+
+**Session Date:** 2026-03-15  
+**Topic:** #13 User Experience Enhancement  
+**Status:** 🟡 PENDING - Awaiting brainstorming
+
+**Components:**
+1. UI Theme System (Dark/Light mode, color palettes, design system)
+2. Full User Profile (Avatar, bio, preferences, notification settings)
+
+**Effort:** 1 Phase (0.5 + 0.5)  
+**Priority:** Medium  
+**Rationale:** Improves user satisfaction, product polish, competitive differentiation
+
+---
+
+*This document is a living artifact. Update it continuously as brainstorming progresses.*
+
+---
+
+## 🆕 NEW TOPIC ADDED (Dashboard & Mission Control)
+
+**Session Date:** 2026-03-16  
+**Topic:** #14 AgentOS Dashboard & Mission Control  
+**Status:** ✅ COMPLETED - Design document written
+
+**Components:**
+1. **Overview Page** — System health + Activity feed
+2. **Flow Execution Monitor** — Workflow runs with step-by-step drill-down
+3. **Agents Page** — Agent management + optional 3D office visualization
+4. **Memory Browser** — Memory search and exploration
+
+**Key Innovations:**
+- Unified operational interface for admins and users
+- Real-time WebSocket updates
+- Deep integration with Phase 8 observability
+- Inspired by OpenClaw Dashboard (mudrii, tugcantopaloglu, tenacitOS)
+
+**Effort:** 1.5 Phases (6 weeks)  
+**Priority:** High  
+**Target:** v1.4  
+**Rationale:** Essential operational visibility; complements existing Grafana dashboards with user-friendly interface
+
+**Design Doc:** [docs/enhancement/agentos-dashboard-mission-control/00-specification.md](./agentos-dashboard-mission-control/00-specification.md)
+
+---
+
+## 📝 SESSION SUMMARY (2026-03-16)
+
+**Topics Completed:** AgentOS Dashboard & Mission Control (#14)
+
+**Brainstorming Highlights:**
+- Analyzed 3 reference repositories (mudrii, tugcantopaloglu, tenacitOS)
+- Selected integrated approach (same Next.js app)
+- Defined 4-page structure: Overview, Flows, Agents, Memory
+- Leverages existing Phase 8 observability (Prometheus, Loki)
+- Real-time updates via WebSocket
+- Optional 3D office visualization
+
+**Architecture Decisions:**
+- Backend API aggregation layer
+- WebSocket + Redis Pub/Sub for real-time
+- Lazy-loaded 3D visualization
+- RBAC-enforced throughout
+
+**Next Topics:**
+- #7 Keycloak SSO Hardening (Critical)
+- #15 Scheduler Management UI (Future)
+
+---
+
+*This document is a living artifact. Update it continuously as brainstorming progresses.*
+
+
+---
+
+## 🆕 NEW TOPIC ADDED (Scheduler Engine & UI)
+
+**Session Date:** 2026-03-16  
+**Topic:** #15 Scheduler Engine & UI  
+**Status:** ✅ COMPLETED - Design document written
+
+**Components:**
+1. **Global Scheduler View** (/scheduler) — Operations dashboard for all jobs
+2. **Per-Workflow Schedule Tab** — Integrated workflow scheduling
+3. **Visual Cron Builder** — Interactive builder with timezone, preview
+4. **Execution History** — Job runs with filtering and drill-down
+5. **Queue Monitoring** — Real-time Celery queue status
+6. **Multi-Channel Alerting** — In-app, Telegram, email notifications
+
+**Key Innovations:**
+- Extends existing Celery infrastructure (no replacement)
+- Dual UI: Global view for ops + per-workflow for users
+- Full interactive cron builder (not just text)
+- Real-time queue monitoring
+- Comprehensive alerting system
+
+**Effort:** 1 Phase (5 weeks)  
+**Priority:** High  
+**Target:** v1.4  
+**Rationale:** Essential operational capability; complements Dashboard with scheduling management
+
+**Design Doc:** [docs/enhancement/scheduler-engine-ui/00-specification.md](./scheduler-engine-ui/00-specification.md)
+
+---
+
+## 📝 SESSION SUMMARY (2026-03-16) — Scheduler
+
+**Topics Completed:** Scheduler Engine & UI (#15)
+
+**Brainstorming Highlights:**
+- Investigated existing Celery scheduler infrastructure
+- Identified gaps: No UI, no visual builder, no queue monitoring
+- Selected Celery-centric approach (extends existing)
+- Defined 5-page structure: Global Jobs, History, Queue, Per-Workflow, Cron Builder
+- Full interactive cron builder with timezone and holiday support
+- Multi-channel alerting architecture
+
+**Architecture Decisions:**
+- Extend Celery (no replacement) — lower risk
+- Backend API aggregation layer
+- Global + per-workflow dual interface
+- Real-time queue status
+- RBAC-enforced throughout
+
+**Completed Topics Now: 6**
+- #1, #4, #6, #12, #14, #15
+
+**Remaining Pending: 5**
+- #7 Keycloak SSO Hardening (Critical - Recommended Next)
+- #2, #5, #8, #13 (Medium priority)
 
 ---
 
