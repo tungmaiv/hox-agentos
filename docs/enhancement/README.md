@@ -2,9 +2,40 @@
 
 This directory contains enhancement proposals and detailed implementation plans for major Blitz AgentOS features.
 
+## Active Brainstorming
+
+📋 **[BRAINSTORMING-TRACKING.md](BRAINSTORMING-TRACKING.md)** — Live tracking of all v1.4+ topics
+
+See the tracking document for:
+- All pending topics with priorities
+- Completed brainstorming with design docs
+- Topic selection guide for next sessions
+
+---
+
 ## Current Proposals
 
-### 1. Security Scan Module
+### 1. Runtime Permission Approval (HITL) ⭐ NEW
+
+**Status:** ✅ Design Complete  
+**Priority:** High  
+**Target:** v1.4
+
+Transform Gate 3 (Tool ACL) from binary deny into escalatable Human-in-the-Loop permission approval. When a skill attempts to use a tool the user lacks permission for, execution pauses, notifies an admin, and resumes automatically upon approval.
+
+**Key Capabilities:**
+- Runtime permission requests with rich context
+- One-click approval with duration options (session/72h/permanent)
+- Auto-approve rule engine with conditions
+- Configurable timeout with escalation
+- Works in both Keycloak and local auth modes
+
+**Documentation:**
+- [00-specification.md](runtime-permission-approval/00-specification.md) - Complete design specification
+
+---
+
+### 2. Security Scan Module
 
 **Status:** Planning Complete  
 **Priority:** High  
@@ -63,4 +94,4 @@ When proposing new enhancements:
 ---
 
 **Maintained by:** Blitz AgentOS Architecture Team  
-**Last Updated:** 2026-03-11
+**Last Updated:** 2026-03-14
