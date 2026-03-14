@@ -9,7 +9,109 @@
 
 ## 🔄 SESSION HANDOVER
 
-### Current Session: 2026-03-16 (Late Evening - Session 5)
+### Previous Session: 2026-03-17 (Session 7 - New Enhancement Topics Added) ✅ COMPLETED
+
+**Total Topics Completed:** 11
+- Topics #1, #4, #5, #6, #7, #8, #12, #13, #14, #15, #16 ✅
+- Topic #9: Runtime Multi-Agent Orchestration (Architecture Decision Made) 🔵
+
+**New Topics Added (v1.7+):** 7 topics
+- #18: Email System & Channel Notifications
+- #19: Storage Service
+- #20: Projects/Spaces
+- #21: Universal Integration
+- #22: MCP Server Creation Skill
+- #23: Plugin Templates
+- #24: Third-Party Apps UI
+
+**Key Decisions:**
+- Option B selected for Multi-Agent (Extend LangGraph, not custom orchestrator)
+- Topic #2 WhatsApp deferred to v1.6+
+- Topic #17 Advanced Multi-Agent Orchestrator documented as future enhancement
+- 7 new enhancement topics documented for v1.7+ roadmap
+
+### 🆕 NEW SESSION: Ready to Start
+
+**Current Status:**
+- **11 Topics** ✅ COMPLETED with design docs
+- **1 Topic** 🔵 IN-PROGRESS (Topic #9 - needs detailed design)
+- **9 Topics** 🟡 PENDING (new v1.7+ topics ready for brainstorming)
+- **3 Topics** 🟡 FUTURE (v1.6+)
+
+**Recommended Order for Deep-Dive:**
+1. Topic #19: Storage Service (High priority, foundational)
+2. Topic #20: Projects/Spaces (High priority, organizational)
+3. Topic #9: Runtime Multi-Agent Orchestration (Complete detailed design)
+4. Topic #18: Email System (Medium priority)
+5. Topic #21: Universal Integration (Medium priority)
+6. Topic #22: MCP Server Creation Skill (Medium priority)
+7. Topic #24: Third-Party Apps UI (Medium priority)
+8. Topic #23: Plugin Templates (Low priority)
+
+**Ready for Deep-Dive Brainstorming**
+
+---
+
+## 📋 CURRENT TOPIC STATUS
+
+### Session 6 Completed Work:
+
+**Topic #5: Universal Skill Import System (GitHub Repository Skill Sources Extended)** ✅
+- Extended from simple GitHub import to Universal Adapter Pattern
+- Comprehensive research of 7 skill repositories (VoltAgent, marketingskills, Claude Official, Everything Claude Code, Superpowers, GSD, etc.)
+- Identified common patterns: SKILL.md, metadata.json, plugin.json structures
+- Adapter architecture with GitHub, ZIP, and Index JSON adapters
+- Skill-Tool Bundling: Private tools require mandatory sandbox execution
+- References & Output Formats: Skills can declare external references and structured output schemas
+- Security-First: Security scanning before import, private tools enforced in sandbox
+- Full observability integration with Dashboard (#8) and Mission Control (#11)
+- Extensible for v1.5 (GitLab, Bitbucket, Gitea) and v1.6 (full plugin ecosystem)
+- **Design Doc:** `docs/plans/2026-03-14-universal-skill-import-design.md`
+
+**Brainstorming Highlights:**
+- Analyzed 7 different skill repository patterns from the ecosystem
+- Discovered common manifest formats: .claude-plugin/plugin.json, SKILL.md, skills/ folders
+- Designed extensible BaseSkillAdapter interface for future sources
+- RawSkillBundle abstraction normalizes all sources to common format
+- Security scanner with secrets detection, unsafe patterns, dependency scanning
+- Import decision engine supporting immediate vs approval workflows
+- Sandbox enforcement: All private tools MUST run in isolated containers
+- References system for documentation, examples, API specs, related skills
+- Output format specifications (markdown, JSON schema, templates)
+- Full observability: metrics, logs, alerting for imports and sandbox executions
+
+**Topic #16: Multi-Agent Tab Architecture (Artifact Creation)** ✅
+- Added existing design document to tracking
+- Creation-time multi-agent experience for artifact wizard
+- Fixes context pollution and UI state bugs in skill/tool creation
+- Enables parallel dependency creation in separate tabs
+- Database-backed dependency tracking with status notifications
+- **Design Doc:** `docs/enhancement/multi-agent-tab-architecture/00-specification.md`
+
+**Topic #9: Runtime Multi-Agent Orchestration - Architecture Decision** 🔵
+- Evaluated two approaches: Custom Orchestrator (Option A) vs Extend LangGraph (Option B)
+- **DECISION: Option B (Extend LangGraph)** for v1.5
+- Rationale: Leverages existing workflow infrastructure, visual canvas, faster implementation
+- Option A (Custom Orchestrator) documented as future enhancement (Topic #17) for v1.6+
+- Implementation phases: Rich agent node → Team templates → Shared memory → Agent spawning tool
+- **Status:** Ready for detailed design documentation
+
+**Architecture Decisions:**
+- Adapter Pattern (not Strategy or Direct) for extensibility and testability
+- RawSkillBundle as intermediate representation before normalization
+- Security scan BEFORE parsing (fail fast for malicious content)
+- Mandatory sandbox for private tools (enforced at validation and runtime)
+- Configurable import policies per repository (immediate vs approval)
+- Integration with existing AgentOS tables (SkillDefinition, ToolDefinition, etc.)
+- Mission Control widgets for import queue and sandbox execution monitoring
+- Analytics dashboard for import metrics, security scans, tool usage
+
+---
+
+### Previous Sessions Summary
+
+**Session 5: 2026-03-16 (Late Evening)**  
+- Topic #7: Keycloak SSO Hardening ✅
 
 **Session Status:** ✅ COMPLETED  
 **Total Topics Completed This Session:** 1  
@@ -57,6 +159,9 @@
 | **Analytics (#8)** | Dual-mode (Grafana + Embedded); Hybrid query strategy (materialized views + direct); 6 analytics categories; Tremor React for charts |
 | **UX Enhancement (#13)** | CSS Variables theming (Tailwind v4); MinIO avatar storage; Dual timezone (system + user); 3 themes + color customization |
 | **Keycloak Hardening (#7)** | Optional SSO with graceful degradation; Health monitoring with error categorization; Circuit breaker pattern; Pre-flight validation |
+| **Skill Import (#5)** | Universal adapter pattern (BaseSkillAdapter); GitHub + ZIP + Index JSON support; Mandatory sandbox for private tools; Security-first validation; Extensible for v1.5/v1.6 |
+| **Multi-Agent Tab (#16)** | Creation-time multi-agent experience; Tab-based context isolation; Database-backed dependency tracking; Parallel dependency creation; Separate CopilotKit instances per tab |
+| **Multi-Agent Orchestration (#9)** | Option B selected: Extend LangGraph (not custom orchestrator); Leverages canvas builder and checkpointing; Rich agent nodes + team templates + shared memory; Option A (custom orchestrator) deferred to v1.6+ as Topic #17 |
 
 ### 🔄 Architecture Evolution
 
@@ -69,6 +174,13 @@
 - **Hybrid Analytics Query:** Materialized views for history + Direct queries for real-time
 - **Dual-Mode Visualization:** Grafana for ops + Embedded panels for users
 - **SSO Hardening:** Graceful degradation; Health monitoring; Error categorization
+- **Skill Adapter Pattern:** BaseSkillAdapter for universal import sources
+- **Skill-Tool Bundling:** Private tools with mandatory sandbox execution
+- **Security-First Import:** Scan before parsing; Validation at multiple layers
+- **Import Decision Engine:** Configurable immediate vs approval workflows
+- **RawSkillBundle:** Intermediate representation normalizing all skill sources
+- **Sandbox Enforcement:** Private tool isolation at validation and runtime
+- **Multi-Agent Tabs:** Creation-time agent spawning with context isolation; Database dependency tracking; Separate agent instances per tab
 
 **Impact on Future Topics:**
 - Security Scan Module can use same BaseModule pattern
@@ -77,12 +189,16 @@
 - Dashboard and Scheduler provide operational foundation
 - Analytics patterns reusable for future reporting features
 - SSO hardening patterns applicable to other external integrations
+- Skill Import adapters establish pattern for GitLab/Bitbucket/Gitea (v1.5)
+- Sandbox execution patterns reusable for all external code
+- Security scanner can be extracted as standalone BaseModule
 
 ### 📊 Current Status
 
-**Completed ✅ (9):**
+**Completed ✅ (11):**
 - #1 Runtime Permission Approval (HITL)
 - #4 Admin Console LLM Configuration
+- #5 Universal Skill Import System (GitHub + ZIP + Adapters)
 - #6 Admin Registry Edit UI
 - #7 Keycloak SSO Hardening
 - #8 Analytics & Observability Dashboard
@@ -90,12 +206,21 @@
 - #13 User Experience Enhancement
 - #14 AgentOS Dashboard & Mission Control
 - #15 Scheduler Engine & UI
+- #16 Multi-Agent Tab Architecture (Artifact Creation)
 
-**Pending 🟡 (3):**
-- #2 WhatsApp Business API Integration (Medium) ⭐ **RECOMMENDED NEXT**
-- #5 GitHub Repository Skill Sources (Medium)
-- #9 HashiCorp Vault Integration (Low)
-- #10 Multi-Agent Orchestration (Low)
+**In-Progress 🔵 (1):**
+- #9 Runtime Multi-Agent Orchestration (LangGraph Extension)
+
+**Pending 🟡 (9):**
+- #2 WhatsApp Business API Integration (Medium)
+- #3 HashiCorp Vault Integration (Low)
+- #18 Email System & Channel Notifications (Medium)
+- #19 Storage Service (High) ⭐ **RECOMMENDED NEXT**
+- #20 Projects/Spaces (High)
+- #21 Universal Integration (Medium)
+- #22 MCP Server Creation Skill (Medium)
+- #23 Plugin Templates (Low)
+- #24 Third-Party Apps UI (Medium)
 
 ### 🚀 Recommended Next Steps
 
@@ -104,28 +229,32 @@
 **For Next Session:**
 
 **Option A: Continue Brainstorming (Remaining Topics)**
-- Topic #2: WhatsApp Business API Integration (Medium) ⭐ **RECOMMENDED NEXT**
-- Topic #5: GitHub Repository Skill Sources (Medium)
+- Topic #9: Runtime Multi-Agent Orchestration (LangGraph Extension) ⭐ **RECOMMENDED NEXT**
 
 **Option B: Start Implementation**
-- Create PLAN.md files for any of the 9 completed topics
+- Create PLAN.md files for any of the 11 completed topics
 - Begin Phase 1 implementation of high-priority topics:
   - #7 Keycloak SSO Hardening (Critical stability fix)
   - #14 Dashboard & Mission Control (High user value)
   - #15 Scheduler Engine (Operational necessity)
+  - #5 Universal Skill Import System (Developer experience)
 - Review designs with stakeholders before coding
 
 **Option C: Plan v1.5 Topics**
-- #9 HashiCorp Vault Integration (Enterprise feature)
-- #10 Multi-Agent Orchestration (Advanced capability)
-- Brainstorm additional post-v1.4 features
+- #9 Runtime Multi-Agent Orchestration (LangGraph Extension)
+- Brainstorm additional v1.5 features
 
-### 📁 Files Modified This Session (Session 5)
+**Option D: Plan v1.6+ Topics**
+- #2 WhatsApp Business API Integration (Channel expansion)
+- #3 HashiCorp Vault Integration (Enterprise feature)
+- #17 Advanced Multi-Agent Orchestrator (Custom)
 
-- `docs/enhancement/keycloak-sso-hardening/00-specification.md` (NEW)
+### 📁 Files Modified This Session (Session 6)
+
+- `docs/plans/2026-03-14-universal-skill-import-design.md` (NEW)
 - `docs/enhancement/BRAINSTORMING-TRACKING.md` (UPDATED)
 
-### 📁 All Design Documents (9 Completed)
+### 📁 All Design Documents (11 Completed)
 
 - `docs/enhancement/runtime-permission-approval/00-specification.md`
 - `docs/enhancement/admin-console-llm-config/00-specification.md`
@@ -136,6 +265,8 @@
 - `docs/enhancement/analytics-observability-dashboard/00-specification.md`
 - `docs/enhancement/user-experience-enhancement/00-specification.md`
 - `docs/enhancement/keycloak-sso-hardening/00-specification.md`
+- `docs/plans/2026-03-14-universal-skill-import-design.md`
+- `docs/enhancement/multi-agent-tab-architecture/00-specification.md`
 
 ### ⚠️ Context to Preserve
 
@@ -152,6 +283,9 @@
 10. **Analytics:** Dual-mode (Grafana UI + Embedded panels); Hybrid query (materialized views + direct); Tremor React charts
 11. **UX Theming:** CSS Variables with Tailwind v4; MinIO for avatars; Dual timezone (system + user)
 12. **Keycloak Hardening:** Optional SSO with graceful degradation; Health monitoring; Circuit breaker; Error categorization
+13. **Skill Import:** Adapter pattern with BaseSkillAdapter interface; GitHub + ZIP + Index JSON; Mandatory sandbox for private tools; Security-first validation
+14. **Skill-Tool Bundling:** Private tools require sandbox execution; Tool visibility controls access; References and output formats supported
+15. **Multi-Agent Tabs:** Creation-time multi-agent experience; Separate CopilotKit instances per tab; Database-backed dependency tracking; Context isolation between artifact types
 
 **Technical Debt Notes:**
 - Old `local_group_roles` table to be deprecated in favor of `group_permissions`
@@ -166,6 +300,12 @@
 - MinIO service needs to be added to docker-compose.yml for avatar storage
 - Theme CSS variables need to be applied to all existing components
 - Keycloak SSO hardening needs graceful error handling on login page
+- Skill Import adapters need async HTTP client with circuit breaker (reuse BaseModule client)
+- ToolDefinition table needs new columns for visibility, parent_skill_id, sandbox_required
+- Sandbox execution service needs resource limits enforcement (CPU, memory, time)
+- Import queue table needs periodic cleanup for old rejected entries
+- Multi-Agent Tabs need database migration 031_agent_dependencies (already designed)
+- Artifact builder needs refactoring to use new TabManager and separate agent instances
 
 **Open Questions for Future:**
 - WhatsApp Business verification timeline (for Topic #2)
@@ -173,6 +313,81 @@
 - Circuit breaker tuning parameters
 - Dashboard 3D visualization performance optimization
 - Scheduler holiday exclusion data source
+- Multi-Agent Tabs: CopilotKit multi-instance performance at scale
+- Multi-Agent Tabs: Max concurrent tabs limit (suggested: 5)
+- GitLab/Bitbucket API rate limiting strategy (v1.5)
+- Private tool marketplace with pricing (v1.6)
+- Cross-skill tool sharing permissions model
+- Runtime Multi-Agent Orchestration: Memory model (shared vs isolated)
+- Runtime Multi-Agent Orchestration: Coordination patterns (hierarchical vs peer-to-peer)
+
+---
+
+## 🆕 MULTI-AGENT ORCHESTRATION - ARCHITECTURE DECISION
+
+**Decision Date:** 2026-03-14  
+**Status:** ✅ DECISION MADE  
+
+### Context
+During brainstorming of Topic #9 (Multi-Agent Orchestration), two architectural approaches were evaluated:
+
+### Option A: Custom Orchestrator (Advanced)
+**Approach:** Build separate orchestration layer with message bus, agent registry, and dynamic spawning
+
+**Pros:**
+- Maximum flexibility for any multi-agent pattern
+- True dynamic runtime agent spawning
+- Independent agent processes (fault isolation)
+- Research-grade multi-agent capabilities
+
+**Cons:**
+- Duplicates effort (AgentOS already has LangGraph)
+- No visual builder integration
+- Complex integration with existing HITL/checkpointing
+- 2-3 Phases implementation time
+- Higher maintenance burden
+
+**Target:** v1.6+ (Future enhancement)  
+**Topic:** #17 Advanced Multi-Agent Orchestrator
+
+### Option B: Extend LangGraph (Selected ✅)
+**Approach:** Extend existing LangGraph workflow system with rich agent nodes and team templates
+
+**Pros:**
+- Leverages existing canvas and workflow infrastructure
+- Visual builder already works
+- HITL, checkpointing, persistence already solved
+- Incremental implementation (1-2 Phases)
+- Single orchestration model
+
+**Cons:**
+- Less flexible than custom orchestrator
+- Constrained by graph topology
+- Dynamic spawning requires subgraph complexity
+- Shared state can get messy
+
+**Target:** v1.5  
+**Topic:** #9 Runtime Multi-Agent Orchestration (LangGraph Extension)
+
+### Decision Rationale
+1. **Existing Investment:** AgentOS already heavily uses LangGraph for workflows
+2. **Visual Builder:** Canvas at `/workflows` is a key differentiator
+3. **Timeline:** Option B ships faster (v1.5 vs v1.6+)
+4. **80/20 Rule:** Option B provides 80% of multi-agent benefits with 20% of effort
+5. **Migration Path:** Can implement Option A later if needed (not breaking change)
+
+### Implementation Phases (Option B)
+1. **Phase 1:** Rich agent node with dynamic agent discovery
+2. **Phase 2:** Team template system with pre-built agent teams
+3. **Phase 3:** Shared memory nodes for inter-agent communication
+4. **Phase 4:** Agent spawning tool for dynamic sub-agent creation
+
+### Future Revisit Criteria
+Consider Option A (Custom Orchestrator) if:
+- Multi-agent becomes PRIMARY differentiator for AgentOS
+- Need cutting-edge research capabilities (consensus, negotiation, markets)
+- Option B proves insufficient for customer use cases
+- Team has bandwidth for major architectural investment
 
 ---
 
@@ -200,20 +415,29 @@ This document tracks all brainstorming topics for v1.4 and beyond. Each topic mo
 ## Quick Status Summary
 
 | # | Topic | Status | Priority | Target | Est. Effort |
-|---|-------|--------|----------|--------|-------------|
+|---|---|---|-------|--------|--------|-------------|
 | 1 | Runtime Permission Approval (HITL) | ✅ COMPLETED | High | v1.4 | 1 Phase |
-| 2 | WhatsApp Business API Integration | 🟡 PENDING | Medium | v1.4 | 1 Phase |
+| 2 | WhatsApp Business API Integration | 🟡 FUTURE | Medium | v1.6+ | 1 Phase |
 | 3 | HashiCorp Vault Integration | 🟡 PENDING | Low | Post-MVP | 1 Phase |
 | 4 | Admin Console LLM Configuration | ✅ COMPLETED | High | v1.4 | 0.5 Phase |
-| 5 | GitHub Repository Skill Sources | 🟡 PENDING | Medium | v1.4 | 0.5 Phase |
+| 5 | Universal Skill Import System | ✅ COMPLETED | Medium | v1.4 | 1 Phase |
 | 6 | Admin Registry Edit UI (expanded from SWR) | ✅ COMPLETED | High | v1.4 | 0.5-1 Phase |
 | 7 | Keycloak SSO Hardening | ✅ COMPLETED | High | v1.4 | 0.5 Phase |
 | 8 | Analytics & Observability Dashboard | ✅ COMPLETED | Medium | v1.4 | 1 Phase |
-| 9 | Multi-Agent Orchestration | 🟡 PENDING | Low | v1.5 | 2 Phases |
+| 9 | Runtime Multi-Agent Orchestration (LangGraph Extension) | 🔵 IN-PROGRESS | Low | v1.5 | 1-2 Phases |
+| 17 | Advanced Multi-Agent Orchestrator (Custom) | 🟡 FUTURE | Low | v1.6+ | 2-3 Phases |
 | 12 | Advanced User & Group Management | ✅ COMPLETED | High | v1.4 | 1 Phase |
 | 13 | User Experience Enhancement | ✅ COMPLETED | Medium | v1.4 | 1 Phase |
 | 14 | AgentOS Dashboard & Mission Control | ✅ COMPLETED | High | v1.4 | 1.5 Phases |
 | 15 | Scheduler Engine & UI | ✅ COMPLETED | High | v1.4 | 1 Phase |
+| 16 | Multi-Agent Tab Architecture (Artifact Creation) | ✅ COMPLETED | High | v1.4 | 0.5 Phase |
+| 18 | Email System & Channel Notifications | 🟡 PENDING | Medium | v1.7+ | 0.5 Phase |
+| 19 | Storage Service | 🟡 PENDING | High | v1.7+ | 1 Phase |
+| 20 | Projects/Spaces | 🟡 PENDING | High | v1.7+ | 1-2 Phases |
+| 21 | Universal Integration | 🟡 PENDING | Medium | v1.7+ | 1-2 Phases |
+| 22 | MCP Server Creation Skill | 🟡 PENDING | Medium | v1.7+ | 1 Phase |
+| 23 | Plugin Templates | 🟡 PENDING | Low | v1.7+ | 0.5 Phase |
+| 24 | Third-Party Apps UI | 🟡 PENDING | Medium | v1.7+ | 1-2 Phases |
 
 ---
 
@@ -748,33 +972,226 @@ LiteLLM configuration requires editing YAML files and restarting containers. No 
 
 ## Pending Topics
 
-### 3. WhatsApp Business API Integration
+### New Topics Added (v1.7+)
+
+#### 18. Email System & Channel Notifications
 
 **Status:** 🟡 PENDING  
+**Source:** New enhancement request  
+**Priority:** Medium  
+**Target:** v1.7+  
+**Dependencies:** Channel gateway architecture (existing)
+
+#### Brief Description
+Transform email into a first-class channel alongside Telegram/WhatsApp. Enable system notifications to be sent via any configured channel (email, Telegram, in-app). Provide email settings management UI with SMTP/IMAP configuration support.
+
+#### Current State
+- Email is used for login/authentication only
+- No email-based notifications
+- No email channel adapter
+- System notifications limited to in-app
+
+#### Target State
+- Email as channel adapter (like Telegram)
+- System notifications routed via channel preferences
+- Email settings UI (SMTP/IMAP configuration)
+- Notification templates per channel
+- User preference for notification channels
+
+---
+
+#### 19. Storage Service
+
+**Status:** 🟡 PENDING  
+**Source:** New enhancement request  
+**Priority:** High  
+**Target:** v1.7+  
+**Dependencies:** MinIO setup
+
+#### Brief Description
+Unified storage abstraction layer providing file upload/download capabilities. Serves avatars (Topic #13), workflow attachments, agent outputs, and document processing. S3-compatible API with MinIO backend.
+
+#### Current State
+- No centralized storage service
+- Avatars planned for MinIO (Topic #13)
+- File handling ad-hoc per feature
+
+#### Target State
+- StorageService abstraction layer
+- MinIO integration (S3-compatible API)
+- Upload/download endpoints with progress
+- Storage quotas per user/project
+- Access control and signed URLs
+- Multiple storage backends (MinIO, S3, GCS)
+
+---
+
+#### 20. Projects/Spaces
+
+**Status:** 🟡 PENDING  
+**Source:** New enhancement request  
+**Priority:** High  
+**Target:** v1.7+  
+**Dependencies:** User/Group management (Topic #12)
+
+#### Brief Description
+Organizational workspaces for grouping agents, workflows, skills, and memory. Enables team collaboration with project-scoped resources and permissions.
+
+#### Current State
+- All resources are global/organization-wide
+- No project-level isolation
+- Limited collaboration features
+
+#### Target State
+- Project/Space creation and management
+- Project-scoped agents and workflows
+- Team membership and roles per project
+- Resource isolation (agents can't access other projects)
+- Project-level analytics and quotas
+- Cross-project sharing (optional)
+
+---
+
+#### 21. Universal Integration
+
+**Status:** 🟡 PENDING  
+**Source:** New enhancement request  
+**Priority:** Medium  
+**Target:** v1.7+  
+**Dependencies:** MCP architecture, Plugin system foundation
+
+#### Brief Description
+Generic adapter framework for connecting external systems without custom code. Webhook-based integrations, REST API connector builder, and OAuth flow management.
+
+#### Current State
+- MCP servers for specific integrations
+- Custom code required for new integrations
+- No generic connector builder
+
+#### Target State
+- Visual integration builder
+- Webhook receiver and processor
+- REST API connector with authentication
+- OAuth 2.0 flow management
+- Integration marketplace/catalog
+- Request/response transformation
+
+---
+
+#### 22. MCP Server Creation Skill
+
+**Status:** 🟡 PENDING  
+**Source:** New enhancement request  
+**Priority:** Medium  
+**Target:** v1.7+  
+**Dependencies:** MCP infrastructure (existing)
+
+#### Brief Description
+Natural language skill for creating new MCP servers. Users describe what they want to integrate with, and the skill auto-generates the MCP server scaffolding, tools, and deployment configuration.
+
+#### Current State
+- MCP servers created manually via code
+- Requires understanding of MCP protocol
+- No automated generation
+
+#### Target State
+- "Create MCP server" skill
+- Natural language description → server code
+- Auto-discovery of available APIs
+- Tool binding and validation
+- One-click deployment
+- Server testing and health checks
+
+---
+
+#### 23. Plugin Templates
+
+**Status:** 🟡 PENDING  
+**Source:** New enhancement request  
+**Priority:** Low  
+**Target:** v1.7+  
+**Dependencies:** Plugin system foundation
+
+#### Brief Description
+Pre-built plugin templates for common patterns (Slack bot, GitHub webhook handler, database connector). Template marketplace with versioning and one-click generation.
+
+#### Current State
+- No plugin template system
+- Each plugin created from scratch
+- No template sharing
+
+#### Target State
+- Template gallery with categories
+- One-click plugin generation from template
+- Custom template creation and publishing
+- Template versioning and updates
+- Community template marketplace
+
+---
+
+#### 24. Third-Party Apps UI
+
+**Status:** 🟡 PENDING  
+**Source:** New enhancement request  
+**Priority:** Medium  
+**Target:** v1.7+  
+**Dependencies:** CopilotKit, AG-UI, A2UI (existing)
+
+#### Brief Description
+Dynamic UI generation for third-party applications using CopilotKit, AG-UI, and A2UI. External apps can render rich interfaces within AgentOS chat/context.
+
+#### Current State
+- Static UI components
+- No dynamic UI generation for external apps
+- Limited app integration capabilities
+
+#### Target State
+- Apps can define UI components via schema
+- CopilotKit renders app-specific UI
+- AG-UI components for interactive elements
+- A2UI envelopes for rich experiences
+- App store/catalog for discovery
+- Runtime UI composition
+
+---
+
+### 3. WhatsApp Business API Integration
+
+**Status:** 🟡 FUTURE  
 **Source:** STATE.md Pending Todos  
 **Priority:** Medium  
-**Target:** v1.4  
-**Dependencies:** Business verification (1-4 weeks)  
+**Target:** v1.6+  
+**Dependencies:** Business verification (1-4 weeks), Resource prioritization  
 
 #### Brief Description
 Full WhatsApp Business API integration as a channel gateway. Currently Telegram is supported; WhatsApp requires Meta Business verification which takes 1-4 weeks.
+
+#### Why Deferred to v1.6+
+- Meta Business verification process is lengthy (1-4 weeks) and bureaucratic
+- Complex message template requirements for business-initiated conversations
+- Resource prioritization: Core platform features (v1.4/v1.5) take precedence
+- Telegram channel already provides messaging capability
+- Can be added later without breaking existing functionality
 
 #### Open Questions
 - Use Meta's Cloud API or On-Premises API?
 - Handle message templates (required for business-initiated messages)?
 - Support for interactive messages (buttons, lists)?
 - Media message support (images, documents)?
+- Business verification strategy and timeline?
 
 #### Current State
 - Channel gateway architecture exists
 - Telegram adapter implemented
 - No WhatsApp adapter
+- Architecture ready for additional channel adapters
 
-#### Target State
+#### Target State (v1.6+)
 - WhatsApp channel adapter in `channels/adapters/`
 - Business verification process documented
 - Message templates management UI
 - Full feature parity with Telegram channel
+- Compliance with Meta Business API policies
 
 ---
 
@@ -838,33 +1255,120 @@ Make LLM model and provider configurable via admin UI instead of editing `infra/
 
 ---
 
-### 5. GitHub Repository Skill Sources
+### 5. Universal Skill Import System (GitHub + ZIP + Adapters)
 
-**Status:** 🟡 PENDING  
-**Source:** STATE.md Pending Todos  
+**Status:** ✅ COMPLETED  
+**Completed Date:** 2026-03-14  
+**Design Doc:** [docs/plans/2026-03-14-universal-skill-import-design.md](../plans/2026-03-14-universal-skill-import-design.md)  
 **Priority:** Medium  
 **Target:** v1.4  
 **Dependencies:** None  
 
 #### Brief Description
-Allow importing skills directly from GitHub repositories. Currently only `agentskills-index.json` protocol is supported.
+Universal skill import system with extensible adapter pattern. Supports GitHub repositories (single skill and skills/ folder structures), ZIP file uploads, and existing agentskills-index.json protocol. Skills can bundle private tools that run in mandatory sandboxes.
 
-#### Open Questions
-- Support for private repositories (GitHub App vs PAT)?
-- Auto-sync on repository updates (webhooks)?
-- Version pinning (tags/branches)?
-- Monorepo support (multiple skills in one repo)?
+#### Key Decisions Made
 
-#### Current State
-- Skill Store supports index.json URLs only
-- Manual ZIP upload
-- No GitHub integration
+| Decision | Current | Target | Rationale |
+|----------|---------|--------|-----------|
+| **Architecture** | Index JSON only | Adapter pattern (BaseSkillAdapter) | Extensible for GitLab/Bitbucket/Gitea (v1.5) |
+| **Sources** | Manual only | GitHub + ZIP + Index JSON | Multiple import pathways |
+| **Tool Bundling** | None | Private tools with sandbox | Self-contained skills with isolated execution |
+| **Security** | Basic | Security-first validation | Scan before parsing, mandatory sandbox |
+| **Import Flow** | Immediate | Configurable (immediate/approval) | Flexibility for different security postures |
 
-#### Target State
-- GitHub repo URL input in Add Repository dialog
-- Automatic skill file detection
-- Tree/file listing for skill selection
-- Fork-based workflow support
+#### Architecture Highlights
+
+**Adapter Pattern:**
+```
+┌─────────────────────────────────────────────┐
+│         SkillImportOrchestrator              │
+│  ┌──────────┐ ┌──────────┐ ┌──────────────┐ │
+│  │ GitHub   │ │  ZIP     │ │ Index JSON   │ │
+│  │ Adapter  │ │ Adapter  │ │ Adapter      │ │
+│  └──────────┘ └──────────┘ └──────────────┘ │
+└─────────────────────────────────────────────┘
+```
+
+**RawSkillBundle Normalization:**
+- All sources converge to common intermediate format
+- Skill metadata, instruction markdown, procedure JSON
+- Tools (0..N), references, output format schemas
+- Security scan BEFORE normalization
+
+**Skill-Tool Bundling:**
+- Skills can include private tools
+- Private tools MUST run in sandbox (enforced)
+- Tool visibility: public | private | protected
+- Parent skill reference for access control
+
+**Security-First Validation:**
+- Secrets detection (API keys, passwords, tokens)
+- Unsafe patterns (eval, exec, shell=True)
+- Dependency vulnerability scanning
+- Policy violation checking
+
+#### Supported Sources
+
+**v1.4 (Current):**
+- GitHub public repos (single skill or skills/ folder)
+- ZIP file upload (full folder structure)
+- agentskills-index.json URLs
+
+**v1.5 (Future):**
+- GitLab, Bitbucket, Gitea adapters
+- Private repos (PAT/App auth)
+- GitHub App with webhook auto-sync
+- Monorepo support
+- Version pinning (tags/branches)
+
+**v1.6 (Future):**
+- Full plugin system (commands + agents + skills)
+- Plugin marketplace
+- Auto-updates
+- Dependency resolution
+
+#### Database Schema Extensions
+
+**New Tables:**
+- `skill_references` - External references (docs, examples, APIs)
+- `skill_output_formats` - Output format specifications
+- `skill_import_queue` - Pending approval queue
+
+**Extended Tables:**
+- `tool_definitions` - Add visibility, parent_skill_id, sandbox_required
+
+#### UI Integration
+
+**Admin Console:**
+- Import from GitHub (URL input, auto-discovery)
+- Import from ZIP (drag-and-drop upload)
+- Import queue management (approve/reject)
+- Repository management (add/remove, policies)
+
+**Mission Control:**
+- Skill import queue widget
+- Sandbox execution dashboard
+- Tool usage analytics
+
+**Analytics Dashboard:**
+- Import volume and success rates
+- Security scan statistics
+- Sandbox resource usage
+- Tool execution metrics
+
+#### Success Criteria
+- [ ] Import skills from GitHub repos (single skill and skills/ folder)
+- [ ] Import skills from ZIP uploads
+- [ ] Support agentskills-index.json protocol
+- [ ] Private tools automatically run in sandbox
+- [ ] Security scanning blocks malicious skills
+- [ ] Import approval workflow functional
+- [ ] Full observability in Dashboard and Mission Control
+- [ ] Extensible adapter architecture for v1.5 sources
+
+#### Estimated Effort
+1 Phase (6 weeks)
 
 ---
 
@@ -1052,25 +1556,140 @@ Comprehensive user experience improvements combining UI theme system with full u
 
 When starting next brainstorming session, consider:
 
-### Completed ✅
+### Completed ✅ (11)
 1. ✅ Runtime Permission Approval (HITL)
-2. ✅ Admin Registry Edit UI
-3. ✅ Advanced User & Group Management
-4. ✅ Admin Console LLM Configuration (Pluggable module architecture)
-5. ✅ Analytics & Observability Dashboard
-6. ✅ User Experience Enhancement (UI Theme + User Profile)
-7. ✅ Keycloak SSO Hardening (Critical stability fix)
+2. ✅ Admin Console LLM Configuration (Pluggable module architecture)
+3. ✅ Admin Registry Edit UI
+4. ✅ Advanced User & Group Management
+5. ✅ Universal Skill Import System (GitHub + ZIP + Adapters)
+6. ✅ Keycloak SSO Hardening (Critical stability fix)
+7. ✅ Analytics & Observability Dashboard
+8. ✅ User Experience Enhancement (UI Theme + User Profile)
+9. ✅ AgentOS Dashboard & Mission Control
+10. ✅ Scheduler Engine & UI
+11. ✅ Multi-Agent Tab Architecture (Artifact Creation)
 
 ### High Priority (v1.4 Must-Have)
 *All high priority topics completed*
 
 ### Medium Priority (v1.4 Should-Have)
-5. WhatsApp Business API Integration (Channel expansion) ⭐ **NEXT RECOMMENDED**
-6. GitHub Repository Skill Sources (Developer experience)
+*All v1.4 medium priority topics completed or reassigned*
 
-### Low Priority (Post-v1.4)
-7. HashiCorp Vault Integration (Enterprise feature)
-8. Multi-Agent Orchestration (v1.5 vision)
+### Low Priority (v1.5)
+1. Runtime Multi-Agent Orchestration (LangGraph Extension) - Topic #9
+    - Extend existing LangGraph workflow system
+    - Rich agent nodes, team templates, shared memory
+    - Leverages canvas builder and checkpointing
+
+### Future / v1.6+
+1. WhatsApp Business API Integration (Channel expansion)
+    - Requires Meta Business verification (1-4 weeks lead time)
+    - Complex message templates and compliance requirements
+    - Deferred due to verification complexity and resource prioritization
+2. HashiCorp Vault Integration (Enterprise feature)
+3. Advanced Multi-Agent Orchestrator (Custom) - Option A
+    - Research-grade multi-agent capabilities
+    - Custom orchestrator with message bus
+    - Dynamic runtime agent spawning
+    - Maximum flexibility for complex patterns
+
+### v1.7+ Topics (New Enhancement Topics)
+4. **Email System & Channel Notifications** (#18)
+    - Email as a first-class channel alongside Telegram/WhatsApp
+    - System notifications via channel infrastructure
+    - Email settings management UI
+    - SMTP/IMAP configuration
+    - Notification templates and preferences
+
+5. **Storage Service** (#19)
+    - Unified storage abstraction layer
+    - MinIO integration (S3-compatible)
+    - File upload/download capabilities
+    - Storage quotas and access control
+    - Support for documents, images, attachments
+
+6. **Projects/Spaces** (#20)
+    - Organizational workspaces for grouping resources
+    - Project-scoped agents, workflows, and memory
+    - Team collaboration within spaces
+    - Resource isolation and permissions
+    - Project-level analytics and quotas
+
+7. **Universal Integration** (#21)
+    - Generic adapter framework for external systems
+    - Webhook-based integrations
+    - REST API connector builder
+    - OAuth flow management
+    - Integration marketplace/catalog
+
+8. **MCP Server Creation Skill** (#22)
+    - Skill for creating new MCP servers via natural language
+    - Auto-generate MCP server scaffolding
+    - Tool discovery and binding
+    - Server testing and validation
+    - Deployment automation
+
+9. **Plugin Templates** (#23)
+    - Pre-built plugin templates for common patterns
+    - Template marketplace
+    - Custom template creation
+    - Template versioning and updates
+    - One-click plugin generation from templates
+
+10. **Third-Party Apps UI** (#24)
+    - Dynamic UI generation for external apps
+    - CopilotKit integration for app interactions
+    - AG-UI components for app interfaces
+    - A2UI envelopes for rich app experiences
+    - App store/catalog for 3rd party integrations
+4. **Email System & Channel Notifications** (#18)
+    - Email as a first-class channel alongside Telegram/WhatsApp
+    - System notifications via channel infrastructure
+    - Email settings management UI
+    - SMTP/IMAP configuration
+    - Notification templates and preferences
+
+5. **Storage Service** (#19)
+    - Unified storage abstraction layer
+    - MinIO integration (S3-compatible)
+    - File upload/download capabilities
+    - Storage quotas and access control
+    - Support for documents, images, attachments
+
+6. **Projects/Spaces** (#20)
+    - Organizational workspaces for grouping resources
+    - Project-scoped agents, workflows, and memory
+    - Team collaboration within spaces
+    - Resource isolation and permissions
+    - Project-level analytics and quotas
+
+7. **Universal Integration** (#21)
+    - Generic adapter framework for external systems
+    - Webhook-based integrations
+    - REST API connector builder
+    - OAuth flow management
+    - Integration marketplace/catalog
+
+8. **MCP Server Creation Skill** (#22)
+    - Skill for creating new MCP servers via natural language
+    - Auto-generate MCP server scaffolding
+    - Tool discovery and binding
+    - Server testing and validation
+    - Deployment automation
+
+9. **Plugin Templates** (#23)
+    - Pre-built plugin templates for common patterns
+    - Template marketplace
+    - Custom template creation
+    - Template versioning and updates
+    - One-click plugin generation from templates
+
+10. **Third-Party Apps UI** (#24)
+    - Dynamic UI generation for external apps
+    - CopilotKit integration for app interactions
+    - AG-UI components for app interfaces
+    - A2UI envelopes for rich app experiences
+    - App store/catalog for 3rd party integrations
 
 ---
 
@@ -1299,60 +1918,123 @@ For each topic:
 - #1, #4, #6, #8, #12, #13, #14, #15
 
 **Remaining Pending: 4**
-- #7 Keycloak SSO Hardening (Critical - Recommended Next)
-- #2, #5 (Medium priority)
-
----
-
-### Session 5: 2026-03-16 (Late Evening)
-
-**Session Status:** ✅ COMPLETED - Ready for next session  
-**Total Topics Completed This Session:** 1  
-
-**Topic #7: Keycloak SSO Hardening** ✅
-- Comprehensive three-pillar hardening approach
-- Verified issue still exists in codebase (not fully fixed)
-- Error categorization: Certificate (40%) / Configuration (35%) / Unreachable (20%) / Timeout (5%)
-- Health monitoring with 4-tier test suite (DNS → TLS → OIDC → Client)
-- Graceful degradation to local auth when SSO fails
-- Circuit breaker pattern (5 failures → 60s timeout → half-open)
-- Pre-flight configuration validation with specific fix recommendations
-- Admin dashboard with real-time health status
-- 0.5 Phase implementation timeline (3 weeks)
-- **Design Doc:** `docs/enhancement/keycloak-sso-hardening/00-specification.md`
-
-**Brainstorming Highlights:**
-- Investigated existing auth.ts and error handling code
-- Confirmed partial fix exists (fetchWithRetry in Phase 24-01) but issue persists
-- Identified missing pieces: login page error handling, admin diagnostics, circuit breaker
-- Emphasized Keycloak as OPTIONAL feature — system works without SSO
-- Designed user-friendly error messages (no more "Server error — Configuration")
-
-**Architecture Decisions:**
-- Keycloak is optional — system must work with local auth only
-- Graceful degradation — SSO issues don't block login
-- Health checks on-demand — no background polling overhead
-- Smart error categorization — different messages for different errors
-- Circuit breaker — prevents cascade of failed auth attempts
-- No user-visible errors for optional feature
-
-**Completed Topics Now: 9**
-- #1, #4, #6, #7, #8, #12, #13, #14, #15
-
-**Remaining Pending: 3**
-- #2 WhatsApp Business API Integration (Medium) ⭐ **RECOMMENDED NEXT**
-- #5 GitHub Repository Skill Sources (Medium)
+- #2 WhatsApp Business API Integration (Medium) - Moved to v1.6+
+- #5 GitHub Repository Skill Sources (Medium) - Now #5 Universal Skill Import ✅
 - #9 HashiCorp Vault Integration (Low)
-- #10 Multi-Agent Orchestration (Low)
+- #10 Multi-Agent Orchestration (Low) - Now #9 In Progress
 
 ---
 
-**Next Recommended Topic:** WhatsApp Business API Integration — Channel expansion
+**Next Recommended Topic:** Topic #9 Runtime Multi-Agent Orchestration — LangGraph Extension
 
 **Alternatives:**
-- GitHub Repository Skill Sources — Developer experience improvement
-- Start implementation planning for completed topics
+- Start implementation planning for completed topics (11 topics ready)
+- Brainstorm additional v1.5 features
+- Review WhatsApp Business API requirements for v1.6+ planning
+
+---
+
+## 🆕 NEW TOPIC ADDED (Multi-Agent Tab Architecture)
+
+**Session Date:** 2026-03-14  
+**Topic:** #16 Multi-Agent Tab Architecture  
+**Status:** ✅ COMPLETED - Design document already exists
+
+**Problem Statement:**
+Artifact creation wizard (`/admin/create`) suffers from context pollution - skill creation conversations become cluttered with tool/MCP implementation details. UI state bugs when switching artifact types. No parallel creation of multiple dependencies.
+
+**Solution:**
+Multi-agent tab architecture that spawns separate agent instances in new UI tabs for tool/MCP creation:
+- Context isolation between artifact types (skill vs tool vs MCP)
+- Enables parallel dependency creation
+- Database-backed dependency tracking
+- Visual status indicators and seamless navigation
+
+**Key Components:**
+1. **TabManager** (`useAgentTabs` hook) - Manage multiple agent tabs
+2. **Agent Dependencies** - Database table tracking parent-child relationships
+3. **Separate CopilotKit Instances** - True context isolation per tab
+4. **Tool/MCP Builder Agents** - Dedicated agents for artifact types
+5. **Dependency Notifications** - Status updates between tabs
+
+**Architecture:**
+```
+User creates skill requiring tools [email-fetch, slack-send]
+         ↓
+Skill Agent detects missing tools
+         ↓
+UI shows: "Tools needed: email-fetch, slack-send"
+         ↓
+User clicks "Create email-fetch tool"
+         ↓
+NEW TAB SPAWNS with Tool Builder Agent
+  ┌─────────────────────────────────────┐
+  │ Tool Form       │ Tool Agent Chat   │
+  │ - handler_code  │ (isolated context)│
+  └─────────────────────────────────────┘
+         ↓
+Tool created → Dependency service notifies parent → Status updated
+```
+
+**Benefits:**
+- ✅ Fixes context pollution - each agent has clean slate
+- ✅ Enables parallel work - multiple dependencies created simultaneously
+- ✅ Clear navigation - Tabbed interface shows all active creations
+- ✅ Status visibility - Visual indicators (✅ ⚠️ 🔄) on each tab
+- ✅ Resume capability - Database tracking allows session recovery
+
+**Effort:** 10-13 hours  
+**Priority:** High (addresses critical UX issues)  
+**Target:** v1.4  
+**Rationale:** Fixes critical UX issues in artifact creation; enables efficient skill development workflow
+
+**Design Doc:** [docs/enhancement/multi-agent-tab-architecture/00-specification.md](./multi-agent-tab-architecture/00-specification.md)
+
+---
+
+### 📁 Files Modified This Session (Session 6 - Skill Import Brainstorming)
+
+- `docs/plans/2026-03-14-universal-skill-import-design.md` (NEW)
+- `docs/enhancement/multi-agent-tab-architecture/00-specification.md` (MOVED to subfolder)
+- `docs/enhancement/BRAINSTORMING-TRACKING.md` (UPDATED)
+
+**Design Docs Moved:**
+- `docs/enhancements/multi-agent-tab-architecture.md` → `docs/enhancement/multi-agent-tab-architecture/00-specification.md` (standardized structure)
 
 ---
 
 *This document is a living artifact. Update it continuously as brainstorming progresses.*
+
+---
+
+## 🆕 NEW TOPICS ADDED (Session 2026-03-17)
+
+**7 New Enhancement Topics Added:**
+
+| # | Topic | Priority | Target | Brief Description |
+|---|-------|----------|--------|-------------------|
+| 18 | Email System & Channel Notifications | Medium | v1.7+ | Email as first-class channel, system notifications via channels |
+| 19 | Storage Service | High | v1.7+ | Unified storage abstraction with MinIO/S3 support |
+| 20 | Projects/Spaces | High | v1.7+ | Organizational workspaces for team collaboration |
+| 21 | Universal Integration | Medium | v1.7+ | Generic adapter framework for external systems |
+| 22 | MCP Server Creation Skill | Medium | v1.7+ | Natural language skill to auto-generate MCP servers |
+| 23 | Plugin Templates | Low | v1.7+ | Pre-built templates for common plugin patterns |
+| 24 | Third-Party Apps UI | Medium | v1.7+ | Dynamic UI generation using CopilotKit/AG-UI/A2UI |
+
+**Updated Statistics:**
+- ✅ Completed: 11 topics
+- 🔵 In-Progress: 1 topic (#9)
+- 🟡 Pending: 9 topics (new v1.7+ topics)
+- 🟡 Future: 3 topics (v1.6+)
+- **Total Topics: 24**
+
+**Recommended Next Topics (Priority Order):**
+1. **Topic #19: Storage Service** (High priority, foundational for avatars, files)
+2. **Topic #20: Projects/Spaces** (High priority, organizational structure)
+3. **Topic #9: Runtime Multi-Agent Orchestration** (Complete detailed design)
+
+**Ready for Deep-Dive Brainstorming:**
+All 7 new topics are documented and ready for detailed design discussions. User can go through each topic to explore requirements, constraints, and architecture decisions.
+
+---
+
