@@ -21,6 +21,122 @@
 **Topics Completed This Session:**
 - Topic #18: Email System & Channel Notifications ✅
 
+**Key Decisions Made This Session:**
+- Sidecar pattern for email adapter
+- Hybrid authentication (OAuth + IMAP/SMTP)
+- Centralized NotificationService for 8 notification types
+- Per-notification-type channel preferences (email + telegram + whatsapp + in-app)
+- System-wide email settings (admin-enforced SMTP)
+- UserCredential table for encrypted storage (AES-256-GCM)
+- Email templates via Jinja2 (HTML + plain text)
+- 7 implementation phases (foundation → sidecar → templates → linking → inbound → events → monitoring)
+
+**Files Created This Session:**
+- `docs/enhancement/topics/18-email-system-channel-notifications/00-specification.md` (COMPREHENSIVE DESIGN - 14 SECTIONS)
+
+**Files Modified This Session:**
+- `docs/enhancement/BRAINSTORMING-MASTER.md` (UPDATED)
+- `docs/enhancement/BRAINSTORMING-INDEX.md` (UPDATED)
+-11 completed design docs moved to `topics/` folders
+
+**Git Commits:**
+- `a7a4f10 refactor: shard BRAINSTORMING-TRACKING.md into topic folders`
+- `c70e5ae refactor: remove empty enhancement directories`
+
+---
+
+**Ready for New Session:**
+All context preserved in MASTER.md and INDEX.md
+- Old tracking archived (no data loss)
+- 11 completed design docs accessible in `topics/` folders
+- System ready for next topic brainstorming
+
+### Current Status
+
+| Status | Count | Topics |
+|--------|-------|--------|--------|
+| **✅ Completed** | 12 | Topics #1, #4, #5, #6, #7, #8, #12, #13, #14, #15, #16, #18 |
+| **🔵 In-Progress** | 1 | Topic #9 (design partial, needs completion) |
+| **🟡 Pending** | 8 | Topics #19-24 (ready for brainstorming) |
+| **🟡 Future** | 3 | Topics #2, #3, #17 (deferred to v1.6+) |
+| **Total** | **24** | All enhancement topics |
+
+---
+
+### 📋 CURRENT TOPIC STATUS
+
+### In-Progress 🔵 (1 topic)
+
+| # | Topic | Status | Description |
+|---|-------|---------|--------|--------|
+| 9 | Runtime Multi-Agent Orchestration | 🔵 IN-PROGRESS | Architecture decision made (Option B: Extend LangGraph) - Detailed design needed |
+
+### Pending 🟡 (8 topics)
+
+| # | Topic | Priority | Target | Description |
+|---|-------|----------|--------|--------|--------|
+| 19 | Storage Service | High | v1.7+ | Unified storage abstraction with MinIO/S3 support |
+| 20 | Projects/Spaces | High | v1.7+ | Organizational workspaces for team collaboration |
+| 21 | Universal Integration | Medium | v1.7+ | Generic adapter framework for external systems |
+| 22 | MCP Server Creation Skill | Medium | v1.7+ | Natural language skill to auto-generate MCP servers |
+| 23 | Plugin Templates | Low | v1.7+ | Pre-built templates for common plugin patterns |
+| 24 | Third-Party Apps UI | Medium | v1.7+ | Dynamic UI generation using CopilotKit/AG-UI/A2UI |
+
+### Future 🟡 (3 topics - v1.6+)
+
+| # | Topic | Priority | Target | Description |
+|---|-------|----------|--------|--------|--------|
+| 2 | WhatsApp Business API Integration | Medium | v1.6+ | Channel expansion (requires Meta verification) |
+| 3 | HashiCorp Vault Integration | Low | Post-MVP | Enterprise secret management |
+| 17 | Advanced Multi-Agent Orchestrator (Custom) | Low | v1.6+ | Research-grade multi-agent capabilities |
+
+---
+
+### 📋 QUICK NAVIGATION
+
+**For overview:** `docs/enhancement/BRAINSTORMING-MASTER.md`
+- Quick stats, completed table, milestones, session handovers
+
+**For search:** `docs/enhancement/BRAINSTORMING-INDEX.md`
+- Searchable by status, milestone, topic number
+
+**For detailed designs:** `docs/enhancement/topics/{topic-name}/`
+- Individual topic folders with design documents
+
+---
+
+### 🚀 RECOMMENDED NEXT STEPS
+
+**Option A: Continue Brainstorming**
+1. **Topic #9:** Runtime Multi-Agent Orchestration — LangGraph Extension
+   - Complete detailed design (architecture decision made, needs: rich agent node, team templates, shared memory, agent spawning tool)
+   
+2. **Topic #19:** Storage Service — High priority, foundational
+   - Unified storage abstraction, MinIO integration, file upload/download capabilities
+   
+3. **Topic #20:** Projects/Spaces — High priority, organizational
+   - Organizational workspaces for team collaboration, resource isolation, project-level analytics
+
+**Option B: Start Implementation Planning**
+- Use `/gsd:plan-phase` to create implementation plans
+- Begin with Topic #18 (Email System) — design is complete
+- All 12 completed topics ready for planning
+
+**Option C: Plan v1.7+ Topics**
+- Brainstorm additional v1.7+ features
+- Review WhatsApp Business API requirements for v1.6+ planning
+
+---
+
+---
+
+*Last Updated: 2026-03-17*
+
+**Previous Session: Session 7 (2026-03-17) ✅ COMPLETED
+
+**Topics Completed This Session:**
+- Topic #18: Email System & Channel Notifications ✅
+
 **Key Decisions:**
 - Sidecar pattern for email adapter
 - Hybrid authentication (OAuth + IMAP/SMTP)
