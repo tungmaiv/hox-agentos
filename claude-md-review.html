@@ -1,0 +1,1146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CLAUDE.md Review</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:#0a0f1e;color:#e2e8f0;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden;font-size:13px}
+
+/* ── Header ─────────────────────────────────────────── */
+.topbar{background:#0f172a;border-bottom:1px solid #1e293b;padding:10px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0}
+.topbar-title{font-size:13px;font-weight:700;color:#f1f5f9}
+.topbar-sub{font-size:11px;color:#475569}
+.stat-pill{display:inline-flex;align-items:center;gap:4px;background:#1e293b;border:1px solid #334155;border-radius:12px;padding:2px 9px;font-size:11px;font-weight:600}
+.sp-pending{color:#f59e0b}.sp-approved{color:#22c55e}.sp-rejected{color:#ef4444}
+
+/* ── Main layout ─────────────────────────────────────── */
+.main{display:flex;flex:1;min-height:0;overflow:hidden}
+
+/* ── Doc panel ───────────────────────────────────────── */
+.doc-panel{width:60%;border-right:1px solid #1e293b;overflow-y:auto;background:#060d1a;font-family:'SF Mono','Fira Code',monospace;font-size:12px;line-height:1.65}
+.doc-panel::-webkit-scrollbar{width:5px}.doc-panel::-webkit-scrollbar-thumb{background:#334155;border-radius:3px}
+
+.doc-line{display:flex;align-items:flex-start;border-left:3px solid transparent;transition:border-color .15s,background .15s;padding:0 10px 0 0;position:relative}
+.doc-line:hover{background:rgba(255,255,255,.02)}
+.doc-line.has-pending{border-left-color:#d97706;background:rgba(217,119,6,.05)}
+.doc-line.has-approved{border-left-color:#16a34a;background:rgba(22,163,74,.05)}
+.doc-line.has-rejected{border-left-color:#dc2626;background:rgba(220,38,38,.04);opacity:.6}
+.doc-line.active-line{background:rgba(59,130,246,.1)!important;border-left-color:#3b82f6!important}
+
+.ln{min-width:44px;text-align:right;padding:1px 10px 1px 4px;color:#334155;user-select:none;flex-shrink:0;font-size:11px;padding-top:2px}
+.lc{flex:1;padding:1px 0;white-space:pre-wrap;word-break:break-word;color:#94a3b8}
+
+/* Doc markdown styles */
+.lc h1{font-size:15px;font-weight:700;color:#f1f5f9;font-family:system-ui,sans-serif}
+.lc h2{font-size:13.5px;font-weight:700;color:#e2e8f0;font-family:system-ui,sans-serif;border-bottom:1px solid #1e293b;padding-bottom:2px}
+.lc h3{font-size:12.5px;font-weight:600;color:#cbd5e1;font-family:system-ui,sans-serif}
+.lc hr{border:none;border-top:1px solid #1e293b}
+.lc code{background:#1e293b;color:#7dd3fc;padding:1px 4px;border-radius:3px;font-family:inherit;font-size:11px}
+.lc strong{color:#e2e8f0;font-weight:700}
+.lc .bq{color:#64748b;border-left:2px solid #334155;padding-left:8px;display:block;font-style:italic}
+.lc .cb{background:#111827;border:1px solid #1e293b;border-radius:4px;padding:1px 4px;color:#6ee7b7;display:block}
+.lc .tbl{color:#94a3b8;font-family:inherit}
+.lc .heading-1{font-size:15px;font-weight:700;color:#f1f5f9;font-family:system-ui,sans-serif;display:block}
+.lc .heading-2{font-size:13px;font-weight:700;color:#cbd5e1;font-family:system-ui,sans-serif;display:block;margin-top:2px}
+.lc .heading-3{font-size:12px;font-weight:600;color:#94a3b8;font-family:system-ui,sans-serif;display:block}
+.lc .hr-line{border:none;border-top:1px solid #1e293b;display:block;height:1px;margin:3px 0}
+.lc .list-item{color:#94a3b8}
+.sug-dot{position:absolute;right:6px;top:4px;width:6px;height:6px;border-radius:50%;cursor:pointer;flex-shrink:0}
+.sug-dot.dp{background:#d97706}.sug-dot.da{background:#16a34a}.sug-dot.dr{background:#dc2626}
+
+/* ── Suggestions panel ────────────────────────────────── */
+.sug-panel{width:40%;display:flex;flex-direction:column;background:#0f172a;overflow:hidden}
+.sug-header{padding:10px 12px;border-bottom:1px solid #1e293b;flex-shrink:0}
+.filter-tabs{display:flex;gap:4px;margin-top:8px}
+.ftab{background:none;border:1px solid #334155;color:#64748b;border-radius:5px;padding:4px 10px;font-size:11px;cursor:pointer;transition:all .1s;font-weight:500}
+.ftab:hover{background:#1e293b;color:#94a3b8}
+.ftab.active{background:#1e293b;border-color:#3b82f6;color:#e2e8f0}
+.sug-list{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px}
+.sug-list::-webkit-scrollbar{width:4px}.sug-list::-webkit-scrollbar-thumb{background:#334155;border-radius:2px}
+
+.sug-card{background:#111827;border:1px solid #334155;border-radius:8px;overflow:hidden;transition:border-color .15s;cursor:pointer}
+.sug-card:hover{border-color:#475569}
+.sug-card.active-card{border-color:#3b82f6;box-shadow:0 0 0 1px #3b82f620}
+.sug-card.st-approved{border-color:#16a34a40}
+.sug-card.st-rejected{opacity:.5}
+.sug-card-head{padding:8px 10px;display:flex;align-items:flex-start;gap:7px;border-bottom:1px solid #1e293b}
+.cat-badge{font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;flex-shrink:0}
+.cat-correctness{background:rgba(239,68,68,.15);color:#fca5a5}
+.cat-clarity{background:rgba(59,130,246,.15);color:#93c5fd}
+.cat-completeness{background:rgba(245,158,11,.15);color:#fcd34d}
+.cat-consistency{background:rgba(168,85,247,.15);color:#d8b4fe}
+.cat-ux{background:rgba(34,197,94,.15);color:#86efac}
+.sug-lineref{font-size:10px;color:#64748b;font-family:monospace;white-space:nowrap;flex-shrink:0;padding-top:1px}
+.sug-card-body{padding:8px 10px}
+.sug-target{font-size:10px;color:#4b5563;font-family:monospace;margin-bottom:5px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-left:2px solid #1e293b;padding-left:6px;font-style:italic}
+.sug-text{font-size:11.5px;color:#cbd5e1;line-height:1.55}
+.sug-actions{display:flex;gap:5px;margin-top:9px;flex-wrap:wrap}
+.btn-approve{background:rgba(22,163,74,.15);border:1px solid rgba(22,163,74,.4);color:#86efac;border-radius:5px;padding:4px 10px;font-size:11px;cursor:pointer;transition:all .1s;font-weight:500}
+.btn-approve:hover{background:rgba(22,163,74,.3)}
+.btn-reject{background:rgba(220,38,38,.12);border:1px solid rgba(220,38,38,.35);color:#fca5a5;border-radius:5px;padding:4px 10px;font-size:11px;cursor:pointer;transition:all .1s;font-weight:500}
+.btn-reject:hover{background:rgba(220,38,38,.25)}
+.btn-reset{background:#1e293b;border:1px solid #334155;color:#64748b;border-radius:5px;padding:4px 10px;font-size:11px;cursor:pointer;transition:all .1s}
+.btn-reset:hover{background:#334155}
+.btn-comment{background:none;border:1px solid #334155;color:#64748b;border-radius:5px;padding:4px 10px;font-size:11px;cursor:pointer;transition:all .1s}
+.btn-comment:hover{background:#1e293b;color:#94a3b8}
+.cmt-area{margin-top:6px;display:none}
+.cmt-area.open{display:block}
+.cmt-ta{width:100%;background:#0a0f1e;border:1px solid #334155;color:#e2e8f0;border-radius:5px;padding:6px 8px;font-size:11px;font-family:inherit;resize:vertical;min-height:56px;outline:none;transition:border-color .15s}
+.cmt-ta:focus{border-color:#3b82f6}
+.cmt-save{margin-top:4px;background:#1d4ed8;border:none;color:#fff;border-radius:5px;padding:4px 12px;font-size:11px;cursor:pointer;font-weight:500}
+.status-chip{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:auto;flex-shrink:0}
+.sc-approved{background:rgba(22,163,74,.2);color:#86efac}
+.sc-rejected{background:rgba(220,38,38,.2);color:#fca5a5}
+.sc-pending{background:rgba(245,158,11,.15);color:#fcd34d}
+
+/* ── Footer / Prompt ─────────────────────────────────── */
+.footer{border-top:1px solid #1e293b;background:#0f172a;padding:10px 14px;display:flex;align-items:flex-start;gap:12px;min-height:72px;max-height:130px;flex-shrink:0}
+.foot-label{font-size:9.5px;color:#475569;text-transform:uppercase;letter-spacing:.1em;white-space:nowrap;padding-top:3px;font-weight:600;flex-shrink:0}
+.prompt-out{flex:1;font-family:'SF Mono','Fira Code',monospace;font-size:11px;color:#94a3b8;line-height:1.55;white-space:pre-wrap;overflow-y:auto;max-height:110px}
+.copy-btn{background:#1d4ed8;border:none;color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:11.5px;font-weight:500;flex-shrink:0;transition:background .15s}
+.copy-btn:hover{background:#2563eb}
+.copy-btn.done{background:#166534}
+</style>
+</head>
+<body>
+
+<!-- Raw CLAUDE.md content — safe in script[type=text/x-doc] since no </script> in content -->
+<script type="text/x-doc" id="raw"># Blitz AgentOS — Project Context for Claude
+
+> This file is read automatically at every Claude Code session start.
+> It gives GSD agents, Superpowers skills, and raw Claude sessions
+> full project context without repeating it in every prompt.
+
+## AGENT INSTRUCTIONS — Read Before Any Task
+
+**Step 1 — Read context files now, before doing anything else:**
+
+1. Read **`docs/dev-context.md`** — service URLs (docker vs localhost), all API endpoints, DB tables, roles, gotchas.
+2. Read **`.dev-secrets`** if it exists — actual credentials for local dev. Template at `.dev-secrets.example`.
+
+**Step 2 — Confirm you have loaded them** by stating:
+> "I have read docs/dev-context.md. The backend URL from inside a container is `http://backend:8000` and from the host is `http://localhost:8000`. Ollama is on the host at `http://host.docker.internal:11434`."
+
+If you cannot make that statement from memory, go read `docs/dev-context.md` now.
+
+**Step 3 — Never guess.** If you are unsure of a URL, port, endpoint path, credential, or command: stop and read `docs/dev-context.md` first. Wrong guesses are harder to fix than a 10-second file read.
+
+**Step 4 — Update on discovery.** When you find a new endpoint, URL mapping, or gotcha during work:
+- Add it to `docs/dev-context.md` immediately (correct section + Update Log at bottom).
+- Never leave a discovery undocumented for the next session.
+
+---
+
+## DO / DON'T — Quick Reference
+
+Scan this before writing any code. Details are in the sections below.
+
+### Package Management
+| DO | DON'T |
+|----|-------|
+| `uv add <pkg>` / `uv run <cmd>` | `pip install` |
+| `pnpm add <pkg>` / `pnpm run <cmd>` | `npm install` / `yarn add` |
+| `gh pr create` / `gh issue create` | raw `git` for GitHub operations |
+
+### URLs & Endpoints
+| DO | DON'T |
+|----|-------|
+| Read `docs/dev-context.md` before using any URL | Guess or hardcode a URL |
+| Use Docker service names inside containers (`http://backend:8000`) | Use `localhost` inside containers |
+| Use `localhost` when calling from the host / browser | Use Docker service names from host |
+| Use `http://host.docker.internal:11434` to reach Ollama from containers | Use `http://ollama:11434` (Ollama is not Dockerized) |
+
+### LLM Access
+| DO | DON'T |
+|----|-------|
+| `from core.config import get_llm; llm = get_llm("blitz/master")` | Import `anthropic`, `openai` SDKs directly |
+| Use stable aliases: `blitz/master`, `blitz/fast`, `blitz/coder` | Use provider model names like `claude-sonnet-4-6` in agent code |
+
+### Credentials & Security
+| DO | DON'T |
+|----|-------|
+| Load credentials from DB using `user_id` from JWT | Accept credentials in request body or query params |
+| Log `user_id`, `tool`, `allowed`, `duration_ms` | Log `access_token`, `refresh_token`, `password` |
+| Deny and log when ACL check fails | Silently skip a security gate |
+| Read `.dev-secrets` for local test credentials | Hardcode passwords or tokens in code |
+
+### Memory & Database
+| DO | DON'T |
+|----|-------|
+| Always parameterize memory queries: `WHERE user_id = $1` from JWT | Accept `user_id` from request body for memory queries |
+| Use pgvector in PostgreSQL for vector search | Add Qdrant, Weaviate, or any other vector DB |
+| Use `async with async_session()` for DB access | Use synchronous SQLAlchemy or raw `psycopg2` |
+
+### Python Code
+| DO | DON'T |
+|----|-------|
+| Full type annotations on every function | Bare `dict`, `list`, untyped args |
+| `structlog.get_logger(__name__)` for all logging | `print()`, `logging.info()` |
+| `HTTPException` with status code in FastAPI routes | Raise bare `Exception` |
+| Absolute imports (`from core.config import settings`) | Relative imports (`from ..config import settings`) |
+| Pydantic v2 `BaseModel` for all tool I/O | Plain `dict` for tool inputs/outputs |
+
+### TypeScript / Frontend Code
+| DO | DON'T |
+|----|-------|
+| `strict: true` — always | Disable strict mode or add `// @ts-ignore` |
+| `unknown` + type guard for external data | `any` |
+| Server Components by default | Add `"use client"` unless you need hooks/events |
+| Zod for validating API responses | Trust external data shapes without validation |
+
+### Architecture & Scope
+| DO | DON'T |
+|----|-------|
+| Register all tools in `gateway/tool_registry.py` | Register tools in agent code or routes |
+| Get config from `core/config.py` only | Read `os.environ` directly in business logic |
+| Run embedding (CPU-bound) in Celery workers | Run embedding inside a FastAPI request handler |
+| Keep `schema_version` on every `definition_json` | Change canvas node schema without bumping version |
+| Add new channels via `ChannelAdapter` protocol | Modify agent/tool/memory code to add a channel |
+| Design for 100 users (Docker Compose, single PostgreSQL) | Add Kubernetes, connection pools, or sharding for MVP |
+
+---
+
+## 1. Project Identity
+
+**Name:** Blitz AgentOS
+**Type:** Enterprise-grade, on-premise Agentic Operating System
+**Scale:** ~100 users (Blitz employees); design for this scale, not for millions
+**Scope:** MVP running on Docker Compose; Kubernetes is post-MVP
+**Inspiration:** OpenClaw architecture — local-first, multi-agent, sandboxed
+
+**Core purpose:**
+- Replace manual daily routines (email digest, calendar summaries, project status) with autonomous agents
+- Let non-technical users build workflows via a visual low-code canvas
+- Enforce enterprise security: no credential leakage to LLMs, per-user memory isolation, per-tool ACL
+
+**Key docs:**
+- Architecture: `docs/architecture/architecture.md` (source of truth)
+- Blueprint: `docs/design/blueprint.md`
+- Module breakdown: `docs/design/module-breakdown.md`
+- Implementation guide: `docs/implementation/implementation-guide.md`
+- **Dev context (URLs, endpoints, credentials):** `docs/dev-context.md` + `.dev-secrets`
+
+---
+
+## 2. Technology Stack (Locked Versions)
+
+| Layer | Technology | Version |
+|-------|-----------|---------|
+| Frontend framework | Next.js | 15+ (App Router) |
+| Agent UI protocol | CopilotKit (AG-UI) | Latest |
+| Generative UI | A2UI / CopilotKit | Latest |
+| Canvas | React Flow (Xyflow) | v12+ |
+| Backend framework | FastAPI | 0.115+ |
+| Agent orchestration | LangGraph | 0.2+ |
+| Data validation | PydanticAI | Latest |
+| Identity | Keycloak | 26+ |
+| Primary database | PostgreSQL | 16+ (pgvector/pgvector:pg16 image) |
+| Vector search | pgvector | 0.8+ (embedded in PostgreSQL — NO separate vector DB) |
+| Embedding model | bge-m3 (BAAI) | Latest — 1024-dim, self-hosted via FlagEmbedding |
+| Task queue | Celery | 5+ |
+| Cache / broker | Redis | 7+ |
+| LLM gateway | LiteLLM Proxy | Latest (self-hosted, port 4000) |
+| Local LLM | Ollama | Latest (runs on host machine, NOT in Docker) |
+| Cloud LLM (quality) | Anthropic Claude | claude-sonnet-4-6 |
+| Cloud LLM (coding) | Kimi via OpenRouter | kimi-k1.5 |
+| Cloud LLM (general) | OpenAI | gpt-4o |
+| MCP transport | HTTP + SSE | MCP spec standard |
+| Sandbox execution | Docker SDK | Latest |
+| Audit logging | structlog -> JSON files | Latest (Loki-compatible) |
+
+### LLM Model Aliases (use these in agent code — never provider model names directly)
+
+| Alias | Use Case | Backend |
+|-------|----------|---------|
+| `blitz/master` | Master agent, complex reasoning | Ollama/Qwen2.5:72b -> Claude Sonnet 4.6 |
+| `blitz/fast` | Simple sub-tasks, classification | Ollama/Llama3.2:3b -> gpt-4o-mini |
+| `blitz/coder` | Code generation, debugging | OpenRouter/Kimi k1.5 -> Claude Sonnet 4.6 |
+| `blitz/summarizer` | Memory summarization | Ollama/Llama3.2:3b -> gpt-4o-mini |
+| `blitz/embedder` | Not via LiteLLM — direct bge-m3 FlagModel | Local only |
+
+> **Ollama runs on the host machine, not in Docker.**
+> LiteLLM config must use `http://host.docker.internal:11434` as `api_base` for Ollama models,
+> not `http://ollama:11434`. On Linux, add `extra_hosts: ["host.docker.internal:host-gateway"]`
+> to the LiteLLM service in `docker-compose.yml`.
+
+```python
+# Always use this pattern — never provider-specific SDKs:
+from core.config import get_llm
+llm = get_llm("blitz/master")   # returns ChatOpenAI pointing at LiteLLM proxy
+```
+
+---
+
+## 3. Development Environment
+
+### Package Management
+
+| Ecosystem | Tool | Notes |
+|-----------|------|-------|
+| Python (backend) | **uv** | Use `uv add`, `uv run`, `uv sync` — never `pip install` directly |
+| Node.js (frontend) | **pnpm** | Use `pnpm add`, `pnpm install`, `pnpm run` — never `npm` or `yarn` |
+| Git / GitHub | **gh** | Use `gh` CLI for PRs, issues, and repo operations |
+
+```bash
+# Python — backend dependency management
+uv add fastapi                  # add a package
+uv add --dev pytest             # add a dev dependency
+uv sync                         # install all deps from lockfile
+uv run pytest                   # run a command in the venv
+
+# Node.js — frontend dependency management
+pnpm add @copilotkit/react-core # add a package
+pnpm add -D typescript          # add a dev dependency
+pnpm install                    # install from lockfile
+pnpm run dev                    # run a script
+
+# GitHub CLI
+gh pr create                    # open a PR
+gh pr list                      # list open PRs
+gh issue create                 # create an issue
+gh repo clone                   # clone repo
+```
+
+### Service Port Map
+
+| Service | Port | Notes |
+|---------|------|-------|
+| Frontend (Next.js) | 3000 | |
+| Backend (FastAPI) | 8000 | |
+| Keycloak | 8080 | Admin: `http://localhost:8080` |
+| LiteLLM Proxy | 4000 | Internal only |
+| MCP CRM Server | 8001 | HTTP+SSE, `/sse` endpoint |
+| MCP Docs Server | 8002 | HTTP+SSE, `/sse` endpoint |
+| Ollama | 11434 | **Host machine** (not Dockerized) — accessed via `host.docker.internal:11434` from containers |
+| Grafana (future) | 3001 | Pre-production only |
+
+### Common Commands
+
+Use `just` (project-root `justfile`) as the primary task runner. Run `just` with no args to list all recipes.
+
+```bash
+# -- Docker services ---
+just up                    # start all Docker services (detached)
+just up-svc postgres redis # start specific service(s)
+just down                  # stop services (keep volumes)
+just down-v                # stop + wipe volumes (destructive)
+just logs postgres         # tail logs for one service
+just ps                    # service status
+
+# -- Backend (FastAPI / uvicorn) ---
+just backend               # start backend dev server (port 8000, hot reload)
+just backend-bg            # start in background (writes .backend.pid)
+just backend-stop          # graceful stop
+just backend-kill          # force kill + free port 8000
+
+# -- Frontend (Next.js / pnpm) ---
+just frontend              # start frontend dev server (port 3000)
+just frontend-bg           # start in background (writes .frontend.pid)
+just frontend-stop         # graceful stop
+just frontend-kill         # force kill + free port 3000
+
+# -- Shortcuts ---
+just stop                  # stop both backend and frontend
+just kill                  # force kill both
+just dev                   # tmux: infra + backend + frontend in split panes
+just migrate               # run Alembic migrations
+just db                    # open psql shell
+
+# -- One-off docker/uv/pnpm commands ---
+docker compose run --rm backend celery -A scheduler.celery_app worker --concurrency=4
+uv add <pkg>               # add Python dep (run from backend/)
+pnpm add <pkg>             # add JS dep (run from frontend/)
+```
+
+> **Gotcha — `justfile` and `.env` files:** `set dotenv-load` was intentionally removed.
+> Each service manages its own `.env`: backend via pydantic-settings (`backend/.env`),
+> frontend via Next.js (`frontend/.env.local`). Do NOT add `set dotenv-load := true`
+> back — it causes `just`'s dotenv parser to mangle JSON list values like
+> `CORS_ORIGINS=["http://..."]` -> `[` -> pydantic-settings `JSONDecodeError`.
+>
+> **Gotcha — kill recipes:** `*-kill` recipes use `#!/usr/bin/env bash` shebang.
+> Without it, `sh -c 'pkill -9 -f "next dev"...'` has the pattern in its own cmdline
+> and pkill kills the shell (and `just`) before the target process dies.
+
+### Environment Variables
+
+Secrets live in `.env` (never committed). Key variables:
+```
+DATABASE_URL=postgresql://blitz:<POSTGRES_PASSWORD>@postgres/blitz
+REDIS_URL=redis://redis:6379
+KEYCLOAK_URL=http://keycloak:8080
+LITELLM_URL=http://litellm:4000
+LITELLM_MASTER_KEY=<key>
+ANTHROPIC_KEY=<key>
+OPENAI_KEY=<key>
+OPENROUTER_KEY=<key>
+TELEGRAM_BOT_TOKEN=<token>
+POSTGRES_PASSWORD=<password>
+KEYCLOAK_ADMIN_PASSWORD=<password>
+```
+
+---
+
+## 4. Coding Philosophy
+
+Apply these principles in order — later ones do not override earlier:
+
+### DRY (Don't Repeat Yourself)
+- Extract shared logic to utilities/helpers only when used in 3+ places
+- `core/config.py` is the single source of truth for settings; never duplicate config reads
+- `gateway/tool_registry.py` is the single registry for all tools; never register tools elsewhere
+- `get_llm()` is the only way to instantiate an LLM client
+
+### YAGNI (You Aren't Gonna Need It)
+- Design for ~100 users, not millions. No premature horizontal scaling abstractions.
+- Docker Compose for MVP. Do not add Kubernetes manifests until post-MVP.
+- No HashiCorp Vault for credentials (deferred post-MVP). Use DB + AES-256.
+- No separate vector DB. pgvector in existing PostgreSQL is sufficient at 100-user scale.
+- Do not add features, error handling, or abstractions for hypothetical future requirements.
+
+### KISS (Keep It Simple, Stupid)
+- Each module does one thing. `security/` does auth. `memory/` does memory. `agents/` orchestrates.
+- Prefer explicit over implicit. No magic decorators that hide security checks.
+- Prefer flat module structure over deep nesting.
+- Three similar lines of code is better than a premature abstraction.
+
+### Security-First
+- Security is not an afterthought — every tool call passes all three security gates.
+- When in doubt: deny access and log the denial.
+- Credentials are NEVER passed to LLMs, logged, or returned to frontends — ever.
+
+### Async-First
+- All FastAPI endpoints and database operations are `async def`.
+- Never block the event loop: CPU-bound operations (embedding) run in Celery workers.
+- Use `asyncpg` for raw SQL, `SQLAlchemy` async for ORM.
+
+---
+
+## 5. Python Coding Standards
+
+### Type Annotations
+- All functions have full type annotations — no bare `dict`, `list`, `Any` unless unavoidable.
+- Use `TypedDict` for agent state (`BlitzState`).
+- Use Pydantic v2 `BaseModel` for all tool I/O schemas, API request/response bodies.
+- Use `UUID` from `uuid` module (not `str`) for IDs in function signatures.
+
+```python
+# Correct
+async def get_recent_turns(
+    user_id: UUID,
+    conversation_id: UUID,
+    n: int = 20,
+) -> list[Turn]:
+    ...
+
+# Wrong — no bare dict or str IDs
+async def get_recent_turns(user_id: str, conversation_id: str, n=20):
+    ...
+```
+
+### Error Handling
+- Raise specific exceptions, not bare `Exception`.
+- FastAPI routes: use `HTTPException` with meaningful status codes.
+- Tools: return structured error results rather than raising, so agents can handle them.
+- Do not add try/except for scenarios that cannot happen.
+
+### Logging
+- Use `structlog` exclusively — no `print()`, no bare `logging.info()`.
+- Audit-worthy events (tool calls, ACL decisions, credential access) go to `get_audit_logger()`.
+- **NEVER log:** `access_token`, `refresh_token`, `password`, any credential value.
+
+```python
+import structlog
+logger = structlog.get_logger(__name__)
+
+# Correct
+logger.info("tool_call", tool="email.fetch", user_id=str(user_id), allowed=True)
+
+# Wrong — credential in log
+logger.info("fetching email", token=creds.access_token)
+```
+
+### Imports
+- Absolute imports only — no relative imports.
+- Group: stdlib -> third-party -> local, separated by blank lines.
+
+### Async DB Pattern
+```python
+# Always use async sessions
+async with async_session() as session:
+    result = await session.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+```
+
+---
+
+## 6. TypeScript / Frontend Coding Standards
+
+### Type Safety
+- `strict: true` in `tsconfig.json` — enforced, no exceptions.
+- No `any` — use `unknown` and narrow with type guards.
+- All component props have explicit interfaces.
+- Use Zod for runtime validation of external data (API responses, user input).
+
+### React Patterns
+- Server Components by default (Next.js App Router); Client Components only when needed.
+- `use client` directive only in files that use hooks, browser APIs, or event handlers.
+- Custom hooks for all stateful logic (`use-copilot-provider.ts`, `use-acl.ts`, etc.).
+- Never call backend APIs directly from components — always through custom hooks.
+
+### Naming
+- Files: `kebab-case.tsx` for components, `use-kebab-case.ts` for hooks.
+- Components: `PascalCase`.
+- Hooks: `useCamelCase`.
+
+### AG-UI + A2UI
+- AG-UI streaming: never block the main thread parsing agent tokens.
+- A2UI envelopes: parse JSONL in `A2UIMessageRenderer` — never in component render functions.
+- Tool calls: visualized automatically by CopilotKit — no custom rendering needed.
+
+---
+
+## 7. Architecture Invariants (Never Break These)
+
+### Security Gates — Always in This Order
+Every agent tool call must pass all three:
+1. **Gate 1:** JWT validation (`security/jwt.py`) — verify signature, expiry, issuer, audience
+2. **Gate 2:** RBAC permission check (`security/rbac.py`) — map Keycloak roles -> permissions
+3. **Gate 3:** Tool ACL (`gateway/agui_middleware.py`) — check `ToolAcl` table for this user's roles
+
+### Memory Isolation — Absolute Rule
+```python
+# ALWAYS parameterize memory queries on user_id from JWT — never from user input
+async def memory_search(user_id: UUID, query: str) -> list[Fact]:
+    # user_id comes from get_current_user(), never from request body
+    ...
+```
+
+### Credential Containment
+```
+LLM prompt   -> sees: user_id, task parameters (never tokens)
+Frontend     -> sees: tool results as structured data (never tokens)
+Audit logs   -> sees: user_id, tool name, timestamp (never tokens)
+DB           -> stores: AES-256 encrypted tokens
+Backend tool -> resolves: credentials internally via user_id from JWT
+```
+
+### Tool Registration — Single Registry
+All tools (backend tools, MCP wrappers, sandbox tools) are registered in `gateway/tool_registry.py` with:
+- `required_permissions`: checked at Gate 2
+- `sandbox_required`: routes to Docker sandbox executor
+- `mcp_server` / `mcp_tool`: for MCP-backed tools
+
+### LLM Access — Single Entry Point
+```python
+# The ONLY correct way to get an LLM client:
+from core.config import get_llm
+llm = get_llm("blitz/master")
+# Never: import anthropic; anthropic.Anthropic()
+# Never: from openai import OpenAI; OpenAI()
+```
+
+### Canvas Schema Versioning
+`Workflow.definition_json` always has `schema_version: "1.0"`. Breaking schema changes require:
+1. Increment `schema_version`
+2. Write and apply a migration script for existing workflows
+3. Update `compile_workflow_to_stategraph()` to handle both versions
+
+### Scheduler Security
+Celery workers run scheduled jobs as the **job owner's UserContext** — never as a service account. All tool ACL and memory isolation applies identically to scheduled jobs.
+
+### MCP Uniformity
+MCP tools go through the same Gate 3 ACL as backend tools. There is no separate security perimeter for MCP. All MCP servers expose `/sse` endpoint (HTTP+SSE transport).
+
+---
+
+## 8. Project Directory Structure
+
+```
+blitz-agentos/
+├── CLAUDE.md                   <- this file (project context)
+├── docker-compose.yml
+├── .env                        <- secrets (never commit)
+├── backend/
+│   ├── main.py
+│   ├── api/routes/             <- auth, agents, workflows, scheduler, channels, mcp
+│   ├── core/
+│   │   ├── config.py           <- single source of truth for settings + get_llm()
+│   │   ├── db.py               <- async SQLAlchemy engine + session factory
+│   │   ├── logging.py          <- structlog config + get_audit_logger()
+│   │   ├── models/             <- SQLAlchemy ORM models
+│   │   └── schemas/            <- Pydantic request/response schemas
+│   ├── security/               <- jwt.py, rbac.py, acl.py, deps.py, keycloak_client.py
+│   ├── gateway/                <- runtime.py, agui_middleware.py, tool_registry.py
+│   ├── agents/
+│   │   ├── master_agent.py     <- run_conversation(), run_workflow()
+│   │   ├── graphs.py           <- compile_workflow_to_stategraph()
+│   │   ├── state/types.py      <- BlitzState TypedDict
+│   │   └── subagents/          <- email, calendar, project, channel agents
+│   ├── tools/                  <- email_tools, calendar_tools, project_tools, etc.
+│   ├── memory/                 <- short_term, medium_term, long_term, embeddings, indexer
+│   ├── sandbox/                <- docker_client, policies, executor
+│   ├── mcp/                    <- client.py + servers/
+│   ├── channels/               <- gateway, models, adapters (telegram, whatsapp, teams)
+│   └── scheduler/              <- celery_app, jobs, worker
+├── frontend/
+│   └── src/
+│       ├── app/                <- Next.js App Router pages + api/copilotkit route
+│       ├── components/         <- canvas/, chat/, a2ui/
+│       ├── hooks/              <- use-copilot-provider, use-acl, use-co-agent, etc.
+│       └── lib/                <- types.ts, a2ui-spec.ts
+├── infra/
+│   ├── keycloak/               <- realm config
+│   ├── postgres/               <- init SQL, migrations
+│   ├── litellm/config.yaml     <- LLM routing config
+│   │                           (no ollama/ — Ollama runs on host, not in Docker)
+│   ├── mcp-crm/                <- CRM MCP server
+│   └── mcp-docs/               <- Docs MCP server
+├── channel-gateways/
+│   ├── telegram/
+│   └── whatsapp/
+├── logs/blitz/                 <- JSON audit log files (volume mounted)
+└── docs/
+    ├── architecture/           <- architecture.md (source of truth)
+    ├── design/                 <- blueprint.md, module-breakdown.md
+    ├── implementation/         <- implementation-guide.md
+    └── research/               <- research papers (Vietnamese)
+```
+
+---
+
+## 9. Key Constraints (Do Not Violate)
+
+| Constraint | Reason |
+|-----------|--------|
+| On-premise only — no SaaS data processing | Enterprise security requirement |
+| PostgreSQL is the sole database | No Qdrant, Weaviate, or other vector DBs |
+| pgvector embedding dim = 1024 (bge-m3) | Changing requires full reindex — avoid |
+| Docker Compose for MVP | Kubernetes deferred to post-MVP |
+| ~100 users — do not over-engineer | YAGNI — avoid distributed systems complexity |
+| `schema_version` on every workflow JSON | Required for canvas migration safety |
+| Celery workers run as job owner | No privilege escalation via scheduler |
+| All LLM calls via LiteLLM Proxy | Provider agnosticism + fallback routing |
+| JWT stored in memory only (not localStorage) | XSS protection |
+| Vietnamese language support | bge-m3 handles multilingual natively |
+
+---
+
+## 10. Implementation Phases
+
+| Phase | Goal | Gate Criteria |
+|-------|------|--------------|
+| 1 | Identity & Skeleton | JWT validated, `/api/agents/chat` 200, SSO working |
+| 2 | Agents, Tools & Memory | All tool schemas tested, memory isolation verified |
+| 3 | Canvas & Workflows | 2-node workflow persists and runs end-to-end |
+| 4 | Scheduler & Channels | Scheduled job creates WorkflowRun, Telegram delivers |
+| 5 | Hardening & Sandboxing | Docker sandbox runs without host access, ACL 403 works |
+| 6 | Observability | Grafana + Loki + Alloy; performance tested |
+
+**Use `/gsd:progress` to check current phase status.**
+**Use `/gsd:execute-phase` to begin executing a planned phase.**
+
+---
+
+## 11. Architecture Decision Records (Summary)
+
+| ADR | Decision | Key Consequence |
+|-----|---------|----------------|
+| ADR-001 | LangGraph + PydanticAI for orchestration | Canvas `definition_json` schema must be versioned |
+| ADR-002 | pgvector in PostgreSQL (no separate vector DB) | `WHERE user_id = $1` enforces memory isolation in same query |
+| ADR-003 | bge-m3 as sole embedding model | `vector(1024)` column dimension locked; reindex = downtime |
+| ADR-004 | LiteLLM Proxy for all LLM calls | Critical path — must be healthy before backend starts |
+| ADR-005 | React Flow v12 for canvas | `definition_json` is React Flow-native (no translation layer) |
+| ADR-006 | HTTP+SSE for all MCP servers | Each MCP server is a Docker service with `/sse` endpoint |
+| ADR-007 | structlog JSON files for audit logs | Never log credential values; files are Loki-ready |
+| ADR-008 | AES-256 encrypted DB table for credentials | No HashiCorp Vault for MVP; rotate KMS key periodically |
+
+---
+
+## 12. GSD + Superpowers Workflow
+
+This project uses two complementary AI tool systems:
+
+| Tool | Purpose | Persistence |
+|------|---------|-------------|
+| **GSD** | Phase planning, roadmap tracking, progress | Across sessions via `.planning/` files |
+| **Superpowers** | Coding discipline: TDD, brainstorming, verification | Within session only (reads CLAUDE.md for context) |
+
+### Key GSD Commands
+
+```
+/gsd:progress          -> check current phase, get next action
+/gsd:plan-phase        -> create a PLAN.md for the next phase
+/gsd:execute-phase     -> execute phase plans with wave parallelization
+/gsd:new-project       -> initialize PROJECT.md + ROADMAP.md from blueprint docs
+/gsd:verify-work       -> validate built features against phase goals
+/gsd:debug             -> systematic debugging with persistent state
+```
+
+### Key Superpowers Skills
+
+- `superpowers:brainstorming` — use BEFORE implementing any feature
+- `superpowers:test-driven-development` — use BEFORE writing implementation code
+- `superpowers:verification-before-completion` — use BEFORE claiming work is done
+- `superpowers:dispatching-parallel-agents` — use for 2+ independent tasks
+- `superpowers:systematic-debugging` — use when encountering any bug
+
+### Recommended Workflow per Feature
+
+```
+brainstorm -> discuss-phase -> plan-phase -> execute-phase -> verify-work -> code-review -> complete
+```
+</script>
+
+<div class="topbar">
+  <div>
+    <div class="topbar-title">CLAUDE.md — Inline Review</div>
+    <div class="topbar-sub">Approve, reject, or comment on each suggestion · copy prompt when done</div>
+  </div>
+  <div style="display:flex;gap:6px;margin-left:auto">
+    <span class="stat-pill sp-pending" id="stat-p">0 pending</span>
+    <span class="stat-pill sp-approved" id="stat-a">0 approved</span>
+    <span class="stat-pill sp-rejected" id="stat-r">0 rejected</span>
+  </div>
+</div>
+
+<div class="main">
+  <div class="doc-panel" id="doc-panel"></div>
+  <div class="sug-panel">
+    <div class="sug-header">
+      <div style="font-size:12px;font-weight:700;color:#e2e8f0">15 Suggestions</div>
+      <div style="font-size:10px;color:#475569;margin-top:2px">Click a card to jump to the line · click a highlighted line to focus its suggestion</div>
+      <div class="filter-tabs">
+        <button class="ftab active" data-f="all">All</button>
+        <button class="ftab" data-f="pending">Pending</button>
+        <button class="ftab" data-f="approved">Approved</button>
+        <button class="ftab" data-f="rejected">Rejected</button>
+      </div>
+    </div>
+    <div class="sug-list" id="sug-list"></div>
+  </div>
+</div>
+
+<div class="footer">
+  <div class="foot-label">Prompt</div>
+  <div class="prompt-out" id="prompt-out">Approve suggestions above to generate a prompt for applying changes to CLAUDE.md.</div>
+  <button class="copy-btn" id="copy-btn">Copy</button>
+</div>
+
+<script>
+'use strict';
+
+// ══════════════════════════════════════════════════════════════
+// SUGGESTIONS DATA
+// ══════════════════════════════════════════════════════════════
+
+const SUGGESTIONS = [
+  {
+    id: 1, lineRef: 'Line 11', status: 'pending', userComment: '', category: 'completeness',
+    target: 'Read `docs/dev-context.md` — service URLs...',
+    text: 'Step 1 only references docs/dev-context.md and .dev-secrets, but misses the auto-memory file at ~/.claude/projects/.../memory/MEMORY.md. This file contains session-discovered quirks (JWT claims format, CopilotKit protocol, patched venv files) that aren\'t in dev-context.md yet. Add it as a third required read: "3. Check ~/.claude/.../memory/MEMORY.md for session discoveries not yet promoted to dev-context.md."'
+  },
+  {
+    id: 2, lineRef: 'Lines 14–17', status: 'pending', userComment: '', category: 'ux',
+    target: 'Confirm you have loaded them by stating: "I have read docs/dev-context.md..."',
+    text: 'The hardcoded confirmation phrase is brittle. It names specific URLs and ports — when Ollama or a port changes, the script becomes incorrect but agents keep repeating it. Replace with a principle: "Confirm you understand the context by restating, in your own words, the backend URL, Keycloak URL, and Ollama URL." This lets agents paraphrase rather than recite stale text.'
+  },
+  {
+    id: 3, lineRef: 'Line 102', status: 'pending', userComment: '', category: 'clarity',
+    target: 'Inspiration: OpenClaw architecture — local-first, multi-agent, sandboxed',
+    text: '"OpenClaw architecture" is undefined in this document and appears to be an internal or obscure reference. New contributors hitting a dead-end search waste time. Add a one-line description or file path: "OpenClaw — internal architecture pattern emphasizing local-first execution, agent sandboxing, and credential isolation (see docs/architecture/architecture.md)."'
+  },
+  {
+    id: 4, lineRef: 'Lines 123–124', status: 'pending', userComment: '', category: 'completeness',
+    target: 'CopilotKit (AG-UI) | Latest  /  PydanticAI | Latest',
+    text: 'CopilotKit and PydanticAI are listed as "Latest" but both have introduced breaking changes across minor versions (e.g., CopilotKit 0.1.78 required a venv patch documented in MEMORY.md). Pin them: copilotkit==0.1.78 and pydantic-ai~=0.x. Also clarify that "Latest" in the tech stack means "latest at time of MVP" — without a pinned version, fresh installs may silently break.'
+  },
+  {
+    id: 5, lineRef: 'Lines 136–139', status: 'pending', userComment: '', category: 'consistency',
+    target: 'Cloud LLM (quality) | Anthropic Claude | claude-sonnet-4-6',
+    text: 'The tech stack table lists bare provider model names (claude-sonnet-4-6, kimi-k1.5, gpt-4o) in the "Version" column. The LLM Access DO/DON\'T rule immediately above says never use provider model names in agent code. New contributors may copy from this table into code. Add a note: "These are infra-config values for litellm/config.yaml only — never use them in agent code; use blitz/* aliases."'
+  },
+  {
+    id: 6, lineRef: 'Line 203', status: 'pending', userComment: '', category: 'correctness',
+    target: 'Keycloak | 8080 | Admin: `http://localhost:8080`',
+    text: 'The port map shows Keycloak on 8080 (HTTP), but the actual configuration uses HTTPS on 8443 (internal container) / 7443 (host-mapped). The issuer URL in Keycloak\'s OIDC discovery document must exactly match the configured URL — using 8080 causes JWT issuer mismatches. Update to: Keycloak | 7443 (HTTPS) | JWKS/OIDC via https://keycloak.blitz.local:7443. Add a note about the HTTP-only admin console if 8080 is kept for admin access.'
+  },
+  {
+    id: 7, lineRef: 'Lines 248–257', status: 'pending', userComment: '', category: 'completeness',
+    target: 'Gotcha — `justfile` and `.env` files: `set dotenv-load` was intentionally removed.',
+    text: 'The set dotenv-load gotcha is buried inside a blockquote that agents often skim. This causes real breakage (pydantic-settings JSONDecodeError) and has burned time on more than one session. Elevate it to the DO/DON\'T table under "Package Management" with an explicit entry: DON\'T | Add `set dotenv-load` to justfile | mangles JSON list env vars like CORS_ORIGINS into invalid JSON.'
+  },
+  {
+    id: 8, lineRef: 'Line 282', status: 'pending', userComment: '', category: 'clarity',
+    target: 'Extract shared logic to utilities/helpers only when used in 3+ places',
+    text: 'The "3+ places" rule can cause over-abstraction when the three uses serve different purposes (structurally similar but semantically different). Add a qualifier: "Extract only when the duplication is identical in intent, not just structure. Three similar lines that do different things are better left separate than wrapped in a misleading abstraction." This prevents the common anti-pattern of DRY applied to coincidental similarity.'
+  },
+  {
+    id: 9, lineRef: 'Line 308', status: 'pending', userComment: '', category: 'clarity',
+    target: 'Use `asyncpg` for raw SQL, `SQLAlchemy` async for ORM.',
+    text: 'This line is ambiguous: SQLAlchemy async actually uses asyncpg as its database driver, so the two aren\'t alternatives — they\'re complementary. Clarify: "Use SQLAlchemy async ORM for model-based queries (select, insert, update). Use raw asyncpg only for performance-critical queries that benefit from direct driver access (bulk inserts, COPY). Never mix both in the same session context."'
+  },
+  {
+    id: 10, lineRef: 'Line 402', status: 'pending', userComment: '', category: 'correctness',
+    target: 'Gate 3: Tool ACL (`gateway/agui_middleware.py`) — check `ToolAcl` table',
+    text: 'Gate 3 references the wrong file. The ACL check is implemented in security/acl.py (check_tool_acl, log_tool_call), not gateway/agui_middleware.py. The agui_middleware.py file was never created as a standalone file — this logic lives in gateway/runtime.py which calls security/acl.py. Correct to: Gate 3: Tool ACL (security/acl.py via gateway/runtime.py) — checks ToolAcl table.'
+  },
+  {
+    id: 11, lineRef: 'Lines 399–403', status: 'pending', userComment: '', category: 'completeness',
+    target: 'Every agent tool call must pass all three [security gates]',
+    text: 'The section says "every agent tool call" but doesn\'t explicitly cross-reference that Celery-scheduled jobs are subject to the same gates. Agents implementing schedulers sometimes assume service-account-level trust. Add a sentence: "This includes Celery-scheduled jobs, which run as the job owner\'s UserContext — see Scheduler Security in this section." Link the two related invariants explicitly.'
+  },
+  {
+    id: 12, lineRef: 'Line 437', status: 'pending', userComment: '', category: 'completeness',
+    target: '`Workflow.definition_json` always has `schema_version: "1.0"`',
+    text: 'The schema versioning rule specifies when to increment but not how to choose between minor and major bumps. Add: "Minor version bump (1.0 -> 1.1) for additive-only changes (new optional fields with defaults). Major bump (1.0 -> 2.0) for breaking changes (removed fields, renamed keys, type changes). A migration script is required for any bump."'
+  },
+  {
+    id: 13, lineRef: 'Lines 559–560', status: 'pending', userComment: '', category: 'correctness',
+    target: 'Superpowers | Coding discipline: TDD, brainstorming, verification | Within session only',
+    text: '"Within session only" is misleading. The skill definitions themselves are persistent files in ~/.claude/plugins. What\'s within-session is the execution state (e.g., todo lists created by skills during a run). Rephrase: "Skill definitions persist across sessions; execution state (todos, in-progress tracking) is within-session only (reads CLAUDE.md for project context)."'
+  },
+  {
+    id: 14, lineRef: 'Lines 574–579', status: 'pending', userComment: '', category: 'completeness',
+    target: 'Key Superpowers Skills (5 listed)',
+    text: 'The list is incomplete — it omits several high-value skills that should be highlighted for this project: superpowers:finishing-a-development-branch (use before merging), superpowers:requesting-code-review (use after implementation), and superpowers:receiving-code-review (use when getting review feedback). These are especially relevant given the GSD workflow described immediately after.'
+  },
+  {
+    id: 15, lineRef: 'Lines 582–584', status: 'pending', userComment: '', category: 'completeness',
+    target: 'brainstorm -> discuss-phase -> plan-phase -> execute-phase -> verify-work -> code-review -> complete',
+    text: 'The recommended workflow diagram is missing two steps: (1) requesting-code-review should appear explicitly between verify-work and code-review, making it a Superpowers skill invocation rather than an implicit step; (2) /gsd:audit-milestone should appear before complete when finishing a milestone (not just a feature). Revised: brainstorm -> discuss-phase -> plan-phase -> execute-phase -> verify-work -> requesting-code-review -> [receive/act] -> complete (-> audit-milestone if end of milestone).'
+  },
+];
+
+// ══════════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════════
+
+let state = {
+  filter: 'all',
+  activeId: null,
+};
+
+// ══════════════════════════════════════════════════════════════
+// LINE MAP — parse lineRef -> set of line numbers
+// ══════════════════════════════════════════════════════════════
+
+function parseLines(ref) {
+  if (!ref) return [];
+  const single = ref.match(/^Line (\d+)$/);
+  if (single) return [+single[1]];
+  const range = ref.match(/Lines (\d+)[–\-](\d+)/);
+  if (range) {
+    const out = [];
+    for (let i = +range[1]; i <= +range[2]; i++) out.push(i);
+    return out;
+  }
+  return [];
+}
+
+function buildLineMap() {
+  const map = {};
+  SUGGESTIONS.forEach(s => {
+    parseLines(s.lineRef).forEach(ln => {
+      if (!map[ln]) map[ln] = [];
+      if (!map[ln].includes(s.id)) map[ln].push(s.id);
+    });
+  });
+  return map;
+}
+
+// ══════════════════════════════════════════════════════════════
+// DOCUMENT RENDERING
+// ══════════════════════════════════════════════════════════════
+
+function esc(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function inlineMarkdown(s) {
+  // Bold
+  s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  // Inline code
+  s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+  return s;
+}
+
+function renderDocLine(raw, lineNum, lineMap) {
+  const sugIds = lineMap[lineNum] || [];
+  const hasSug = sugIds.length > 0;
+
+  // Determine status for this line
+  let lineStatus = '';
+  if (hasSug) {
+    const statuses = sugIds.map(id => SUGGESTIONS.find(s => s.id === id)?.status || 'pending');
+    if (statuses.every(s => s === 'rejected')) lineStatus = 'has-rejected';
+    else if (statuses.some(s => s === 'approved')) lineStatus = 'has-approved';
+    else lineStatus = 'has-pending';
+  }
+
+  const isActive = hasSug && sugIds.includes(state.activeId);
+  const activeClass = isActive ? ' active-line' : '';
+
+  // Render content
+  const e = esc(raw);
+  let content = '';
+  let inCode = false;
+
+  if (raw.trim() === '---' || raw.trim() === '----') {
+    content = '<span class="hr-line"></span>';
+  } else if (raw.startsWith('# ')) {
+    content = `<span class="heading-1">${inlineMarkdown(esc(raw.slice(2)))}</span>`;
+  } else if (raw.startsWith('## ')) {
+    content = `<span class="heading-2">${inlineMarkdown(esc(raw.slice(3)))}</span>`;
+  } else if (raw.startsWith('### ')) {
+    content = `<span class="heading-3">${inlineMarkdown(esc(raw.slice(4)))}</span>`;
+  } else if (raw.startsWith('> ')) {
+    content = `<span class="bq">${inlineMarkdown(esc(raw.slice(2)))}</span>`;
+  } else if (raw.startsWith('| ') || raw.startsWith('|-') || raw.startsWith('|--')) {
+    content = `<span class="tbl">${esc(raw)}</span>`;
+  } else if (raw.startsWith('```')) {
+    content = `<span class="cb">${esc(raw)}</span>`;
+  } else if (raw.startsWith('- ') || raw.match(/^\d+\. /)) {
+    content = `<span class="list-item">${inlineMarkdown(esc(raw))}</span>`;
+  } else {
+    content = inlineMarkdown(e);
+  }
+
+  const dotStatus = lineStatus === 'has-approved' ? 'da' : lineStatus === 'has-rejected' ? 'dr' : 'dp';
+  const dot = hasSug ? `<span class="sug-dot ${dotStatus}" title="Jump to suggestion" data-ids="${sugIds.join(',')}"></span>` : '';
+
+  return `<div class="doc-line${hasSug ? ' ' + lineStatus : ''}${activeClass}" data-line="${lineNum}" data-sug-ids="${sugIds.join(',')}" id="dl-${lineNum}">
+  <span class="ln">${lineNum}</span>
+  <span class="lc">${content}</span>
+  ${dot}
+</div>`;
+}
+
+function renderDoc() {
+  const raw = document.getElementById('raw').textContent;
+  const lines = raw.split('\n');
+  // Remove leading blank line from text/x-doc
+  const start = lines[0].trim() === '' ? 1 : 0;
+  const lineMap = buildLineMap();
+
+  const html = lines.slice(start).map((line, i) => {
+    const lineNum = i + (start === 1 ? 0 : 0) + 1;
+    return renderDocLine(line, lineNum, lineMap);
+  }).join('');
+
+  document.getElementById('doc-panel').innerHTML = html;
+
+  // Click on doc lines
+  document.getElementById('doc-panel').addEventListener('click', e => {
+    const dot = e.target.closest('.sug-dot');
+    const line = e.target.closest('.doc-line');
+    const ids = (dot || line)?.dataset.sugIds?.split(',').filter(Boolean).map(Number);
+    if (ids && ids.length) {
+      focusSuggestion(ids[0]);
+    }
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+// SUGGESTIONS RENDERING
+// ══════════════════════════════════════════════════════════════
+
+const CAT_LABELS = {
+  correctness: 'Correctness', clarity: 'Clarity',
+  completeness: 'Completeness', consistency: 'Consistency', ux: 'UX / Ergonomics',
+};
+
+function renderSuggestions() {
+  const list = document.getElementById('sug-list');
+  const visible = SUGGESTIONS.filter(s =>
+    state.filter === 'all' || s.status === state.filter
+  );
+
+  if (!visible.length) {
+    list.innerHTML = `<div style="text-align:center;color:#374151;padding:24px;font-size:12px">No ${state.filter} suggestions</div>`;
+    return;
+  }
+
+  list.innerHTML = visible.map(s => {
+    const isActive = s.id === state.activeId;
+    const hasComment = s.userComment?.trim();
+    const statusChip = s.status !== 'pending'
+      ? `<span class="status-chip sc-${s.status}">${s.status === 'approved' ? '✓ Approved' : '✗ Rejected'}</span>`
+      : `<span class="status-chip sc-pending">Pending</span>`;
+
+    const actions = s.status === 'pending'
+      ? `<button class="btn-approve" data-id="${s.id}" data-action="approve">Approve</button>
+         <button class="btn-reject" data-id="${s.id}" data-action="reject">Reject</button>
+         <button class="btn-comment" data-id="${s.id}" data-action="comment">Comment</button>`
+      : `<button class="btn-reset" data-id="${s.id}" data-action="reset">Reset</button>
+         <button class="btn-comment" data-id="${s.id}" data-action="comment">Comment</button>`;
+
+    const commentBlock = `<div class="cmt-area${hasComment || (isActive && s._commentOpen) ? ' open' : ''}" id="cmt-${s.id}">
+      <textarea class="cmt-ta" id="cmt-ta-${s.id}" placeholder="Add a note (optional)…">${esc(s.userComment || '')}</textarea>
+      <button class="cmt-save" data-id="${s.id}" data-action="save-comment">Save Note</button>
+    </div>`;
+
+    return `<div class="sug-card st-${s.status}${isActive ? ' active-card' : ''}" id="sc-${s.id}" data-id="${s.id}">
+      <div class="sug-card-head" style="cursor:pointer" data-id="${s.id}" data-action="focus">
+        <span class="cat-badge cat-${s.category}">${CAT_LABELS[s.category]}</span>
+        <span class="sug-lineref">${s.lineRef}</span>
+        ${statusChip}
+      </div>
+      <div class="sug-card-body">
+        <span class="sug-target">${esc(s.target)}</span>
+        <div class="sug-text">${esc(s.text)}</div>
+        <div class="sug-actions">${actions}</div>
+        ${commentBlock}
+      </div>
+    </div>`;
+  }).join('');
+
+  // Attach events
+  list.querySelectorAll('[data-action]').forEach(el => {
+    el.addEventListener('click', e => {
+      e.stopPropagation();
+      const id = +el.dataset.id;
+      const action = el.dataset.action;
+      handleAction(id, action);
+    });
+  });
+}
+
+function handleAction(id, action) {
+  const sug = SUGGESTIONS.find(s => s.id === id);
+  if (!sug) return;
+
+  if (action === 'approve') { sug.status = 'approved'; state.activeId = id; }
+  else if (action === 'reject') { sug.status = 'rejected'; state.activeId = id; }
+  else if (action === 'reset') { sug.status = 'pending'; }
+  else if (action === 'focus') { focusSuggestion(id); return; }
+  else if (action === 'comment') {
+    const area = document.getElementById(`cmt-${id}`);
+    if (area) { area.classList.toggle('open'); document.getElementById(`cmt-ta-${id}`)?.focus(); }
+    return;
+  }
+  else if (action === 'save-comment') {
+    const ta = document.getElementById(`cmt-ta-${id}`);
+    if (ta) sug.userComment = ta.value.trim();
+  }
+
+  renderAll();
+}
+
+function focusSuggestion(id) {
+  state.activeId = id;
+  renderAll();
+
+  // Scroll suggestion card into view
+  setTimeout(() => {
+    const card = document.getElementById(`sc-${id}`);
+    card?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    // Scroll doc to relevant line
+    const sug = SUGGESTIONS.find(s => s.id === id);
+    const lines = parseLines(sug?.lineRef);
+    if (lines.length) {
+      const el = document.getElementById(`dl-${lines[0]}`);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, 50);
+}
+
+// ══════════════════════════════════════════════════════════════
+// STATS
+// ══════════════════════════════════════════════════════════════
+
+function updateStats() {
+  const p = SUGGESTIONS.filter(s => s.status === 'pending').length;
+  const a = SUGGESTIONS.filter(s => s.status === 'approved').length;
+  const r = SUGGESTIONS.filter(s => s.status === 'rejected').length;
+  document.getElementById('stat-p').textContent = `${p} pending`;
+  document.getElementById('stat-a').textContent = `${a} approved`;
+  document.getElementById('stat-r').textContent = `${r} rejected`;
+}
+
+// ══════════════════════════════════════════════════════════════
+// PROMPT GENERATION
+// ══════════════════════════════════════════════════════════════
+
+function updatePrompt() {
+  const approved = SUGGESTIONS.filter(s => s.status === 'approved');
+  const commented = SUGGESTIONS.filter(s => s.userComment?.trim() && s.status !== 'approved');
+  const rejected = SUGGESTIONS.filter(s => s.status === 'rejected');
+
+  if (!approved.length && !commented.length) {
+    document.getElementById('prompt-out').textContent =
+      'Approve suggestions above to generate a prompt for applying changes to CLAUDE.md.';
+    return;
+  }
+
+  let prompt = 'Please update CLAUDE.md with the following changes:\n\n';
+
+  if (approved.length) {
+    prompt += '## Approved Changes\n\n';
+    approved.forEach(s => {
+      prompt += `**${s.lineRef} — ${CAT_LABELS[s.category]}:** ${s.text}`;
+      if (s.userComment?.trim()) prompt += `\n  → Note: ${s.userComment.trim()}`;
+      prompt += '\n\n';
+    });
+  }
+
+  if (commented.length) {
+    prompt += '## Additional Feedback (not approved yet)\n\n';
+    commented.forEach(s => {
+      prompt += `**${s.lineRef}:** ${s.userComment.trim()}\n\n`;
+    });
+  }
+
+  if (rejected.length) {
+    prompt += `## Rejected (${rejected.length} items — no action needed)\n`;
+    rejected.forEach(s => {
+      prompt += `- ${s.lineRef}: ${s.text.slice(0, 60)}…\n`;
+    });
+  }
+
+  document.getElementById('prompt-out').textContent = prompt;
+}
+
+// ══════════════════════════════════════════════════════════════
+// FILTER TABS
+// ══════════════════════════════════════════════════════════════
+
+document.querySelectorAll('.ftab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    state.filter = btn.dataset.f;
+    document.querySelectorAll('.ftab').forEach(b => b.classList.toggle('active', b === btn));
+    renderSuggestions();
+  });
+});
+
+// ══════════════════════════════════════════════════════════════
+// COPY
+// ══════════════════════════════════════════════════════════════
+
+document.getElementById('copy-btn').onclick = function() {
+  navigator.clipboard.writeText(document.getElementById('prompt-out').textContent).then(() => {
+    this.textContent = 'Copied!';
+    this.classList.add('done');
+    setTimeout(() => { this.textContent = 'Copy'; this.classList.remove('done'); }, 1600);
+  });
+};
+
+// ══════════════════════════════════════════════════════════════
+// RENDER ALL
+// ══════════════════════════════════════════════════════════════
+
+function renderAll() {
+  renderDoc();
+  renderSuggestions();
+  updateStats();
+  updatePrompt();
+}
+
+// ── INIT ──
+renderAll();
+</script>
+</body>
+</html>

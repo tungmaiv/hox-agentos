@@ -54,8 +54,11 @@ Base URL (local dev): `http://localhost:8000`
 ### Authentication
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/health` | Health check |
+| GET | `/health` | Health check (no auth) |
 | GET | `/api/auth/me` | Current user info (requires JWT) |
+| GET | `/api/auth/config` | Public auth mode info (local-only vs SSO enabled) |
+| POST | `/api/auth/local/token` | Local user login — returns JWT |
+| POST | `/api/auth/local/change-password` | Change local user password (requires JWT) |
 
 ### Agents
 | Method | Path | Description |
@@ -63,51 +66,93 @@ Base URL (local dev): `http://localhost:8000`
 | POST | `/api/agents/chat` | Main AG-UI streaming endpoint |
 | POST | `/api/agents/workflow/run` | Trigger a workflow manually |
 
+### Conversations
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/conversations/` | List user's conversations (sidebar history) |
+| PATCH | `/api/conversations/{id}/title` | Rename a conversation |
+| DELETE | `/api/conversations/{id}` | Delete a conversation |
+| GET | `/api/conversations/{id}/messages` | Get all turns in a conversation |
+
 ### Workflows (Canvas)
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/api/workflows` | List user's workflows |
 | POST | `/api/workflows` | Create new workflow |
+| GET | `/api/workflows/templates` | List template workflows |
+| POST | `/api/workflows/templates/{template_id}/copy` | Copy template to user's workflows |
+| GET | `/api/workflows/runs/pending-hitl` | Count paused HITL runs awaiting approval |
+| GET | `/api/workflows/runs/{run_id}` | Get a specific workflow run |
+| POST | `/api/workflows/runs/{run_id}/approve` | Approve a HITL-paused run |
+| POST | `/api/workflows/runs/{run_id}/reject` | Reject a HITL-paused run |
+| GET | `/api/workflows/runs/{run_id}/events` | SSE stream of live run events |
 | GET | `/api/workflows/{id}` | Get workflow by ID |
 | PUT | `/api/workflows/{id}` | Update workflow definition |
 | DELETE | `/api/workflows/{id}` | Delete workflow |
 | POST | `/api/workflows/{id}/run` | Execute a workflow |
+| GET | `/api/workflows/{id}/triggers` | List workflow triggers (cron + webhook) |
+| POST | `/api/workflows/{id}/triggers` | Create a trigger for a workflow |
+| DELETE | `/api/workflows/{id}/triggers/{trigger_id}` | Delete a workflow trigger |
 
-### Scheduler
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/scheduler/jobs` | List scheduled jobs |
-| POST | `/api/scheduler/jobs` | Create scheduled job |
-| PUT | `/api/scheduler/jobs/{id}` | Update job |
-| DELETE | `/api/scheduler/jobs/{id}` | Delete job |
-| GET | `/api/scheduler/runs` | List workflow run history |
+> **Note:** There are no `/api/scheduler/*` REST routes. Scheduled jobs run as Celery tasks,
+> triggered by workflow triggers (cron type stored in `workflow_triggers` table).
 
 ### Channels
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/channels` | List connected channel accounts |
-| POST | `/api/channels/telegram/webhook` | Telegram inbound webhook |
+| GET | `/api/channels/info` | Channel sidecar availability + metadata |
+| GET | `/api/channels/accounts` | List user's linked channel accounts |
+| POST | `/api/channels/pair` | Generate pairing code for channel link |
+| DELETE | `/api/channels/accounts/{account_id}` | Unlink a channel account |
+| POST | `/api/channels/telegram/webhook` | Telegram inbound webhook (Cloudflare Tunnel) |
 | POST | `/api/channels/whatsapp/webhook` | WhatsApp inbound webhook |
 | POST | `/api/channels/teams/webhook` | MS Teams inbound webhook |
+| POST | `/api/channels/incoming` | Internal — receive InternalMessage from channel sidecar |
 
-### MCP
+### User APIs
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/mcp/servers` | List registered MCP servers |
-| GET | `/api/mcp/servers/{name}/tools` | List tools on a server |
+| GET | `/api/credentials/` | List user's connected OAuth providers |
+| DELETE | `/api/credentials/{provider}` | Disconnect an OAuth provider |
+| GET | `/api/user/memory/facts` | User's long-term memory facts |
+| DELETE | `/api/user/memory/facts/{fact_id}` | Delete a single fact |
+| DELETE | `/api/user/memory/facts` | Delete all facts (bulk clear) |
+| GET | `/api/user/memory/episodes` | User's episodic memories |
+| GET | `/api/user/preferences` | Get chat preferences (thinking mode, response style) |
+| PUT | `/api/user/preferences` | Update chat preferences |
+| GET | `/api/user/instructions` | Get custom instructions injected into agent context |
+| PUT | `/api/user/instructions` | Update custom instructions |
+| GET | `/api/users/me/preferences` | Get user preferences (NAV-07/08 — LLM mode, style) |
+| PUT | `/api/users/me/preferences` | Update user preferences |
+
+### Tools
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/tools` | List tools available to current user (role-filtered) |
+| POST | `/api/tools/call` | Execute a tool via registry (agent-facing, JWT required) |
 
 ### Skills (User-facing)
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/skills` | List skills available to current user (role-filtered); response includes `is_promoted` and `is_shared` per item (Phase 22) |
-| GET | `/api/skills?promoted=true` | List only promoted skills (for Featured Skills section) |
+| GET | `/api/skills` | List skills available to current user; response includes `is_promoted` and `is_shared` per item |
+| GET | `/api/skills?promoted=true` | List only promoted skills (Featured Skills section) |
 | GET | `/api/skills/{id}/export` | Download skill as agentskills.io ZIP (auth required) |
 | POST | `/api/skills/{name}/run` | Execute a skill by name (procedural or instructional) |
 
-### Tools (User-facing)
+### Skill Repositories
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/tools` | List tools available to current user (role-filtered) |
+| GET | `/api/skill-repos` | List user's skill repositories |
+| POST | `/api/skill-repos/browse` | Browse skills in an external repository |
+| POST | `/api/skill-repos/import` | Import a skill from an external repository |
+| GET | `/api/admin/skill-repos` | Admin: list all skill repositories |
+| POST | `/api/admin/skill-repos` | Admin: add a skill repository |
+| DELETE | `/api/admin/skill-repos/{id}` | Admin: remove a skill repository |
+
+### Webhooks
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/webhooks/{webhook_id}` | Trigger a workflow via webhook (X-Webhook-Secret validation) |
 
 ### Admin — Extensibility Registries (Phase 6)
 
@@ -117,6 +162,7 @@ All admin endpoints require `registry:manage` permission (Gate 2 RBAC — it-adm
 |--------|------|-------------|
 | GET | `/api/admin/agents` | List all agent definitions |
 | POST | `/api/admin/agents` | Create agent definition |
+| GET | `/api/admin/agents/check-name` | Check if agent name is available |
 | GET | `/api/admin/agents/{id}` | Get agent by UUID |
 | PUT | `/api/admin/agents/{id}` | Update agent fields |
 | PATCH | `/api/admin/agents/{id}/status` | Enable/disable agent |
@@ -124,19 +170,24 @@ All admin endpoints require `registry:manage` permission (Gate 2 RBAC — it-adm
 | PATCH | `/api/admin/agents/bulk-status` | Bulk status update |
 | GET | `/api/admin/tools` | List all tool definitions |
 | POST | `/api/admin/tools` | Create tool definition |
+| GET | `/api/admin/tools/check-name` | Check if tool name is available |
 | GET | `/api/admin/tools/{id}` | Get tool by UUID |
 | PUT | `/api/admin/tools/{id}` | Update tool fields |
 | PATCH | `/api/admin/tools/{id}/status` | Enable/disable tool |
 | PATCH | `/api/admin/tools/{id}/activate` | Activate version |
+| PATCH | `/api/admin/tools/{id}/activate-stub` | Activate a pending-stub tool (Phase 25) |
 | PATCH | `/api/admin/tools/bulk-status` | Bulk status update |
 | GET | `/api/admin/skills` | List all skill definitions |
-| POST | `/api/admin/skills` | Create skill definition |
+| POST | `/api/admin/skills` | Create skill definition (defaults to `draft` status — Phase 25) |
+| GET | `/api/admin/skills/check-name` | Check if skill name is available |
 | GET | `/api/admin/skills/pending` | List skills pending review |
 | POST | `/api/admin/skills/import` | Import skill from URL or inline |
+| POST | `/api/admin/skills/builder-save` | Save artifact builder output as skill (Phase 23) |
+| POST | `/api/admin/skills/import/zip` | Import skill from agentskills.io ZIP upload (Phase 23) |
 | GET | `/api/admin/skills/{id}` | Get skill by UUID |
 | PUT | `/api/admin/skills/{id}` | Update skill fields |
 | PATCH | `/api/admin/skills/{id}/status` | Enable/disable skill |
-| PATCH | `/api/admin/skills/{id}/activate` | Activate version |
+| PATCH | `/api/admin/skills/{id}/activate` | Activate version (422 if tool_gaps present — Phase 25) |
 | PATCH | `/api/admin/skills/bulk-status` | Bulk status update |
 | POST | `/api/admin/skills/{id}/validate` | Dry-run validate procedure |
 | POST | `/api/admin/skills/{id}/review` | Approve/reject quarantined skill |
@@ -145,10 +196,95 @@ All admin endpoints require `registry:manage` permission (Gate 2 RBAC — it-adm
 | POST | `/api/admin/skills/{id}/share` | Share skill with user (body: {user_id}, registry:manage) |
 | DELETE | `/api/admin/skills/{id}/share/{user_id}` | Revoke user share (registry:manage) |
 | GET | `/api/admin/skills/{id}/shares` | List users with access to skill (registry:manage) |
+| GET | `/api/admin/mcp-servers` | List registered MCP servers |
+| POST | `/api/admin/mcp-servers` | Register a new MCP server |
+| GET | `/api/admin/mcp-servers/check-name` | Check if MCP server name is available |
+| GET | `/api/admin/mcp-servers/{id}` | Get MCP server by UUID |
+| PUT | `/api/admin/mcp-servers/{id}` | Update MCP server config |
+| DELETE | `/api/admin/mcp-servers/{id}` | Delete MCP server |
 | PUT | `/api/admin/permissions/roles/{role}` | Set role permissions |
 | PUT | `/api/admin/permissions/artifacts/{id}` | Set artifact permissions (staged) |
 | POST | `/api/admin/permissions/apply` | Apply pending permissions |
 | PUT | `/api/admin/permissions/users/{id}` | Set per-user permission override |
+
+### Admin — Unified Registry (Phase 24)
+
+All unified registry endpoints require `tool:admin` permission (Gate 2 RBAC — it-admin role).
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/registry` | List registry entries (filter by type, status) |
+| POST | `/api/registry` | Create registry entry |
+| GET | `/api/registry/mcp-catalog` | List pre-built MCP server catalog |
+| POST | `/api/registry/import` | Import skill from URL or inline |
+| GET | `/api/registry/{id}` | Get entry by UUID |
+| PUT | `/api/registry/{id}` | Update entry |
+| DELETE | `/api/registry/{id}` | Delete entry |
+
+### Admin — LLM Configuration (Phase 24)
+
+All endpoints require `tool:admin` permission.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/admin/llm/models` | List all configured LLM model aliases |
+| POST | `/api/admin/llm/models` | Add or update a model alias |
+| DELETE | `/api/admin/llm/models/{alias}` | Remove a model alias |
+
+### Admin — System (Phase 24)
+
+All endpoints require `tool:admin` permission.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/admin/system/health` | System component health check |
+| POST | `/api/admin/system/rescan-skills` | Trigger retroactive security rescan of all skills |
+
+### Admin — Memory
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/admin/memory/reindex` | Trigger full memory reindex (re-embeds all facts/episodes) |
+
+### Admin — Config (System Key/Value)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/admin/config` | Get system configuration |
+| PUT | `/api/admin/config/{key}` | Update a specific config key |
+
+### Admin — Identity (Keycloak)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/admin/keycloak/config` | Get current Keycloak config (has_secret: bool, never raw secret) |
+| POST | `/api/admin/keycloak/config` | Save Keycloak config (Issuer, Client ID, Client Secret, Realm) |
+| POST | `/api/admin/keycloak/config/test` | Test Keycloak connection before saving |
+| POST | `/api/admin/keycloak/enable` | Enable SSO (apply saved Keycloak config) |
+| POST | `/api/admin/keycloak/disable` | Disable SSO (revert to local-only auth) |
+| GET | `/api/admin/keycloak/users` | List Keycloak users |
+| GET | `/api/internal/keycloak/provider-config` | Internal — Next.js server fetches provider config (X-Internal-Key header) |
+
+### Admin — Local Users
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/admin/local/users` | Create local user |
+| GET | `/api/admin/local/users` | List local users |
+| GET | `/api/admin/local/users/{id}` | Get local user by ID |
+| PUT | `/api/admin/local/users/{id}` | Update local user |
+| DELETE | `/api/admin/local/users/{id}` | Delete local user |
+| POST | `/api/admin/local/users/{id}/groups` | Add user to group |
+| DELETE | `/api/admin/local/users/{id}/groups/{group_id}` | Remove user from group |
+| POST | `/api/admin/local/users/{id}/roles` | Assign role to user |
+| DELETE | `/api/admin/local/users/{id}/roles/{role}` | Remove role from user |
+
+### Admin — Credentials
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/admin/credentials` | List all credential entries (admin view — no tokens) |
+| DELETE | `/api/admin/credentials/{user_id}/{provider}` | Revoke a user's provider credential |
 
 ### CopilotKit
 | Method | Path | Description |
@@ -188,15 +324,43 @@ All requests are `POST /api/copilotkit` with a JSON envelope body:
 
 Base URL (local dev): `http://localhost:3000`
 
+All routes under `/(authenticated)/` require a valid session — unauthenticated access redirects to `/login`.
+
 | Path | Description |
 |------|-------------|
-| `/` | Main app (redirects to `/chat`) |
+| `/` | Redirects to `/chat` |
+| `/login` | Login page (local credentials or SSO button) |
 | `/chat` | AG-UI chat interface |
-| `/canvas` | Low-code workflow canvas |
-| `/canvas/[id]` | Edit a specific workflow |
-| `/scheduler` | Scheduled jobs management |
-| `/settings` | User settings, channel connections |
-| `/api/copilotkit` | Next.js API route — AG-UI proxy to backend |
+| `/workflows` | Canvas workflow list |
+| `/workflows/new` | Create new workflow |
+| `/workflows/[id]` | Edit a specific workflow (canvas) |
+| `/skills` | User skill catalog |
+| `/profile` | User profile — account info, password change, preferences |
+| `/settings` | Settings hub |
+| `/settings/agents` | Agent settings |
+| `/settings/channels` | Channel connections (Telegram, WhatsApp, Teams) |
+| `/settings/chat-preferences` | Chat preference settings |
+| `/settings/integrations` | OAuth integrations |
+| `/settings/memory` | Memory management (view/delete facts and episodes) |
+| `/admin` | Admin hub (Registry counts + navigation) |
+| `/admin/agents` | Admin: agent registry |
+| `/admin/tools` | Admin: tool registry |
+| `/admin/skills` | Admin: skill registry list |
+| `/admin/skills/[id]` | Admin: skill detail (metadata, security report) |
+| `/admin/mcp-servers` | Admin: MCP server registry |
+| `/admin/builder` | Artifact builder (AI-assisted skill/tool creation) |
+| `/admin/skill-store` | Skill store browser (external registries) |
+| `/admin/create` | Create new registry entry |
+| `/admin/access` | Admin: access management hub |
+| `/admin/users` | Admin: user management |
+| `/admin/permissions` | Admin: role permissions |
+| `/admin/credentials` | Admin: credentials viewer |
+| `/admin/identity` | Admin: Keycloak SSO configuration |
+| `/admin/config` | Admin: system configuration |
+| `/admin/system` | Admin: system status and maintenance |
+| `/admin/system/llm` | Admin: LLM model/provider configuration |
+| `/admin/memory` | Admin: memory reindex |
+| `/api/copilotkit` | Next.js API route — AG-UI proxy to backend (injects JWT) |
 
 ---
 
@@ -238,22 +402,35 @@ Token endpoint: `http://keycloak.blitz.local:8180/realms/blitz-internal/protocol
 - **From container:** `postgresql://blitz:<POSTGRES_PASSWORD>@postgres:5432/blitz`
 
 ### Key Tables
+
+> The tables `agent_definitions`, `skill_definitions`, `tool_definitions`, and `mcp_servers` were dropped in migration 029 (Phase 24) and replaced by `registry_entries`.
+
 | Table | Purpose |
 |-------|---------|
-| `users` | Blitz user registry (synced from Keycloak) |
-| `roles`, `permissions`, `role_permissions`, `user_roles` | RBAC |
+| `role_permissions` | RBAC role → permission mapping |
 | `tool_acl` | Per-tool role allowlist (Gate 3) |
-| `workflows` | Saved canvas workflows (`definition_json`) |
+| `workflows` | Saved canvas workflows (`definition_json`, `schema_version`) |
 | `workflow_runs` | Execution history + state snapshots |
-| `scheduled_jobs` | Cron job definitions |
+| `workflow_triggers` | Cron and webhook trigger definitions per workflow |
 | `user_credentials` | OAuth tokens (AES-256 encrypted) |
-| `memory_conversations` | Tier 1: short-term turns |
+| `memory_conversations` | Tier 1: short-term turns (per user, per conversation) |
 | `memory_episodes` | Tier 2: episodic summaries |
-| `memory_facts` | Tier 3: long-term facts + vector(1024) |
-| `memory_files`, `memory_chunks` | File-based memory |
-| `channel_accounts` | User ↔ external platform mapping |
+| `memory_facts` | Tier 3: long-term facts + `vector(1024)` (pgvector) |
+| `channel_accounts` | User ↔ external platform mapping (Telegram, WhatsApp, Teams) |
 | `channel_sessions` | Active channel sessions |
-| `mcp_servers` | Registered MCP server config |
+| `registry_entries` | Unified registry for agents, skills, tools, MCP servers (Phase 24, migration 029 `c12d84fc28f9`) |
+| `mcp_server_catalog` | Pre-built MCP server definitions — catalog of installable servers (Phase 24, migration 030 `617b296e937a`) |
+| `platform_config` | Runtime configuration (Keycloak config, feature flags) — typed columns |
+| `system_config` | Key/value system configuration |
+| `user_instructions` | Per-user custom instructions injected into agent context |
+| `user_preferences` | Per-user preferences (LLM mode, response style) |
+| `user_artifact_permissions` | Skill share permissions (user → artifact_type → artifact_id) |
+| `artifact_permissions` | Role-based artifact permissions (staged/applied) |
+| `skill_repositories` | External skill registry URLs configured by admin |
+| `skill_repo_index` | Cached index of skills from external repositories (for browse + pgvector similarity) |
+| `conversation_titles` | User-edited conversation titles (sidebar display) |
+| `local_users` | Local auth users (when Keycloak is not configured) |
+| `local_groups`, `local_user_groups`, `local_group_roles`, `local_user_roles` | Local auth RBAC |
 
 ---
 
@@ -282,7 +459,8 @@ Tools are called via the backend MCPClient — never directly from frontend.
 
 | Situation | Wrong | Correct |
 |-----------|-------|---------|
-| Running backend/frontend | `just backend` / `just frontend` (host process) | `just dev-local` — both run in Docker containers only; no host processes |
+| Running backend/frontend | `just backend` / `just frontend` / `just dev-local` (old recipes — removed) | `just up` — starts all services in Docker; old dev-local/backend/frontend recipes no longer exist |
+| Scheduler REST API | `GET /api/scheduler/jobs` (does not exist) | No scheduler HTTP API — jobs run as Celery tasks triggered by `workflow_triggers` table |
 | Backend calling Ollama | `http://ollama:11434` | `http://host.docker.internal:11434` |
 | Browser calling backend | `http://backend:8000` | `http://localhost:8000` |
 | Backend calling Keycloak | `http://localhost:8080` | `http://keycloak:8080` |
@@ -323,6 +501,81 @@ Tools are called via the backend MCPClient — never directly from frontend.
 | 2026-02-26 | CopilotKit protocol: 3 methods — info, agent/run, agent/connect; connect is called on component mount to restore thread state, same RunAgentInput body/SSE response as run | claude |
 | 2026-02-28 | Phase 6 endpoints: user-facing GET /api/skills, POST /api/skills/{name}/run, GET /api/tools; admin CRUD for agents/tools/skills/permissions at /api/admin/*; skill slash commands detected in master agent _pre_route | claude |
 | 2026-03-02 | [Phase 11]: Added Cloudflare Tunnel documentation (172.16.155.118, external machine, INFRA-01/02 satisfied) | claude |
-| 2026-03-06 | Backend and frontend run in Docker containers ONLY (dev-local mode). No host processes. Removed host-mode justfile recipes (backend, backend-bg, backend-stop, backend-kill, frontend, frontend-bg, frontend-stop, frontend-kill, stop, kill, stack, dev). Use `just dev-local` for full stack. | claude |
+| 2026-03-06 | Backend and frontend run in Docker containers ONLY. No host processes. Removed host-mode justfile recipes. Justfile now uses: up/down/stop/restart/rebuild/build/reset/logs/ps/migrate/db — all accept optional service name(s). Old dev-local/up-svc/down-v/backend-rebuild/frontend-rebuild removed. | claude |
 | 2026-03-07 | Frontend Alpine SSL: docker-entrypoint.sh adds Keycloak CA to system bundle at runtime; NODE_EXTRA_CA_CERTS doesn't work with musl libc | claude |
 | 2026-03-09 | Phase 22: user GET /api/skills now returns is_promoted+is_shared per item; GET /api/skills?promoted=true for featured section; GET /api/skills/{id}/export ZIP download; admin PATCH /promote, POST/DELETE/GET /api/admin/skills/{id}/share* | claude |
+| 2026-03-13 | Phase 24: Unified registry — registry_entries table (migration 029 c12d84fc28f9) replaces agent_definitions/skill_definitions/tool_definitions/mcp_servers; mcp_server_catalog table (migration 030 617b296e937a) added; /api/registry/* unified CRUD routes added | claude |
+| 2026-03-13 | Phase 24: Admin LLM config routes at /api/admin/llm/models; admin system routes at /api/admin/system/health and /rescan-skills; check-name endpoints for agents/tools/skills/mcp-servers | claude |
+| 2026-03-13 | Phase 24: Auth tokens for MCP servers stored as hex-encoded AES-256-GCM blobs in registry_entries.config['auth_token_hex'] | claude |
+| 2026-03-14 | Phase 25: Skill builder tool resolver — resolve_tools LangGraph node, pending_activation status, tool_gaps in RegistryEntry.config; create_skill defaults to draft status; PATCH /{id}/activate returns 422 when tool_gaps present; PATCH /admin/tools/{id}/activate-stub for stub promotion | claude |
+| 2026-03-14 | Full API audit: added missing sections — Conversations, full Workflows (templates/HITL/triggers/events), full Channels, User APIs (memory/instructions/preferences/credentials), Tools (call), Webhooks, Skill Repos, Admin (Memory/Config/Keycloak/LocalUsers/Credentials). Removed stale /api/scheduler/* section. Frontend routes fully documented. DB tables expanded. | claude |
+| 2026-03-14 | Added E2E testing section — Playwright, test users (admin/admin and giangtt/BilHam30), commands, storageState pattern. Credentials in .dev-secrets as E2E_ADMIN_* and E2E_USER_*. | claude |
+
+---
+
+## 10. Frontend E2E Testing (Playwright)
+
+**Tool:** Playwright (`@playwright/test`)
+**Location:** `frontend/e2e/`
+**Base URL:** `http://localhost:3000`
+
+> **Prerequisite:** `just up` must be running before executing Playwright tests.
+> Playwright targets the live app — it does NOT start a dev server itself.
+
+### Test Users
+
+Both are **local auth accounts** (created via `/api/admin/local/users`). They are NOT Keycloak SSO accounts.
+
+| Role | Username | Password | Permissions |
+|------|----------|----------|-------------|
+| Administrator (`it-admin`) | `admin` | `admin` | All pages — `/chat`, `/admin/*`, `/workflows`, `/skills`, `/settings`, `/profile` |
+| Normal user (`employee`) | `giangtt` | `BilHam30` | `/chat`, `/workflows`, `/skills`, `/settings`, `/profile` — cannot access `/admin/*` |
+
+Credentials are stored in `.dev-secrets`:
+```
+E2E_ADMIN_USER=admin
+E2E_ADMIN_PASSWORD=admin
+E2E_USER_USER=giangtt
+E2E_USER_PASSWORD=BilHam30
+```
+
+### Commands
+
+```bash
+cd /home/tungmv/Projects/hox-agentos/frontend
+
+# Full suite
+pnpm exec playwright test
+
+# Specific file
+pnpm exec playwright test e2e/tests/auth.spec.ts
+
+# Headed mode (visible browser — debugging)
+pnpm exec playwright test --headed
+
+# One project only
+pnpm exec playwright test --project=admin-tests
+pnpm exec playwright test --project=user-tests
+
+# HTML report after a run
+pnpm exec playwright show-report
+```
+
+### Auth Pattern (storageState)
+
+Playwright uses `storageState` to avoid re-logging-in per test:
+
+1. `e2e/auth/admin.setup.ts` — fills `/login` form as `admin/admin`, saves session to `e2e/.auth/admin.json`
+2. `e2e/auth/user.setup.ts` — fills `/login` form as `giangtt/BilHam30`, saves session to `e2e/.auth/user.json`
+3. Test projects load the saved state — each test starts already authenticated
+
+**Why:** next-auth login involves CSRF token handling and redirects — re-running per test is slow and fragile.
+
+### Critical Gotchas
+
+| Situation | Wrong | Correct |
+|-----------|-------|---------|
+| Logging in during tests | Call backend JWT API directly | Use the `/login` form — next-auth manages CSRF and session cookie |
+| Auth state files | Commit `e2e/.auth/*.json` to git | Gitignore them — regenerated by setup projects on each machine |
+| Admin route access | Assume any authenticated user can reach `/admin` | Only `it-admin` role — always test both: admin succeeds, `giangtt` gets redirected |
+| Running without services up | `pnpm exec playwright test` on cold machine | Run `just up` first and confirm `http://localhost:3000` responds |

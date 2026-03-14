@@ -1,0 +1,2328 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>gsd-and-superpowers-guide.md</title>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+
+<style>
+/* https://github.com/microsoft/vscode/blob/master/extensions/markdown-language-features/media/markdown.css */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+body {
+	font-family: var(--vscode-markdown-font-family, -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif);
+	font-size: var(--vscode-markdown-font-size, 14px);
+	padding: 0 26px;
+	line-height: var(--vscode-markdown-line-height, 22px);
+	word-wrap: break-word;
+}
+
+#code-csp-warning {
+	position: fixed;
+	top: 0;
+	right: 0;
+	color: white;
+	margin: 16px;
+	text-align: center;
+	font-size: 12px;
+	font-family: sans-serif;
+	background-color:#444444;
+	cursor: pointer;
+	padding: 6px;
+	box-shadow: 1px 1px 1px rgba(0,0,0,.25);
+}
+
+#code-csp-warning:hover {
+	text-decoration: none;
+	background-color:#007acc;
+	box-shadow: 2px 2px 2px rgba(0,0,0,.25);
+}
+
+body.scrollBeyondLastLine {
+	margin-bottom: calc(100vh - 22px);
+}
+
+body.showEditorSelection .code-line {
+	position: relative;
+}
+
+body.showEditorSelection .code-active-line:before,
+body.showEditorSelection .code-line:hover:before {
+	content: "";
+	display: block;
+	position: absolute;
+	top: 0;
+	left: -12px;
+	height: 100%;
+}
+
+body.showEditorSelection li.code-active-line:before,
+body.showEditorSelection li.code-line:hover:before {
+	left: -30px;
+}
+
+.vscode-light.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.15);
+}
+
+.vscode-light.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.40);
+}
+
+.vscode-light.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-dark.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.4);
+}
+
+.vscode-dark.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.60);
+}
+
+.vscode-dark.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-high-contrast.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 160, 0, 0.7);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 160, 0, 1);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+img {
+	max-width: 100%;
+	max-height: 100%;
+}
+
+a {
+	text-decoration: none;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+a:focus,
+input:focus,
+select:focus,
+textarea:focus {
+	outline: 1px solid -webkit-focus-ring-color;
+	outline-offset: -1px;
+}
+
+hr {
+	border: 0;
+	height: 2px;
+	border-bottom: 2px solid;
+}
+
+h1 {
+	padding-bottom: 0.3em;
+	line-height: 1.2;
+	border-bottom-width: 1px;
+	border-bottom-style: solid;
+}
+
+h1, h2, h3 {
+	font-weight: normal;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+table > thead > tr > th {
+	text-align: left;
+	border-bottom: 1px solid;
+}
+
+table > thead > tr > th,
+table > thead > tr > td,
+table > tbody > tr > th,
+table > tbody > tr > td {
+	padding: 5px 10px;
+}
+
+table > tbody > tr + tr > td {
+	border-top: 1px solid;
+}
+
+blockquote {
+	margin: 0 7px 0 5px;
+	padding: 0 16px 0 10px;
+	border-left-width: 5px;
+	border-left-style: solid;
+}
+
+code {
+	font-family: Menlo, Monaco, Consolas, "Droid Sans Mono", "Courier New", monospace, "Droid Sans Fallback";
+	font-size: 1em;
+	line-height: 1.357em;
+}
+
+body.wordWrap pre {
+	white-space: pre-wrap;
+}
+
+pre:not(.hljs),
+pre.hljs code > div {
+	padding: 16px;
+	border-radius: 3px;
+	overflow: auto;
+}
+
+pre code {
+	color: var(--vscode-editor-foreground);
+	tab-size: 4;
+}
+
+/** Theming */
+
+.vscode-light pre {
+	background-color: rgba(220, 220, 220, 0.4);
+}
+
+.vscode-dark pre {
+	background-color: rgba(10, 10, 10, 0.4);
+}
+
+.vscode-high-contrast pre {
+	background-color: rgb(0, 0, 0);
+}
+
+.vscode-high-contrast h1 {
+	border-color: rgb(0, 0, 0);
+}
+
+.vscode-light table > thead > tr > th {
+	border-color: rgba(0, 0, 0, 0.69);
+}
+
+.vscode-dark table > thead > tr > th {
+	border-color: rgba(255, 255, 255, 0.69);
+}
+
+.vscode-light h1,
+.vscode-light hr,
+.vscode-light table > tbody > tr + tr > td {
+	border-color: rgba(0, 0, 0, 0.18);
+}
+
+.vscode-dark h1,
+.vscode-dark hr,
+.vscode-dark table > tbody > tr + tr > td {
+	border-color: rgba(255, 255, 255, 0.18);
+}
+
+</style>
+
+<style>
+/* Tomorrow Theme */
+/* http://jmblog.github.com/color-themes-for-google-code-highlightjs */
+/* Original theme - https://github.com/chriskempson/tomorrow-theme */
+
+/* Tomorrow Comment */
+.hljs-comment,
+.hljs-quote {
+	color: #8e908c;
+}
+
+/* Tomorrow Red */
+.hljs-variable,
+.hljs-template-variable,
+.hljs-tag,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class,
+.hljs-regexp,
+.hljs-deletion {
+	color: #c82829;
+}
+
+/* Tomorrow Orange */
+.hljs-number,
+.hljs-built_in,
+.hljs-builtin-name,
+.hljs-literal,
+.hljs-type,
+.hljs-params,
+.hljs-meta,
+.hljs-link {
+	color: #f5871f;
+}
+
+/* Tomorrow Yellow */
+.hljs-attribute {
+	color: #eab700;
+}
+
+/* Tomorrow Green */
+.hljs-string,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-addition {
+	color: #718c00;
+}
+
+/* Tomorrow Blue */
+.hljs-title,
+.hljs-section {
+	color: #4271ae;
+}
+
+/* Tomorrow Purple */
+.hljs-keyword,
+.hljs-selector-tag {
+	color: #8959a8;
+}
+
+.hljs {
+	display: block;
+	overflow-x: auto;
+	color: #4d4d4c;
+	padding: 0.5em;
+}
+
+.hljs-emphasis {
+	font-style: italic;
+}
+
+.hljs-strong {
+	font-weight: bold;
+}
+</style>
+
+<style>
+/*
+ * Markdown PDF CSS
+ */
+
+ body {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif, "Meiryo";
+	padding: 0 12px;
+}
+
+pre {
+	background-color: #f8f8f8;
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	overflow-x: auto;
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
+}
+
+pre:not(.hljs) {
+	padding: 23px;
+	line-height: 19px;
+}
+
+blockquote {
+	background: rgba(127, 127, 127, 0.1);
+	border-color: rgba(0, 122, 204, 0.5);
+}
+
+.emoji {
+	height: 1.4em;
+}
+
+code {
+	font-size: 14px;
+	line-height: 19px;
+}
+
+/* for inline code */
+:not(pre):not(.hljs) > code {
+	color: #C9AE75; /* Change the old color so it seems less like an error */
+	font-size: inherit;
+}
+
+/* Page Break : use <div class="page"/> to insert page break
+-------------------------------------------------------- */
+.page {
+	page-break-after: always;
+}
+
+</style>
+
+<script src="https://unpkg.com/mermaid/dist/mermaid.min.js"></script>
+</head>
+<body>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: document.body.classList.contains('vscode-dark') || document.body.classList.contains('vscode-high-contrast')
+          ? 'dark'
+          : 'default'
+    });
+  </script>
+<h1 id="gsd--superpowers-complete-reference-guide">GSD &amp; Superpowers: Complete Reference Guide</h1>
+<blockquote>
+<p><strong>Purpose:</strong> Comprehensive reference for both AI-assisted development frameworks used in this project — what they are, how they work individually, and how to combine them for maximum effectiveness.</p>
+</blockquote>
+<hr>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol>
+<li><a href="#1-overview-two-complementary-frameworks">Overview: Two Complementary Frameworks</a></li>
+<li><a href="#2-gsd-framework">GSD Framework</a>
+<ul>
+<li><a href="#21-what-is-gsd">What Is GSD?</a></li>
+<li><a href="#22-core-concepts">Core Concepts</a></li>
+<li><a href="#23-file-artifacts--structure">File Artifacts &amp; Structure</a></li>
+<li><a href="#24-all-commands-slash-commands">All Commands (Slash Commands)</a></li>
+<li><a href="#25-gsd-workflow">GSD Workflow</a></li>
+<li><a href="#26-internal-subagents">Internal Subagents</a></li>
+</ul>
+</li>
+<li><a href="#3-superpowers-framework">Superpowers Framework</a>
+<ul>
+<li><a href="#31-what-is-superpowers">What Is Superpowers?</a></li>
+<li><a href="#32-core-concepts">Core Concepts</a></li>
+<li><a href="#33-all-skills">All Skills</a></li>
+<li><a href="#34-superpowers-workflow">Superpowers Workflow</a></li>
+</ul>
+</li>
+<li><a href="#4-combining-both-frameworks">Combining Both Frameworks</a>
+<ul>
+<li><a href="#41-artifact-sharing-map">Artifact Sharing Map</a></li>
+<li><a href="#42-decision-matrix-which-to-use-when">Decision Matrix: Which to Use When</a></li>
+<li><a href="#43-master-combined-workflow">Master Combined Workflow</a></li>
+<li><a href="#44-context-continuity-protocol">Context Continuity Protocol</a></li>
+</ul>
+</li>
+<li><a href="#5-quick-reference">Quick Reference</a></li>
+<li><a href="#6-appendix-optimizing-claudemd-for-both-frameworks">Appendix: Optimizing CLAUDE.md for Both Frameworks</a>
+<ul>
+<li><a href="#61-why-claudemd-is-the-central-bridge">Why CLAUDE.md Is the Central Bridge</a></li>
+<li><a href="#62-analysis-of-current-claudemd">Analysis of Current CLAUDE.md</a></li>
+<li><a href="#63-recommended-enhancements">Recommended Enhancements</a></li>
+<li><a href="#64-enhanced-sections-drop-in-additions">Enhanced Sections (Drop-in Additions)</a></li>
+</ul>
+</li>
+</ol>
+<hr>
+<h2 id="1-overview-two-complementary-frameworks">1. Overview: Two Complementary Frameworks</h2>
+<table>
+<thead>
+<tr>
+<th>Dimension</th>
+<th>GSD</th>
+<th>Superpowers</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Scope</strong></td>
+<td>Project lifecycle management (milestones → phases → plans)</td>
+<td>Per-session coding discipline</td>
+</tr>
+<tr>
+<td><strong>Persistence</strong></td>
+<td>Across sessions via <code>.planning/</code> files</td>
+<td>Within session only (reads CLAUDE.md)</td>
+</tr>
+<tr>
+<td><strong>Invocation</strong></td>
+<td>Slash commands: <code>/gsd:progress</code>, <code>/gsd:execute-phase</code></td>
+<td>Skill tool: <code>superpowers:brainstorming</code>, <code>superpowers:tdd</code></td>
+</tr>
+<tr>
+<td><strong>Purpose</strong></td>
+<td>Strategic — what to build, when, in what order</td>
+<td>Tactical — how to build it correctly</td>
+</tr>
+<tr>
+<td><strong>Agents</strong></td>
+<td>Spawns specialized subagents (planner, executor, verifier)</td>
+<td>Provides discipline protocols for Claude itself</td>
+</tr>
+<tr>
+<td><strong>Output</strong></td>
+<td>Planning files, roadmaps, phase plans, summaries</td>
+<td>Design docs, implementation plans, test suites</td>
+</tr>
+<tr>
+<td><strong>Memory</strong></td>
+<td><code>.planning/STATE.md</code>, <code>ROADMAP.md</code>, <code>SUMMARY.md</code> files</td>
+<td>CLAUDE.md, conversation context</td>
+</tr>
+</tbody>
+</table>
+<p><strong>The key insight:</strong> GSD handles <em>project management at scale</em> across many sessions. Superpowers handles <em>quality enforcement within each session</em>. They are designed to complement each other — GSD's executor agents receive Superpowers discipline via <code>.agents/skills/</code> and <code>CLAUDE.md</code>.</p>
+<hr>
+<h2 id="2-gsd-framework">2. GSD Framework</h2>
+<h3 id="21-what-is-gsd">2.1 What Is GSD?</h3>
+<p>GSD (&quot;Get Shit Done&quot;) is a project lifecycle management framework for Claude Code. It provides:</p>
+<ul>
+<li><strong>Persistent state</strong> across context resets via markdown files in <code>.planning/</code></li>
+<li><strong>Structured planning</strong> that breaks projects into milestones → phases → plans</li>
+<li><strong>Wave-based parallel execution</strong> using specialized subagents</li>
+<li><strong>Verification loops</strong> that check goal achievement (not just task completion)</li>
+<li><strong>Automatic routing</strong> to the correct next action at all times</li>
+</ul>
+<p>GSD is installed at <code>~/.claude/get-shit-done/</code> and exposed via slash commands.</p>
+<p><strong>Philosophy:</strong> Context resets are unavoidable. Every GSD command starts by loading state from files, so no prior conversation context is ever required.</p>
+<h3 id="22-core-concepts">2.2 Core Concepts</h3>
+<h4 id="hierarchy">Hierarchy</h4>
+<pre class="hljs"><code><div>Project
+└── Milestone (e.g., v1.0, v1.1)
+    └── Phase (e.g., Phase 4: Canvas &amp; Workflows)
+        └── Plan (e.g., 04-01: Workflow CRUD API)
+            └── Task (e.g., Task 1: Write failing tests)
+</div></code></pre>
+<h4 id="wave-based-execution">Wave-Based Execution</h4>
+<p>Plans within a phase are grouped into <strong>waves</strong> based on their <code>depends_on</code> frontmatter. Plans in the same wave execute in parallel. Wave 2 only starts after all Wave 1 plans complete.</p>
+<pre class="hljs"><code><div>Wave 1: Plan 01 ──┬── Plan 02 (parallel)
+                  │
+Wave 2:           └── Plan 03 (waits for Wave 1)
+</div></code></pre>
+<h4 id="autonomous-vs-checkpoint-plans">Autonomous vs. Checkpoint Plans</h4>
+<ul>
+<li><code>autonomous: true</code> — executor runs to completion without interruption</li>
+<li><code>autonomous: false</code> — executor pauses at a checkpoint, presents to user for approval, then continues</li>
+</ul>
+<h4 id="goal-backward-verification">Goal-Backward Verification</h4>
+<p>GSD verifiers check <code>must_haves</code> derived from the <strong>phase goal</strong>, not just whether tasks ran. A phase is complete only when the goal is demonstrably achieved in the codebase.</p>
+<h3 id="23-file-artifacts--structure">2.3 File Artifacts &amp; Structure</h3>
+<pre class="hljs"><code><div>.planning/
+├── PROJECT.md           ← Project identity, core value, constraints, key decisions
+├── ROADMAP.md           ← Active milestone roadmap with all phases and checkboxes
+├── MILESTONES.md        ← History of all milestones and their archive paths
+├── STATE.md             ← Live project state: position, decisions, blockers, todos
+├── config.json          ← GSD settings (model profiles, parallelization, etc.)
+│
+├── phases/
+│   └── 04-canvas-and-workflows/
+│       ├── 04-CONTEXT.md       ← User design decisions from /gsd:discuss-phase
+│       ├── 04-RESEARCH.md      ← Technical research output
+│       ├── 04-VALIDATION.md    ← Nyquist validation strategy (if enabled)
+│       ├── 04-01-PLAN.md       ← Executable plan with tasks in XML format
+│       ├── 04-01-SUMMARY.md    ← Post-execution summary with key-files and decisions
+│       ├── 04-VERIFICATION.md  ← Goal-backward verification report
+│       └── 04-UAT.md           ← User acceptance test results
+│
+├── milestones/
+│   └── v1.0-phases/            ← Archived milestone with all its phases
+│
+├── quick/
+│   └── N-task-slug/
+│       ├── N-PLAN.md           ← Quick task plan
+│       └── N-SUMMARY.md        ← Quick task result
+│
+├── debug/
+│   ├── active-bug.md           ← Active debug sessions
+│   └── resolved/               ← Resolved debug sessions
+│
+└── research/                   ← Project-level research (SUMMARY.md, STACK.md, etc.)
+</div></code></pre>
+<h4 id="key-file-details">Key File Details</h4>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Owner</th>
+<th>Read by</th>
+<th>Contains</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>PROJECT.md</code></td>
+<td>GSD</td>
+<td>All agents</td>
+<td>What, why, constraints, key decisions</td>
+</tr>
+<tr>
+<td><code>ROADMAP.md</code></td>
+<td>GSD</td>
+<td>Planner, verifier, progress</td>
+<td>Phase list, goals, completion status</td>
+</tr>
+<tr>
+<td><code>STATE.md</code></td>
+<td>GSD executors</td>
+<td>All agents</td>
+<td>Current position, decisions log, blockers, todos</td>
+</tr>
+<tr>
+<td><code>XX-PLAN.md</code></td>
+<td><code>gsd-planner</code></td>
+<td><code>gsd-executor</code></td>
+<td>Frontmatter + XML tasks + must_haves</td>
+</tr>
+<tr>
+<td><code>XX-SUMMARY.md</code></td>
+<td><code>gsd-executor</code></td>
+<td>Orchestrator, verifier</td>
+<td>What was built, files created, decisions made</td>
+</tr>
+<tr>
+<td><code>XX-VERIFICATION.md</code></td>
+<td><code>gsd-verifier</code></td>
+<td>Orchestrator, user</td>
+<td>Goal achievement status, gaps, human items</td>
+</tr>
+<tr>
+<td><code>XX-CONTEXT.md</code></td>
+<td>User (via discuss-phase)</td>
+<td>Planner, checker</td>
+<td>Design preferences, approach decisions</td>
+</tr>
+<tr>
+<td><code>XX-RESEARCH.md</code></td>
+<td><code>gsd-phase-researcher</code></td>
+<td>Planner</td>
+<td>Technical research, API choices, patterns</td>
+</tr>
+</tbody>
+</table>
+<h3 id="24-all-commands-slash-commands">2.4 All Commands (Slash Commands)</h3>
+<hr>
+<h4 id="gsdprogress"><code>/gsd:progress</code></h4>
+<p><strong>Purpose:</strong> Check where you are and get routed to the next action.</p>
+<p><strong>When to use:</strong> Start of every session, or whenever you're unsure what to do next.</p>
+<p><strong>What it does:</strong></p>
+<ol>
+<li>Loads project state from <code>.planning/STATE.md</code> and <code>ROADMAP.md</code></li>
+<li>Displays: recent work, current position, key decisions, blockers, pending todos</li>
+<li>Intelligently routes to the correct next command:
+<ul>
+<li>Has unexecuted plans → <code>/gsd:execute-phase N</code></li>
+<li>Phase needs planning → <code>/gsd:discuss-phase N</code> or <code>/gsd:plan-phase N</code></li>
+<li>Phase complete, more phases remain → <code>/gsd:discuss-phase N+1</code></li>
+<li>All phases complete → <code>/gsd:complete-milestone</code></li>
+<li>UAT gaps found → <code>/gsd:plan-phase N --gaps</code></li>
+</ul>
+</li>
+</ol>
+<p><strong>Output:</strong> Rich status report + one clear next-action command.</p>
+<p><strong>No parameters needed.</strong></p>
+<hr>
+<h4 id="gsdnew-project"><code>/gsd:new-project</code></h4>
+<p><strong>Purpose:</strong> Initialize a brand-new project from idea to ready-for-planning.</p>
+<p><strong>When to use:</strong> Starting a completely new project in an empty or new directory.</p>
+<p><strong>What it does:</strong></p>
+<ol>
+<li>Detects if brownfield (existing code) — optionally maps codebase first</li>
+<li>Deep questioning session: purpose, users, constraints, success criteria</li>
+<li>Optionally runs parallel research agents (4 concurrent) on domain/tech/architecture/pitfalls</li>
+<li>Synthesizes research into <code>SUMMARY.md</code></li>
+<li>Creates <code>REQUIREMENTS.md</code> with validation</li>
+<li>Creates <code>ROADMAP.md</code> with phase breakdown</li>
+<li>Creates <code>PROJECT.md</code> as the project's single source of truth</li>
+</ol>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>--auto @doc.md</code> — skip questioning, synthesize from provided document</li>
+</ul>
+<p><strong>Deliverables:</strong></p>
+<ul>
+<li><code>.planning/PROJECT.md</code></li>
+<li><code>.planning/ROADMAP.md</code></li>
+<li><code>.planning/requirements/REQUIREMENTS.md</code></li>
+<li><code>.planning/research/SUMMARY.md</code></li>
+</ul>
+<hr>
+<h4 id="gsdnew-milestone"><code>/gsd:new-milestone</code></h4>
+<p><strong>Purpose:</strong> Start a new milestone cycle after the previous one is complete.</p>
+<p><strong>When to use:</strong> After <code>/gsd:complete-milestone</code> archives the old milestone.</p>
+<p><strong>What it does:</strong></p>
+<ol>
+<li>Updates <code>PROJECT.md</code> with new milestone objectives</li>
+<li>Runs fresh requirements gathering</li>
+<li>Creates new <code>ROADMAP.md</code> for the milestone</li>
+<li>Provides the planning entry point for Phase 1</li>
+</ol>
+<p><strong>Deliverables:</strong></p>
+<ul>
+<li>Updated <code>.planning/PROJECT.md</code></li>
+<li>New <code>.planning/ROADMAP.md</code></li>
+<li>New <code>.planning/requirements/REQUIREMENTS.md</code></li>
+</ul>
+<hr>
+<h4 id="gsddiscuss-phase-n"><code>/gsd:discuss-phase N</code></h4>
+<p><strong>Purpose:</strong> Gather context and clarify design decisions before planning a phase.</p>
+<p><strong>When to use:</strong> Before <code>/gsd:plan-phase N</code> when you want to capture design preferences, approach decisions, or constraints specific to the phase.</p>
+<p><strong>What it does:</strong></p>
+<ol>
+<li>Asks adaptive questions about the phase — one at a time</li>
+<li>Explores trade-offs and your preferences</li>
+<li>Records all decisions in <code>N-CONTEXT.md</code></li>
+<li>This CONTEXT.md is then consumed by the planner — ensuring plans reflect your actual intentions</li>
+</ol>
+<p><strong>Parameters:</strong> <code>N</code> = phase number</p>
+<p><strong>Deliverables:</strong> <code>.planning/phases/NN-slug/NN-CONTEXT.md</code></p>
+<p><strong>Why it matters:</strong> Plans without context are written from Claude's default assumptions. Plans with CONTEXT.md are written from your stated preferences. The difference is significant for complex phases.</p>
+<hr>
+<h4 id="gsdplan-phase-n"><code>/gsd:plan-phase N</code></h4>
+<p><strong>Purpose:</strong> Create detailed, executable PLAN.md files for a phase.</p>
+<p><strong>When to use:</strong> After <code>/gsd:discuss-phase N</code> (or instead of it if you want to skip discussion).</p>
+<p><strong>What it does:</strong></p>
+<ol>
+<li>Validates phase exists in ROADMAP.md</li>
+<li>Checks for and loads CONTEXT.md (asks if missing)</li>
+<li><strong>Optionally runs <code>gsd-phase-researcher</code></strong> to research technical approach</li>
+<li><strong>Spawns <code>gsd-planner</code></strong> — creates wave-grouped PLAN.md files with XML tasks</li>
+<li><strong>Spawns <code>gsd-plan-checker</code></strong> — verifies plans will achieve the phase goal</li>
+<li><strong>Revision loop</strong> (up to 3 iterations) if checker finds issues</li>
+<li>Presents final plan count + wave structure</li>
+</ol>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>N</code> — phase number (integer or decimal like <code>4.1</code>)</li>
+<li><code>--research</code> — force re-research even if RESEARCH.md exists</li>
+<li><code>--skip-research</code> — never research, plan directly</li>
+<li><code>--gaps</code> — create gap-closure plans from VERIFICATION.md issues</li>
+<li><code>--skip-verify</code> — skip plan checker</li>
+<li><code>--auto</code> — auto-advance to execute-phase after planning</li>
+</ul>
+<p><strong>Deliverables:</strong></p>
+<ul>
+<li><code>.planning/phases/NN-slug/NN-RESEARCH.md</code></li>
+<li><code>.planning/phases/NN-slug/NN-01-PLAN.md</code>, <code>NN-02-PLAN.md</code>, etc.</li>
+</ul>
+<hr>
+<h4 id="gsdexecute-phase-n"><code>/gsd:execute-phase N</code></h4>
+<p><strong>Purpose:</strong> Execute all plans in a phase using parallel executor subagents.</p>
+<p><strong>When to use:</strong> After <code>/gsd:plan-phase N</code> produces PLAN.md files.</p>
+<p><strong>What it does:</strong></p>
+<ol>
+<li>Discovers all PLAN.md files, skips ones with matching SUMMARY.md (already done)</li>
+<li>Groups plans into waves by <code>depends_on</code> frontmatter</li>
+<li>For each wave, spawns parallel <code>gsd-executor</code> agents (one per plan)</li>
+<li>Each executor: reads plan → executes tasks → commits atomically → writes SUMMARY.md → updates STATE.md</li>
+<li>Spot-checks each executor's claims (verifies files exist, commits present)</li>
+<li>Handles checkpoints (autonomous: false plans) — pauses for user input</li>
+<li>After all waves, spawns <code>gsd-verifier</code> to check goal achievement</li>
+<li>On success: updates ROADMAP.md and STATE.md</li>
+</ol>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>N</code> — phase number</li>
+<li><code>--gaps-only</code> — execute only gap-closure plans</li>
+<li><code>--auto</code> — auto-advance to next phase after completion</li>
+</ul>
+<p><strong>Deliverables:</strong></p>
+<ul>
+<li><code>.planning/phases/NN-slug/NN-01-SUMMARY.md</code> (per plan)</li>
+<li><code>.planning/phases/NN-slug/NN-VERIFICATION.md</code></li>
+<li>Git commits per task (atomic)</li>
+</ul>
+<hr>
+<h4 id="gsdquick-description"><code>/gsd:quick [description]</code></h4>
+<p><strong>Purpose:</strong> Execute a quick, bounded task with GSD guarantees but without optional agents.</p>
+<p><strong>When to use:</strong> Small fixes, polish items, or isolated improvements that don't need full phase planning.</p>
+<p><strong>What it does:</strong></p>
+<ol>
+<li>Creates a plan directory in <code>.planning/quick/N-task-slug/</code></li>
+<li>Writes a PLAN.md (compressed format, no research/checker agents)</li>
+<li>Executes with atomic commits</li>
+<li>Writes SUMMARY.md</li>
+<li>Updates STATE.md</li>
+</ol>
+<p><strong>Parameters:</strong> Free-text description of the task.</p>
+<p><strong>Deliverables:</strong></p>
+<ul>
+<li><code>.planning/quick/N-task-slug/N-PLAN.md</code></li>
+<li><code>.planning/quick/N-task-slug/N-SUMMARY.md</code></li>
+<li>Git commits</li>
+</ul>
+<hr>
+<h4 id="gsdverify-work-n"><code>/gsd:verify-work N</code></h4>
+<p><strong>Purpose:</strong> Validate built features through conversational user acceptance testing (UAT).</p>
+<p><strong>When to use:</strong> After completing a phase or before marking it complete — especially for UI features or user-facing behavior that automated tests can't cover.</p>
+<p><strong>What it does:</strong></p>
+<ol>
+<li>Checks for existing UAT sessions (resumable)</li>
+<li>Presents one test scenario at a time: &quot;Here's what should happen — does it?&quot;</li>
+<li>Records pass/fail for each scenario</li>
+<li>Infers severity from user descriptions of failures</li>
+<li>On completion, writes <code>NN-UAT.md</code> with test results and gap list</li>
+<li>Gaps automatically feed into <code>/gsd:plan-phase N --gaps</code></li>
+</ol>
+<p><strong>Parameters:</strong> <code>N</code> = phase number</p>
+<p><strong>Deliverables:</strong> <code>.planning/phases/NN-slug/NN-UAT.md</code></p>
+<hr>
+<h4 id="gsdplan-milestone-gaps"><code>/gsd:plan-milestone-gaps</code></h4>
+<p><strong>Purpose:</strong> Create phases to close all gaps identified by a milestone audit.</p>
+<p><strong>When to use:</strong> After <code>/gsd:audit-milestone</code> reveals unmet requirements.</p>
+<p><strong>What it does:</strong> Creates gap-closure phases (e.g., <code>4.1</code>, <code>4.2</code>) for each gap cluster found in the milestone audit, then offers to execute them.</p>
+<hr>
+<h4 id="gsdaudit-milestone"><code>/gsd:audit-milestone</code></h4>
+<p><strong>Purpose:</strong> Audit milestone completion against its original intent before archiving.</p>
+<p><strong>When to use:</strong> When all phases appear complete but before running <code>/gsd:complete-milestone</code>.</p>
+<p><strong>What it does:</strong> Reads original REQUIREMENTS.md and all VERIFICATION.md files to determine if every requirement was actually delivered. Produces a <code>vX.X-MILESTONE-AUDIT.md</code>.</p>
+<p><strong>Deliverables:</strong> <code>.planning/milestones/vX.X-MILESTONE-AUDIT.md</code></p>
+<hr>
+<h4 id="gsdcomplete-milestone"><code>/gsd:complete-milestone</code></h4>
+<p><strong>Purpose:</strong> Archive a completed milestone and prepare for the next.</p>
+<p><strong>When to use:</strong> After <code>/gsd:audit-milestone</code> confirms all requirements are met.</p>
+<p><strong>What it does:</strong></p>
+<ol>
+<li>Moves all current phase files to <code>.planning/milestones/vX.X-phases/</code></li>
+<li>Archives ROADMAP.md and REQUIREMENTS.md to milestone directory</li>
+<li>Removes active ROADMAP.md (signals between-milestone state to <code>/gsd:progress</code>)</li>
+<li>Updates MILESTONES.md with completion date</li>
+</ol>
+<hr>
+<h4 id="gsddebug-description"><code>/gsd:debug [description]</code></h4>
+<p><strong>Purpose:</strong> Systematic debugging with persistent state across context resets.</p>
+<p><strong>When to use:</strong> Any bug, unexpected behavior, or test failure.</p>
+<p><strong>What it does:</strong></p>
+<ol>
+<li>Creates a debug session file in <code>.planning/debug/slug.md</code></li>
+<li>Spawns <code>gsd-debugger</code> agent using the 4-phase systematic debugging process</li>
+<li>Records hypotheses tested, evidence gathered, root cause found</li>
+<li>Debug session survives <code>/clear</code> — resume with <code>/gsd:debug</code></li>
+<li>On resolution, moves to <code>.planning/debug/resolved/</code></li>
+</ol>
+<p><strong>Parameters:</strong> Free-text description of the bug.</p>
+<p><strong>Deliverables:</strong> <code>.planning/debug/slug.md</code></p>
+<hr>
+<h4 id="gsdmap-codebase"><code>/gsd:map-codebase</code></h4>
+<p><strong>Purpose:</strong> Analyze existing codebase and produce structured documentation.</p>
+<p><strong>When to use:</strong> On brownfield projects, or before planning a phase that touches unfamiliar code.</p>
+<p><strong>What it does:</strong> Spawns 4 parallel <code>gsd-codebase-mapper</code> agents focused on:</p>
+<ul>
+<li>Technology stack and dependencies</li>
+<li>Architecture and module structure</li>
+<li>Code quality and patterns</li>
+<li>Potential concerns and tech debt</li>
+</ul>
+<p><strong>Deliverables:</strong> <code>.planning/codebase/TECH.md</code>, <code>ARCH.md</code>, <code>QUALITY.md</code>, <code>CONCERNS.md</code></p>
+<hr>
+<h4 id="gsdadd-phase-description"><code>/gsd:add-phase [description]</code></h4>
+<p><strong>Purpose:</strong> Add a new phase to the end of the current milestone's roadmap.</p>
+<p><strong>When to use:</strong> When scope expands or a new requirement needs a dedicated phase.</p>
+<p><strong>Parameters:</strong> Free-text phase description.</p>
+<p><strong>Deliverables:</strong> Updated <code>ROADMAP.md</code> with new phase entry.</p>
+<hr>
+<h4 id="gsdinsert-phase-n-description"><code>/gsd:insert-phase [N] [description]</code></h4>
+<p><strong>Purpose:</strong> Insert an urgent phase between existing phases using decimal numbering (e.g., <code>4.1</code> between 4 and 5).</p>
+<p><strong>When to use:</strong> When a gap closure or urgent fix needs its own phase without renumbering all subsequent phases.</p>
+<hr>
+<h4 id="gsdremove-phase-n"><code>/gsd:remove-phase N</code></h4>
+<p><strong>Purpose:</strong> Remove a future phase from the roadmap and renumber subsequent phases.</p>
+<p><strong>When to use:</strong> When a planned phase is no longer needed.</p>
+<hr>
+<h4 id="gsdlist-phase-assumptions-n"><code>/gsd:list-phase-assumptions N</code></h4>
+<p><strong>Purpose:</strong> Surface Claude's assumptions about how a phase would be approached before planning.</p>
+<p><strong>When to use:</strong> Before <code>/gsd:plan-phase N</code> to catch misaligned assumptions early — especially on complex or ambiguous phases.</p>
+<hr>
+<h4 id="gsdadd-todo-description"><code>/gsd:add-todo [description]</code></h4>
+<p><strong>Purpose:</strong> Capture an idea or task as a todo in STATE.md from current conversation context.</p>
+<p><strong>When to use:</strong> When you notice something that needs doing but don't want to interrupt current work.</p>
+<hr>
+<h4 id="gsdcheck-todos"><code>/gsd:check-todos</code></h4>
+<p><strong>Purpose:</strong> List all pending todos and select one to work on.</p>
+<p><strong>When to use:</strong> When you want to review and act on accumulated todos.</p>
+<hr>
+<h4 id="gsdpause-work"><code>/gsd:pause-work</code></h4>
+<p><strong>Purpose:</strong> Create a context handoff file when pausing work mid-phase.</p>
+<p><strong>When to use:</strong> When stopping for the day mid-task — creates a resume file so the next session can pick up exactly where you left off.</p>
+<p><strong>Deliverables:</strong> <code>.planning/RESUME.md</code></p>
+<hr>
+<h4 id="gsdresume-work"><code>/gsd:resume-work</code></h4>
+<p><strong>Purpose:</strong> Resume work from a previous session with full context restoration.</p>
+<p><strong>When to use:</strong> When returning to work and <code>.planning/RESUME.md</code> exists (shown by <code>/gsd:progress</code>).</p>
+<hr>
+<h4 id="gsdset-profile-qualitybalancedbudget"><code>/gsd:set-profile [quality|balanced|budget]</code></h4>
+<p><strong>Purpose:</strong> Switch the model profile used for GSD agents.</p>
+<p><strong>Profiles:</strong></p>
+<ul>
+<li><code>quality</code> — uses most capable models for all agents (slowest, most thorough)</li>
+<li><code>balanced</code> — uses capable models for planning, faster for execution (default)</li>
+<li><code>budget</code> — uses fastest models throughout (quickest, least thorough)</li>
+</ul>
+<hr>
+<h4 id="gsdsettings"><code>/gsd:settings</code></h4>
+<p><strong>Purpose:</strong> Configure GSD workflow toggles interactively.</p>
+<p><strong>Configurable options:</strong> parallelization, auto-advance, commit behavior, nyquist validation, research enabled, plan checker enabled.</p>
+<hr>
+<h4 id="gsdhealth"><code>/gsd:health</code></h4>
+<p><strong>Purpose:</strong> Diagnose planning directory health and optionally repair issues.</p>
+<p><strong>When to use:</strong> If planning files seem corrupted, inconsistent, or if commands fail unexpectedly.</p>
+<hr>
+<h4 id="gsdcleanup"><code>/gsd:cleanup</code></h4>
+<p><strong>Purpose:</strong> Archive accumulated phase directories from completed milestones.</p>
+<p><strong>When to use:</strong> When <code>.planning/phases/</code> has old completed phase directories from prior milestones cluttering the view.</p>
+<hr>
+<h4 id="gsdupdate"><code>/gsd:update</code></h4>
+<p><strong>Purpose:</strong> Update GSD to the latest version with changelog display.</p>
+<hr>
+<h4 id="gsdreapply-patches"><code>/gsd:reapply-patches</code></h4>
+<p><strong>Purpose:</strong> Reapply local modifications (customizations) after a GSD update.</p>
+<hr>
+<h4 id="gsdhelp"><code>/gsd:help</code></h4>
+<p><strong>Purpose:</strong> Show all available GSD commands and usage guide.</p>
+<hr>
+<h3 id="25-gsd-workflow">2.5 GSD Workflow</h3>
+<p>The full project lifecycle through GSD:</p>
+<pre class="hljs"><code><div>Phase 0: Project Setup
+  /gsd:new-project          → Creates PROJECT.md + ROADMAP.md + REQUIREMENTS.md
+
+For each Phase:
+  /gsd:progress             → Check state, get routing
+  /gsd:discuss-phase N      → Capture design decisions → CONTEXT.md
+  /gsd:plan-phase N         → Research + Plan + Verify → PLAN.md files
+  /gsd:execute-phase N      → Parallel execution → SUMMARY.md + commits
+  /gsd:verify-work N        → UAT testing → UAT.md
+  (if gaps) /gsd:plan-phase N --gaps → Gap plans
+  (if gaps) /gsd:execute-phase N --gaps-only → Fix gaps
+
+Phase Complete:
+  /gsd:audit-milestone      → Requirements coverage check
+  /gsd:complete-milestone   → Archive + prepare next
+
+Auto-advance option:
+  /gsd:plan-phase N --auto  → Plan then immediately execute, then transition
+</div></code></pre>
+<p><strong>State transition between sessions:</strong></p>
+<pre class="hljs"><code><div>Session ends → STATE.md updated with position + decisions
+New session → /gsd:progress reads STATE.md → no context needed
+</div></code></pre>
+<h3 id="26-internal-subagents">2.6 Internal Subagents</h3>
+<p>GSD orchestrators spawn these specialized subagents:</p>
+<table>
+<thead>
+<tr>
+<th>Agent</th>
+<th>Role</th>
+<th>Input</th>
+<th>Output</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>gsd-phase-researcher</code></td>
+<td>Technical research for a phase</td>
+<td>CONTEXT.md, REQUIREMENTS.md, phase description</td>
+<td><code>NN-RESEARCH.md</code></td>
+</tr>
+<tr>
+<td><code>gsd-planner</code></td>
+<td>Creates executable PLAN.md files</td>
+<td>RESEARCH.md, CONTEXT.md, ROADMAP.md</td>
+<td><code>NN-01-PLAN.md</code>, etc.</td>
+</tr>
+<tr>
+<td><code>gsd-plan-checker</code></td>
+<td>Verifies plans will achieve phase goal</td>
+<td>All PLAN.md files + phase goal</td>
+<td>Pass/Issues report</td>
+</tr>
+<tr>
+<td><code>gsd-executor</code></td>
+<td>Executes a single plan atomically</td>
+<td>PLAN.md + STATE.md</td>
+<td><code>NN-01-SUMMARY.md</code> + git commits</td>
+</tr>
+<tr>
+<td><code>gsd-verifier</code></td>
+<td>Goal-backward verification</td>
+<td>All SUMMARY.md + must_haves</td>
+<td><code>NN-VERIFICATION.md</code></td>
+</tr>
+<tr>
+<td><code>gsd-codebase-mapper</code></td>
+<td>Maps existing codebase</td>
+<td>Source files</td>
+<td><code>TECH.md</code>, <code>ARCH.md</code>, etc.</td>
+</tr>
+<tr>
+<td><code>gsd-debugger</code></td>
+<td>Systematic debugging</td>
+<td>Bug description + debug session</td>
+<td>Updated debug session file</td>
+</tr>
+<tr>
+<td><code>gsd-integration-checker</code></td>
+<td>Cross-phase integration check</td>
+<td>Multiple VERIFICATION.md files</td>
+<td>Integration report</td>
+</tr>
+<tr>
+<td><code>gsd-roadmapper</code></td>
+<td>Creates milestone roadmaps</td>
+<td>REQUIREMENTS.md + research</td>
+<td><code>ROADMAP.md</code></td>
+</tr>
+<tr>
+<td><code>gsd-project-researcher</code></td>
+<td>Domain research for new projects</td>
+<td>Project idea</td>
+<td>Research files</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="3-superpowers-framework">3. Superpowers Framework</h2>
+<h3 id="31-what-is-superpowers">3.1 What Is Superpowers?</h3>
+<p>Superpowers is a set of coding discipline skills for Claude Code. Each skill is a protocol enforcing a specific engineering practice — brainstorming before building, TDD before implementation, verification before claiming completion.</p>
+<p>Superpowers is installed at <code>~/.claude/skills/</code> and invoked via the <code>Skill</code> tool with <code>superpowers:skill-name</code>.</p>
+<p><strong>Philosophy:</strong> Skills enforce discipline that Claude might otherwise skip under time pressure or rationalization. Every skill has an &quot;Iron Law&quot; — a non-negotiable rule that cannot be bypassed.</p>
+<p><strong>Session scope:</strong> Superpowers skills provide discipline for the current session. They do not persist state across sessions (unlike GSD). However, their <em>outputs</em> (design docs, plans, implementation) become persistent artifacts.</p>
+<h3 id="32-core-concepts">3.2 Core Concepts</h3>
+<h4 id="the-invocation-rule">The Invocation Rule</h4>
+<blockquote>
+<p>If there is even a 1% chance a skill applies to your task, you MUST invoke it before doing anything — including asking clarifying questions.</p>
+</blockquote>
+<p>This rule prevents rationalization (&quot;too simple to need a skill&quot;) from degrading code quality.</p>
+<h4 id="iron-laws">Iron Laws</h4>
+<p>Each skill has a non-negotiable rule:</p>
+<ul>
+<li>TDD: &quot;No production code without a failing test first&quot;</li>
+<li>Debugging: &quot;No fixes without root cause investigation first&quot;</li>
+<li>Verification: &quot;No completion claims without fresh verification evidence&quot;</li>
+<li>Brainstorming: &quot;No implementation until design is presented and approved&quot;</li>
+</ul>
+<h4 id="skill-type-rigid-vs-flexible">Skill Type: Rigid vs. Flexible</h4>
+<ul>
+<li><strong>Rigid</strong> (TDD, Debugging, Verification): Follow exactly. Adapting away from the ritual defeats the purpose.</li>
+<li><strong>Flexible</strong> (Brainstorming, Writing Plans): Adapt principles to context.</li>
+</ul>
+<h3 id="33-all-skills">3.3 All Skills</h3>
+<hr>
+<h4 id="superpowersusing-superpowers"><code>superpowers:using-superpowers</code></h4>
+<p><strong>Purpose:</strong> Establish how to find and use skills at the start of every conversation.</p>
+<p><strong>When invoked:</strong> Automatically at session start (via system reminder).</p>
+<p><strong>Iron Law:</strong> Skill check happens BEFORE any response, including clarifying questions.</p>
+<p><strong>What it provides:</strong></p>
+<ul>
+<li>Decision graph for when to invoke skills</li>
+<li>Red flag list (common rationalizations to avoid)</li>
+<li>Skill priority order: process skills first, implementation skills second</li>
+</ul>
+<hr>
+<h4 id="superpowersbrainstorming"><code>superpowers:brainstorming</code></h4>
+<p><strong>Purpose:</strong> Turn ideas into fully formed designs through collaborative dialogue before any implementation begins.</p>
+<p><strong>When to use:</strong> Before creating features, building components, adding functionality, or modifying behavior — ANY creative work.</p>
+<p><strong>Iron Law / Hard Gate:</strong> Do NOT write any code, invoke any implementation skill, or take any implementation action until a design has been presented AND the user has approved it.</p>
+<p><strong>Process (sequential):</strong></p>
+<ol>
+<li><strong>Explore project context</strong> — read files, docs, recent commits</li>
+<li><strong>Ask clarifying questions</strong> — one at a time, understand purpose/constraints/success criteria</li>
+<li><strong>Propose 2-3 approaches</strong> — with trade-offs and recommendation</li>
+<li><strong>Present design sections</strong> — get approval after each section</li>
+<li><strong>Write design doc</strong> — save to <code>docs/plans/YYYY-MM-DD-&lt;topic&gt;-design.md</code> and commit</li>
+<li><strong>Transition to writing-plans</strong> — the ONLY skill invoked from brainstorming</li>
+</ol>
+<p><strong>Parameters:</strong> None — conversational.</p>
+<p><strong>Deliverables:</strong> <code>docs/plans/YYYY-MM-DD-&lt;topic&gt;-design.md</code></p>
+<p><strong>Key principles:</strong></p>
+<ul>
+<li>One question at a time (not a list)</li>
+<li>Multiple choice preferred over open-ended</li>
+<li>YAGNI ruthlessly — remove unnecessary features from all designs</li>
+<li>Always propose 2-3 alternatives before settling</li>
+</ul>
+<hr>
+<h4 id="superpowerswriting-plans"><code>superpowers:writing-plans</code></h4>
+<p><strong>Purpose:</strong> Create comprehensive, bite-sized implementation plans from a design spec.</p>
+<p><strong>When to use:</strong> After brainstorming produces an approved design. Before touching any code.</p>
+<p><strong>Process:</strong></p>
+<ol>
+<li>Announce: &quot;I'm using the writing-plans skill to create the implementation plan.&quot;</li>
+<li>Write the plan with exact file paths, complete code snippets, and exact commands</li>
+<li>Each step is 2-5 minutes of work (RED → verify RED → GREEN → verify GREEN → REFACTOR → commit)</li>
+<li>Save to <code>docs/plans/YYYY-MM-DD-&lt;feature-name&gt;.md</code></li>
+<li>Offer two execution modes: Subagent-Driven (same session) or Parallel Session (new session)</li>
+</ol>
+<p><strong>Plan format per task:</strong></p>
+<pre class="hljs"><code><div><span class="hljs-section">### Task N: [Component Name]</span>
+
+<span class="hljs-strong">**Files:**</span>
+<span class="hljs-bullet">- </span>Create: <span class="hljs-code">`exact/path/to/file.py`</span>
+<span class="hljs-bullet">- </span>Modify: <span class="hljs-code">`exact/path/to/existing.py:123-145`</span>
+<span class="hljs-bullet">- </span>Test: <span class="hljs-code">`tests/exact/path/to/test.py`</span>
+
+<span class="hljs-strong">**Step 1: Write the failing test**</span> [code]
+<span class="hljs-strong">**Step 2: Run test to verify it fails**</span> [command + expected output]
+<span class="hljs-strong">**Step 3: Write minimal implementation**</span> [code]
+<span class="hljs-strong">**Step 4: Run test to verify it passes**</span> [command + expected output]
+<span class="hljs-strong">**Step 5: Commit**</span> [git command]
+</div></code></pre>
+<p><strong>Deliverables:</strong> <code>docs/plans/YYYY-MM-DD-&lt;feature-name&gt;.md</code></p>
+<hr>
+<h4 id="superpowerstest-driven-development"><code>superpowers:test-driven-development</code></h4>
+<p><strong>Purpose:</strong> Enforce Red-Green-Refactor cycle before writing any production code.</p>
+<p><strong>When to use:</strong> Implementing any feature, bugfix, or behavior change.</p>
+<p><strong>Iron Law:</strong> &quot;No production code without a failing test first.&quot;</p>
+<p><strong>The cycle:</strong></p>
+<pre class="hljs"><code><div>RED: Write one failing test (one behavior, clear name, real code)
+  ↓ VERIFY RED: Run test — must fail for the right reason
+GREEN: Write minimal code to pass (no extras, no refactoring)
+  ↓ VERIFY GREEN: Run test — must pass, no other tests break
+REFACTOR: Clean up (no behavior changes, stay green)
+  ↓ Repeat
+</div></code></pre>
+<p><strong>Non-negotiable rules:</strong></p>
+<ul>
+<li>Code before test? Delete it. Start over.</li>
+<li>Test passes immediately? You're testing existing behavior. Fix the test.</li>
+<li>&quot;I'll write tests after&quot; — passes immediately, proves nothing</li>
+</ul>
+<p><strong>Good test qualities:</strong></p>
+<ul>
+<li>One behavior per test</li>
+<li>Name describes behavior (not &quot;test1&quot;)</li>
+<li>Tests real code (not mocks unless unavoidable)</li>
+<li>Fails for the right reason</li>
+</ul>
+<hr>
+<h4 id="superpowerssystematic-debugging"><code>superpowers:systematic-debugging</code></h4>
+<p><strong>Purpose:</strong> Enforce root cause investigation before proposing any fix.</p>
+<p><strong>When to use:</strong> Any bug, test failure, unexpected behavior, performance problem, build failure.</p>
+<p><strong>Iron Law:</strong> &quot;No fixes without root cause investigation first.&quot;</p>
+<p><strong>Four phases:</strong></p>
+<ol>
+<li>
+<p><strong>Root Cause Investigation</strong></p>
+<ul>
+<li>Read error messages carefully (stack traces, line numbers)</li>
+<li>Reproduce consistently (can you trigger it reliably?)</li>
+<li>Check recent changes (git diff, new dependencies)</li>
+<li>In multi-component systems: add diagnostic instrumentation at each boundary, run once to find WHERE it breaks</li>
+<li>Trace data flow backward (where does bad value originate?)</li>
+</ul>
+</li>
+<li>
+<p><strong>Pattern Analysis</strong></p>
+<ul>
+<li>Find working examples of similar code</li>
+<li>Compare against references (read completely, not skimming)</li>
+<li>Identify every difference between working and broken</li>
+<li>Understand all dependencies and assumptions</li>
+</ul>
+</li>
+<li>
+<p><strong>Hypothesis and Testing</strong></p>
+<ul>
+<li>State one clear hypothesis: &quot;I think X is root cause because Y&quot;</li>
+<li>Make smallest possible change to test it</li>
+<li>One variable at a time</li>
+<li>If wrong: form new hypothesis, don't pile on more fixes</li>
+</ul>
+</li>
+<li>
+<p><strong>Implementation</strong></p>
+<ul>
+<li>Create failing test case BEFORE fixing</li>
+<li>Implement single fix for root cause</li>
+<li>Verify fix (test passes, no regressions)</li>
+<li>If 3+ fixes fail: question architecture, stop and discuss</li>
+</ul>
+</li>
+</ol>
+<p><strong>Rule after 3 failed fixes:</strong> Do NOT attempt a 4th fix. The architecture may be wrong. Discuss with user.</p>
+<hr>
+<h4 id="superpowersverification-before-completion"><code>superpowers:verification-before-completion</code></h4>
+<p><strong>Purpose:</strong> Require actual evidence before claiming work is complete.</p>
+<p><strong>When to use:</strong> Before claiming tests pass, build succeeds, bug is fixed, requirements met, or before committing/creating PRs.</p>
+<p><strong>Iron Law:</strong> &quot;No completion claims without fresh verification evidence.&quot;</p>
+<p><strong>The gate function:</strong></p>
+<pre class="hljs"><code><div>1. IDENTIFY: What command proves this claim?
+2. RUN: Execute the FULL command (fresh, not cached)
+3. READ: Full output, check exit code, count failures
+4. VERIFY: Does output confirm the claim?
+5. ONLY THEN: Make the claim
+</div></code></pre>
+<p><strong>What counts as evidence:</strong></p>
+<ul>
+<li>&quot;Tests pass&quot; → <code>pytest -q</code> output showing 0 failures (just run)</li>
+<li>&quot;Build succeeds&quot; → build command exit 0 (not just &quot;linter passed&quot;)</li>
+<li>&quot;Bug fixed&quot; → original symptom test passes (not just code changed)</li>
+<li>&quot;Requirements met&quot; → line-by-line checklist against spec</li>
+</ul>
+<p><strong>Red flags:</strong></p>
+<ul>
+<li>&quot;Should work now&quot; / &quot;Probably&quot; / &quot;Seems to&quot;</li>
+<li>Expressing satisfaction before running verification</li>
+<li>Trusting agent success reports without independent check</li>
+</ul>
+<hr>
+<h4 id="superpowersdispatching-parallel-agents"><code>superpowers:dispatching-parallel-agents</code></h4>
+<p><strong>Purpose:</strong> Handle multiple independent problems concurrently using specialized subagents.</p>
+<p><strong>When to use:</strong> 2+ independent tasks — different test files failing, different subsystems broken, different features to implement simultaneously.</p>
+<p><strong>Process:</strong></p>
+<ol>
+<li>Identify independent domains (can each be worked on without context from others?)</li>
+<li>Create focused agent prompts (specific scope, clear goal, constraints, expected output)</li>
+<li>Dispatch all agents in parallel (one <code>Task</code> call per agent in same message)</li>
+<li>Review all returns together — check for conflicts</li>
+<li>Run full suite to verify all fixes work together</li>
+</ol>
+<p><strong>Good agent prompt structure:</strong></p>
+<ul>
+<li>Specific scope (one file or subsystem)</li>
+<li>Clear goal (make these 3 tests pass)</li>
+<li>Constraints (don't change other code)</li>
+<li>Expected output (return root cause + what changed)</li>
+</ul>
+<p><strong>Do NOT use when:</strong></p>
+<ul>
+<li>Failures are related (fixing one might fix others)</li>
+<li>Agents would edit the same files</li>
+<li>Need full system context to understand the problem</li>
+</ul>
+<hr>
+<h4 id="superpowerssubagent-driven-development"><code>superpowers:subagent-driven-development</code></h4>
+<p><strong>Purpose:</strong> Execute an implementation plan task-by-task within the current session using fresh subagents with two-stage review.</p>
+<p><strong>When to use:</strong> Have a written plan, tasks are mostly independent, want to stay in current session.</p>
+<p><strong>Process per task:</strong></p>
+<ol>
+<li>Dispatch implementer subagent with full task text + context</li>
+<li>Answer any questions subagent raises</li>
+<li>Subagent implements, tests, commits, self-reviews</li>
+<li>Dispatch spec compliance reviewer — checks code matches spec exactly</li>
+<li>If issues: implementer fixes, reviewer re-reviews</li>
+<li>Dispatch code quality reviewer — checks implementation quality</li>
+<li>If issues: implementer fixes, reviewer re-reviews</li>
+<li>Mark task complete</li>
+<li>Repeat for next task</li>
+</ol>
+<p><strong>After all tasks:</strong></p>
+<ul>
+<li>Dispatch final code reviewer for entire implementation</li>
+<li>Use <code>superpowers:finishing-a-development-branch</code></li>
+</ul>
+<p><strong>Red flags:</strong></p>
+<ul>
+<li>Skip spec review before code quality review (wrong order)</li>
+<li>Let implementer self-review replace actual review</li>
+<li>Move to next task while issues are open</li>
+</ul>
+<hr>
+<h4 id="superpowersexecuting-plans"><code>superpowers:executing-plans</code></h4>
+<p><strong>Purpose:</strong> Execute a written plan in a separate session with batch execution and checkpoint reviews.</p>
+<p><strong>When to use:</strong> Have a written plan, want parallel session execution (not same session), need human-in-loop between batches.</p>
+<p><strong>Process:</strong></p>
+<ol>
+<li>Load and critically review plan — raise concerns before starting</li>
+<li>Create TodoWrite</li>
+<li>Execute first 3 tasks as a batch</li>
+<li>Report: what was implemented + verification output + &quot;Ready for feedback&quot;</li>
+<li>Apply feedback if needed</li>
+<li>Execute next batch</li>
+<li>Repeat until complete</li>
+<li>Use <code>superpowers:finishing-a-development-branch</code></li>
+</ol>
+<p><strong>Difference from subagent-driven-development:</strong></p>
+<ul>
+<li>Different session (requires handoff)</li>
+<li>Batch execution (not per-task)</li>
+<li>Human reviews between batches (not after each task)</li>
+</ul>
+<hr>
+<h4 id="superpowersusing-git-worktrees"><code>superpowers:using-git-worktrees</code></h4>
+<p><strong>Purpose:</strong> Create isolated git worktrees for feature work to avoid polluting the main workspace.</p>
+<p><strong>When to use:</strong> Before executing any implementation plan, before starting feature work that needs isolation.</p>
+<p><strong>Process:</strong></p>
+<ol>
+<li>Check current branch and working tree status</li>
+<li>Select appropriate parent directory</li>
+<li>Create worktree: <code>git worktree add ../&lt;branch-name&gt; -b &lt;branch-name&gt;</code></li>
+<li>Verify worktree is clean and correct</li>
+<li>All implementation work happens in the worktree</li>
+</ol>
+<p><strong>Why it matters:</strong> Worktrees allow parallel work on different features without branch switching. Each worktree has its own working directory and index.</p>
+<hr>
+<h4 id="superpowersrequesting-code-review"><code>superpowers:requesting-code-review</code></h4>
+<p><strong>Purpose:</strong> Request thorough code review after completing implementation.</p>
+<p><strong>When to use:</strong> After completing significant features, implementing major changes, or before merging.</p>
+<p><strong>What it ensures:</strong> Security review, architecture alignment, test coverage, code quality, and requirement compliance are all checked before integration.</p>
+<hr>
+<h4 id="superpowersreceiving-code-review"><code>superpowers:receiving-code-review</code></h4>
+<p><strong>Purpose:</strong> Process code review feedback with technical rigor before implementing suggestions.</p>
+<p><strong>When to use:</strong> Upon receiving code review comments — especially if feedback seems unclear or technically questionable.</p>
+<p><strong>Iron Law:</strong> Do not implement suggestions blindly. Verify technical correctness first.</p>
+<p><strong>Process:</strong></p>
+<ol>
+<li>Read all feedback before implementing anything</li>
+<li>For each suggestion: understand WHY, verify it's correct, check for conflicts with other suggestions</li>
+<li>Question suggestions that seem wrong — reviewer may have incomplete context</li>
+<li>Implement verified improvements</li>
+<li>Re-verify complete system after changes</li>
+</ol>
+<hr>
+<h4 id="superpowersfinishing-a-development-branch"><code>superpowers:finishing-a-development-branch</code></h4>
+<p><strong>Purpose:</strong> Guide completion of development work after all tasks are done and tests pass.</p>
+<p><strong>When to use:</strong> After all implementation tasks complete and full test suite passes.</p>
+<p><strong>Process:</strong></p>
+<ol>
+<li>Verify tests pass (do NOT proceed if failing)</li>
+<li>Determine base branch</li>
+<li>Present 4 options: Merge locally | Push &amp; create PR | Keep as-is | Discard</li>
+<li>Execute chosen option</li>
+<li>Cleanup worktree (for options 1 and 4)</li>
+</ol>
+<p><strong>Never:</strong> Force-push, merge without test verification, delete without confirmation.</p>
+<hr>
+<h4 id="superpowerswriting-skills"><code>superpowers:writing-skills</code></h4>
+<p><strong>Purpose:</strong> Create, edit, or verify Superpowers skills before deployment.</p>
+<p><strong>When to use:</strong> Creating new skills, editing existing skills, or testing that skills work correctly.</p>
+<hr>
+<h3 id="34-superpowers-workflow">3.4 Superpowers Workflow</h3>
+<p>The typical Superpowers skill invocation chain for a new feature:</p>
+<pre class="hljs"><code><div>New feature request
+  ↓
+superpowers:brainstorming
+  → Explores intent, proposes approaches, gets approval
+  → Writes docs/plans/YYYY-MM-DD-design.md
+  ↓
+superpowers:writing-plans
+  → Creates bite-sized TDD plan
+  → Saves docs/plans/YYYY-MM-DD-feature.md
+  ↓
+superpowers:using-git-worktrees
+  → Creates isolated workspace
+  ↓
+EITHER superpowers:subagent-driven-development (same session)
+OR     superpowers:executing-plans (new session)
+  → Each task uses superpowers:test-driven-development internally
+  ↓
+superpowers:verification-before-completion
+  → Runs full test suite, confirms output
+  ↓
+superpowers:requesting-code-review
+  → Review before merge
+  ↓
+superpowers:finishing-a-development-branch
+  → Merge / PR / keep
+</div></code></pre>
+<p>For bugs:</p>
+<pre class="hljs"><code><div>Bug discovered
+  ↓
+superpowers:systematic-debugging
+  → 4-phase investigation finds root cause
+  ↓
+superpowers:test-driven-development
+  → Write failing test reproducing bug
+  → Fix → verify green
+  ↓
+superpowers:verification-before-completion
+  → Full suite still green
+</div></code></pre>
+<hr>
+<h2 id="4-combining-both-frameworks">4. Combining Both Frameworks</h2>
+<h3 id="41-artifact-sharing-map">4.1 Artifact Sharing Map</h3>
+<p>The two frameworks share artifacts through a well-defined boundary:</p>
+<pre class="hljs"><code><div>GSD produces:                    Superpowers consumes:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+.planning/STATE.md         →     CLAUDE.md context (executor reads it)
+.planning/NN-PLAN.md       →     gsd-executor (which runs TDD internally)
+.planning/PROJECT.md       →     brainstorming (for project context)
+.planning/NN-RESEARCH.md   →     writing-plans (technical context)
+.planning/NN-CONTEXT.md    →     writing-plans (design decisions)
+
+Superpowers produces:            GSD consumes:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+docs/plans/design.md       →     gsd-planner reads for design intent
+docs/plans/feature.md      →     gsd-planner can include in plan context
+git commits                →     gsd-executor spot-checks commits
+test results               →     gsd-verifier checks must_haves
+</div></code></pre>
+<h4 id="the-central-bridge-claudemd">The Central Bridge: CLAUDE.md</h4>
+<p><code>CLAUDE.md</code> is the shared contract between both frameworks:</p>
+<ul>
+<li>GSD executor agents read it for project-specific conventions</li>
+<li>Superpowers skills read it for project context</li>
+<li>Updates to <code>CLAUDE.md</code> propagate to all future agent invocations automatically</li>
+</ul>
+<h4 id="the-second-bridge-docsplans">The Second Bridge: docs/plans/</h4>
+<p>Brainstorming produces <code>docs/plans/YYYY-MM-DD-design.md</code>. When <code>/gsd:plan-phase</code> runs, the <code>gsd-planner</code> can reference these design docs via the context files list, ensuring plans reflect design intent.</p>
+<h3 id="42-decision-matrix-which-to-use-when">4.2 Decision Matrix: Which to Use When</h3>
+<table>
+<thead>
+<tr>
+<th>Situation</th>
+<th>Use GSD</th>
+<th>Use Superpowers</th>
+<th>Use Both</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>New project, zero context</td>
+<td><code>/gsd:new-project</code></td>
+<td>—</td>
+<td>GSD creates context Superpowers needs</td>
+</tr>
+<tr>
+<td>&quot;What should I work on?&quot;</td>
+<td><code>/gsd:progress</code></td>
+<td>—</td>
+<td>GSD routes, Superpowers then executes</td>
+</tr>
+<tr>
+<td>Designing a new feature</td>
+<td>—</td>
+<td><code>brainstorming</code></td>
+<td>Brainstorming output feeds GSD planner</td>
+</tr>
+<tr>
+<td>Planning a full phase</td>
+<td><code>/gsd:plan-phase</code></td>
+<td>—</td>
+<td>GSD orchestrates research+planning agents</td>
+</tr>
+<tr>
+<td>Executing 1 plan</td>
+<td>—</td>
+<td><code>executing-plans</code> or <code>subagent-driven-development</code></td>
+<td>Superpowers for discipline</td>
+</tr>
+<tr>
+<td>Executing whole phase</td>
+<td><code>/gsd:execute-phase</code></td>
+<td>TDD inside executor</td>
+<td>GSD orchestrates, TDD is enforced internally</td>
+</tr>
+<tr>
+<td>Found a bug</td>
+<td><code>/gsd:debug</code></td>
+<td><code>systematic-debugging</code></td>
+<td>Either; GSD adds persistence</td>
+</tr>
+<tr>
+<td>Implementation task</td>
+<td>—</td>
+<td><code>tdd</code> + <code>verification</code></td>
+<td>Superpowers enforces quality</td>
+</tr>
+<tr>
+<td>Multiple parallel tasks</td>
+<td><code>/gsd:execute-phase</code> (parallel waves)</td>
+<td><code>dispatching-parallel-agents</code></td>
+<td>Depends on scope</td>
+</tr>
+<tr>
+<td>Phase complete, verify it</td>
+<td><code>/gsd:verify-work</code></td>
+<td><code>verification-before-completion</code></td>
+<td>Both: UAT + automated checks</td>
+</tr>
+<tr>
+<td>Before merging</td>
+<td>—</td>
+<td><code>requesting-code-review</code> + <code>finishing-a-development-branch</code></td>
+<td>Superpowers handles merge</td>
+</tr>
+</tbody>
+</table>
+<h3 id="43-master-combined-workflow">4.3 Master Combined Workflow</h3>
+<p>This is the recommended workflow when starting a new feature or phase, combining both frameworks for maximum quality:</p>
+<pre class="hljs"><code><div>┌─────────────────────────────────────────────────────────────────┐
+│  SESSION 1: Setup &amp; Design (Superpowers-led)                   │
+│                                                                  │
+│  1. /gsd:progress                                               │
+│     → Get current position, confirm this is the right phase    │
+│                                                                  │
+│  2. superpowers:brainstorming                                   │
+│     → Explore intent, propose approaches, get design approval   │
+│     → Write docs/plans/YYYY-MM-DD-design.md                    │
+│     → Commit design doc                                         │
+│                                                                  │
+│  3. /gsd:discuss-phase N                                        │
+│     → Record design decisions as .planning/NN-CONTEXT.md       │
+│     → CONTEXT.md references design doc for full detail          │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓ /clear
+┌─────────────────────────────────────────────────────────────────┐
+│  SESSION 2: Planning (GSD-led)                                  │
+│                                                                  │
+│  4. /gsd:plan-phase N                                           │
+│     → gsd-phase-researcher: technical research                  │
+│       (reads CONTEXT.md → picks up design decisions)           │
+│     → gsd-planner: creates PLAN.md files                        │
+│       (reads RESEARCH.md + CONTEXT.md + design doc)             │
+│     → gsd-plan-checker: verifies plans will achieve goal        │
+│     → Revision loop if needed                                   │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓ /clear
+┌─────────────────────────────────────────────────────────────────┐
+│  SESSION 3: Execution (Both frameworks)                         │
+│                                                                  │
+│  5. superpowers:using-git-worktrees                             │
+│     → Create isolated branch for the work                       │
+│                                                                  │
+│  Option A — Full phase, parallel execution:                     │
+│    /gsd:execute-phase N                                         │
+│    → gsd-executor agents read PLAN.md files                     │
+│    → Each executor follows TDD (enforced via CLAUDE.md)         │
+│    → Atomic commits per task                                     │
+│    → SUMMARY.md per plan                                        │
+│    → gsd-verifier checks phase goal achievement                 │
+│                                                                  │
+│  Option B — Single plan, same-session quality control:          │
+│    superpowers:subagent-driven-development                      │
+│    → Reads docs/plans/feature.md                                │
+│    → Fresh subagent per task                                    │
+│    → Spec review + code quality review per task                 │
+│    → superpowers:finishing-a-development-branch at end          │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓ /clear
+┌─────────────────────────────────────────────────────────────────┐
+│  SESSION 4: Validation (Both frameworks)                        │
+│                                                                  │
+│  6. superpowers:verification-before-completion                  │
+│     → Run full test suite, confirm output                       │
+│     → Evidence before any completion claims                     │
+│                                                                  │
+│  7. /gsd:verify-work N                                          │
+│     → Conversational UAT for user-facing behavior               │
+│     → Records pass/fail, creates NN-UAT.md                     │
+│                                                                  │
+│  8. superpowers:requesting-code-review                          │
+│     → Final code review before merge                            │
+│                                                                  │
+│  9. superpowers:finishing-a-development-branch                  │
+│     → Merge or PR                                               │
+│                                                                  │
+│  10. /gsd:progress                                              │
+│      → Confirm completion, get routing to next phase            │
+└─────────────────────────────────────────────────────────────────┘
+</div></code></pre>
+<h3 id="44-context-continuity-protocol">4.4 Context Continuity Protocol</h3>
+<p>The most critical challenge when combining frameworks is ensuring no context is lost across sessions. Here's the protocol:</p>
+<h4 id="what-gsd-stores-persists-across-sessions">What GSD Stores (Persists Across Sessions)</h4>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>What it preserves</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>STATE.md</code></td>
+<td>Current position, all decisions made, blockers, todos</td>
+</tr>
+<tr>
+<td><code>ROADMAP.md</code></td>
+<td>Phase completion status, goals, requirements coverage</td>
+</tr>
+<tr>
+<td><code>NN-CONTEXT.md</code></td>
+<td>User design decisions for phase N</td>
+</tr>
+<tr>
+<td><code>NN-RESEARCH.md</code></td>
+<td>Technical research findings for phase N</td>
+</tr>
+<tr>
+<td><code>NN-PLAN.md</code></td>
+<td>The complete executable plan with all tasks</td>
+</tr>
+<tr>
+<td><code>NN-SUMMARY.md</code></td>
+<td>What was built, files created, decisions made</td>
+</tr>
+<tr>
+<td><code>NN-VERIFICATION.md</code></td>
+<td>What was verified, what gaps remain</td>
+</tr>
+</tbody>
+</table>
+<h4 id="what-superpowers-stores">What Superpowers Stores</h4>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>What it preserves</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>docs/plans/YYYY-MM-DD-design.md</code></td>
+<td>Design decisions and architecture</td>
+</tr>
+<tr>
+<td><code>docs/plans/YYYY-MM-DD-feature.md</code></td>
+<td>Implementation plan with tasks</td>
+</tr>
+<tr>
+<td>Git history</td>
+<td>Every atomic commit with descriptive messages</td>
+</tr>
+</tbody>
+</table>
+<h4 id="the-clear-handoff-protocol">The <code>/clear</code> Handoff Protocol</h4>
+<p>Before every <code>/clear</code>, ensure:</p>
+<ol>
+<li>
+<p><strong>GSD STATE.md is updated</strong> — executors do this automatically. If you made decisions manually, add them: <code>/gsd:add-todo</code> or edit STATE.md directly.</p>
+</li>
+<li>
+<p><strong>Design docs are committed</strong> — <code>docs/plans/design.md</code> should be in git before clearing.</p>
+</li>
+<li>
+<p><strong>CONTEXT.md exists</strong> — if you discussed design in the session, run <code>/gsd:discuss-phase N</code> to record it formally.</p>
+</li>
+<li>
+<p><strong>Pausing mid-task</strong> — run <code>/gsd:pause-work</code> to create a RESUME.md with exact stopping point.</p>
+</li>
+<li>
+<p><strong>Next session start</strong> — always run <code>/gsd:progress</code> first to reload full context.</p>
+</li>
+</ol>
+<h4 id="artifact-flow-example-full-blitz-agentos-feature">Artifact Flow Example (Full Blitz AgentOS Feature)</h4>
+<pre class="hljs"><code><div>Brainstorming produces:
+  docs/plans/2026-02-27-workflow-crud-design.md
+  (contains: why React Flow, how definition_json is structured, API design)
+           ↓
+Discuss-phase records:
+  .planning/phases/04-canvas/04-CONTEXT.md
+  (contains: references design doc, adds: owner_user_id must be nullable)
+           ↓
+Research produces:
+  .planning/phases/04-canvas/04-RESEARCH.md
+  (contains: React Flow v12 API, LangGraph StateGraph patterns)
+           ↓
+Planner reads all three → produces:
+  .planning/phases/04-canvas/04-01-PLAN.md
+  (contains: 6 tasks, must_haves, wave: 1)
+           ↓
+Executor reads plan + CLAUDE.md → produces:
+  git commits: feat(04-01): add workflow SQLAlchemy models
+               feat(04-01): create Alembic migration 009
+               feat(04-01): add workflow CRUD endpoints
+  .planning/phases/04-canvas/04-01-SUMMARY.md
+  (contains: files created, decision: owner_user_id nullable, 15 tests added)
+           ↓
+Verifier reads SUMMARY + must_haves → produces:
+  .planning/phases/04-canvas/04-VERIFICATION.md
+  (status: passed, score: 8/8 must_haves verified)
+           ↓
+STATE.md updated:
+  position: Phase 4, Plan 01 complete
+  decision: [04-01] owner_user_id nullable (no FK constraint per project rules)
+</div></code></pre>
+<p>Every decision made in one session is readable by agents in the next session. No context is ever truly lost — it's all in the files.</p>
+<hr>
+<h2 id="5-quick-reference">5. Quick Reference</h2>
+<h3 id="gsd-commands-cheat-sheet">GSD Commands Cheat Sheet</h3>
+<pre class="hljs"><code><div><span class="hljs-comment"># Navigation</span>
+/gsd:progress                        <span class="hljs-comment"># Where am I? What's next?</span>
+/gsd:<span class="hljs-built_in">help</span>                            <span class="hljs-comment"># List all commands</span>
+
+<span class="hljs-comment"># Project lifecycle</span>
+/gsd:new-project                     <span class="hljs-comment"># Initialize project</span>
+/gsd:new-milestone                   <span class="hljs-comment"># Start new milestone</span>
+
+<span class="hljs-comment"># Phase workflow</span>
+/gsd:discuss-phase 4                 <span class="hljs-comment"># Gather design context for Phase 4</span>
+/gsd:list-phase-assumptions 4        <span class="hljs-comment"># See Claude's assumptions before planning</span>
+/gsd:plan-phase 4                    <span class="hljs-comment"># Plan Phase 4 (research + plan + verify)</span>
+/gsd:plan-phase 4 --auto             <span class="hljs-comment"># Plan then immediately execute</span>
+/gsd:plan-phase 4 --gaps             <span class="hljs-comment"># Plan fixes for gaps in VERIFICATION.md</span>
+/gsd:execute-phase 4                 <span class="hljs-comment"># Execute all Phase 4 plans</span>
+/gsd:execute-phase 4 --gaps-only     <span class="hljs-comment"># Execute only gap-closure plans</span>
+/gsd:verify-work 4                   <span class="hljs-comment"># UAT testing for Phase 4</span>
+
+<span class="hljs-comment"># Quick tasks</span>
+/gsd:quick fix owner_user_id nullable <span class="hljs-comment"># Quick fix with GSD guarantees</span>
+
+<span class="hljs-comment"># Roadmap management</span>
+/gsd:add-phase <span class="hljs-string">"Phase 6: Observability"</span>
+/gsd:insert-phase 4 <span class="hljs-string">"HITL fix"</span>       <span class="hljs-comment"># Creates Phase 4.1</span>
+/gsd:remove-phase 7                  <span class="hljs-comment"># Remove phase</span>
+
+<span class="hljs-comment"># Milestone management</span>
+/gsd:audit-milestone                 <span class="hljs-comment"># Requirements coverage check</span>
+/gsd:complete-milestone              <span class="hljs-comment"># Archive and prepare next</span>
+/gsd:cleanup                         <span class="hljs-comment"># Archive old phase directories</span>
+
+<span class="hljs-comment"># Debugging</span>
+/gsd:debug <span class="hljs-string">"HITL amber ring not showing"</span>
+
+<span class="hljs-comment"># Session management</span>
+/gsd:pause-work                      <span class="hljs-comment"># Create RESUME.md before stopping</span>
+/gsd:resume-work                     <span class="hljs-comment"># Resume from RESUME.md</span>
+/gsd:add-todo <span class="hljs-string">"Start WhatsApp verification"</span>
+/gsd:check-todos                     <span class="hljs-comment"># Review todos</span>
+
+<span class="hljs-comment"># Configuration</span>
+/gsd:<span class="hljs-built_in">set</span>-profile quality             <span class="hljs-comment"># Use most capable models</span>
+/gsd:settings                        <span class="hljs-comment"># Configure GSD options</span>
+/gsd:health                          <span class="hljs-comment"># Diagnose planning directory</span>
+/gsd:update                          <span class="hljs-comment"># Update GSD version</span>
+</div></code></pre>
+<h3 id="superpowers-skills-cheat-sheet">Superpowers Skills Cheat Sheet</h3>
+<pre class="hljs"><code><div>superpowers:brainstorming            # Before ANY feature implementation
+superpowers:writing-plans            # After brainstorming, before coding
+superpowers:test-driven-development  # Before writing implementation code
+superpowers:systematic-debugging     # Before proposing any fix
+superpowers:verification-before-completion  # Before claiming work is done
+superpowers:dispatching-parallel-agents     # For 2+ independent tasks
+superpowers:subagent-driven-development     # Execute plan (same session)
+superpowers:executing-plans          # Execute plan (parallel session)
+superpowers:using-git-worktrees      # Before implementation begins
+superpowers:finishing-a-development-branch  # After all tasks complete
+superpowers:requesting-code-review   # Before merging
+superpowers:receiving-code-review    # When reviewing feedback
+</div></code></pre>
+<h3 id="workflow-decision-guide">Workflow Decision Guide</h3>
+<pre class="hljs"><code><div>Q: Starting a new session?
+→ /gsd:progress
+
+Q: New feature to build?
+→ superpowers:brainstorming → superpowers:writing-plans → /gsd:discuss-phase N
+
+Q: Phase needs planning?
+→ /gsd:plan-phase N
+
+Q: Plans exist, ready to execute?
+→ /gsd:execute-phase N (full phase) OR superpowers:subagent-driven-development (one plan)
+
+Q: Found a bug?
+→ superpowers:systematic-debugging (session) OR /gsd:debug (persistent)
+
+Q: About to claim work is done?
+→ superpowers:verification-before-completion first
+
+Q: Phase complete, verify it?
+→ superpowers:verification-before-completion + /gsd:verify-work N
+
+Q: Ready to merge?
+→ superpowers:requesting-code-review → superpowers:finishing-a-development-branch
+
+Q: Gaps found in verification?
+→ /gsd:plan-phase N --gaps → /gsd:execute-phase N --gaps-only
+
+Q: All phases complete?
+→ /gsd:audit-milestone → /gsd:complete-milestone
+</div></code></pre>
+<h3 id="key-file-locations">Key File Locations</h3>
+<pre class="hljs"><code><div># GSD (persists across sessions)
+.planning/STATE.md                   # Current project state
+.planning/ROADMAP.md                 # Phase plan with completion
+.planning/PROJECT.md                 # Project identity and decisions
+.planning/phases/NN-slug/NN-PLAN.md  # Executable plans
+.planning/phases/NN-slug/NN-SUMMARY.md  # What was built
+
+# Superpowers (session outputs)
+docs/plans/YYYY-MM-DD-design.md      # Design decisions
+docs/plans/YYYY-MM-DD-feature.md     # Implementation plan
+
+# Shared bridge
+CLAUDE.md                            # Project conventions (read by all agents)
+</div></code></pre>
+<hr>
+<p><em>Last updated: 2026-02-27</em>
+<em>Applies to: Blitz AgentOS project using GSD v2+ and Superpowers v1.x</em></p>
+<hr>
+<h2 id="6-appendix-optimizing-claudemd-for-both-frameworks">6. Appendix: Optimizing CLAUDE.md for Both Frameworks</h2>
+<h3 id="61-why-claudemd-is-the-central-bridge">6.1 Why CLAUDE.md Is the Central Bridge</h3>
+<p><code>CLAUDE.md</code> is the <strong>only file guaranteed to be read by every agent in every context</strong> — raw Claude sessions, GSD executor subagents, Superpowers skill implementations, and mid-phase resumptions all start from it. This makes it uniquely powerful as a shared contract.</p>
+<pre class="hljs"><code><div>Every agent in every session reads:
+                  CLAUDE.md
+                 /          \
+         GSD agents      Superpowers sessions
+        /     |    \          |          \
+  planner  executor verifier brainstorm   tdd
+                               |
+                          raw Claude
+</div></code></pre>
+<p><strong>What CLAUDE.md currently does well:</strong></p>
+<ul>
+<li>Establishes the mandatory <code>docs/dev-context.md</code> read protocol</li>
+<li>Provides clean DO/DON'T tables for common decisions</li>
+<li>Documents technology stack, coding standards, and architecture invariants</li>
+<li>Has a Section 12 introducing both frameworks</li>
+</ul>
+<p><strong>What CLAUDE.md currently lacks</strong> (causing repeated rediscovery across sessions):</p>
+<table>
+<thead>
+<tr>
+<th>Gap</th>
+<th>Impact</th>
+<th>How Often Rediscovered</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>No canonical verification commands</td>
+<td>Agents guess wrong test commands, hit uv timeouts</td>
+<td>Every new session</td>
+</tr>
+<tr>
+<td>No decision recording protocol</td>
+<td>Decisions made during execution may not reach STATE.md</td>
+<td>~30% of plans</td>
+</tr>
+<tr>
+<td>Critical gotchas in STATE.md only</td>
+<td>Fresh raw sessions (not via /gsd:progress) miss them</td>
+<td>Any non-GSD session</td>
+</tr>
+<tr>
+<td>Thin GSD+Superpowers section</td>
+<td>Agents don't know mandatory invocation rule or artifact protocol</td>
+<td>Every session start</td>
+</tr>
+<tr>
+<td>No commit format guide</td>
+<td>GSD spot-checks by grep pattern — wrong format breaks tracking</td>
+<td>~20% of commits</td>
+</tr>
+<tr>
+<td>No migration chain documentation</td>
+<td>New agents guess the next Alembic revision number</td>
+<td>Every migration</td>
+</tr>
+<tr>
+<td>No test baseline count</td>
+<td>No signal when a commit inadvertently drops test coverage</td>
+<td>Silently</td>
+</tr>
+<tr>
+<td>No context continuity protocol</td>
+<td><code>/clear</code> protocol not known; STATE.md may not be updated</td>
+<td>After every /clear</td>
+</tr>
+<tr>
+<td>No docs output location convention</td>
+<td>Design docs end up in random places</td>
+<td>During brainstorming</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h3 id="62-analysis-of-current-claudemd">6.2 Analysis of Current CLAUDE.md</h3>
+<h4 id="strengths">Strengths</h4>
+<p><strong>AGENT INSTRUCTIONS (top of file):</strong> The mandatory <code>docs/dev-context.md</code> read with confirmation statement is excellent — it enforces context loading before any action. This is the right pattern.</p>
+<p><strong>DO/DON'T tables:</strong> Scannable, actionable, and unambiguous. Agents read tables reliably.</p>
+<p><strong>Technology stack section:</strong> Comprehensive. Model aliases, port map, and package manager rules prevent common mistakes.</p>
+<p><strong>Architecture invariants (Section 7):</strong> The security gates, memory isolation, and single-entry-point rules are critical to enforce here — they're not repeated elsewhere.</p>
+<p><strong>Section 12 introduction:</strong> The table comparing GSD vs Superpowers is a good starting point.</p>
+<h4 id="gaps-detailed">Gaps (Detailed)</h4>
+<p><strong>Gap 1 — No canonical verification commands</strong></p>
+<p>The most common agent mistake is running <code>uv run pytest</code> (times out on this machine) instead of <code>.venv/bin/pytest</code>. This is documented in STATE.md decisions but not in CLAUDE.md. Every new agent that doesn't route through <code>/gsd:progress</code> will make this mistake.</p>
+<p><strong>Gap 2 — No decision recording protocol</strong></p>
+<p>GSD executor agents make decisions (&quot;owner_user_id must be nullable&quot;) but there's no instruction to record them in STATE.md. The format <code>- [04-01]: &lt;decision&gt; — &lt;rationale&gt;</code> in STATE.md Decisions section is the correct pattern, but agents don't know to do it.</p>
+<p><strong>Gap 3 — Critical gotchas in wrong location</strong></p>
+<p>The following are in STATE.md decisions but should also be in CLAUDE.md:</p>
+<ul>
+<li><code>uv run</code> timeouts → use <code>.venv/bin/</code> directly</li>
+<li>Alembic migration from host needs <code>docker exec psql</code></li>
+<li>Next.js 15 requires <code>Promise&lt;{id: string}&gt;</code> for async params</li>
+<li>FastAPI route ordering: literal paths before <code>/{uuid}</code> params</li>
+<li>Current migration chain head (what number is next)</li>
+</ul>
+<p><strong>Gap 4 — Mandatory Superpowers invocation is soft</strong></p>
+<p>Section 12 says &quot;use BEFORE implementing&quot; but doesn't state the Iron Law: &quot;1% chance a skill applies = MUST invoke it.&quot; Agents rationalize skipping skills without this explicit rule.</p>
+<p><strong>Gap 5 — No commit format guide</strong></p>
+<p>GSD's spot-check verifies commits exist by grepping for <code>feat({phase}-{plan})</code> patterns. If agents commit with different formats (e.g., <code>add workflow models</code> without phase prefix), the spot-check may report false failures, triggering unnecessary retries.</p>
+<p><strong>Gap 6 — No Alembic migration chain state</strong></p>
+<p>Each new session that needs to create a migration guesses the revision number. The current chain (001→002→003→merge→004→...→011) should be documented with the next expected number.</p>
+<p><strong>Gap 7 — Test baseline unknown</strong></p>
+<p>Without a documented baseline (currently 258 tests passing), agents don't know when to be alarmed. A plan that inadvertently drops 10 tests may not trigger warnings.</p>
+<p><strong>Gap 8 — Context continuity absent</strong></p>
+<p>No instruction for what to do before <code>/clear</code> (update STATE.md, commit design docs) or after (always start with <code>/gsd:progress</code>). This causes sessions to start without proper context.</p>
+<hr>
+<h3 id="63-recommended-enhancements">6.3 Recommended Enhancements</h3>
+<p>The following enhancements are recommended, grouped by priority:</p>
+<h4 id="priority-1--critical-causes-repeated-rediscovery">Priority 1 — Critical (causes repeated rediscovery)</h4>
+<table>
+<thead>
+<tr>
+<th>Enhancement</th>
+<th>Location in CLAUDE.md</th>
+<th>Benefit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Canonical verification commands</td>
+<td>New Section 13</td>
+<td>Eliminates uv timeout issues</td>
+</tr>
+<tr>
+<td>Decision recording protocol</td>
+<td>AGENT INSTRUCTIONS Step 4</td>
+<td>Decisions survive session boundaries</td>
+</tr>
+<tr>
+<td>Critical gotchas quick reference</td>
+<td>New Section 14</td>
+<td>Eliminates repeated rediscovery</td>
+</tr>
+<tr>
+<td>Commit format specification</td>
+<td>Section 12 / New DO/DON'T row</td>
+<td>GSD spot-checks work correctly</td>
+</tr>
+</tbody>
+</table>
+<h4 id="priority-2--high-improves-framework-integration">Priority 2 — High (improves framework integration)</h4>
+<table>
+<thead>
+<tr>
+<th>Enhancement</th>
+<th>Location in CLAUDE.md</th>
+<th>Benefit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Mandatory Superpowers invocation rule</td>
+<td>Section 12</td>
+<td>Skills actually used, not rationalized away</td>
+</tr>
+<tr>
+<td>Artifact sharing protocol</td>
+<td>Section 12</td>
+<td>Agents know what files GSD/Superpowers exchange</td>
+</tr>
+<tr>
+<td>Context continuity protocol</td>
+<td>Section 12 / New Section 15</td>
+<td>No context loss across /clear</td>
+</tr>
+<tr>
+<td>Migration chain documentation</td>
+<td>New Section 14</td>
+<td>No guessing of revision numbers</td>
+</tr>
+</tbody>
+</table>
+<h4 id="priority-3--good-to-have">Priority 3 — Good to have</h4>
+<table>
+<thead>
+<tr>
+<th>Enhancement</th>
+<th>Location in CLAUDE.md</th>
+<th>Benefit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Test baseline count</td>
+<td>New Section 13</td>
+<td>Early warning on coverage drops</td>
+</tr>
+<tr>
+<td>Design doc naming convention</td>
+<td>Section 12</td>
+<td>Consistent docs/plans/ output</td>
+</tr>
+<tr>
+<td>docs/plans/ update in directory tree</td>
+<td>Section 8</td>
+<td>Agents know where to save design docs</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h3 id="64-enhanced-sections-drop-in-additions">6.4 Enhanced Sections (Drop-in Additions)</h3>
+<p>These are the exact content blocks recommended for addition/replacement in CLAUDE.md.</p>
+<hr>
+<h4 id="enhancement-a-expand-agent-instructions-replace-step-4">Enhancement A: Expand AGENT INSTRUCTIONS (replace Step 4)</h4>
+<p><strong>Current Step 4:</strong></p>
+<pre class="hljs"><code><div>**Step 4 — Update on discovery.** When you find a new endpoint, URL mapping, or gotcha during work:
+- Add it to `docs/dev-context.md` immediately (correct section + Update Log at bottom).
+- Never leave a discovery undocumented for the next session.
+</div></code></pre>
+<p><strong>Recommended replacement:</strong></p>
+<pre class="hljs"><code><div><span class="hljs-strong">**Step 4 — Update on discovery.**</span> When you find a new endpoint, URL mapping, or gotcha:
+<span class="hljs-bullet">- </span>Add it to <span class="hljs-code">`docs/dev-context.md`</span> immediately (correct section + Update Log at bottom).
+<span class="hljs-bullet">- </span>Never leave a discovery undocumented for the next session.
+
+<span class="hljs-strong">**Step 5 — Record decisions in STATE.md.**</span> When you make a technical decision during
+implementation (e.g., "owner<span class="hljs-emphasis">_user_</span>id must be nullable", "use asyncio.run() in Celery tasks"):
+<span class="hljs-bullet">- </span>Add to <span class="hljs-code">`.planning/STATE.md`</span> → Decisions section with format:
+  <span class="hljs-code">`- [Phase-Plan or context]: &lt;decision&gt; — &lt;rationale&gt;`</span>
+<span class="hljs-bullet">- </span>Commit STATE.md update with the plan's final commit.
+<span class="hljs-bullet">- </span>This ensures decisions survive context resets and are visible to future agents.
+
+<span class="hljs-strong">**Step 6 — Use canonical commands.**</span> See Section 13 for the exact test, build, and migration
+commands. Do NOT guess commands — the wrong ones either time out or produce misleading output.
+</div></code></pre>
+<hr>
+<h4 id="enhancement-b-add-commit-format-to-dodont">Enhancement B: Add Commit Format to DO/DON'T</h4>
+<p>Add a new table after the existing &quot;Package Management&quot; table:</p>
+<pre class="hljs"><code><div><span class="hljs-section">### Commits (GSD Tracking)</span>
+| DO | DON'T |
+|----|-------|
+| <span class="hljs-code">`feat(04-01): add workflow SQLAlchemy models`</span> | <span class="hljs-code">`add workflow models`</span> (no phase prefix) |
+| <span class="hljs-code">`fix(04-03): handle HITL interrupt correctly`</span> | <span class="hljs-code">`fix bug`</span> (too vague) |
+| <span class="hljs-code">`docs(phase-04): update STATE.md position`</span> | <span class="hljs-code">`update docs`</span> |
+| <span class="hljs-code">`test(04-01): add workflow model tests`</span> | <span class="hljs-code">`add tests`</span> |
+| One commit per task, one task per commit | Bundle multiple tasks in one commit |
+
+<span class="hljs-strong">**Format:**</span> <span class="hljs-code">`&lt;type&gt;(&lt;phase&gt;-&lt;plan&gt;): &lt;description&gt;`</span>
+<span class="hljs-bullet">- </span><span class="hljs-code">`type`</span>: feat / fix / test / docs / refactor / chore
+<span class="hljs-bullet">- </span><span class="hljs-code">`phase-plan`</span>: e.g., <span class="hljs-code">`04-01`</span> (Phase 4, Plan 01) — omit for cross-cutting changes
+<span class="hljs-bullet">- </span><span class="hljs-code">`description`</span>: imperative mood, lowercase, ≤72 chars
+</div></code></pre>
+<hr>
+<h4 id="enhancement-c-expand-section-12-gsd--superpowers-workflow">Enhancement C: Expand Section 12 (GSD + Superpowers Workflow)</h4>
+<p><strong>Replace current Section 12 with this expanded version:</strong></p>
+<pre class="hljs"><code><div><span class="hljs-section">## 12. GSD + Superpowers Workflow</span>
+
+This project uses two complementary AI tool systems:
+
+| Tool | Purpose | Persistence | Entry Point |
+|------|---------|-------------|-------------|
+| <span class="hljs-strong">**GSD**</span> | Project lifecycle: milestones → phases → plans → execution | Across sessions via <span class="hljs-code">`.planning/`</span> files | <span class="hljs-code">`/gsd:progress`</span> |
+| <span class="hljs-strong">**Superpowers**</span> | Session discipline: TDD, brainstorming, verification | Within session (reads CLAUDE.md for context) | Skill tool: <span class="hljs-code">`superpowers:X`</span> |
+
+<span class="hljs-section">### Mandatory Invocation Rule</span>
+
+<span class="hljs-quote">&gt; **If there is even a 1% chance a Superpowers skill applies to your task, you MUST invoke</span>
+<span class="hljs-quote">&gt; it via the Skill tool BEFORE doing anything — including asking clarifying questions.**</span>
+
+This is not optional. Rationalization patterns to ignore:
+<span class="hljs-bullet">- </span>"Too simple to need a skill" — simple code breaks too
+<span class="hljs-bullet">- </span>"I need context first" — skills tell you HOW to gather context
+<span class="hljs-bullet">- </span>"Just this once" — no exceptions
+
+<span class="hljs-section">### Key GSD Commands</span>
+
+</div></code></pre>
+<p>/gsd:progress          → ALWAYS start here — loads state, routes to next action
+/gsd:discuss-phase N   → Capture design decisions before planning
+/gsd:plan-phase N      → Research + create PLAN.md files
+/gsd:execute-phase N   → Parallel wave execution of all plans
+/gsd:verify-work N     → UAT testing, creates UAT.md with gaps
+/gsd:quick <desc>      → Quick fix with GSD guarantees (no research/checker)
+/gsd:debug <desc>      → Systematic debug with persistent state</p>
+<pre class="hljs"><code><div>
+### Key Superpowers Skills
+
+</div></code></pre>
+<p>superpowers:brainstorming                → BEFORE any feature implementation
+superpowers:writing-plans                → After brainstorming, before coding
+superpowers:test-driven-development      → BEFORE writing implementation code
+superpowers:systematic-debugging         → BEFORE proposing any fix
+superpowers:verification-before-completion → BEFORE claiming work is done
+superpowers:dispatching-parallel-agents  → For 2+ independent tasks
+superpowers:subagent-driven-development  → Execute plan in current session
+superpowers:executing-plans              → Execute plan in parallel session
+superpowers:using-git-worktrees          → Before any implementation begins
+superpowers:finishing-a-development-branch → After all tasks complete</p>
+<pre class="hljs"><code><div>
+### Artifact Sharing Protocol
+
+GSD and Superpowers share artifacts through these files — always produce and consume
+them in the correct direction:
+
+</div></code></pre>
+<p>Superpowers → GSD:
+docs/plans/YYYY-MM-DD-design.md  →  gsd-planner reads for design intent
+docs/plans/YYYY-MM-DD-plan.md    →  gsd-executor can execute
+git commits (atomic, per task)   →  gsd spot-checks for existence</p>
+<p>GSD → Superpowers:
+.planning/PROJECT.md             →  brainstorming reads for project context
+.planning/NN-PLAN.md             →  subagent-driven-development executes
+.planning/NN-RESEARCH.md         →  writing-plans uses for technical context
+.planning/NN-CONTEXT.md          →  writing-plans uses for design decisions</p>
+<pre class="hljs"><code><div>
+### Context Continuity Protocol (Before/After /clear)
+
+**Before every /clear:**
+1. `STATE.md` has current position and all decisions made this session
+2. Design docs (`docs/plans/`) are committed to git
+3. If mid-task: run `/gsd:pause-work` to create `.planning/RESUME.md`
+4. If decisions were made manually: add them to STATE.md Decisions section
+
+**After /clear (new session):**
+1. ALWAYS start with `/gsd:progress` — it reloads full context from files
+2. Confirm position matches expectation before starting new work
+3. If RESUME.md exists: run `/gsd:resume-work` instead
+
+### Recommended Workflow per Feature
+
+</div></code></pre>
+<p>[Session 1 — Design]
+superpowers:brainstorming           → docs/plans/YYYY-MM-DD-design.md
+/gsd:discuss-phase N                → .planning/NN-CONTEXT.md</p>
+<p>/clear</p>
+<p>[Session 2 — Planning]
+/gsd:plan-phase N                   → .planning/NN-0X-PLAN.md files</p>
+<p>/clear</p>
+<p>[Session 3 — Execution]
+superpowers:using-git-worktrees     → isolated branch
+/gsd:execute-phase N                → SUMMARY.md + atomic commits
+(each task uses TDD internally — enforced via CLAUDE.md + .agents/skills/)</p>
+<p>/clear</p>
+<p>[Session 4 — Validation]
+superpowers:verification-before-completion → fresh test run evidence
+/gsd:verify-work N                  → UAT.md
+superpowers:requesting-code-review  → code review
+superpowers:finishing-a-development-branch → merge or PR</p>
+<p>/gsd:progress                       → confirm completion, get next phase</p>
+<pre class="hljs"><code><div></div></code></pre>
+<hr>
+<h4 id="enhancement-d-new-section-13--canonical-verification-commands">Enhancement D: New Section 13 — Canonical Verification Commands</h4>
+<pre class="hljs"><code><div><span class="hljs-section">## 13. Canonical Verification Commands</span>
+
+<span class="hljs-strong">**Always use these exact commands.**</span> Do NOT use <span class="hljs-code">`uv run pytest`</span> (times out) or invent variants.
+
+<span class="hljs-section">### Backend Tests</span>
+<span class="hljs-code">```bash
+# Run full test suite (canonical)
+cd /path/to/project/backend
+PYTHONPATH=. .venv/bin/pytest tests/ -q
+
+# Run specific test file
+PYTHONPATH=. .venv/bin/pytest tests/api/test_workflow_routes.py -v
+
+# Run with output (for debugging)
+PYTHONPATH=. .venv/bin/pytest tests/ -v -s
+
+# Current baseline: 258 tests — never commit if count drops unexpectedly
+</span></div></code></pre>
+<h3 id="frontend-build--type-check">Frontend Build + Type Check</h3>
+<pre class="hljs"><code><div><span class="hljs-comment"># Full build (catches TypeScript errors)</span>
+<span class="hljs-built_in">cd</span> /path/to/project/frontend
+pnpm run build
+
+<span class="hljs-comment"># Type check only (faster, no output files)</span>
+pnpm run typecheck   <span class="hljs-comment"># if available; otherwise use build</span>
+</div></code></pre>
+<h3 id="alembic-database-migrations">Alembic (Database Migrations)</h3>
+<pre class="hljs"><code><div><span class="hljs-comment"># Check migration status (heads = current DB state)</span>
+<span class="hljs-built_in">cd</span> /path/to/project/backend
+.venv/bin/alembic heads
+.venv/bin/alembic current
+
+<span class="hljs-comment"># Check for pending migrations</span>
+.venv/bin/alembic check
+
+<span class="hljs-comment"># Create new migration (autogenerate from models)</span>
+.venv/bin/alembic revision --autogenerate -m <span class="hljs-string">"description_here"</span>
+
+<span class="hljs-comment"># Current migration chain head: 011 (next new migration = 012)</span>
+<span class="hljs-comment"># Applied: 001 → 002+003 → merge(9754fd) → 004 → 005 → 006 → 007 → 008 → 009 → 010 → 011</span>
+
+<span class="hljs-comment"># Apply migrations (CANNOT run from host — .env not present)</span>
+<span class="hljs-comment"># Must apply via Docker:</span>
+docker <span class="hljs-built_in">exec</span> -it blitz-postgres psql -U blitz blitz -c <span class="hljs-string">"&lt;SQL from migration&gt;"</span>
+<span class="hljs-comment"># Or: just migrate  (if .env is present on host)</span>
+</div></code></pre>
+<h3 id="litellm--docker-health">LiteLLM / Docker Health</h3>
+<pre class="hljs"><code><div>just ps                <span class="hljs-comment"># all service status</span>
+just logs backend      <span class="hljs-comment"># tail backend logs</span>
+curl http://localhost:8000/health  <span class="hljs-comment"># backend health (no auth needed)</span>
+curl http://localhost:4000/health  <span class="hljs-comment"># LiteLLM health</span>
+</div></code></pre>
+<pre class="hljs"><code><div>
+---
+
+#### Enhancement E: New Section 14 — Critical Gotchas
+
+```markdown
+## 14. Critical Gotchas (Read Before Writing Code)
+
+These are hard-won discoveries that apply to every session. They live here so that
+agents starting fresh don't have to rediscover them from STATE.md.
+
+### Python / Backend
+
+| Gotcha | Symptom | Fix |
+|--------|---------|-----|
+| `uv run pytest` times out | Hangs indefinitely | Use `.venv/bin/pytest` directly |
+| `uv run alembic` times out | Hangs indefinitely | Use `.venv/bin/alembic` directly |
+| Relative imports fail | `ImportError` in pytest | Use `PYTHONPATH=. .venv/bin/pytest` |
+| Alembic from host fails | `alembic.ini` can't find `.env` | Apply via `docker exec psql` or `just migrate` |
+| Two migrations branch from same revision | `alembic heads` shows multiple heads | Create merge migration: `.venv/bin/alembic merge &lt;rev1&gt; &lt;rev2&gt;` |
+| `FlagEmbedding` ImportError | `is_torch_fx_available removed` | `transformers&lt;5.0` pinned in pyproject.toml — do not upgrade |
+| Celery tasks are sync | `async def` tasks silently don't await | Wrap: `asyncio.run(_run())` inside each task |
+| No FK constraint on `user_id` columns | Intended — users live in Keycloak | Never add FK to `users` table (doesn't exist in PostgreSQL) |
+| `JSON().with_variant(JSONB(), 'postgresql')` | Needed for SQLite test compat | Use on all JSONB columns in ORM models |
+
+### Frontend / TypeScript
+
+| Gotcha | Symptom | Fix |
+|--------|---------|-----|
+| Next.js 15 async params | `params.id` type error | Type as `Promise&lt;{id: string}&gt;`, await before use |
+| FastAPI route ordering | String literals matched as UUID | Declare `/templates`, `/runs/*` BEFORE `/{workflow_id}` |
+| `pnpm run build` fails on `any` | TypeScript strict mode | Use `unknown` + type guard instead |
+| CopilotKit agent name mismatch | Agent not found | Frontend must reference exact name: `'blitz_master'` |
+| `react-markdown` v10 removed `className` | TypeScript error | Wrap in `&lt;div className=&quot;...&quot;&gt;` instead |
+
+### Security / Auth
+
+| Gotcha | Symptom | Fix |
+|--------|---------|-----|
+| Keycloak self-signed cert | JWKS fetch fails | `KEYCLOAK_CA_CERT=frontend/certs/keycloak-ca.crt` in `backend/.env` |
+| No `aud` claim in JWT | `JWTError` → 401 | `options={&quot;verify_aud&quot;: False}` in `jose_jwt.decode()` |
+| Roles in `realm_roles` not `realm_access.roles` | Empty roles list → 403 | Check both: `payload.get(&quot;realm_roles&quot;) or payload.get(&quot;realm_access&quot;, {}).get(&quot;roles&quot;, [])` |
+| CopilotKit body is camelCase | `RunAgentInput(**body)` fails | Use `RunAgentInput.model_validate(body)` |
+
+### GSD-Specific
+
+| Gotcha | Symptom | Fix |
+|--------|---------|-----|
+| Lazy imports not patchable | `patch('module.func')` doesn't work in tests | Import at module top level; patch at definition module |
+| `BlitzState` fields are `None` in LangGraph | Agent doesn't inject custom state | Use contextvar fallback: `user_id = user_id_ctx.get(None)` |
+| `classifyHandoffIfNeeded` error | Executor reports &quot;failed&quot; | Claude Code runtime bug — spot-check SUMMARY.md + commits; if present, treat as success |
+</div></code></pre>
+<hr>
+<h4 id="enhancement-f-new-section-15--context-continuity-protocol">Enhancement F: New Section 15 — Context Continuity Protocol</h4>
+<pre class="hljs"><code><div><span class="hljs-section">## 15. Context Continuity Protocol</span>
+
+How GSD and Superpowers maintain shared context across sessions.
+
+<span class="hljs-section">### The /clear Checklist</span>
+
+Run this mental checklist before every <span class="hljs-code">`/clear`</span>:
+
+</div></code></pre>
+<p>□ STATE.md updated with current position and any new decisions
+□ Any design docs (docs/plans/) committed to git
+□ If mid-task: /gsd:pause-work creates .planning/RESUME.md
+□ Technical discoveries added to docs/dev-context.md
+□ Known blockers added to STATE.md → Blockers section</p>
+<pre class="hljs"><code><div>
+### Session Start Protocol
+
+```bash
+# 1. Always start with:
+/gsd:progress
+# → Reads STATE.md + ROADMAP.md → shows position + routes to next action
+
+# 2. If RESUME.md exists:
+/gsd:resume-work
+# → Restores exact stopping point from RESUME.md
+
+# 3. Confirm context by reading what /gsd:progress reports
+# Never jump to coding without knowing current position
+</div></code></pre>
+<h3 id="decision-recording-format">Decision Recording Format</h3>
+<p>When making technical decisions during implementation, add to STATE.md:</p>
+<pre class="hljs"><code><div><span class="hljs-section">## Accumulated Context</span>
+
+<span class="hljs-section">### Decisions</span>
+<span class="hljs-bullet">- </span>[04-01]: owner<span class="hljs-emphasis">_user_</span>id on workflows is NULLABLE — template rows have owner<span class="hljs-emphasis">_user_</span>id=NULL
+<span class="hljs-bullet">- </span>[04-02]: compile<span class="hljs-emphasis">_workflow_</span>to_stategraph() returns uncompiled builder — caller injects checkpointer
+<span class="hljs-bullet">- </span>[04-03]: GraphInterrupt caught by type name ("Interrupt" in type(exc).<span class="hljs-strong">__name__</span>) — avoids fragile import
+</div></code></pre>
+<p>Format: <code>- [context-tag]: &lt;decision statement&gt; — &lt;rationale&gt;</code></p>
+<h3 id="what-lives-where">What Lives Where</h3>
+<table>
+<thead>
+<tr>
+<th>Context type</th>
+<th>Where to store</th>
+<th>Read by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Technical decisions</td>
+<td><code>.planning/STATE.md</code> Decisions</td>
+<td>All GSD agents</td>
+</tr>
+<tr>
+<td>Blockers / concerns</td>
+<td><code>.planning/STATE.md</code> Blockers</td>
+<td>All GSD agents, <code>/gsd:progress</code></td>
+</tr>
+<tr>
+<td>Pending todos</td>
+<td><code>.planning/STATE.md</code> Pending Todos</td>
+<td><code>/gsd:check-todos</code></td>
+</tr>
+<tr>
+<td>Design decisions (phase-specific)</td>
+<td><code>.planning/phases/NN-CONTEXT.md</code></td>
+<td>gsd-planner, gsd-plan-checker</td>
+</tr>
+<tr>
+<td>Technical research</td>
+<td><code>.planning/phases/NN-RESEARCH.md</code></td>
+<td>gsd-planner</td>
+</tr>
+<tr>
+<td>Endpoint / URL gotchas</td>
+<td><code>docs/dev-context.md</code></td>
+<td>AGENT INSTRUCTIONS Step 1</td>
+</tr>
+<tr>
+<td>Critical cross-cutting gotchas</td>
+<td><code>CLAUDE.md</code> Section 14</td>
+<td>All agents (every session)</td>
+</tr>
+<tr>
+<td>Design intent</td>
+<td><code>docs/plans/YYYY-MM-DD-design.md</code></td>
+<td>brainstorming, writing-plans</td>
+</tr>
+<tr>
+<td>Implementation plan</td>
+<td><code>docs/plans/YYYY-MM-DD-plan.md</code></td>
+<td>executing-plans, subagent-driven</td>
+</tr>
+</tbody>
+</table>
+<h3 id="handoff-anti-patterns">Handoff Anti-Patterns</h3>
+<table>
+<thead>
+<tr>
+<th>Anti-pattern</th>
+<th>Problem</th>
+<th>Correct Approach</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Jumping to code without <code>/gsd:progress</code></td>
+<td>Wrong phase, duplicate work</td>
+<td>Always start with <code>/gsd:progress</code></td>
+</tr>
+<tr>
+<td>Decisions only in conversation</td>
+<td>Lost on <code>/clear</code></td>
+<td>Write to STATE.md before clearing</td>
+</tr>
+<tr>
+<td>Design docs not committed</td>
+<td>Lost if session crashes</td>
+<td>Commit before <code>/clear</code></td>
+</tr>
+<tr>
+<td>Gotchas only in SUMMARY.md</td>
+<td>Future agents don't read SUMMARY</td>
+<td>Add critical ones to CLAUDE.md §14</td>
+</tr>
+<tr>
+<td>STATE.md updated by hand without commit</td>
+<td>Uncommitted state lost</td>
+<td>Commit STATE.md with each plan completion</td>
+</tr>
+</tbody>
+</table>
+<pre class="hljs"><code><div>
+---
+
+### 6.5 Summary: What to Add vs. What to Enhance
+
+| CLAUDE.md Location | Action | Priority |
+|--------------------|--------|----------|
+| AGENT INSTRUCTIONS | Add Steps 5–6 (decision recording + canonical commands) | Critical |
+| DO/DON'T tables | Add &quot;Commits (GSD Tracking)&quot; table | High |
+| Section 12 | Replace with expanded version (mandatory rule + artifact protocol + continuity) | High |
+| New Section 13 | Add canonical verification commands | Critical |
+| New Section 14 | Add critical gotchas quick reference | Critical |
+| New Section 15 | Add context continuity protocol | High |
+| Section 8 directory tree | Add `docs/plans/` entry | Low |
+
+**Implementation order:** 13 → 14 → AGENT INSTRUCTIONS Steps 5-6 → DO/DON'T commits table → Section 12 → 15
+
+The total addition is approximately 200 lines added to CLAUDE.md. The existing content (Sections 1–11) remains unchanged — these are additive enhancements only.
+</div></code></pre>
+
+</body>
+</html>

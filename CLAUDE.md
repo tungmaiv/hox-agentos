@@ -219,7 +219,7 @@ gh repo clone                   # clone repo
 |---------|------|-------|
 | Frontend (Next.js) | 3000 | |
 | Backend (FastAPI) | 8000 | |
-| Keycloak | 8080 | Admin: `http://localhost:8080` |
+| Keycloak | 8180 (HTTP) / 7443 (HTTPS) | Admin: `http://keycloak.blitz.local:8180` — use HTTPS `https://keycloak.blitz.local:7443` for OIDC (issuer match); internal container-to-container is port 8080 |
 | LiteLLM Proxy | 4000 | Internal only |
 | MCP CRM Server | 8001 | HTTP+SSE, `/sse` endpoint |
 | MCP Docs Server | 8002 | HTTP+SSE, `/sse` endpoint |
@@ -231,23 +231,16 @@ gh repo clone                   # clone repo
 Use `just` (project-root `justfile`) as the primary task runner. Run `just` with no args to list all recipes.
 
 ```bash
-# ── Dev mode (Docker only — backend and frontend run in containers) ──
-just dev-local-build       # build dev images (run once, or after dep changes)
-just dev-local             # start full stack with hot reload
-just dev-local-down        # stop full stack
-just dev-local-restart-workers  # restart Celery workers after code changes
-
-# ── Docker services ───────────────────────────────────────────
-just up                    # start all Docker services (detached)
-just up-svc postgres redis # start specific service(s)
-just down                  # stop services (keep volumes)
-just down-v                # stop + wipe volumes (destructive)
-just logs postgres         # tail logs for one service
+# ── Docker services (all accept optional service name(s)) ─────
+just up [svc...]           # start all or specific services (detached)
+just down [svc...]         # stop all or specific services
+just stop [svc...]         # alias for down
+just restart [svc...]      # restart all or specific services
+just rebuild [svc...]      # build + start (all or specific)
+just build [svc...]        # build only, no start
+just reset                 # DESTRUCTIVE: stop + wipe volumes + fresh start
+just logs [svc]            # tail logs (all or specific service)
 just ps                    # service status
-
-# ── Rebuild individual services ───────────────────────────────
-just backend-rebuild       # rebuild + restart backend container
-just frontend-rebuild      # rebuild + restart frontend container
 
 # ── Database ──────────────────────────────────────────────────
 just migrate               # run Alembic migrations
@@ -266,7 +259,7 @@ pnpm add <pkg>             # add JS dep (run from frontend/)
 > `CORS_ORIGINS=["http://..."]` → `[` → pydantic-settings `JSONDecodeError`.
 >
 > **Gotcha — container-only dev:** Backend and frontend run EXCLUSIVELY in Docker containers.
-> Do NOT start them on the host with uvicorn or pnpm. Use `just dev-local` for the full stack.
+> Do NOT start them on the host with uvicorn or pnpm. Use `just up` for the full stack.
 > Running host processes causes container→host URL resolution failures and port conflicts.
 
 ### Environment Variables
@@ -547,6 +540,8 @@ blitz-agentos/
 **Use `/gsd:progress` to check current phase status.**
 **Use `/gsd:execute-phase` to begin executing a planned phase.**
 
+> **Current milestone:** v1.3 shipped 2026-03-14 (Phases 15–25). Run `/gsd:new-milestone` to define v1.4.
+
 ---
 
 ## 11. Architecture Decision Records (Summary)
@@ -686,7 +681,7 @@ PYTHONPATH=. .venv/bin/pytest tests/api/test_workflow_routes.py -v
 # With stdout (debugging)
 PYTHONPATH=. .venv/bin/pytest tests/ -v -s
 
-# Current baseline: 258 tests — a commit that drops this count unexpectedly is a red flag
+# Current baseline: 946 tests — a commit that drops this count unexpectedly is a red flag
 ```
 
 ### Frontend Build + Type Check
@@ -700,6 +695,58 @@ pnpm run build
 pnpm exec tsc --noEmit
 ```
 
+### Frontend E2E Tests (Playwright)
+
+**Prerequisites:** `just up` must be running — Playwright targets `http://localhost:3000`.
+
+**Test users** (local auth accounts — NOT Keycloak SSO):
+
+| Role | Username | Password | Access |
+|------|----------|----------|--------|
+| Administrator (`it-admin`) | `admin` | `admin` | All pages including `/admin/*` |
+| Normal user (`employee`) | `giangtt` | `BilHam30` | `/chat`, `/workflows`, `/skills`, `/settings`, `/profile` — no `/admin/*` |
+
+Credentials are also stored in `.dev-secrets` as `E2E_ADMIN_USER`, `E2E_ADMIN_PASSWORD`, `E2E_USER_USER`, `E2E_USER_PASSWORD`.
+
+```bash
+cd /home/tungmv/Projects/hox-agentos/frontend
+
+# Full E2E suite
+pnpm exec playwright test
+
+# Specific test file
+pnpm exec playwright test e2e/tests/auth.spec.ts
+
+# Run headed (visible browser — useful for debugging)
+pnpm exec playwright test --headed
+
+# Open HTML report after a run
+pnpm exec playwright show-report
+
+# Run only admin-context tests
+pnpm exec playwright test --project=admin-tests
+
+# Run only normal-user-context tests
+pnpm exec playwright test --project=user-tests
+```
+
+**Test file structure** (once scaffolded):
+```
+frontend/e2e/
+  auth/
+    admin.setup.ts      # logs in as admin, saves storageState to e2e/.auth/admin.json
+    user.setup.ts       # logs in as giangtt, saves storageState to e2e/.auth/user.json
+  fixtures/
+    index.ts            # typed test() with adminPage / userPage fixtures
+  tests/
+    auth.spec.ts        # login, logout, protected route redirect to /login
+    admin-access.spec.ts # admin sees /admin, normal user gets 403/redirect
+    chat.spec.ts        # chat page loads, message input present
+    skills.spec.ts      # skills catalog loads for both users
+```
+
+**Critical gotcha:** Always authenticate via the login form at `/login` (POST to `/api/auth/local/token` via next-auth). Do NOT try to set cookies or call the backend JWT endpoint directly — next-auth manages the session cookie and CSRF token internally.
+
 ### Alembic Migrations
 
 ```bash
@@ -712,11 +759,16 @@ cd /home/tungmv/Projects/hox-agentos/backend
 
 # Create new migration (autogenerate from ORM models)
 .venv/bin/alembic revision --autogenerate -m "NNN_short_description"
-# Next migration number: 022 (current head is 83f730920f5a — phase-18 platform_config)
-# Note: 83f730920f5a used hex ID (autogenerated); do NOT rename — breaks revision chain.
+# Next migration number: 031
+# Current heads (two active heads — merge required for new migrations):
+#   617b296e937a — migration 030 mcp_server_catalog (Phase 24)
+#   83f730920f5a — platform_config (Phase 18)
+# New migrations must merge from both heads: .venv/bin/alembic merge 617b296e937a 83f730920f5a -m "031_..."
+# Note: hex IDs (autogenerated); do NOT rename — breaks revision chain.
 
 # Migration chain (do NOT create branching without merge migration):
 # 001 → 002+003 (parallel) → merge(9754fd080ee2) → 004 → ... → 021 → 83f730920f5a
+# Also: 021 → ... → 028 → c12d84fc28f9 (029_registry_entries) → 617b296e937a (030_mcp_catalog)
 
 # Apply migrations — CANNOT run from host (.env not present outside Docker)
 # Method 1: via justfile (requires host .env)

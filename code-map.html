@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blitz AgentOS — Code Map</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:#0a0f1e;color:#e2e8f0;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+.app{display:flex;flex:1;min-height:0;overflow:hidden}
+
+/* ── Sidebar ─────────────────────────────────────────────── */
+.sidebar{width:250px;flex-shrink:0;background:#0f172a;border-right:1px solid #1e293b;display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;padding:13px 11px;gap:13px}
+.sidebar::-webkit-scrollbar{width:3px}.sidebar::-webkit-scrollbar-thumb{background:#334155;border-radius:2px}
+.logo{display:flex;align-items:center;gap:8px}
+.logo-dot{width:9px;height:9px;border-radius:50%;background:#3b82f6;flex-shrink:0;box-shadow:0 0 8px #3b82f666}
+.logo-name{font-size:13px;font-weight:700;color:#f1f5f9}
+.logo-sub{font-size:9px;color:#475569;margin-top:2px;font-family:monospace}
+.divider{height:1px;background:#1e293b;margin:1px 0}
+.section{display:flex;flex-direction:column;gap:5px}
+.sec-title{font-size:9.5px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.1em}
+.presets{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.preset-btn{background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:5px;padding:5px 7px;font-size:10.5px;cursor:pointer;transition:all .12s;text-align:left;line-height:1.2}
+.preset-btn:hover{background:#334155;color:#cbd5e1}
+.preset-btn.active{background:#1d4ed8;border-color:#3b82f6;color:#fff;font-weight:600}
+.toggle-row{display:flex;align-items:center;gap:7px;padding:4px 6px;border-radius:5px;cursor:pointer;transition:background .1s}
+.toggle-row:hover{background:#1e293b}
+.toggle-row input[type=checkbox]{width:13px;height:13px;cursor:pointer;flex-shrink:0;accent-color:#3b82f6}
+.t-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.t-dash{width:20px;height:2px;flex-shrink:0}
+.t-label{font-size:11px;color:#cbd5e1}
+.cmt-badge{display:inline-flex;align-items:center;justify-content:center;background:#1d4ed8;color:#fff;border-radius:9px;padding:0 6px;height:15px;font-size:9px;margin-left:4px;font-weight:700}
+.cmt-list{display:flex;flex-direction:column;gap:5px;overflow-y:auto;flex:1;min-height:0}
+.cmt-card{background:#1e293b;border:1px solid #334155;border-radius:6px;padding:8px}
+.cmt-node{font-size:11px;font-weight:600;color:#93c5fd;margin-bottom:3px}
+.cmt-body{font-size:11px;color:#94a3b8;line-height:1.4}
+.cmt-foot{display:flex;justify-content:flex-end;margin-top:5px}
+.cmt-del{background:none;border:1px solid #374151;color:#6b7280;border-radius:4px;padding:2px 7px;font-size:9.5px;cursor:pointer;transition:all .1s}
+.cmt-del:hover{border-color:#ef4444;color:#fca5a5;background:rgba(239,68,68,.1)}
+.no-cmt{font-size:11px;color:#374151;text-align:center;padding:10px 4px;line-height:1.6}
+.cmt-section{display:flex;flex-direction:column;gap:5px;flex:1;min-height:60px;overflow:hidden}
+
+/* ── Canvas ──────────────────────────────────────────────── */
+.canvas-wrap{flex:1;position:relative;overflow:hidden;background:#060d1a;background-image:radial-gradient(circle,#1e293b 1px,transparent 1px);background-size:26px 26px}
+#diagram{width:100%;height:100%;display:block;cursor:grab;user-select:none}
+#diagram.pan{cursor:grabbing}
+.zoom-bar{position:absolute;bottom:14px;right:14px;display:flex;flex-direction:column;gap:3px;z-index:10}
+.zoom-btn{width:30px;height:30px;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;transition:background .1s}
+.zoom-btn:hover{background:#334155}
+.legend-box{position:absolute;bottom:14px;left:14px;background:rgba(9,18,38,.92);border:1px solid #1e293b;border-radius:8px;padding:9px 11px;display:flex;flex-direction:column;gap:4px}
+.leg-title{font-size:9px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px}
+.leg-row{display:flex;align-items:center;gap:7px;font-size:10px;color:#94a3b8}
+.leg-line{width:20px;height:1.5px}
+.hint-box{position:absolute;top:12px;right:14px;background:rgba(9,18,38,.85);border:1px solid #1e293b;border-radius:6px;padding:6px 10px;font-size:10px;color:#475569;line-height:1.5}
+
+/* ── Prompt footer ───────────────────────────────────────── */
+.prompt-footer{border-top:1px solid #1e293b;background:#0f172a;padding:10px 14px;display:flex;align-items:flex-start;gap:12px;min-height:68px;max-height:120px}
+.prompt-label{font-size:9.5px;color:#475569;text-transform:uppercase;letter-spacing:.1em;white-space:nowrap;padding-top:3px;flex-shrink:0;font-weight:600}
+.prompt-out{flex:1;font-family:'SF Mono','Cascadia Code','Fira Code',monospace;font-size:11px;color:#94a3b8;line-height:1.55;white-space:pre-wrap;overflow-y:auto;max-height:100px}
+.copy-btn{background:#1d4ed8;border:none;color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:11.5px;font-weight:500;flex-shrink:0;transition:background .15s}
+.copy-btn:hover{background:#2563eb}
+.copy-btn.done{background:#166534}
+
+/* ── Modal ───────────────────────────────────────────────── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;z-index:200;visibility:hidden;opacity:0;transition:opacity .15s,visibility .15s}
+.overlay.open{visibility:visible;opacity:1}
+.modal{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:20px;width:380px;max-width:92vw;display:flex;flex-direction:column;gap:10px;box-shadow:0 20px 60px rgba(0,0,0,.65)}
+.modal h3{font-size:14px;font-weight:700;color:#f1f5f9}
+.modal .m-path{font-size:9.5px;font-family:monospace;color:#475569;margin-top:2px}
+.modal-ta{width:100%;background:#0f172a;border:1px solid #334155;color:#e2e8f0;border-radius:7px;padding:9px 11px;font-size:11.5px;line-height:1.55;font-family:inherit;resize:vertical;min-height:80px;outline:none;transition:border-color .15s}
+.modal-ta:focus{border-color:#3b82f6}
+.modal-hint{font-size:9.5px;color:#374151}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end}
+.m-cancel{background:#334155;border:none;color:#94a3b8;border-radius:6px;padding:7px 14px;cursor:pointer;font-size:11.5px}
+.m-cancel:hover{background:#475569}
+.m-save{background:#1d4ed8;border:none;color:#fff;border-radius:6px;padding:7px 14px;cursor:pointer;font-size:11.5px;font-weight:500}
+.m-save:hover{background:#2563eb}
+
+/* SVG node hover via CSS */
+.node-g{cursor:pointer}
+.node-g .nb{fill:#111827;transition:fill .12s}
+.node-g:hover .nb{fill:#1a2742}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar">
+    <div>
+      <div class="logo">
+        <div class="logo-dot"></div>
+        <div>
+          <div class="logo-name">Blitz AgentOS</div>
+          <div class="logo-sub">Architecture Code Map</div>
+        </div>
+      </div>
+      <div class="divider" style="margin-top:10px"></div>
+    </div>
+
+    <div class="section">
+      <div class="sec-title">View Preset</div>
+      <div class="presets" id="preset-btns">
+        <button class="preset-btn active" data-p="full">Full System</button>
+        <button class="preset-btn" data-p="frontend">Frontend Flow</button>
+        <button class="preset-btn" data-p="security">Security Gates</button>
+        <button class="preset-btn" data-p="agents">Agent System</button>
+        <button class="preset-btn" data-p="pipeline">Data Pipeline</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="sec-title">Layers</div>
+      <div id="layer-ctrls"></div>
+    </div>
+
+    <div class="section">
+      <div class="sec-title">Connection Types</div>
+      <div id="conn-ctrls"></div>
+    </div>
+
+    <div class="cmt-section">
+      <div class="sec-title">Comments <span class="cmt-badge" id="cmt-badge">0</span></div>
+      <div class="cmt-list" id="cmt-list"></div>
+    </div>
+  </aside>
+
+  <!-- ── Canvas ── -->
+  <div class="canvas-wrap">
+    <svg id="diagram" xmlns="http://www.w3.org/2000/svg">
+      <defs id="svg-defs"></defs>
+      <g id="vp"></g>
+    </svg>
+
+    <div class="zoom-bar">
+      <button class="zoom-btn" id="btn-zi" title="Zoom in">+</button>
+      <button class="zoom-btn" id="btn-zo" title="Zoom out">−</button>
+      <button class="zoom-btn" id="btn-zr" title="Fit view" style="font-size:11px">⊙</button>
+    </div>
+
+    <div class="legend-box" id="legend-box"></div>
+
+    <div class="hint-box">Click any node to add a comment</div>
+  </div>
+</div>
+
+<!-- ── Prompt footer ── -->
+<div class="prompt-footer">
+  <div class="prompt-label">Prompt</div>
+  <div class="prompt-out" id="prompt-out"></div>
+  <button class="copy-btn" id="copy-btn">Copy</button>
+</div>
+
+<!-- ── Comment modal ── -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div>
+      <h3 id="m-title"></h3>
+      <div class="m-path" id="m-path"></div>
+    </div>
+    <textarea class="modal-ta" id="m-ta" placeholder="Feedback, questions, or implementation notes for this component…"></textarea>
+    <div class="modal-hint">⌘ Enter to save · Escape to cancel</div>
+    <div class="modal-btns">
+      <button class="m-cancel" id="m-cancel">Cancel</button>
+      <button class="m-save" id="m-save">Save Comment</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ══════════════════════════════════════════════════════════════════
+// DATA
+// ══════════════════════════════════════════════════════════════════
+
+const LAYERS = {
+  frontend: { label:'Frontend',         color:'#3b82f6', fill:'rgba(30,58,138,.16)'  },
+  security: { label:'Security',         color:'#ef4444', fill:'rgba(127,29,29,.18)'  },
+  gateway:  { label:'Gateway',          color:'#f97316', fill:'rgba(124,45,18,.16)'  },
+  agent:    { label:'Agents',           color:'#22c55e', fill:'rgba(20,83,45,.16)'   },
+  memory:   { label:'Memory / Tools',   color:'#a855f7', fill:'rgba(88,28,135,.16)'  },
+  data:     { label:'Data',             color:'#ec4899', fill:'rgba(131,24,67,.16)'  },
+  external: { label:'External / Infra', color:'#94a3b8', fill:'rgba(30,41,59,.16)'   },
+};
+
+const CT = {
+  df:  { label:'Data Flow',     color:'#3b82f6', dash:null   },
+  tc:  { label:'Tool Call',     color:'#22c55e', dash:'6,3'  },
+  sec: { label:'Security Gate', color:'#ef4444', dash:'4,3'  },
+  mem: { label:'Memory Op',     color:'#a855f7', dash:'2,3'  },
+  dep: { label:'Dependency',    color:'#64748b', dash:'1,4'  },
+};
+
+const H = 52;
+const NODES = [
+  // ── Frontend y=40 ───────────────────────────────────────────────────────
+  {id:'auth',     label:'auth.ts',             sub:'NextAuth v5 / Keycloak OIDC',         x:40,  y:40,  w:158, h:H, l:'frontend'},
+  {id:'chat',     label:'ChatPanel',            sub:'components/chat/chat-panel.tsx',      x:220, y:40,  w:155, h:H, l:'frontend'},
+  {id:'csbar',    label:'ConversationSidebar',  sub:'components/chat/conversation-sidebar.tsx', x:397,y:40,w:178,h:H,l:'frontend'},
+  {id:'ckp',      label:'/api/copilotkit',      sub:'app/api/copilotkit/route.ts',          x:600, y:40,  w:155, h:H, l:'frontend'},
+  {id:'a2ui',     label:'A2UIRenderer',         sub:'components/a2ui/A2UIMessageRenderer.tsx',x:780,y:40,w:162,h:H,l:'frontend'},
+
+  // ── Security y=152 ──────────────────────────────────────────────────────
+  {id:'jwt',      label:'JWT Validation',       sub:'security/jwt.py — Gate 1',            x:220, y:152, w:158, h:H, l:'security'},
+  {id:'rbac',     label:'RBAC Check',           sub:'security/rbac.py — Gate 2',           x:400, y:152, w:155, h:H, l:'security'},
+  {id:'acl',      label:'Tool ACL',             sub:'security/acl.py — Gate 3',            x:577, y:152, w:155, h:H, l:'security'},
+
+  // ── Gateway y=265 ───────────────────────────────────────────────────────
+  {id:'runtime',  label:'AG-UI Runtime',        sub:'gateway/runtime.py',                  x:120, y:265, w:155, h:H, l:'gateway'},
+  {id:'treg',     label:'Tool Registry',        sub:'gateway/tool_registry.py',            x:400, y:265, w:155, h:H, l:'gateway'},
+  {id:'cfg',      label:'Config / get_llm()',   sub:'core/config.py',                      x:660, y:265, w:162, h:H, l:'gateway'},
+  {id:'dbcore',   label:'DB + Contextvars',     sub:'core/db.py + core/context.py',        x:845, y:265, w:160, h:H, l:'gateway'},
+
+  // ── Agents y=378 ────────────────────────────────────────────────────────
+  {id:'master',   label:'Master Agent',         sub:'agents/master_agent.py',              x:40,  y:378, w:155, h:H, l:'agent'},
+  {id:'router',   label:'Intent Router',        sub:'agents/subagents/router.py',          x:220, y:378, w:155, h:H, l:'agent'},
+  {id:'eagent',   label:'Email Agent',          sub:'agents/subagents/email_agent.py',     x:400, y:378, w:155, h:H, l:'agent'},
+  {id:'cagent',   label:'Calendar Agent',       sub:'agents/subagents/calendar_agent.py',  x:577, y:378, w:158, h:H, l:'agent'},
+  {id:'pagent',   label:'Project Agent',        sub:'agents/subagents/project_agent.py',   x:758, y:378, w:155, h:H, l:'agent'},
+  {id:'deliv',    label:'Delivery Router',      sub:'agents/delivery_router.py',           x:940, y:378, w:155, h:H, l:'agent'},
+
+  // ── Memory / Tools y=490 ────────────────────────────────────────────────
+  {id:'st',       label:'Short-Term Mem',       sub:'memory/short_term.py',                x:40,  y:490, w:155, h:H, l:'memory'},
+  {id:'mt',       label:'Medium-Term Mem',      sub:'memory/medium_term.py',               x:220, y:490, w:155, h:H, l:'memory'},
+  {id:'lt',       label:'Long-Term Mem',        sub:'memory/long_term.py',                 x:400, y:490, w:155, h:H, l:'memory'},
+  {id:'emb',      label:'BGE-M3 Embedder',      sub:'memory/embeddings.py (1024-dim)',     x:577, y:490, w:162, h:H, l:'memory'},
+  {id:'mcpreg',   label:'MCP Registry',         sub:'mcp/registry.py',                     x:762, y:490, w:155, h:H, l:'memory'},
+  {id:'mcpcli',   label:'MCP Client',           sub:'mcp/client.py (HTTP+SSE)',             x:940, y:490, w:155, h:H, l:'memory'},
+
+  // ── Data y=602 ──────────────────────────────────────────────────────────
+  {id:'pg',       label:'PostgreSQL + pgvector',sub:'infra/postgres (port 5432)',           x:55,  y:602, w:185, h:H, l:'data'},
+  {id:'redis',    label:'Redis',                sub:'broker + cache (port 6379)',           x:285, y:602, w:155, h:H, l:'data'},
+  {id:'celery',   label:'Celery Workers',       sub:'scheduler/celery_app.py',             x:475, y:602, w:155, h:H, l:'data'},
+
+  // ── External y=715 ──────────────────────────────────────────────────────
+  {id:'kc',       label:'Keycloak IAM',         sub:'keycloak:8443 (OIDC + JWKS)',          x:55,  y:715, w:155, h:H, l:'external'},
+  {id:'litellm',  label:'LiteLLM Proxy',        sub:'infra/litellm (port 4000)',            x:255, y:715, w:155, h:H, l:'external'},
+  {id:'ollama',   label:'Ollama (host)',         sub:'host:11434 — Qwen2.5 / Llama3',       x:455, y:715, w:162, h:H, l:'external'},
+  {id:'mcrm',     label:'MCP CRM Server',       sub:'infra/mcp-crm (port 8001/sse)',        x:660, y:715, w:160, h:H, l:'external'},
+];
+
+const EDGES = [
+  // Data Flow
+  {s:'chat',   t:'ckp',     c:'df',  lbl:'POST /copilotkit'},
+  {s:'ckp',    t:'runtime', c:'df',  lbl:'JWT + body'},
+  {s:'deliv',  t:'chat',    c:'df',  lbl:'SSE stream'},
+  // Security Gates
+  {s:'runtime',t:'jwt',     c:'sec', lbl:'Gate 1'},
+  {s:'jwt',    t:'rbac',    c:'sec', lbl:'Gate 2'},
+  {s:'rbac',   t:'acl',     c:'sec', lbl:'Gate 3'},
+  {s:'acl',    t:'master',  c:'sec', lbl:'allowed'},
+  {s:'jwt',    t:'kc',      c:'sec', lbl:'JWKS fetch'},
+  // Tool Calls
+  {s:'master', t:'router',  c:'tc',  lbl:'classify intent'},
+  {s:'router', t:'eagent',  c:'tc',  lbl:'email'},
+  {s:'router', t:'cagent',  c:'tc',  lbl:'calendar'},
+  {s:'router', t:'pagent',  c:'tc',  lbl:'project'},
+  {s:'eagent', t:'treg',    c:'tc'},
+  {s:'cagent', t:'treg',    c:'tc'},
+  {s:'pagent', t:'treg',    c:'tc'},
+  {s:'treg',   t:'mcpreg',  c:'tc'},
+  {s:'mcpreg', t:'mcpcli',  c:'tc'},
+  {s:'mcpcli', t:'mcrm',    c:'tc',  lbl:'HTTP+SSE'},
+  {s:'master', t:'deliv',   c:'tc',  lbl:'route result'},
+  // Memory Ops
+  {s:'master', t:'st',      c:'mem', lbl:'load/save turns'},
+  {s:'master', t:'lt',      c:'mem', lbl:'search facts'},
+  {s:'master', t:'mt',      c:'mem', lbl:'episodes'},
+  {s:'lt',     t:'emb',     c:'mem', lbl:'embed query'},
+  {s:'st',     t:'pg',      c:'mem'},
+  {s:'lt',     t:'pg',      c:'mem', lbl:'pgvector'},
+  {s:'mt',     t:'pg',      c:'mem'},
+  {s:'emb',    t:'celery',  c:'mem', lbl:'async task'},
+  {s:'celery', t:'pg',      c:'mem', lbl:'store'},
+  {s:'celery', t:'redis',   c:'mem', lbl:'broker'},
+  // Dependencies
+  {s:'auth',   t:'kc',      c:'dep', lbl:'OIDC'},
+  {s:'master', t:'cfg',     c:'dep', lbl:'get_llm()'},
+  {s:'cfg',    t:'litellm', c:'dep', lbl:'proxy calls'},
+  {s:'litellm',t:'ollama',  c:'dep', lbl:'Ollama API'},
+];
+
+const PRESETS = {
+  full:     { layers:{frontend:1,security:1,gateway:1,agent:1,memory:1,data:1,external:1},
+              ctypes:{df:1,tc:1,sec:1,mem:1,dep:1} },
+  frontend: { layers:{frontend:1,security:1,gateway:1,agent:0,memory:0,data:0,external:0},
+              ctypes:{df:1,tc:0,sec:1,mem:0,dep:1} },
+  security: { layers:{frontend:0,security:1,gateway:1,agent:1,memory:0,data:0,external:1},
+              ctypes:{df:0,tc:0,sec:1,mem:0,dep:0} },
+  agents:   { layers:{frontend:0,security:0,gateway:1,agent:1,memory:1,data:0,external:1},
+              ctypes:{df:0,tc:1,sec:0,mem:1,dep:1} },
+  pipeline: { layers:{frontend:0,security:0,gateway:0,agent:0,memory:1,data:1,external:0},
+              ctypes:{df:0,tc:0,sec:0,mem:1,dep:1} },
+};
+
+// ══════════════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════════════
+
+const S = {
+  layers:  Object.fromEntries(Object.keys(LAYERS).map(k=>[k,1])),
+  ctypes:  Object.fromEntries(Object.keys(CT).map(k=>[k,1])),
+  comments: [],
+  preset:  'full',
+  vp:      {x:0,y:0,sc:1},
+  pan:     null,
+  mnode:   null,
+};
+
+// ══════════════════════════════════════════════════════════════════
+// SVG HELPERS
+// ══════════════════════════════════════════════════════════════════
+
+const NS = 'http://www.w3.org/2000/svg';
+const $svg = document.getElementById('diagram');
+const $vp  = document.getElementById('vp');
+
+const nmap = ()=>Object.fromEntries(NODES.map(n=>[n.id,n]));
+
+function se(tag,a={}){
+  const e=document.createElementNS(NS,tag);
+  for(const[k,v]of Object.entries(a))e.setAttribute(k,v);
+  return e;
+}
+function st(txt,a){const e=se('text',a);e.textContent=txt;return e;}
+function cx(n){return n.x+n.w/2;}
+function cy(n){return n.y+n.h/2;}
+function trunc(s,n){return s.length>n?s.slice(0,n-1)+'…':s;}
+
+function attach(a,b){
+  const ax=cx(a),ay=cy(a),bx=cx(b),by=cy(b);
+  const adx=Math.abs(bx-ax),ady=Math.abs(by-ay);
+  if(ady>=adx){
+    return by>ay?{x1:ax,y1:a.y+a.h,x2:bx,y2:b.y}
+                :{x1:ax,y1:a.y,    x2:bx,y2:b.y+b.h};
+  }
+  return bx>ax?{x1:a.x+a.w,y1:ay,x2:b.x,    y2:by}
+              :{x1:a.x,     y1:ay,x2:b.x+b.w,y2:by};
+}
+
+function bpath(x1,y1,x2,y2){
+  const dx=Math.abs(x2-x1),dy=Math.abs(y2-y1);
+  if(dy>=dx){const my=(y1+y2)/2;return`M${x1} ${y1}C${x1} ${my} ${x2} ${my} ${x2} ${y2}`;}
+  const mx=(x1+x2)/2;return`M${x1} ${y1}C${mx} ${y1} ${mx} ${y2} ${x2} ${y2}`;
+}
+
+// ══════════════════════════════════════════════════════════════════
+// RENDER DEFS
+// ══════════════════════════════════════════════════════════════════
+
+function renderDefs(){
+  const defs=document.getElementById('svg-defs');
+  defs.innerHTML='';
+  for(const[k,c]of Object.entries(CT)){
+    const m=se('marker',{id:`arr-${k}`,markerWidth:'8',markerHeight:'6',refX:'7',refY:'3',orient:'auto'});
+    m.appendChild(se('polygon',{points:'0 0,8 3,0 6',fill:c.color}));
+    defs.appendChild(m);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// RENDER DIAGRAM
+// ══════════════════════════════════════════════════════════════════
+
+function renderDiagram(){
+  $vp.innerHTML='';
+  const nm=nmap();
+  const vis=new Set(NODES.filter(n=>S.layers[n.l]).map(n=>n.id));
+  const commented=new Set(S.comments.map(c=>c.nid));
+
+  // ─ Layer bands ─
+  const bands={};
+  for(const n of NODES){
+    if(!vis.has(n.id))continue;
+    if(!bands[n.l])bands[n.l]={x1:Infinity,y1:Infinity,x2:-Infinity,y2:-Infinity};
+    const b=bands[n.l];
+    b.x1=Math.min(b.x1,n.x); b.y1=Math.min(b.y1,n.y);
+    b.x2=Math.max(b.x2,n.x+n.w); b.y2=Math.max(b.y2,n.y+n.h);
+  }
+  for(const[layer,b]of Object.entries(bands)){
+    const lc=LAYERS[layer],pd=14;
+    $vp.appendChild(se('rect',{
+      x:b.x1-pd,y:b.y1-22,width:b.x2-b.x1+pd*2,height:b.y2-b.y1+22+pd,
+      rx:10,fill:lc.fill,stroke:lc.color,'stroke-width':1,'stroke-opacity':.35,
+    }));
+    $vp.appendChild(st(lc.label.toUpperCase(),{
+      x:b.x1-pd+7,y:b.y1-8,
+      'font-size':'8.5','font-family':'system-ui,sans-serif','font-weight':'700',
+      fill:lc.color,opacity:'.75',
+    }));
+  }
+
+  // ─ Edges ─
+  for(const e of EDGES){
+    if(!S.ctypes[e.c])continue;
+    if(!vis.has(e.s)||!vis.has(e.t))continue;
+    const sn=nm[e.s],tn=nm[e.t],ct=CT[e.c];
+    const pts=attach(sn,tn);
+    const d=bpath(pts.x1,pts.y1,pts.x2,pts.y2);
+    const g=se('g',{});
+    const pa={d,fill:'none',stroke:ct.color,'stroke-width':'1.5','stroke-opacity':'.6',
+               'marker-end':`url(#arr-${e.c})`};
+    if(ct.dash)pa['stroke-dasharray']=ct.dash;
+    g.appendChild(se('path',pa));
+    if(e.lbl){
+      const mx=(pts.x1+pts.x2)/2,my=(pts.y1+pts.y2)/2;
+      const w=e.lbl.length*4.7+10;
+      g.appendChild(se('rect',{x:mx-w/2,y:my-6.5,width:w,height:13,rx:3,fill:'#090e1c',opacity:'.9'}));
+      g.appendChild(st(e.lbl,{x:mx,y:my,'text-anchor':'middle','dominant-baseline':'middle',
+        'font-size':'7','font-family':'system-ui,sans-serif',fill:ct.color,opacity:'.9'}));
+    }
+    $vp.appendChild(g);
+  }
+
+  // ─ Nodes ─
+  for(const n of NODES){
+    if(!vis.has(n.id))continue;
+    const lc=LAYERS[n.l],hasCmt=commented.has(n.id);
+    const g=se('g',{transform:`translate(${n.x},${n.y})`,class:'node-g'});
+
+    // Drop shadow
+    g.appendChild(se('rect',{x:2,y:3,width:n.w,height:n.h,rx:7,fill:'rgba(0,0,0,.4)'}));
+    // Body (fill via CSS .nb class)
+    g.appendChild(se('rect',{x:0,y:0,width:n.w,height:n.h,rx:7,class:'nb',
+      stroke:hasCmt?'#f59e0b':lc.color,'stroke-width':hasCmt?'2':'1.5'}));
+    // Top accent bar
+    g.appendChild(se('rect',{x:8,y:0,width:n.w-16,height:2.5,rx:1.5,fill:lc.color,opacity:'.8'}));
+    // Label
+    g.appendChild(st(trunc(n.label,22),{x:10,y:n.h/2-5.5,
+      'font-size':'11.5','font-family':'system-ui,-apple-system,sans-serif','font-weight':'600',
+      fill:'#e2e8f0','dominant-baseline':'middle'}));
+    // Subtitle
+    g.appendChild(st(trunc(n.sub,30),{x:10,y:n.h/2+9,
+      'font-size':'8','font-family':"'SF Mono','Fira Code',monospace",
+      fill:'#64748b','dominant-baseline':'middle'}));
+    // Comment badge
+    if(hasCmt){
+      const nc=S.comments.filter(c=>c.nid===n.id).length;
+      g.appendChild(se('circle',{cx:n.w-9,cy:8,r:6,fill:'#f59e0b'}));
+      g.appendChild(st(String(nc),{x:n.w-9,y:8,'text-anchor':'middle',
+        'dominant-baseline':'middle','font-size':'7.5','font-weight':'bold',fill:'#000'}));
+    }
+
+    g.addEventListener('click',()=>openModal(n));
+    $vp.appendChild(g);
+  }
+
+  applyVp();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// CONTROLS
+// ══════════════════════════════════════════════════════════════════
+
+function buildLayerCtrls(){
+  const el=document.getElementById('layer-ctrls');el.innerHTML='';
+  for(const[k,lc]of Object.entries(LAYERS)){
+    const row=document.createElement('label');row.className='toggle-row';
+    const cb=document.createElement('input');cb.type='checkbox';cb.checked=!!S.layers[k];
+    cb.addEventListener('change',()=>{S.layers[k]=cb.checked?1:0;S.preset=null;syncPresets();renderDiagram();renderPrompt();});
+    const dot=document.createElement('div');dot.className='t-dot';dot.style.background=lc.color;
+    const lbl=document.createElement('span');lbl.className='t-label';lbl.textContent=lc.label;
+    row.append(cb,dot,lbl);el.appendChild(row);
+  }
+}
+
+function buildConnCtrls(){
+  const el=document.getElementById('conn-ctrls');el.innerHTML='';
+  for(const[k,c]of Object.entries(CT)){
+    const row=document.createElement('label');row.className='toggle-row';
+    const cb=document.createElement('input');cb.type='checkbox';cb.checked=!!S.ctypes[k];
+    cb.style.accentColor=c.color;
+    cb.addEventListener('change',()=>{S.ctypes[k]=cb.checked?1:0;S.preset=null;syncPresets();renderDiagram();renderPrompt();});
+    const dash=document.createElement('div');dash.className='t-dash';
+    if(c.dash){
+      const[on,off]=c.dash.split(',').map(Number);
+      dash.style.backgroundImage=`repeating-linear-gradient(90deg,${c.color} 0,${c.color} ${on}px,transparent ${on}px,transparent ${on+off}px)`;
+    }else dash.style.background=c.color;
+    const lbl=document.createElement('span');lbl.className='t-label';lbl.textContent=c.label;
+    row.append(cb,dash,lbl);el.appendChild(row);
+  }
+}
+
+function syncPresets(){
+  document.querySelectorAll('.preset-btn').forEach(b=>b.classList.toggle('active',b.dataset.p===S.preset));
+}
+
+document.getElementById('preset-btns').addEventListener('click',e=>{
+  const btn=e.target.closest('.preset-btn');if(!btn)return;
+  const p=PRESETS[btn.dataset.p];
+  S.layers={...p.layers};S.ctypes={...p.ctypes};S.preset=btn.dataset.p;
+  buildLayerCtrls();buildConnCtrls();syncPresets();renderDiagram();renderPrompt();
+  setTimeout(fitView,30);
+});
+
+// ══════════════════════════════════════════════════════════════════
+// LEGEND
+// ══════════════════════════════════════════════════════════════════
+
+function buildLegend(){
+  const el=document.getElementById('legend-box');
+  el.innerHTML='<div class="leg-title">Connections</div>';
+  for(const c of Object.values(CT)){
+    const row=document.createElement('div');row.className='leg-row';
+    const line=document.createElement('div');line.className='leg-line';
+    if(c.dash){const[on,off]=c.dash.split(',').map(Number);
+      line.style.backgroundImage=`repeating-linear-gradient(90deg,${c.color} 0,${c.color} ${on}px,transparent ${on}px,transparent ${on+off}px)`;}
+    else line.style.background=c.color;
+    const lbl=document.createElement('span');lbl.textContent=c.label;
+    row.append(line,lbl);el.appendChild(row);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// ZOOM / PAN
+// ══════════════════════════════════════════════════════════════════
+
+function applyVp(){
+  $vp.setAttribute('transform',`translate(${S.vp.x},${S.vp.y})scale(${S.vp.sc})`);
+}
+
+function zoomAt(delta,cx,cy){
+  const{x,y,sc}=S.vp,ns=Math.max(.15,Math.min(3,sc*(1+delta)));
+  S.vp.x=cx-(cx-x)*ns/sc;S.vp.y=cy-(cy-y)*ns/sc;S.vp.sc=ns;applyVp();
+}
+
+function fitView(){
+  const vis=NODES.filter(n=>S.layers[n.l]);if(!vis.length)return;
+  const rc=$svg.getBoundingClientRect();
+  const minX=Math.min(...vis.map(n=>n.x))-20,  minY=Math.min(...vis.map(n=>n.y))-32;
+  const maxX=Math.max(...vis.map(n=>n.x+n.w))+20,maxY=Math.max(...vis.map(n=>n.y+n.h))+20;
+  const sc=Math.min(rc.width/(maxX-minX),rc.height/(maxY-minY),2)*.9;
+  S.vp.sc=sc;
+  S.vp.x=rc.width/2-(minX+(maxX-minX)/2)*sc;
+  S.vp.y=rc.height/2-(minY+(maxY-minY)/2)*sc;
+  applyVp();
+}
+
+document.getElementById('btn-zi').onclick=()=>{const r=$svg.getBoundingClientRect();zoomAt(.2,r.width/2,r.height/2);};
+document.getElementById('btn-zo').onclick=()=>{const r=$svg.getBoundingClientRect();zoomAt(-.2,r.width/2,r.height/2);};
+document.getElementById('btn-zr').onclick=fitView;
+
+$svg.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const r=$svg.getBoundingClientRect();
+  zoomAt(-e.deltaY*.001,e.clientX-r.left,e.clientY-r.top);
+},{passive:false});
+
+$svg.addEventListener('mousedown',e=>{
+  if(e.target.closest('.node-g'))return;
+  S.pan={sx:e.clientX,sy:e.clientY,tx:S.vp.x,ty:S.vp.y};
+  $svg.classList.add('pan');
+});
+window.addEventListener('mousemove',e=>{
+  if(!S.pan)return;
+  S.vp.x=S.pan.tx+(e.clientX-S.pan.sx);S.vp.y=S.pan.ty+(e.clientY-S.pan.sy);applyVp();
+});
+window.addEventListener('mouseup',()=>{S.pan=null;$svg.classList.remove('pan');});
+
+// ══════════════════════════════════════════════════════════════════
+// COMMENTS
+// ══════════════════════════════════════════════════════════════════
+
+const $overlay=document.getElementById('overlay');
+const $mTitle=document.getElementById('m-title');
+const $mPath=document.getElementById('m-path');
+const $mTa=document.getElementById('m-ta');
+
+function openModal(n){
+  S.mnode=n;$mTitle.textContent=n.label;$mPath.textContent=n.sub;
+  const ex=S.comments.find(c=>c.nid===n.id);
+  $mTa.value=ex?ex.text:'';
+  $overlay.classList.add('open');
+  setTimeout(()=>$mTa.focus(),50);
+}
+function closeModal(){$overlay.classList.remove('open');S.mnode=null;}
+function saveComment(){
+  const txt=$mTa.value.trim();
+  if(txt&&S.mnode){
+    S.comments=S.comments.filter(c=>c.nid!==S.mnode.id);
+    S.comments.push({id:Date.now(),nid:S.mnode.id,nlabel:S.mnode.label,nsub:S.mnode.sub,text:txt});
+  }
+  closeModal();renderDiagram();renderComments();renderPrompt();
+}
+function delComment(id){S.comments=S.comments.filter(c=>c.id!==id);renderDiagram();renderComments();renderPrompt();}
+
+document.getElementById('m-save').onclick=saveComment;
+document.getElementById('m-cancel').onclick=closeModal;
+$overlay.addEventListener('click',e=>{if(e.target===$overlay)closeModal();});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape')closeModal();
+  if((e.metaKey||e.ctrlKey)&&e.key==='Enter'&&$overlay.classList.contains('open'))saveComment();
+});
+
+function renderComments(){
+  const list=document.getElementById('cmt-list');
+  document.getElementById('cmt-badge').textContent=S.comments.length;
+  if(!S.comments.length){
+    list.innerHTML='<div class="no-cmt">Click any node to add<br>feedback or questions</div>';return;
+  }
+  list.innerHTML='';
+  for(const c of S.comments){
+    const card=document.createElement('div');card.className='cmt-card';
+    const node=document.createElement('div');node.className='cmt-node';node.textContent=c.nlabel;
+    const body=document.createElement('div');body.className='cmt-body';
+    body.textContent=c.text.length>100?c.text.slice(0,100)+'…':c.text;
+    const foot=document.createElement('div');foot.className='cmt-foot';
+    const btn=document.createElement('button');btn.className='cmt-del';btn.textContent='Remove';
+    btn.onclick=()=>delComment(c.id);
+    foot.appendChild(btn);card.append(node,body,foot);list.appendChild(card);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// PROMPT
+// ══════════════════════════════════════════════════════════════════
+
+function renderPrompt(){
+  const vl=Object.entries(S.layers).filter(([,v])=>v).map(([k])=>LAYERS[k].label);
+  const vc=Object.entries(S.ctypes).filter(([,v])=>v).map(([k])=>CT[k].label);
+  const parts=[];
+
+  if(vl.length===Object.keys(LAYERS).length){
+    parts.push('Blitz AgentOS full architecture: Next.js 15 frontend → AG-UI gateway (3-gate security: JWT→RBAC→ACL) → LangGraph multi-agent system → pgvector memory (BGE-M3 1024-dim) + MCP tools → PostgreSQL. On-premise, ~100 users, Docker Compose.');
+  }else{
+    parts.push(`Blitz AgentOS architecture — layers: ${vl.join(', ')}.`);
+  }
+  if(vc.length<Object.keys(CT).length)parts.push(`Connections visible: ${vc.join(', ')}.`);
+
+  if(S.comments.length){
+    parts.push('\nComponent feedback:\n');
+    for(const c of S.comments)parts.push(`**${c.nlabel}** (${c.nsub}):\n${c.text}`);
+  }
+
+  document.getElementById('prompt-out').textContent=parts.join('\n');
+}
+
+document.getElementById('copy-btn').onclick=function(){
+  navigator.clipboard.writeText(document.getElementById('prompt-out').textContent).then(()=>{
+    this.textContent='Copied!';this.classList.add('done');
+    setTimeout(()=>{this.textContent='Copy';this.classList.remove('done');},1600);
+  });
+};
+
+// ══════════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════════
+
+renderDefs();
+buildLayerCtrls();
+buildConnCtrls();
+buildLegend();
+renderDiagram();
+renderComments();
+renderPrompt();
+syncPresets();
+setTimeout(fitView,80);
+</script>
+</body>
+</html>
