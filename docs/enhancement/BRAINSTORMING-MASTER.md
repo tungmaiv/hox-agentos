@@ -14,7 +14,7 @@
 
 ### New Session: Ready to Start
 
-**Session Date:** 2026-03-17
+**Session Date:** 2026-03-14
 
 **Previous Session: Session 7 (2026-03-17) ✅ COMPLETED
 
@@ -30,6 +30,19 @@
 - UserCredential table for encrypted storage (AES-256-GCM)
 - Email templates via Jinja2 (HTML + plain text)
 - 7 implementation phases (foundation → sidecar → templates → linking → inbound → events → monitoring)
+
+### Deferred Discussions (To Resume in Topic #21)
+
+**MCP vs CLI-Anything Evaluation** 🟡 DEFERRED
+- **Decision:** Halt discussion, revisit after Topic #21 (Universal Integration) completion
+- **Reason:** Topic #21 will design the universal adapter framework that unifies both approaches
+- **Saved Context:** `docs/enhancement/mcp-vs-cli-anything-evaluation.md`
+- **Key Findings:**
+  - Hybrid architecture recommended (MCP for custom tools, CLI-Anything for existing software)
+  - MCP: Real-time streaming, integrated security, AgentOS-native
+  - CLI-Anything: Zero dev effort, 1,508 proven tests, existing software support
+  - Implementation priority: LibreOffice → GIMP → Blender → Shotcut
+- **Next Steps:** Resume MCP vs CLI-Anything discussion during Topic #21 brainstorming
 
 **Files Created This Session:**
 - `docs/enhancement/topics/18-email-system-channel-notifications/00-specification.md` (COMPREHENSIVE DESIGN - 14 SECTIONS)
@@ -108,14 +121,19 @@ All context preserved in MASTER.md and INDEX.md
 ### 🚀 RECOMMENDED NEXT STEPS
 
 **Option A: Continue Brainstorming**
-1. **Topic #9:** Runtime Multi-Agent Orchestration — LangGraph Extension
-   - Complete detailed design (architecture decision made, needs: rich agent node, team templates, shared memory, agent spawning tool)
-   
-2. **Topic #19:** Storage Service — High priority, foundational
-   - Unified storage abstraction, MinIO integration, file upload/download capabilities
-   
-3. **Topic #20:** Projects/Spaces — High priority, organizational
-   - Organizational workspaces for team collaboration, resource isolation, project-level analytics
+1. **Topic #19:** Storage Service — High priority, foundational (CURRENT FOCUS)
+    - Architecture-01: Dedicated storage service + MCP-inspired adapter pattern
+    - Unified storage abstraction (MinIO/S3/Azure support)
+    - DB-only folder structure (File, Folder, FileShare, MemoryFileLink tables)
+    - 2000-3000 user scalability
+
+2. **Topic #20:** Projects/Spaces — High priority, organizational
+    - Organizational workspaces for team collaboration, resource isolation, project-level analytics
+
+3. **Topic #21:** Universal Integration — Medium priority, framework design
+    - ⚠️ **Resume MCP vs CLI-Anything discussion here**
+    - Design universal adapter framework for both MCP and CLI-Anything
+    - Create unified security model, streaming support, error handling
 
 **Option B: Start Implementation Planning**
 - Use `/gsd:plan-phase` to create implementation plans
