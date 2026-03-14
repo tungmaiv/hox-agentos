@@ -89,6 +89,7 @@
 | **Architecture** | Generic module pattern reusable for Security Scanner, Analytics, and future features |
 | **Scale Path** | Start with Docker Compose sidecars; migrate to Kubernetes Deployments with HPA |
 | **Analytics** | Dual-mode (Grafana + Embedded); Hybrid query strategy (materialized views + direct); 6 analytics categories; Tremor React for charts |
+| **UX Enhancement** | CSS Variables theming (Tailwind v4); MinIO avatar storage; Dual timezone (system + user); 3 themes + color customization |
 
 ### 🔄 Architecture Evolution
 
@@ -110,22 +111,22 @@
 
 ### 📊 Current Status
 
-**Completed ✅ (7):**
+**Completed ✅ (8):**
 - #1 Runtime Permission Approval (HITL)
 - #4 Admin Console LLM Configuration
-- #6 Admin Registry Edit UI  
+- #6 Admin Registry Edit UI
 - #8 Analytics & Observability Dashboard
 - #12 Advanced User & Group Management
+- #13 User Experience Enhancement
 - #14 AgentOS Dashboard & Mission Control
 - #15 Scheduler Engine & UI
 
-**Pending 🟡 (5):**
+**Pending 🟡 (4):**
 - #2 WhatsApp Business API Integration (Medium)
 - #5 GitHub Repository Skill Sources (Medium)
 - #7 Keycloak SSO Hardening (High) ⭐ **RECOMMENDED NEXT**
 - #9 HashiCorp Vault Integration (Low)
 - #10 Multi-Agent Orchestration (Low)
-- #13 User Experience Enhancement (Medium)
 
 ### 🚀 Recommended Next Steps
 
@@ -150,6 +151,7 @@
 - `docs/enhancement/agentos-dashboard-mission-control/00-specification.md` (NEW)
 - `docs/enhancement/scheduler-engine-ui/00-specification.md` (NEW)
 - `docs/enhancement/analytics-observability-dashboard/00-specification.md` (NEW)
+- `docs/enhancement/user-experience-enhancement/00-specification.md` (NEW)
 - `docs/enhancement/BRAINSTORMING-TRACKING.md` (UPDATED)
 - `docs/enhancement/README.md` (UPDATED)
 
@@ -166,6 +168,7 @@
 8. **Dashboard:** Integrated in Next.js; API aggregation layer; WebSocket real-time updates
 9. **Scheduler:** Extend existing Celery (don't replace); Dual UI (global + per-workflow); Full visual cron builder
 10. **Analytics:** Dual-mode (Grafana UI + Embedded panels); Hybrid query (materialized views + direct); Tremor React charts
+11. **UX Theming:** CSS Variables with Tailwind v4; MinIO for avatars; Dual timezone (system + user)
 
 **Technical Debt Notes:**
 - Old `local_group_roles` table to be deprecated in favor of `group_permissions`
@@ -177,6 +180,8 @@
 - Scheduler extends existing Celery infrastructure (no migration needed)
 - Analytics materialized views need concurrent refresh monitoring
 - Grafana dashboards need version control (JSON export/import)
+- MinIO service needs to be added to docker-compose.yml for avatar storage
+- Theme CSS variables need to be applied to all existing components
 
 **Open Questions for Future:**
 - Keycloak SSO error handling specifics (for Topic #7)
@@ -223,7 +228,7 @@ This document tracks all brainstorming topics for v1.4 and beyond. Each topic mo
 | 8 | Analytics & Observability Dashboard | ✅ COMPLETED | Medium | v1.4 | 1 Phase |
 | 9 | Multi-Agent Orchestration | 🟡 PENDING | Low | v1.5 | 2 Phases |
 | 12 | Advanced User & Group Management | ✅ COMPLETED | High | v1.4 | 1 Phase |
-| 13 | User Experience Enhancement | 🟡 PENDING | Medium | v1.4 | 1 Phase |
+| 13 | User Experience Enhancement | ✅ COMPLETED | Medium | v1.4 | 1 Phase |
 | 14 | AgentOS Dashboard & Mission Control | ✅ COMPLETED | High | v1.4 | 1.5 Phases |
 
 ---
@@ -280,6 +285,80 @@ No visibility into usage trends, performance metrics, costs, or security auditin
 - [ ] Time range filtering works (24h, 7d, 30d, 90d, custom)
 - [ ] Grafana accessible at port 3001
 - [ ] Export to CSV works for all tables
+
+#### Estimated Effort
+1 Phase (6 weeks)
+
+---
+
+### 13. User Experience Enhancement (UI Theme + User Profile)
+
+**Status:** ✅ COMPLETED  
+**Completed Date:** 2026-03-16  
+**Design Doc:** [docs/enhancement/user-experience-enhancement/00-specification.md](./user-experience-enhancement/00-specification.md)  
+
+#### Problem Statement
+Single light theme with no customization; no user avatars; no personal profiles; UTC-only timestamps causing confusion for international users.
+
+#### Target State (To-Be)
+- 3 built-in themes (Light, Dark, Navy Blue) with smooth transitions
+- Color customization: 6 curated presets + custom hex input
+- Avatar upload with crop/resize, stored in MinIO
+- Full user profile: display name, bio, preferences, notifications
+- Dual-level timezone: System-wide (admin) + per-user
+
+#### Key Decisions Made
+
+| Decision | Current | Target | Rationale |
+|----------|---------|--------|-----------|
+| **Theming Approach** | Light only | 3 themes + custom colors | User personalization, accessibility |
+| **Color System** | Fixed blue | CSS Variables (Tailwind v4) | Zero JS overhead, instant switching |
+| **Avatar Storage** | None | MinIO (S3-compatible) | Scalable, aligns with storage system vision |
+| **Timezone** | UTC only | System + User timezones | Global team support |
+| **Customization** | None | Presets + Hex input | Balance ease-of-use with flexibility |
+
+#### Technical Approach
+- CSS Variables architecture using Tailwind v4's native support
+- MinIO service in docker-compose for avatar storage
+- Three avatar sizes generated: 40x40, 120x120, 400x400
+- `date-fns-tz` for reliable timezone conversion
+- localStorage for instant theme, database for persistence
+
+#### Features
+
+**Theme System:**
+- Light, Dark, Navy Blue themes
+- 6 curated color presets (Ocean Blue, Forest Green, Royal Purple, Sunset Orange, Ruby Red, Teal Wave)
+- Custom hex color input with WCAG validation
+- System preference detection
+- Smooth 0.3s CSS transitions
+
+**User Profile:**
+- Avatar upload with crop/resize
+- Display name (editable, separate from Keycloak)
+- Bio/description (500 character limit)
+- Contact preferences
+- Profile visibility (Public/Organization/Private)
+
+**Preferences:**
+- Theme selection
+- Color customization
+- Timezone (searchable dropdown)
+- Date format (MM/DD/YYYY, DD/MM/YYYY, YYYY-MM-DD)
+
+**Notifications:**
+- Email toggles (weekly digest, failures, security)
+- In-app toggles (features, mentions, completions)
+- Channel toggles (Telegram, WhatsApp)
+
+#### Success Criteria
+- [ ] 3 themes work with smooth transitions
+- [ ] Color customization with presets and hex input
+- [ ] Avatar upload with crop/resize
+- [ ] Display name and bio editable
+- [ ] Timezone selection works
+- [ ] Notification settings affect actual delivery
+- [ ] Settings persist across sessions
 
 #### Estimated Effort
 1 Phase (6 weeks)
@@ -919,6 +998,7 @@ When starting next brainstorming session, consider:
 3. ✅ Advanced User & Group Management
 4. ✅ Admin Console LLM Configuration (Pluggable module architecture)
 5. ✅ Analytics & Observability Dashboard
+6. ✅ User Experience Enhancement (UI Theme + User Profile)
 
 ### High Priority (v1.4 Must-Have)
 5. Keycloak SSO Hardening (Stability) ⭐ **NEXT RECOMMENDED**
@@ -926,7 +1006,6 @@ When starting next brainstorming session, consider:
 ### Medium Priority (v1.4 Should-Have)
 6. WhatsApp Business API Integration (Channel expansion)
 7. GitHub Repository Skill Sources (Developer experience)
-8. User Experience Enhancement (UI Theme + User Profile)
 
 ### Low Priority (Post-v1.4)
 10. HashiCorp Vault Integration (Enterprise feature)
@@ -990,8 +1069,8 @@ For each topic:
 **Next Recommended Topic:** Keycloak SSO Hardening — Critical stability fix
 
 **Alternatives:**
-- User Experience Enhancement — Polish the UI, improve user satisfaction
 - GitHub Repository Skill Sources — Developer experience improvement
+- Start implementation planning for completed topics
 
 ---
 
@@ -1120,12 +1199,47 @@ For each topic:
 - Real-time queue status
 - RBAC-enforced throughout
 
-**Completed Topics Now: 6**
-- #1, #4, #6, #12, #14, #15
+---
 
-**Remaining Pending: 5**
+### Session 4: 2026-03-16 (Evening)
+
+**Session Status:** ✅ COMPLETED - Ready for next session  
+**Total Topics Completed This Session:** 1  
+
+**Topic #13: User Experience Enhancement (UI Theme + User Profile)** ✅
+- Comprehensive UX transformation with dual-component system
+- 3 Built-in themes: Light, Dark, Navy Blue
+- Color customization: 6 curated presets + custom hex input
+- Full user profile: Avatar (MinIO), bio, preferences, notifications
+- Dual-level timezone: System-wide (admin) + per-user
+- CSS Variables architecture (Tailwind v4 native)
+- Avatar storage via MinIO (S3-compatible)
+- 6-week implementation timeline (1 Phase)
+- Consistent with all other v1.4 topics
+- **Design Doc:** `docs/enhancement/user-experience-enhancement/00-specification.md`
+
+**Brainstorming Highlights:**
+- Analyzed existing Tailwind v4 CSS variable foundation
+- Selected CSS Variables approach over next-themes (better performance, Tailwind v4 native)
+- Defined complete color system with 17 CSS variables per theme
+- Architected dual-level timezone management (system + user)
+- Integrated MinIO for avatar storage (aligns with broader storage system vision)
+- Designed 4-tab profile structure (Profile, Preferences, Notifications, Security)
+
+**Architecture Decisions:**
+- CSS Variables strategy for zero-JS-overhead theming
+- MinIO (S3-compatible) for scalable avatar storage
+- 6 curated color presets + custom hex input
+- localStorage for instant theme, database for persistence
+- 3 avatar sizes generated (40px, 120px, 400px)
+- date-fns-tz for reliable timezone handling
+
+**Completed Topics Now: 8**
+- #1, #4, #6, #8, #12, #13, #14, #15
+
+**Remaining Pending: 4**
 - #7 Keycloak SSO Hardening (Critical - Recommended Next)
-- #2, #5, #8, #13 (Medium priority)
+- #2, #5 (Medium priority)
 
 ---
 
