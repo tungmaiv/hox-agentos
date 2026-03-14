@@ -130,8 +130,9 @@ All context preserved in MASTER.md and INDEX.md
 
 **Option B: Start Implementation Planning**
 - Use `/gsd:plan-phase` to create implementation plans
-- Begin with Topic #18 (Email System) — design is complete
-- All 12 completed topics ready for planning
+- Begin with Topic #19 (Storage Service) — design complete
+- Implementation plan created: docs/plans/2026-03-14-storage-service.md
+- Topics #1, #4-8, #12-18 also ready for planning (13 topics total)
 
 **Option C: Plan v1.7+ Topics**
 - Brainstorm additional v1.7+ features
