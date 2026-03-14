@@ -56,7 +56,30 @@ Create comprehensive detail and edit pages for all registry types (agents, tools
 
 ---
 
-### 3. Security Scan Module
+### 3. Advanced User & Group Management ⭐ NEW
+
+**Status:** ✅ Design Complete  
+**Priority:** High  
+**Target:** v1.4
+
+Transform AgentOS user management into an enterprise-grade identity system with direct group-based permissions and seamless external identity provider integration (Keycloak/AD/LDAP). Features clear separation between Identity (external) and Permissions (AgentOS-local).
+
+**Key Capabilities:**
+- Direct group permissions (no role indirection)
+- Global Groups (read-only mirror of Keycloak/AD)
+- Local Groups (permission-bearing with external mappings)
+- Group detail pages with Members/Permissions/Settings tabs
+- "Manage Groups" modal for user group assignment
+- Auto-provisioning based on external group membership
+- Permission visibility by category
+- Manual and synced group membership tracking
+
+**Documentation:**
+- [00-specification.md](advanced-user-group-management/00-specification.md) - Complete design specification
+
+---
+
+### 4. Security Scan Module
 
 **Status:** Planning Complete  
 **Priority:** High  

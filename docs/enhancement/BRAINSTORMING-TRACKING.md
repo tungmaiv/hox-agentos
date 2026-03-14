@@ -37,6 +37,7 @@ This document tracks all brainstorming topics for v1.4 and beyond. Each topic mo
 | 7 | Keycloak SSO Hardening | 🟡 PENDING | High | v1.4 | 0.5 Phase |
 | 8 | Analytics & Observability Dashboard | 🟡 PENDING | Medium | v1.4 | 1 Phase |
 | 9 | Multi-Agent Orchestration | 🟡 PENDING | Low | v1.5 | 2 Phases |
+| 12 | Advanced User & Group Management | ✅ COMPLETED | High | v1.4 | 1 Phase |
 
 ---
 
@@ -161,6 +162,94 @@ Admin registry pages (agents, tools, MCP servers) lack detail pages and form-bas
 
 #### Estimated Effort
 0.5-1 Phase (5 plans)
+
+---
+
+### 12. Advanced User & Group Management with External Identity Integration
+
+**Status:** ✅ COMPLETED  
+**Completed Date:** 2026-03-14  
+**Design Doc:** [docs/enhancement/advanced-user-group-management/00-specification.md](./advanced-user-group-management/00-specification.md)  
+
+#### Problem Statement
+Current group management is limited: no inline user-to-group assignment, can't edit user groups after creation, groups only show member count (not who), no group detail pages, and no external identity provider integration for enterprise scenarios.
+
+#### Current State (As-Is)
+- **Permission Model:** Complex (User → Direct Roles OR User → Groups → Roles → Permissions)
+- **Group Assignment:** Only at user creation time, cannot edit after
+- **Group Visibility:** Shows only member count, not member list
+- **No Detail Pages:** Groups are rows only, no drill-down
+- **No External Sync:** Keycloak/AD groups not integrated
+- **Permission Clarity:** Hidden behind role abstraction
+
+#### Target State (To-Be)
+- **Permission Model:** Clean (User → Local Groups → Permissions directly)
+- **Group Assignment:** "Manage Groups" modal for anytime editing
+- **Group Detail Pages:** /admin/groups/[id] with Members/Permissions/Settings tabs
+- **External Integration:** Global Groups (Keycloak/AD) map to Local Groups
+- **Permission Visibility:** Expanded checklist showing all granted permissions
+- **Auto-Provisioning:** Users automatically get permissions based on external group membership
+
+#### Key Decisions Made
+
+| Decision | Current | Target | Rationale |
+|----------|---------|--------|-----------|
+| **Permission path** | Groups → Roles → Permissions | Groups → Permissions (direct) | Simpler, clearer audit trail |
+| **External groups** | Not supported | Global Groups (read-only mirror) | IT manages identities externally |
+| **Local groups** | Manual only | Permission-bearing with external mappings | AgentOS admin controls permissions |
+| **Assignment UI** | Creation-time only | Modal dialog (Manage Groups) | Easier for large user bases |
+| **Detail view** | None (count only) | Full page with tabs | Complete management capability |
+| **Permission display** | Hidden in roles | Expanded checklist by category | Full visibility |
+
+#### Architecture Highlights
+
+**Three-Layer Design:**
+```
+External IDP (Keycloak/AD/LDAP)
+    ↓
+Global Groups (read-only, auto-sync)
+    ↓ [Admin mapping]
+Local Groups (permission-bearing)
+    ↓
+Permissions → User Access
+```
+
+**Key Features:**
+- **Global Groups:** Mirror external IDP groups (keycloak:/engineering)
+- **Local Groups:** AgentOS-managed with direct permissions
+- **Mappings:** Link global to local (e.g., keycloak:/engineering → "Engineering Team")
+- **Auto-Sync:** Users automatically join local groups based on external membership
+- **Exceptions:** Manual add/remove overrides auto-sync
+
+#### Database Changes
+- New tables: `global_groups`, `group_permissions`, `group_mappings`
+- Enhanced: `local_user_groups` with source tracking
+- Migration: Convert `local_group_roles` → `group_permissions`
+
+#### UI Components
+- **ManageGroupsModal:** Add/remove users from groups
+- **Group Detail Page:** Members tab, Permissions tab, Settings tab
+- **PermissionChecklist:** Categorized permission management
+- **SyncStatusIndicator:** Show external sync health
+
+#### Implementation Phases
+1. **Backend Foundation:** Database migration, new APIs, permission resolution
+2. **Group Management UI:** Detail pages, permission management
+3. **User Enhancement:** Manage Groups modal, user detail page
+4. **Keycloak Integration:** Global group sync, auto-mapping
+
+#### Success Criteria
+- [ ] Groups have direct permissions (no role indirection)
+- [ ] Group detail page with Members/Permissions/Settings tabs
+- [ ] "Manage Groups" modal for user group assignment
+- [ ] Keycloak groups sync as Global Groups
+- [ ] Global-to-Local group mappings work
+- [ ] Permission resolution includes all group permissions
+- [ ] UI distinguishes manual vs synced group memberships
+- [ ] Audit log tracks permission changes
+
+#### Estimated Effort
+1 Phase (6 plans)
 
 ---
 
@@ -405,20 +494,23 @@ Enable agents to spawn sub-agents and coordinate complex workflows. Currently si
 
 When starting next brainstorming session, consider:
 
+### Completed ✅
+1. ✅ Runtime Permission Approval (HITL)
+2. ✅ Admin Registry Edit UI
+3. ✅ Advanced User & Group Management
+
 ### High Priority (v1.4 Must-Have)
-1. ✅ Runtime Permission Approval (DONE)
-2. ✅ Admin Registry Edit UI (DONE)
-3. Keycloak SSO Hardening (Stability)
-4. Admin Console LLM Configuration (Ops improvement)
+4. Keycloak SSO Hardening (Stability)
+5. Admin Console LLM Configuration (Ops improvement)
 
 ### Medium Priority (v1.4 Should-Have)
-5. WhatsApp Business API Integration (Channel expansion)
-6. GitHub Repository Skill Sources (Developer experience)
-7. Analytics & Observability Dashboard (Ops visibility)
+6. WhatsApp Business API Integration (Channel expansion)
+7. GitHub Repository Skill Sources (Developer experience)
+8. Analytics & Observability Dashboard (Ops visibility)
 
 ### Low Priority (Post-v1.4)
-8. HashiCorp Vault Integration (Enterprise feature)
-9. Multi-Agent Orchestration (v1.5 vision)
+9. HashiCorp Vault Integration (Enterprise feature)
+10. Multi-Agent Orchestration (v1.5 vision)
 
 ---
 
