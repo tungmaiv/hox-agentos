@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Platform Enhancement & Infrastructure
 status: unknown
-last_updated: "2026-03-15T18:44:10.167Z"
+last_updated: "2026-03-16T20:15:00.000Z"
 progress:
   total_phases: 14
-  completed_phases: 12
-  total_plans: 55
-  completed_plans: 55
+  completed_phases: 13
+  total_plans: 59
+  completed_plans: 59
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-15)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates their daily work routines and lets them build custom automations without writing code -- all within an enterprise-secure, on-premise environment where data never leaves the company.
-**Current focus:** v1.4 Phase 28 -- Storage Service (in progress)
+**Current focus:** v1.4 Phase 29 -- next phase
 
 ## Current Position
 
-Phase: 28 of 35 (Storage Service)
-Plan: 3 of 4 in current phase
-Status: Phase 28 plan 3 complete -- File Manager UI at /files (folder tree, grid/list, upload tray, share dialog)
-Last activity: 2026-03-16 -- Completed 28-03 (File Manager UI)
+Phase: 28 COMPLETE — Phase 29 next
+Plan: 4 of 4 in Phase 28 (done)
+Status: Phase 28 COMPLETE — Storage Service fully delivered (MinIO, upload/download/share, File Manager UI, admin settings, notification bell)
+Last activity: 2026-03-16 — Completed 28-04 (admin storage settings + notification bell + E2E checkpoint)
 
-Progress: [██░░░░░░░░] 10%
+Progress: [███░░░░░░░] ~21% (3 phases done of v1.4)
 
 ## Performance Metrics
 
@@ -51,6 +51,7 @@ Progress: [██░░░░░░░░] 10%
 | Phase 28 P01 | 25 | 2 tasks | 11 files |
 | Phase 28 P02 | 21min | 2 tasks | 7 files |
 | Phase 28 P03 | 25min | 2 tasks | 12 files |
+| Phase 28 P04 | ~60min | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -90,6 +91,8 @@ v1.4 roadmap decisions:
 - [Phase 28]: [28-03]: FileManager imported via next/dynamic with ssr=false — uses browser APIs (dropzone, XHR)
 - [Phase 28]: [28-03]: pnpm run build blocked by Docker-owned .next directory; tsc --noEmit used for host-side TypeScript verification (0 errors)
 - [Phase 28]: [28-03]: shared-with-me treated as virtual folder ID string to avoid separate state boolean
+- [Phase 28]: [28-04]: Admin storage page + notification bell must use relative paths, not NEXT_PUBLIC_API_URL (baked at build time to backend:8000, unreachable from browser)
+- [Phase 28]: [28-04]: dynamic(..., ssr:false) cannot be in Next.js 15 Server Components — use a "use client" loader wrapper that holds the dynamic import
 
 ### Pending Todos
 
@@ -104,5 +107,5 @@ None for v1.4 start. Design specs exist in `docs/enhancement/topics/` for all 9 
 ## Session Continuity
 
 Last session: 2026-03-16
-Stopped at: Completed 28-03-PLAN.md (File Manager UI at /files)
+Stopped at: Phase 28 complete (all 4 plans done, E2E checkpoint passed)
 Resume file: None
