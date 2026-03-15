@@ -34,8 +34,9 @@ const SYSTEM_SUBNAV = [
   { label: "Identity", href: "/admin/identity" },
   { label: "LLM", href: "/admin/system/llm" },
   { label: "Memory", href: "/admin/memory" },
+  { label: "Storage", href: "/admin/storage" },
 ];
-const SYSTEM_PATHS = ["/admin/config", "/admin/identity", "/admin/system", "/admin/memory"];
+const SYSTEM_PATHS = ["/admin/config", "/admin/identity", "/admin/system", "/admin/memory", "/admin/storage"];
 
 const BUILD_SUBNAV = [
   { label: "Artifact Builder", href: "/admin/builder" },

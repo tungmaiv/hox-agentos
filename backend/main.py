@@ -31,6 +31,7 @@ from api.routes import (
     user_skills,
     user_tools,
 )
+from api.routes.admin_storage import router as admin_storage_router
 from api.routes.registry import router as registry_router
 from api.routes.storage import router as storage_router
 from api.routes.admin_keycloak import router as admin_keycloak_router
@@ -328,6 +329,10 @@ def create_app() -> FastAPI:
     # Storage service — /api/storage/* (file/folder/share management + memory indexing)
     # Note: router already includes /api/storage prefix in its definition
     app.include_router(storage_router)
+
+    # Admin storage settings — /api/admin/storage/settings (tool:admin permission)
+    # Note: router already includes /api/admin/storage prefix in its definition
+    app.include_router(admin_storage_router)
 
     return app
 

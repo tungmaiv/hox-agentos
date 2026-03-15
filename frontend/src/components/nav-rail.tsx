@@ -22,6 +22,7 @@ import {
   Settings,
 } from "lucide-react";
 import { SignOutButton } from "@/components/sign-out-button";
+import UserNotificationBell from "@/components/user-notification-bell";
 
 const ADMIN_ROLES = ["admin", "developer", "it-admin"];
 
@@ -149,6 +150,9 @@ export function NavRail() {
           label="Settings"
           active={isActive("/settings")}
         />
+
+        {/* User notification bell — share notifications */}
+        <UserNotificationBell />
 
         {/* Avatar dropdown — Profile + SignOut */}
         <div ref={dropdownRef} className="relative">

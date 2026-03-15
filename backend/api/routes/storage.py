@@ -20,6 +20,9 @@ Routes:
   DELETE /api/storage/shares/{share_id}      — revoke share (owner only)
   GET    /api/storage/shared-with-me         — files/folders shared with calling user
   GET    /api/storage/users/search           — user typeahead for share dialog
+  GET    /api/storage/notifications          — unread share notifications for current user
+  POST   /api/storage/notifications/{id}/read — mark notification as read
+  POST   /api/storage/notifications/read-all  — mark all notifications as read
 """
 from __future__ import annotations
 
@@ -34,7 +37,7 @@ import structlog
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from sqlalchemy import or_, select
+from sqlalchemy import or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.config import settings
@@ -749,3 +752,98 @@ async def search_users(
         )
         for u in users
     ]
+
+
+# ---------------------------------------------------------------------------
+# Notification endpoints (per-user share notifications)
+# ---------------------------------------------------------------------------
+
+
+class UserNotificationResponse(BaseModel):
+    id: str
+    title: str
+    message: str | None
+    notification_type: str
+    is_read: bool
+    created_at: str
+
+
+# NOTE: /notifications/read-all MUST be declared BEFORE /notifications/{notification_id}/read
+# to prevent FastAPI routing collision where "read-all" is matched as a UUID notification_id.
+
+
+@router.post("/notifications/read-all")
+async def mark_all_notifications_read(
+    current_user: Any = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> dict[str, str]:
+    """Mark all notifications for the calling user as read."""
+    user_id: UUID = current_user["user_id"]
+    await session.execute(
+        update(UserNotification)
+        .where(
+            UserNotification.user_id == user_id,
+            UserNotification.is_read == False,  # noqa: E712
+        )
+        .values(is_read=True)
+    )
+    await session.commit()
+    logger.info("storage_notifications_read_all", user_id=str(user_id))
+    return {"status": "all_read"}
+
+
+@router.get("/notifications")
+async def list_notifications(
+    current_user: Any = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> list[UserNotificationResponse]:
+    """Return unread notifications for the calling user, ordered by created_at DESC, limit 20."""
+    user_id: UUID = current_user["user_id"]
+    result = await session.execute(
+        select(UserNotification)
+        .where(
+            UserNotification.user_id == user_id,
+            UserNotification.is_read == False,  # noqa: E712
+        )
+        .order_by(UserNotification.created_at.desc())
+        .limit(20)
+    )
+    notifications = result.scalars().all()
+    return [
+        UserNotificationResponse(
+            id=str(n.id),
+            title=n.title,
+            message=n.message,
+            notification_type=n.notification_type,
+            is_read=n.is_read,
+            created_at=n.created_at.isoformat() if n.created_at else "",
+        )
+        for n in notifications
+    ]
+
+
+@router.post("/notifications/{notification_id}/read")
+async def mark_notification_read(
+    notification_id: UUID,
+    current_user: Any = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> dict[str, str]:
+    """Mark a single notification as read. User can only read their own notifications."""
+    user_id: UUID = current_user["user_id"]
+    result = await session.execute(
+        select(UserNotification).where(UserNotification.id == notification_id)
+    )
+    notification = result.scalar_one_or_none()
+    if notification is None:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    if notification.user_id != user_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    notification.is_read = True
+    await session.commit()
+    logger.info(
+        "storage_notification_read",
+        notification_id=str(notification_id),
+        user_id=str(user_id),
+    )
+    return {"status": "read"}
