@@ -226,6 +226,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   providers,
   pages: {
     signIn: "/login", // Use our custom login page instead of Auth.js default
+    error: "/login", // Redirect OAuth errors (Keycloak down mid-flow) to login page
   },
   session: { strategy: "jwt" }, // JWT in server memory — NOT localStorage
   callbacks: {

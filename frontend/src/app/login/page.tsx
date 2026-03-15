@@ -43,7 +43,12 @@ function LoginForm() {
 
   const sessionExpired =
     urlError === "SessionExpired" || urlError === "RefreshAccessTokenError";
-  const ssoUnavailable = urlError === "SSOUnavailable";
+  // SSOUnavailable: explicit circuit breaker redirect
+  // OAuthCallbackError / OAuthSignin: next-auth catches Keycloak down mid-flow
+  const ssoUnavailable =
+    urlError === "SSOUnavailable" ||
+    urlError === "OAuthCallbackError" ||
+    urlError === "OAuthSignin";
 
   // Auto-dismiss the signed-out success banner after 3 seconds
   useEffect(() => {

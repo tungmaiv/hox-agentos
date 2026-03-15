@@ -14,6 +14,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
+import NotificationBell from "@/components/admin/notification-bell";
 
 // ---------------------------------------------------------------------------
 // Tab / sub-nav definitions
@@ -156,6 +157,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <h1 className="text-lg font-semibold text-gray-900">Admin Dashboard</h1>
           </div>
           <div className="flex items-center gap-3">
+            {/* Admin notifications bell (SSO health, system alerts) */}
+            <NotificationBell />
             {/* Pending skills bell */}
             <div className="relative">
               <button
