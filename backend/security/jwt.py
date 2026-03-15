@@ -60,10 +60,15 @@ async def _fetch_jwks_from_remote(config: KeycloakConfig) -> dict[str, Any]:
     while the in-process cache logic continues to run and be tested.
 
     Uses config.ca_cert_path for self-signed TLS (local dev).
+    Records success/failure on the SSO circuit breaker.
 
     Raises:
         HTTPException(503) if the Keycloak endpoint is unreachable.
     """
+    from security.circuit_breaker import get_circuit_breaker
+
+    cb = get_circuit_breaker()
+
     # Use the config CA cert for self-signed Keycloak TLS (local dev).
     # Falls back to system default trust store when ca_cert_path is not set.
     ssl_verify: str | bool = config.ca_cert_path or True
@@ -71,9 +76,11 @@ async def _fetch_jwks_from_remote(config: KeycloakConfig) -> dict[str, Any]:
         async with httpx.AsyncClient(verify=ssl_verify) as client:
             resp = await client.get(config.jwks_url, timeout=10.0)
             resp.raise_for_status()
+            await cb.record_success()
             return resp.json()
     except httpx.HTTPError as exc:
         logger.error("jwks_fetch_failed", url=config.jwks_url, error=str(exc))
+        await cb.record_failure(f"JWKS fetch failed: {exc}")
         raise HTTPException(
             status_code=503,
             detail="Authentication service unavailable — JWKS fetch failed",
@@ -218,6 +225,17 @@ async def validate_token(
     kc_config = await get_keycloak_config()
 
     if kc_config is not None and kc_config.enabled and issuer == kc_config.issuer_url:
+        # Circuit breaker: block new SSO logins when Keycloak is down.
+        # Existing sessions with cached JWKS still work (cache hit path).
+        from security.circuit_breaker import get_circuit_breaker
+
+        cb = get_circuit_breaker()
+        if await cb.is_open() and not _JWKS_CACHE:
+            # Only block when we have no cached JWKS to fall back on
+            raise HTTPException(
+                status_code=503,
+                detail="SSO temporarily unavailable — please try again shortly or use local login",
+            )
         return await _validate_keycloak_token(token, kc_config)
     elif issuer == "blitz-local":
         # Import here to avoid circular import: local_auth imports from core.models,

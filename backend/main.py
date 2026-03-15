@@ -39,6 +39,8 @@ from api.routes.admin_llm import router as admin_llm_router
 from api.routes.admin_memory import router as admin_memory_router
 from api.routes.admin_system import router as admin_system_router
 from api.routes.auth_local import router as auth_local_router
+from api.routes.admin_notifications import router as admin_notifications_router
+from api.routes.admin_sso_health import router as admin_sso_health_router
 from api.routes.auth_config import router as auth_config_router
 from api.routes.auth_local_password import router as auth_local_password_router
 from api.routes.channels import router as channels_router
@@ -103,6 +105,40 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         import structlog as _structlog
         _structlog.get_logger(__name__).warning(
             "keycloak_config_prewarm_failed", error=str(exc)
+        )
+
+    # Register SSO circuit breaker transition callback for admin notifications + Telegram alerts.
+    try:
+        from security.circuit_breaker import get_circuit_breaker
+        from security.sso_notifications import on_sso_state_transition
+
+        cb = get_circuit_breaker()
+        cb.register_transition_callback(on_sso_state_transition)
+
+        # Load thresholds from platform_config if available
+        try:
+            from core.db import async_session as _async_session
+            from core.models.platform_config import PlatformConfig as _PC
+            from sqlalchemy import select as _select
+
+            async with _async_session() as _session:
+                _result = await _session.execute(_select(_PC).where(_PC.id == 1))
+                _row = _result.scalar_one_or_none()
+                if _row:
+                    cb.update_thresholds(
+                        failure_threshold=_row.cb_failure_threshold,
+                        recovery_timeout_seconds=float(_row.cb_recovery_timeout),
+                        half_open_max_calls=_row.cb_half_open_max_calls,
+                    )
+        except Exception:
+            pass  # Use defaults if DB not ready
+
+        import structlog as _structlog
+        _structlog.get_logger(__name__).info("sso_circuit_breaker_callback_registered")
+    except Exception as exc:
+        import structlog as _structlog
+        _structlog.get_logger(__name__).warning(
+            "sso_circuit_breaker_callback_registration_failed", error=str(exc)
         )
 
     # Hypothesis 5 — pre-warm JWKS cache at startup so the first auth request
@@ -236,6 +272,12 @@ def create_app() -> FastAPI:
     # Admin Keycloak identity config — GET/POST /api/admin/keycloak/* (tool:admin permission)
     # Internal provider config — GET /api/internal/keycloak/provider-config (X-Internal-Key)
     app.include_router(admin_keycloak_router)
+
+    # Admin SSO health — GET /api/admin/sso/health, PUT /api/admin/sso/circuit-breaker/config
+    app.include_router(admin_sso_health_router)
+
+    # Admin notifications — GET/POST /api/admin/notifications/* (tool:admin permission)
+    app.include_router(admin_notifications_router)
 
     # User skill listing and execution — GET /api/skills, POST /api/skills/{name}/run
     # Note: router already includes /api prefix in its definition
