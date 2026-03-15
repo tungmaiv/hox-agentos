@@ -1,7 +1,7 @@
 # Requirements: Blitz AgentOS
 
 **Defined:** 2026-03-15
-**Core Value:** Every Blitz employee gets an intelligent, context-aware assistant that automates their daily work routines and lets them build custom automations without writing code — all within an enterprise-secure, on-premise environment where data never leaves the company.
+**Core Value:** Every Blitz employee gets an intelligent, context-aware assistant that automates their daily work routines and lets them build custom automations without writing code -- all within an enterprise-secure, on-premise environment where data never leaves the company.
 
 ## v1.4 Requirements
 
@@ -11,10 +11,10 @@ Requirements for v1.4 Platform Enhancement & Infrastructure. Each maps to roadma
 
 - [ ] **KC-01**: Admin can view SSO health status with categorized diagnostics (certificate/config/unreachable/timeout)
 - [ ] **KC-02**: Admin can test Keycloak configuration before saving (DNS, TLS, OIDC discovery, client auth)
-- [ ] **KC-03**: Login page shows friendly error messages instead of "Server error — Configuration"
+- [ ] **KC-03**: Login page shows friendly error messages instead of "Server error -- Configuration"
 - [ ] **KC-04**: SSO failures gracefully fall back to local auth with helpful message
 - [ ] **KC-05**: SSO button hides dynamically when Keycloak is unhealthy
-- [ ] **KC-06**: Circuit breaker prevents cascade of failed SSO auth attempts (5 failures → open → 60s half-open)
+- [ ] **KC-06**: Circuit breaker prevents cascade of failed SSO auth attempts (5 failures -> open -> 60s half-open)
 - [ ] **KC-07**: Admin receives in-app notification when SSO goes down
 
 ### Admin Registry Edit UI
@@ -45,7 +45,7 @@ Requirements for v1.4 Platform Enhancement & Infrastructure. Each maps to roadma
 - [ ] **PERM-04**: Approval creates persistent ToolAcl entry and auto-resumes execution
 - [ ] **PERM-05**: Auto-approve rule engine evaluates configurable conditions before creating request
 - [ ] **PERM-06**: Admin UI for rule builder with visual conditions and test mode
-- [ ] **PERM-07**: Configurable timeout with escalation path (24h → manager → it-admin → expire)
+- [ ] **PERM-07**: Configurable timeout with escalation path (24h -> manager -> it-admin -> expire)
 
 ### Multi-Agent Tab Architecture
 
@@ -88,7 +88,7 @@ Requirements for v1.4 Platform Enhancement & Infrastructure. Each maps to roadma
 - [ ] **STOR-02**: Per-user personal storage with virtual folder hierarchy (database-backed)
 - [ ] **STOR-03**: File upload/download with presigned URLs, metadata storage, SHA-256 deduplication
 - [ ] **STOR-04**: File sharing between users with READ/WRITE/ADMIN permissions
-- [ ] **STOR-05**: Memory integration — add files to long-term memory with auto re-embedding on update
+- [ ] **STOR-05**: Memory integration -- add files to long-term memory with auto re-embedding on update
 - [ ] **STOR-06**: File manager UI with grid/list view, folder tree, breadcrumb navigation, search
 
 ### Email System & Notifications
@@ -114,11 +114,11 @@ Requirements for v1.4 Platform Enhancement & Infrastructure. Each maps to roadma
 
 ### v1.6+ Architecture
 
-- **#20**: Projects & Spaces — workspace isolation, team collaboration
-- **#09**: Multi-Agent Orchestration — runtime agent coordination
-- **#12**: Advanced User & Group Management — LDAP sync, delegation
-- **#05**: Universal Skill Import — Claude Code, Cursor, Windsurf format import
-- **#04**: Admin Console LLM Config — full LLM model/provider management UI
+- **#20**: Projects & Spaces -- workspace isolation, team collaboration
+- **#09**: Multi-Agent Orchestration -- runtime agent coordination
+- **#12**: Advanced User & Group Management -- LDAP sync, delegation
+- **#05**: Universal Skill Import -- Claude Code, Cursor, Windsurf format import
+- **#04**: Admin Console LLM Config -- full LLM model/provider management UI
 
 ### v1.7+ Architecture
 
@@ -146,77 +146,77 @@ Requirements for v1.4 Platform Enhancement & Infrastructure. Each maps to roadma
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| KC-01 | Pending | Pending |
-| KC-02 | Pending | Pending |
-| KC-03 | Pending | Pending |
-| KC-04 | Pending | Pending |
-| KC-05 | Pending | Pending |
-| KC-06 | Pending | Pending |
-| KC-07 | Pending | Pending |
-| REG-01 | Pending | Pending |
-| REG-02 | Pending | Pending |
-| REG-03 | Pending | Pending |
-| REG-04 | Pending | Pending |
-| REG-05 | Pending | Pending |
-| REG-06 | Pending | Pending |
-| SCHED-01 | Pending | Pending |
-| SCHED-02 | Pending | Pending |
-| SCHED-03 | Pending | Pending |
-| SCHED-04 | Pending | Pending |
-| SCHED-05 | Pending | Pending |
-| SCHED-06 | Pending | Pending |
-| SCHED-07 | Pending | Pending |
-| SCHED-08 | Pending | Pending |
-| PERM-01 | Pending | Pending |
-| PERM-02 | Pending | Pending |
-| PERM-03 | Pending | Pending |
-| PERM-04 | Pending | Pending |
-| PERM-05 | Pending | Pending |
-| PERM-06 | Pending | Pending |
-| PERM-07 | Pending | Pending |
-| TABS-01 | Pending | Pending |
-| TABS-02 | Pending | Pending |
-| TABS-03 | Pending | Pending |
-| TABS-04 | Pending | Pending |
-| TABS-05 | Pending | Pending |
-| UX-01 | Pending | Pending |
-| UX-02 | Pending | Pending |
-| UX-03 | Pending | Pending |
-| UX-04 | Pending | Pending |
-| UX-05 | Pending | Pending |
-| UX-06 | Pending | Pending |
-| UX-07 | Pending | Pending |
-| DASH-01 | Pending | Pending |
-| DASH-02 | Pending | Pending |
-| DASH-03 | Pending | Pending |
-| DASH-04 | Pending | Pending |
-| DASH-05 | Pending | Pending |
-| ANLYT-01 | Pending | Pending |
-| ANLYT-02 | Pending | Pending |
-| ANLYT-03 | Pending | Pending |
-| ANLYT-04 | Pending | Pending |
-| ANLYT-05 | Pending | Pending |
-| ANLYT-06 | Pending | Pending |
-| STOR-01 | Pending | Pending |
-| STOR-02 | Pending | Pending |
-| STOR-03 | Pending | Pending |
-| STOR-04 | Pending | Pending |
-| STOR-05 | Pending | Pending |
-| STOR-06 | Pending | Pending |
-| EMAIL-01 | Pending | Pending |
-| EMAIL-02 | Pending | Pending |
-| EMAIL-03 | Pending | Pending |
-| EMAIL-04 | Pending | Pending |
-| EMAIL-05 | Pending | Pending |
-| EMAIL-06 | Pending | Pending |
-| CARRY-01 | Pending | Pending |
-| CARRY-02 | Pending | Pending |
+| KC-01 | Phase 26 | Pending |
+| KC-02 | Phase 26 | Pending |
+| KC-03 | Phase 26 | Pending |
+| KC-04 | Phase 26 | Pending |
+| KC-05 | Phase 26 | Pending |
+| KC-06 | Phase 26 | Pending |
+| KC-07 | Phase 26 | Pending |
+| REG-01 | Phase 27 | Pending |
+| REG-02 | Phase 27 | Pending |
+| REG-03 | Phase 27 | Pending |
+| REG-04 | Phase 27 | Pending |
+| REG-05 | Phase 27 | Pending |
+| REG-06 | Phase 27 | Pending |
+| STOR-01 | Phase 28 | Pending |
+| STOR-02 | Phase 28 | Pending |
+| STOR-03 | Phase 28 | Pending |
+| STOR-04 | Phase 28 | Pending |
+| STOR-05 | Phase 28 | Pending |
+| STOR-06 | Phase 28 | Pending |
+| UX-01 | Phase 29 | Pending |
+| UX-02 | Phase 29 | Pending |
+| UX-03 | Phase 29 | Pending |
+| UX-04 | Phase 29 | Pending |
+| UX-05 | Phase 29 | Pending |
+| UX-06 | Phase 29 | Pending |
+| UX-07 | Phase 29 | Pending |
+| SCHED-01 | Phase 30 | Pending |
+| SCHED-02 | Phase 30 | Pending |
+| SCHED-03 | Phase 30 | Pending |
+| SCHED-04 | Phase 30 | Pending |
+| SCHED-05 | Phase 30 | Pending |
+| SCHED-06 | Phase 30 | Pending |
+| SCHED-07 | Phase 30 | Pending |
+| SCHED-08 | Phase 30 | Pending |
+| PERM-01 | Phase 31 | Pending |
+| PERM-02 | Phase 31 | Pending |
+| PERM-03 | Phase 31 | Pending |
+| PERM-04 | Phase 31 | Pending |
+| PERM-05 | Phase 31 | Pending |
+| PERM-06 | Phase 31 | Pending |
+| PERM-07 | Phase 31 | Pending |
+| TABS-01 | Phase 32 | Pending |
+| TABS-02 | Phase 32 | Pending |
+| TABS-03 | Phase 32 | Pending |
+| TABS-04 | Phase 32 | Pending |
+| TABS-05 | Phase 32 | Pending |
+| CARRY-02 | Phase 32 | Pending |
+| EMAIL-01 | Phase 33 | Pending |
+| EMAIL-02 | Phase 33 | Pending |
+| EMAIL-03 | Phase 33 | Pending |
+| EMAIL-04 | Phase 33 | Pending |
+| EMAIL-05 | Phase 33 | Pending |
+| EMAIL-06 | Phase 33 | Pending |
+| CARRY-01 | Phase 33 | Pending |
+| DASH-01 | Phase 34 | Pending |
+| DASH-02 | Phase 34 | Pending |
+| DASH-03 | Phase 34 | Pending |
+| DASH-04 | Phase 34 | Pending |
+| DASH-05 | Phase 34 | Pending |
+| ANLYT-01 | Phase 35 | Pending |
+| ANLYT-02 | Phase 35 | Pending |
+| ANLYT-03 | Phase 35 | Pending |
+| ANLYT-04 | Phase 35 | Pending |
+| ANLYT-05 | Phase 35 | Pending |
+| ANLYT-06 | Phase 35 | Pending |
 
 **Coverage:**
-- v1.4 requirements: 63 total
-- Mapped to phases: 0
-- Unmapped: 63 ⚠️
+- v1.4 requirements: 65 total
+- Mapped to phases: 65
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-15*
-*Last updated: 2026-03-15 after initial definition*
+*Last updated: 2026-03-15 after roadmap creation*
