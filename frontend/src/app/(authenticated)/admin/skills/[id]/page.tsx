@@ -2,14 +2,22 @@
 /**
  * Admin skill detail page — /admin/skills/[id].
  *
- * Shows skill details with tabbed view including a "Scan Results" tab
- * displaying security scan data from the registry entry config.
+ * Form-based editing with three tabs:
+ * - Overview: read-only metadata + editable display name, description, status
+ * - Config: skill-type-specific fields (instruction markdown, procedure JSON,
+ *   slash command, category, tags, allowed tools) with markdown preview toggle
+ * - Scan Results: existing security scan display preserved
+ *
+ * Uses RegistryDetailLayout for consistent shell with save bar.
  */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useParams } from "next/navigation";
-import Link from "next/link";
+import ReactMarkdown from "react-markdown";
 import { mapSnakeToCamel } from "@/lib/admin-types";
 import type { RegistryEntry } from "@/lib/admin-types";
+import { RegistryDetailLayout } from "@/components/admin/registry-detail-layout";
+import { skillFormSchema, validateField } from "@/lib/registry-schemas";
+import type { SkillFormValues } from "@/lib/registry-schemas";
 
 // ---------------------------------------------------------------------------
 // Security report type (matches backend SecurityScanResult schema)
@@ -27,9 +35,7 @@ interface SecurityReport {
 // Tabs
 // ---------------------------------------------------------------------------
 
-type Tab = "overview" | "config" | "scan-results";
-
-const TABS: { id: Tab; label: string }[] = [
+const TABS = [
   { id: "overview", label: "Overview" },
   { id: "config", label: "Config" },
   { id: "scan-results", label: "Scan Results" },
@@ -46,7 +52,71 @@ export default function AdminSkillDetailPage() {
   const [entry, setEntry] = useState<RegistryEntry | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<Tab>("overview");
+  const [activeTab, setActiveTab] = useState("overview");
+
+  // Form state
+  const [formData, setFormData] = useState<SkillFormValues>({
+    displayName: null,
+    description: null,
+    skillType: "instructional",
+    instructionMarkdown: null,
+    slashCommand: null,
+    category: null,
+    tags: null,
+    status: "active",
+  });
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string | null>>(
+    {}
+  );
+  const initialFormRef = useRef<SkillFormValues | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
+
+  // Comma-separated string helpers for tags / allowedTools
+  const [tagsStr, setTagsStr] = useState("");
+  const [allowedToolsStr, setAllowedToolsStr] = useState("");
+  const initialAllowedToolsRef = useRef("");
+
+  // Markdown preview toggle
+  const [previewMd, setPreviewMd] = useState(false);
+
+  // Advanced raw JSON toggle + text
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [procedureJsonStr, setProcedureJsonStr] = useState("");
+  const initialProcedureJsonRef = useRef("");
+
+  // ---------------------------------------------------------------------------
+  // Data loading
+  // ---------------------------------------------------------------------------
+
+  const initFormFromEntry = useCallback((e: RegistryEntry) => {
+    const cfg = e.config;
+    const initial: SkillFormValues = {
+      displayName: e.displayName ?? null,
+      description: e.description ?? null,
+      skillType:
+        (cfg.skill_type as SkillFormValues["skillType"]) ?? "instructional",
+      instructionMarkdown: (cfg.instruction_markdown as string) ?? null,
+      slashCommand: (cfg.slash_command as string) ?? null,
+      category: (cfg.category as string) ?? null,
+      tags: (cfg.tags as string[]) ?? null,
+      status: e.status as SkillFormValues["status"],
+    };
+    setFormData(initial);
+    initialFormRef.current = initial;
+    setTagsStr((cfg.tags as string[] | null)?.join(", ") ?? "");
+    const initAllowedTools = (cfg.allowed_tools as string[] | null)?.join(", ") ?? "";
+    setAllowedToolsStr(initAllowedTools);
+    initialAllowedToolsRef.current = initAllowedTools;
+    const initProcedureJson = cfg.procedure_json
+      ? JSON.stringify(cfg.procedure_json, null, 2)
+      : "";
+    setProcedureJsonStr(initProcedureJson);
+    initialProcedureJsonRef.current = initProcedureJson;
+  }, []);
 
   useEffect(() => {
     if (!id) return;
@@ -56,13 +126,177 @@ export default function AdminSkillDetailPage() {
       .then(async (res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const raw = (await res.json()) as unknown;
-        setEntry(mapSnakeToCamel<RegistryEntry>(raw as Record<string, unknown>));
+        const mapped = mapSnakeToCamel<RegistryEntry>(
+          raw as Record<string, unknown>
+        );
+        setEntry(mapped);
+        initFormFromEntry(mapped);
       })
       .catch((err: unknown) => {
         setError(err instanceof Error ? err.message : "Failed to load skill");
       })
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, initFormFromEntry]);
+
+  useEffect(() => {
+    if (!saveMessage) return;
+    const t = setTimeout(() => setSaveMessage(null), 3000);
+    return () => clearTimeout(t);
+  }, [saveMessage]);
+
+  // ---------------------------------------------------------------------------
+  // Change tracking
+  // ---------------------------------------------------------------------------
+
+  const hasChanges = useMemo(() => {
+    if (!initialFormRef.current) return false;
+    const init = initialFormRef.current;
+    return (
+      formData.displayName !== init.displayName ||
+      formData.description !== init.description ||
+      formData.skillType !== init.skillType ||
+      formData.instructionMarkdown !== init.instructionMarkdown ||
+      formData.slashCommand !== init.slashCommand ||
+      formData.category !== init.category ||
+      formData.status !== init.status ||
+      JSON.stringify(formData.tags) !== JSON.stringify(init.tags) ||
+      allowedToolsStr !== initialAllowedToolsRef.current ||
+      procedureJsonStr !== initialProcedureJsonRef.current
+    );
+  }, [formData, allowedToolsStr, procedureJsonStr]);
+
+  // ---------------------------------------------------------------------------
+  // Field update + validation
+  // ---------------------------------------------------------------------------
+
+  const updateField = useCallback(
+    (field: keyof SkillFormValues, value: unknown) => {
+      setFormData((prev) => ({ ...prev, [field]: value }));
+      setSaveMessage(null);
+    },
+    []
+  );
+
+  const validateOnBlur = useCallback(
+    (field: keyof SkillFormValues, value: unknown) => {
+      const err = validateField(skillFormSchema, field, value);
+      setFieldErrors((prev) => ({ ...prev, [field]: err }));
+    },
+    []
+  );
+
+  // ---------------------------------------------------------------------------
+  // Save
+  // ---------------------------------------------------------------------------
+
+  const handleSave = useCallback(async () => {
+    if (!entry) return;
+
+    // Validate all fields
+    const result = skillFormSchema.safeParse(formData);
+    if (!result.success) {
+      const errs: Record<string, string | null> = {};
+      for (const issue of result.error.issues) {
+        const key = issue.path[0];
+        if (typeof key === "string") {
+          errs[key] = issue.message;
+        }
+      }
+      setFieldErrors(errs);
+      return;
+    }
+
+    setSaving(true);
+    setSaveMessage(null);
+
+    // Build config update — merge with existing config
+    const configUpdate: Record<string, unknown> = {
+      ...entry.config,
+      skill_type: formData.skillType,
+      instruction_markdown: formData.instructionMarkdown,
+      slash_command: formData.slashCommand,
+      category: formData.category,
+      tags: formData.tags,
+    };
+
+    // Parse allowed_tools from comma-separated string
+    const parsedAllowedTools = allowedToolsStr
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    configUpdate.allowed_tools =
+      parsedAllowedTools.length > 0 ? parsedAllowedTools : null;
+
+    // Parse procedure_json if applicable
+    if (formData.skillType === "procedural" && procedureJsonStr.trim()) {
+      try {
+        configUpdate.procedure_json = JSON.parse(procedureJsonStr);
+      } catch {
+        setFieldErrors((prev) => ({
+          ...prev,
+          procedureJson: "Invalid JSON",
+        }));
+        setSaving(false);
+        return;
+      }
+    }
+
+    const payload = {
+      display_name: formData.displayName,
+      description: formData.description,
+      config: configUpdate,
+      status: formData.status,
+    };
+
+    try {
+      const res = await fetch(`/api/registry/${entry.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as Record<
+          string,
+          unknown
+        > | null;
+        throw new Error(
+          (body?.detail as string) ?? `Save failed (HTTP ${res.status})`
+        );
+      }
+      const raw = (await res.json()) as unknown;
+      const updated = mapSnakeToCamel<RegistryEntry>(
+        raw as Record<string, unknown>
+      );
+      setEntry(updated);
+      initFormFromEntry(updated);
+      setFieldErrors({});
+      setSaveMessage({ type: "success", text: "Changes saved successfully." });
+    } catch (err: unknown) {
+      setSaveMessage({
+        type: "error",
+        text: err instanceof Error ? err.message : "Save failed",
+      });
+    } finally {
+      setSaving(false);
+    }
+  }, [entry, formData, allowedToolsStr, procedureJsonStr, initFormFromEntry]);
+
+  // ---------------------------------------------------------------------------
+  // Discard
+  // ---------------------------------------------------------------------------
+
+  const handleDiscard = useCallback(() => {
+    if (entry) {
+      initFormFromEntry(entry);
+      setFieldErrors({});
+      setSaveMessage(null);
+      setPreviewMd(false);
+    }
+  }, [entry, initFormFromEntry]);
+
+  // ---------------------------------------------------------------------------
+  // Render helpers
+  // ---------------------------------------------------------------------------
 
   if (loading) {
     return <div className="text-gray-400 text-sm py-8">Loading skill...</div>;
@@ -71,134 +305,422 @@ export default function AdminSkillDetailPage() {
   if (error || !entry) {
     return (
       <div className="py-8">
-        <p className="text-red-600 text-sm mb-4">{error ?? "Skill not found"}</p>
-        <Link href="/admin/skills" className="text-sm text-blue-600 hover:underline">
+        <p className="text-red-600 text-sm mb-4">
+          {error ?? "Skill not found"}
+        </p>
+        <a
+          href="/admin/skills"
+          className="text-sm text-blue-600 hover:underline"
+        >
           &larr; Back to Skills
-        </Link>
+        </a>
       </div>
     );
   }
 
   const config = entry.config;
   const securityScore = config.security_score as number | null | undefined;
-  const securityReport = config.security_report as SecurityReport | null | undefined;
+  const securityReport = config.security_report as
+    | SecurityReport
+    | null
+    | undefined;
 
   const recommendationColor =
     securityReport?.recommendation === "approve"
       ? "bg-green-100 text-green-800"
       : securityReport?.recommendation === "review"
-      ? "bg-yellow-100 text-yellow-800"
-      : "bg-red-100 text-red-800";
+        ? "bg-yellow-100 text-yellow-800"
+        : "bg-red-100 text-red-800";
 
   return (
-    <div>
-      {/* Breadcrumb */}
-      <div className="mb-4">
-        <Link href="/admin/skills" className="text-sm text-blue-600 hover:underline">
-          &larr; Skills
-        </Link>
-        <span className="text-gray-400 text-sm mx-2">/</span>
-        <span className="text-sm text-gray-700 font-medium">{entry.name}</span>
-      </div>
-
-      {/* Header */}
-      <div className="mb-4">
-        <h2 className="text-xl font-semibold text-gray-900">
-          {entry.displayName ?? entry.name}
-        </h2>
-        {entry.description && (
-          <p className="text-sm text-gray-500 mt-1">{entry.description}</p>
-        )}
-        <div className="flex gap-2 mt-2">
-          <span
-            className={`px-2 py-0.5 rounded text-xs font-medium ${
-              entry.status === "active"
-                ? "bg-green-100 text-green-700"
-                : entry.status === "archived"
-                ? "bg-gray-100 text-gray-500"
-                : entry.status === "pending_review"
-                ? "bg-orange-100 text-orange-700"
-                : "bg-yellow-100 text-yellow-700"
-            }`}
-          >
-            {entry.status}
-          </span>
-          <span className="px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-600">
-            {(config.skill_type as string) ?? "instructional"}
-          </span>
+    <RegistryDetailLayout
+      entry={entry}
+      backHref="/admin/skills"
+      backLabel="Skills"
+      tabs={TABS}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      hasChanges={hasChanges}
+      saving={saving}
+      onSave={handleSave}
+      onDiscard={handleDiscard}
+    >
+      {saveMessage && (
+        <div
+          className={`mb-4 p-3 rounded text-sm ${
+            saveMessage.type === "success"
+              ? "bg-green-50 border border-green-200 text-green-700"
+              : "bg-red-50 border border-red-200 text-red-700"
+          }`}
+        >
+          {saveMessage.text}
         </div>
-      </div>
+      )}
 
-      {/* Tabs */}
-      <div className="border-b border-gray-200 mb-4">
-        <div className="flex gap-0">
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === tab.id
-                  ? "text-blue-600 border-blue-600"
-                  : "text-gray-500 border-transparent hover:text-gray-700"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Tab content */}
+      {/* Overview tab */}
       {activeTab === "overview" && (
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
+        <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-4">
+          {/* Read-only fields */}
           <dl className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <dt className="text-gray-500">ID</dt>
-              <dd className="font-mono text-gray-900 text-xs mt-0.5">{entry.id}</dd>
+              <dd className="font-mono text-gray-900 text-xs mt-0.5">
+                {entry.id}
+              </dd>
             </div>
             <div>
               <dt className="text-gray-500">Name</dt>
               <dd className="text-gray-900 mt-0.5">{entry.name}</dd>
             </div>
             <div>
-              <dt className="text-gray-500">Status</dt>
-              <dd className="text-gray-900 mt-0.5">{entry.status}</dd>
+              <dt className="text-gray-500">Skill Type</dt>
+              <dd className="mt-0.5">
+                <span className="px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-600">
+                  {(config.skill_type as string) ?? "instructional"}
+                </span>
+              </dd>
+            </div>
+            <div>
+              <dt className="text-gray-500">Source Type</dt>
+              <dd className="text-gray-900 mt-0.5">
+                {(config.source_type as string) ?? "\u2014"}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-gray-500">Slash Command</dt>
+              <dd className="font-mono text-gray-900 text-xs mt-0.5">
+                {(config.slash_command as string) ?? "\u2014"}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-gray-500">Category</dt>
+              <dd className="text-gray-900 mt-0.5">
+                {(config.category as string) ?? "\u2014"}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-gray-500">Tags</dt>
+              <dd className="text-gray-900 mt-0.5">
+                {(config.tags as string[] | null)?.join(", ") ?? "\u2014"}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-gray-500">Security Score</dt>
+              <dd className="text-gray-900 mt-0.5">
+                {securityScore != null ? `${securityScore}/100` : "\u2014"}
+              </dd>
             </div>
             <div>
               <dt className="text-gray-500">Owner</dt>
               <dd className="font-mono text-gray-900 text-xs mt-0.5">
-                {entry.ownerId ?? "—"}
+                {entry.ownerId ?? "\u2014"}
               </dd>
             </div>
             <div>
               <dt className="text-gray-500">Created</dt>
               <dd className="text-gray-900 mt-0.5">
-                {entry.createdAt ? new Date(entry.createdAt).toLocaleString() : "—"}
+                {new Date(entry.createdAt).toLocaleString()}
               </dd>
             </div>
             <div>
               <dt className="text-gray-500">Updated</dt>
               <dd className="text-gray-900 mt-0.5">
-                {entry.updatedAt ? new Date(entry.updatedAt).toLocaleString() : "—"}
+                {new Date(entry.updatedAt).toLocaleString()}
               </dd>
             </div>
           </dl>
+
+          <hr className="border-gray-100" />
+
+          {/* Editable fields */}
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Display Name
+              </label>
+              <input
+                type="text"
+                value={formData.displayName ?? ""}
+                onChange={(e) =>
+                  updateField("displayName", e.target.value || null)
+                }
+                onBlur={(e) =>
+                  validateOnBlur("displayName", e.target.value || null)
+                }
+                placeholder="Optional display name"
+                className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+              {fieldErrors.displayName && (
+                <p className="text-xs text-red-600 mt-1">
+                  {fieldErrors.displayName}
+                </p>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Description
+              </label>
+              <textarea
+                value={formData.description ?? ""}
+                onChange={(e) =>
+                  updateField("description", e.target.value || null)
+                }
+                onBlur={(e) =>
+                  validateOnBlur("description", e.target.value || null)
+                }
+                placeholder="Optional description"
+                rows={3}
+                className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+              {fieldErrors.description && (
+                <p className="text-xs text-red-600 mt-1">
+                  {fieldErrors.description}
+                </p>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Status
+              </label>
+              <select
+                value={formData.status}
+                onChange={(e) =>
+                  updateField(
+                    "status",
+                    e.target.value as SkillFormValues["status"]
+                  )
+                }
+                className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="active">Active</option>
+                <option value="disabled">Disabled</option>
+                <option value="deprecated">Deprecated</option>
+                <option value="draft">Draft</option>
+                <option value="pending_review">Pending Review</option>
+                <option value="archived">Archived</option>
+              </select>
+            </div>
+          </div>
         </div>
       )}
 
+      {/* Config tab */}
       {activeTab === "config" && (
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <pre className="text-xs text-gray-700 overflow-auto max-h-96 whitespace-pre-wrap">
-            {JSON.stringify(config, null, 2)}
-          </pre>
+        <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-4">
+          {/* Skill Type */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Skill Type
+            </label>
+            <select
+              value={formData.skillType}
+              onChange={(e) =>
+                updateField(
+                  "skillType",
+                  e.target.value as SkillFormValues["skillType"]
+                )
+              }
+              className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="instructional">Instructional</option>
+              <option value="procedural">Procedural</option>
+            </select>
+          </div>
+
+          {/* Instruction Markdown — visible for instructional */}
+          {formData.skillType === "instructional" && (
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-sm font-medium text-gray-700">
+                  Instruction Markdown
+                </label>
+                <button
+                  onClick={() => setPreviewMd((p) => !p)}
+                  className={`px-2 py-0.5 text-xs rounded border transition-colors ${
+                    previewMd
+                      ? "bg-blue-50 border-blue-300 text-blue-700"
+                      : "bg-white border-gray-300 text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  {previewMd ? "Edit" : "Preview"}
+                </button>
+              </div>
+              {previewMd ? (
+                <div className="prose prose-sm max-w-none p-3 border border-gray-200 rounded-md bg-gray-50 min-h-[12rem]">
+                  <ReactMarkdown>
+                    {formData.instructionMarkdown ?? ""}
+                  </ReactMarkdown>
+                </div>
+              ) : (
+                <textarea
+                  value={formData.instructionMarkdown ?? ""}
+                  onChange={(e) =>
+                    updateField(
+                      "instructionMarkdown",
+                      e.target.value || null
+                    )
+                  }
+                  onBlur={(e) =>
+                    validateOnBlur(
+                      "instructionMarkdown",
+                      e.target.value || null
+                    )
+                  }
+                  placeholder="Markdown instructions for this skill..."
+                  rows={8}
+                  className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              )}
+              {fieldErrors.instructionMarkdown && (
+                <p className="text-xs text-red-600 mt-1">
+                  {fieldErrors.instructionMarkdown}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Procedure JSON — visible for procedural */}
+          {formData.skillType === "procedural" && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Procedure JSON
+              </label>
+              <textarea
+                value={procedureJsonStr}
+                onChange={(e) => {
+                  setProcedureJsonStr(e.target.value);
+                  setFieldErrors((prev) => ({
+                    ...prev,
+                    procedureJson: null,
+                  }));
+                }}
+                placeholder='{"steps": [...]}'
+                rows={8}
+                className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+              {fieldErrors.procedureJson && (
+                <p className="text-xs text-red-600 mt-1">
+                  {fieldErrors.procedureJson}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Slash Command */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Slash Command
+            </label>
+            <input
+              type="text"
+              value={formData.slashCommand ?? ""}
+              onChange={(e) =>
+                updateField("slashCommand", e.target.value || null)
+              }
+              onBlur={(e) =>
+                validateOnBlur("slashCommand", e.target.value || null)
+              }
+              placeholder="/my-skill"
+              className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+            {fieldErrors.slashCommand && (
+              <p className="text-xs text-red-600 mt-1">
+                {fieldErrors.slashCommand}
+              </p>
+            )}
+          </div>
+
+          {/* Category */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Category
+            </label>
+            <input
+              type="text"
+              value={formData.category ?? ""}
+              onChange={(e) =>
+                updateField("category", e.target.value || null)
+              }
+              onBlur={(e) =>
+                validateOnBlur("category", e.target.value || null)
+              }
+              placeholder="e.g. productivity, security"
+              className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+            {fieldErrors.category && (
+              <p className="text-xs text-red-600 mt-1">
+                {fieldErrors.category}
+              </p>
+            )}
+          </div>
+
+          {/* Tags */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Tags
+              <span className="text-xs text-gray-400 ml-1">
+                (comma-separated)
+              </span>
+            </label>
+            <input
+              type="text"
+              value={tagsStr}
+              onChange={(e) => {
+                setTagsStr(e.target.value);
+                const parsed = e.target.value
+                  .split(",")
+                  .map((s) => s.trim())
+                  .filter(Boolean);
+                updateField("tags", parsed.length > 0 ? parsed : null);
+              }}
+              placeholder="tag1, tag2, tag3"
+              className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+
+          {/* Allowed Tools */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Allowed Tools
+              <span className="text-xs text-gray-400 ml-1">
+                (comma-separated)
+              </span>
+            </label>
+            <input
+              type="text"
+              value={allowedToolsStr}
+              onChange={(e) => setAllowedToolsStr(e.target.value)}
+              placeholder="email.send, calendar.read"
+              className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+
+          {/* Advanced (raw JSON) */}
+          <details
+            open={showAdvanced}
+            onToggle={(e) =>
+              setShowAdvanced(
+                (e.target as HTMLDetailsElement).open
+              )
+            }
+          >
+            <summary className="cursor-pointer text-sm font-medium text-gray-500 select-none hover:text-gray-700">
+              Advanced (raw JSON)
+            </summary>
+            <pre className="mt-2 p-3 bg-gray-50 border border-gray-200 rounded text-xs overflow-auto max-h-64 text-gray-700">
+              {JSON.stringify(config, null, 2)}
+            </pre>
+          </details>
         </div>
       )}
 
+      {/* Scan Results tab */}
       {activeTab === "scan-results" && (
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           {securityReport == null ? (
-            <p className="text-muted-foreground text-sm text-gray-500">
-              No scan results available. Use the admin Re-scan button to generate.
+            <p className="text-sm text-gray-500">
+              No scan results available. Use the admin Re-scan button to
+              generate.
             </p>
           ) : (
             <div>
@@ -206,7 +728,7 @@ export default function AdminSkillDetailPage() {
               <div className="flex items-center gap-4 mb-6">
                 <div>
                   <span className="text-4xl font-bold text-gray-900">
-                    {securityScore ?? "—"}
+                    {securityScore ?? "\u2014"}
                   </span>
                   <span className="text-gray-400 ml-1">/ 100</span>
                 </div>
@@ -227,38 +749,49 @@ export default function AdminSkillDetailPage() {
               {/* Bandit issues */}
               <details className="mb-4">
                 <summary className="cursor-pointer text-sm font-medium text-gray-700 select-none">
-                  Bandit Issues ({securityReport.bandit_issues?.length ?? 0})
+                  Bandit Issues (
+                  {securityReport.bandit_issues?.length ?? 0})
                 </summary>
                 <pre className="mt-2 p-3 bg-gray-50 border border-gray-200 rounded text-xs overflow-auto max-h-64 text-gray-700">
-                  {JSON.stringify(securityReport.bandit_issues ?? [], null, 2)}
+                  {JSON.stringify(
+                    securityReport.bandit_issues ?? [],
+                    null,
+                    2
+                  )}
                 </pre>
               </details>
 
               {/* pip-audit issues */}
               <details className="mb-4">
                 <summary className="cursor-pointer text-sm font-medium text-gray-700 select-none">
-                  pip-audit Issues ({securityReport.pip_audit_issues?.length ?? 0})
+                  pip-audit Issues (
+                  {securityReport.pip_audit_issues?.length ?? 0})
                 </summary>
                 <pre className="mt-2 p-3 bg-gray-50 border border-gray-200 rounded text-xs overflow-auto max-h-64 text-gray-700">
-                  {JSON.stringify(securityReport.pip_audit_issues ?? [], null, 2)}
+                  {JSON.stringify(
+                    securityReport.pip_audit_issues ?? [],
+                    null,
+                    2
+                  )}
                 </pre>
               </details>
 
               {/* Findings summary */}
-              {securityReport.findings && securityReport.findings.length > 0 && (
-                <details className="mb-4">
-                  <summary className="cursor-pointer text-sm font-medium text-gray-700 select-none">
-                    All Findings ({securityReport.findings.length})
-                  </summary>
-                  <pre className="mt-2 p-3 bg-gray-50 border border-gray-200 rounded text-xs overflow-auto max-h-64 text-gray-700">
-                    {JSON.stringify(securityReport.findings, null, 2)}
-                  </pre>
-                </details>
-              )}
+              {securityReport.findings &&
+                securityReport.findings.length > 0 && (
+                  <details className="mb-4">
+                    <summary className="cursor-pointer text-sm font-medium text-gray-700 select-none">
+                      All Findings ({securityReport.findings.length})
+                    </summary>
+                    <pre className="mt-2 p-3 bg-gray-50 border border-gray-200 rounded text-xs overflow-auto max-h-64 text-gray-700">
+                      {JSON.stringify(securityReport.findings, null, 2)}
+                    </pre>
+                  </details>
+                )}
             </div>
           )}
         </div>
       )}
-    </div>
+    </RegistryDetailLayout>
   );
 }

@@ -141,6 +141,88 @@ async def check_mcp_server_name(
     return {"available": (count or 0) == 0}
 
 
+class McpTestRequest(BaseModel):
+    """Request body for testing MCP server connectivity."""
+
+    url: str
+    auth_token: str | None = None
+
+
+class McpTestResponse(BaseModel):
+    """Response from MCP connection test."""
+
+    success: bool
+    latency_ms: int
+    tool_count: int | None = None
+    error: str | None = None
+    hint: str | None = None
+
+
+@router.post("/test")
+async def test_mcp_connection(
+    body: McpTestRequest,
+    user: UserContext = Depends(_require_admin),
+) -> dict[str, Any]:
+    """Test connectivity to an MCP server by attempting SSE connection and tools/list."""
+    import httpx
+
+    logger.info("mcp_test_connection", url=body.url, user_id=str(user["user_id"]))
+
+    start = time.monotonic()
+    headers: dict[str, str] = {}
+    if body.auth_token:
+        headers["Authorization"] = f"Bearer {body.auth_token}"
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            # Attempt to reach the SSE endpoint
+            resp = await client.get(f"{body.url}/sse", headers=headers)
+            latency_ms = int((time.monotonic() - start) * 1000)
+            if resp.status_code >= 400:
+                return McpTestResponse(
+                    success=False,
+                    latency_ms=latency_ms,
+                    error=f"HTTP {resp.status_code} from SSE endpoint",
+                    hint="Check that the MCP server is running and the URL is correct",
+                ).model_dump()
+
+            return McpTestResponse(
+                success=True,
+                latency_ms=latency_ms,
+            ).model_dump()
+
+    except httpx.ConnectError:
+        latency_ms = int((time.monotonic() - start) * 1000)
+        return McpTestResponse(
+            success=False,
+            latency_ms=latency_ms,
+            error="Connection refused",
+            hint="Check that the MCP server is running and the URL is correct",
+        ).model_dump()
+    except httpx.TimeoutException:
+        latency_ms = int((time.monotonic() - start) * 1000)
+        return McpTestResponse(
+            success=False,
+            latency_ms=latency_ms,
+            error="Connection timed out",
+            hint="Server did not respond within 10 seconds",
+        ).model_dump()
+    except Exception as exc:
+        latency_ms = int((time.monotonic() - start) * 1000)
+        error_msg = str(exc)
+        hint = None
+        if "ssl" in error_msg.lower() or "certificate" in error_msg.lower():
+            hint = "SSL certificate verification failed -- check TLS configuration"
+        else:
+            hint = "Check that the MCP server is running and the URL is correct"
+        return McpTestResponse(
+            success=False,
+            latency_ms=latency_ms,
+            error=error_msg,
+            hint=hint,
+        ).model_dump()
+
+
 @router.delete("/{server_id}")
 async def delete_mcp_server(
     server_id: UUID,
