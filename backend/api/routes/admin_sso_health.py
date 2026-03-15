@@ -118,6 +118,6 @@ async def reset_circuit_breaker(
 ) -> dict[str, str]:
     """Manually reset circuit breaker to CLOSED state (admin override)."""
     cb = get_circuit_breaker()
-    cb.reset()
+    await cb.reset()
     logger.info("circuit_breaker_admin_reset", admin_user=str(user["user_id"]))
     return {"status": "reset", "state": cb.state.value}

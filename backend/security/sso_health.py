@@ -42,35 +42,43 @@ class SSOHealthStatus(BaseModel):
     checked_at: datetime
 
 
+def _sync_check_certificate(issuer_url: str, ca_cert_path: str) -> tuple[str, str]:
+    """Blocking certificate check — run in executor from async context."""
+    import socket
+    from urllib.parse import urlparse
+
+    parsed = urlparse(issuer_url)
+    hostname = parsed.hostname or ""
+    port = parsed.port or 443
+
+    ctx = ssl.create_default_context()
+    if ca_cert_path:
+        ctx.load_verify_locations(ca_cert_path)
+
+    conn = ctx.wrap_socket(socket.socket(), server_hostname=hostname)
+    conn.settimeout(10.0)
+    try:
+        conn.connect((hostname, port))
+        cert = conn.getpeercert()
+    finally:
+        conn.close()
+    return cert  # type: ignore[return-value]
+
+
 async def _check_certificate(issuer_url: str, ca_cert_path: str) -> tuple[str, str]:
     """
     Check TLS certificate validity for the Keycloak host.
 
+    Runs blocking socket I/O in a thread pool to avoid blocking the event loop.
     Returns (status, detail) where status is green/yellow/red.
     """
-    import socket
+    import asyncio
 
     try:
-        # Extract hostname from issuer URL
-        from urllib.parse import urlparse
-
-        parsed = urlparse(issuer_url)
-        hostname = parsed.hostname or ""
-        port = parsed.port or 443
-
-        # Create SSL context
-        ctx = ssl.create_default_context()
-        if ca_cert_path:
-            ctx.load_verify_locations(ca_cert_path)
-
-        # Connect and get cert
-        conn = ctx.wrap_socket(socket.socket(), server_hostname=hostname)
-        conn.settimeout(10.0)
-        try:
-            conn.connect((hostname, port))
-            cert = conn.getpeercert()
-        finally:
-            conn.close()
+        loop = asyncio.get_running_loop()
+        cert = await loop.run_in_executor(
+            None, _sync_check_certificate, issuer_url, ca_cert_path
+        )
 
         if not cert:
             return ("red", "No certificate returned by server")

@@ -12,7 +12,7 @@ import { z } from "zod";
 
 export const SSOHealthCategorySchema = z.object({
   name: z.string(),
-  status: z.enum(["green", "yellow", "red"]),
+  status: z.enum(["green", "yellow", "red", "gray"]),
   detail: z.string(),
 });
 

@@ -171,18 +171,19 @@ class SSOCircuitBreaker:
         return {
             "state": self._state.value,
             "failure_count": self._failure_count,
-            "last_failure_time": self._last_failure_time if self._last_failure_time else None,
+            "last_failure_time": None,  # monotonic time not useful to frontend
             "failure_threshold": self.failure_threshold,
             "recovery_timeout_seconds": self.recovery_timeout_seconds,
             "half_open_max_calls": self.half_open_max_calls,
         }
 
-    def reset(self) -> None:
+    async def reset(self) -> None:
         """Manually reset to CLOSED state (admin override)."""
-        self._state = CircuitState.CLOSED
-        self._failure_count = 0
-        self._half_open_calls = 0
-        self._last_failure_time = 0.0
+        async with self._lock:
+            self._state = CircuitState.CLOSED
+            self._failure_count = 0
+            self._half_open_calls = 0
+            self._last_failure_time = 0.0
         logger.info("circuit_breaker_manually_reset")
 
     def update_thresholds(
