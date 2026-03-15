@@ -130,12 +130,13 @@ Plans:
   3. User can share files with other users at READ/WRITE/ADMIN permission levels
   4. User can add files to long-term memory; re-embedding triggers automatically on file update
   5. File manager UI supports grid/list view, folder tree, breadcrumb navigation, and search
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 28-01: TBD
-- [ ] 28-02: TBD
-- [ ] 28-03: TBD
+- [ ] 28-01-PLAN.md — MinIO infra, storage module, ORM models, migration 032, test scaffolds
+- [ ] 28-02-PLAN.md — Backend API routes (files, folders, shares), user notifications, Celery embedding task
+- [ ] 28-03-PLAN.md — File Manager UI (folder tree, grid/list views, upload tray, share dialog, nav rail)
+- [ ] 28-04-PLAN.md — Admin storage settings, user notification bell, end-to-end checkpoint
 
 ### Phase 29: User Experience Enhancement
 **Goal**: Users can personalize their visual experience and time display; notification preferences are configurable
