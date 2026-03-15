@@ -11,6 +11,7 @@ export interface StorageFile {
   content_hash: string;
   folder_id: string | null;
   owner_user_id: string;
+  owner_username?: string | null;
   in_memory: boolean;
   created_at: string;
   updated_at: string;

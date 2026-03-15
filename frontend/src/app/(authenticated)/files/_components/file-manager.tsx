@@ -49,7 +49,7 @@ export function FileManager() {
           files: StorageFile[];
           total: number;
         };
-        setFiles(data.files ?? []);
+        setFiles(data.files ?? (data as unknown as { items: StorageFile[] }).items ?? []);
       }
     } finally {
       setLoading(false);
@@ -104,6 +104,9 @@ export function FileManager() {
     let source: StorageFile[];
     if (currentFolderId === "shared-with-me") {
       source = sharedFiles;
+    } else if (currentFolderId === null) {
+      // "My Files" root shows all owned files
+      source = files;
     } else {
       source = files.filter((f) => f.folder_id === currentFolderId);
     }

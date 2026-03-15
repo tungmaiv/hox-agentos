@@ -71,6 +71,7 @@ class StorageFileResponse(BaseModel):
     id: str
     name: str
     owner_user_id: str
+    owner_username: str | None = None
     folder_id: str | None
     content_hash: str
     mime_type: str
@@ -175,11 +176,14 @@ async def check_file_access(
     return False
 
 
-def _file_to_response(file_record: StorageFile, download_url: str) -> StorageFileResponse:
+def _file_to_response(
+    file_record: StorageFile, download_url: str, owner_username: str | None = None
+) -> StorageFileResponse:
     return StorageFileResponse(
         id=str(file_record.id),
         name=file_record.name,
         owner_user_id=str(file_record.owner_user_id),
+        owner_username=owner_username,
         folder_id=str(file_record.folder_id) if file_record.folder_id else None,
         content_hash=file_record.content_hash,
         mime_type=file_record.mime_type,
@@ -369,7 +373,16 @@ async def upload_file(
         size_bytes=size_bytes,
     )
 
-    return _file_to_response(new_file, download_url)
+    # Look up uploader's username for the response
+    from core.models.local_auth import LocalUser
+
+    owner_username: str | None = None
+    uname_result = await session.execute(select(LocalUser).where(LocalUser.id == user_id))
+    local_user = uname_result.scalar_one_or_none()
+    if local_user:
+        owner_username = local_user.username
+
+    return _file_to_response(new_file, download_url, owner_username)
 
 
 @router.get("/files")
@@ -397,13 +410,25 @@ async def list_files(
     result = await session.execute(query)
     files = result.scalars().all()
 
+    # Batch-fetch usernames for all distinct owner_user_ids
+    from core.models.local_auth import LocalUser
+
+    owner_ids = list({f.owner_user_id for f in files})
+    username_map: dict[uuid.UUID, str] = {}
+    if owner_ids:
+        uname_result = await session.execute(
+            select(LocalUser).where(LocalUser.id.in_(owner_ids))
+        )
+        for u in uname_result.scalars().all():
+            username_map[u.id] = u.username
+
     service = StorageService()
     items = []
     for f in files:
         download_url = await service.generate_download_url(f.object_key)
-        items.append(_file_to_response(f, download_url))
+        items.append(_file_to_response(f, download_url, username_map.get(f.owner_user_id)))
 
-    return {"items": items, "page": page, "limit": limit}
+    return {"files": items, "total": len(items), "page": page, "limit": limit}
 
 
 @router.get("/files/{file_id}")
