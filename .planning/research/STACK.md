@@ -1,534 +1,744 @@
 # Stack Research: Blitz AgentOS
 
 **Domain:** Enterprise on-premise agentic operating system
-**Researched:** 2026-02-24 (v1.0–v1.2) | Updated: 2026-03-05 (v1.3 additions)
-**Confidence:** HIGH (core stack verified via official docs and PyPI/npm; supporting libraries MEDIUM)
+**Researched:** 2026-02-24 (v1.0-v1.2) | 2026-03-05 (v1.3) | Updated: 2026-03-15 (v1.4 additions)
+**Confidence:** HIGH (core stack verified via official docs and PyPI/npm; v1.4 additions MEDIUM-HIGH)
 
 ---
 
-## v1.3 Stack Additions (NEW — Research Focus for This Document)
+## v1.4 Stack Additions (NEW -- Research Focus for This Document)
 
-This section documents only the new libraries and patterns needed for v1.3. The existing stack (LangGraph, FastAPI, Next.js 15, CopilotKit, PostgreSQL + pgvector, Redis, Celery, LiteLLM, Keycloak) remains unchanged.
+This section documents only the new libraries and patterns needed for v1.4 (Platform Enhancement & Infrastructure). The existing stack (LangGraph, FastAPI, Next.js 15, CopilotKit, PostgreSQL + pgvector, Redis, Celery, LiteLLM, Keycloak, infinity-emb, jose, shadcn/ui Sidebar) remains unchanged.
+
+The 9 v1.4 features drive stack additions across 6 categories:
+1. **Circuit breaker** (Keycloak SSO Hardening)
+2. **Charting/dashboard** (Unified Dashboard)
+3. **WebSocket** (Mission Control real-time feeds)
+4. **Object storage** (Storage Service + Avatar upload)
+5. **Email/IMAP/SMTP** (Email System & Notifications)
+6. **Theme management** (User Experience Enhancement)
+7. **Cron builder UI** (Scheduler UI)
 
 ---
 
-### 1. Next.js Middleware for Route Protection
+### 1. Circuit Breaker for Keycloak SSO Hardening (#07)
 
-**Decision:** Use `jose` + custom `middleware.ts` — do NOT add Auth.js v5 middleware.
+**Decision:** Use `tenacity` (already installed) for retry logic + custom lightweight circuit breaker class -- do NOT add `pybreaker`.
 
-**Rationale:** The project already uses NextAuth v5 (Auth.js) with a custom JWT strategy for dual-issuer tokens (local HS256 + Keycloak RS256). The existing `app/api/copilotkit/route.ts` proxy already injects JWT. What is missing is a `middleware.ts` that enforces authentication before any protected route renders.
+**Rationale:** `tenacity` (>=9.1.4) is already in the backend dependency list and provides retry with exponential backoff, jitter, and retry-on-exception filtering. A circuit breaker is a small state machine (CLOSED/OPEN/HALF-OPEN) that can be implemented in ~60 lines of Python using `tenacity` as the retry engine underneath. Adding `pybreaker` introduces a new dependency for a pattern that only applies to one integration point (Keycloak JWKS/OIDC).
 
-**Critical security note:** CVE-2025-29927 (CVSS 9.1) disclosed March 2025 — middleware bypass via `x-middleware-subrequest` header — affects Next.js < 15.2.3. The project must be on Next.js 15.2.3+ before v1.3 ships. Defense-in-depth: always verify session at the data access layer (DAL), not only in middleware.
+The circuit breaker wraps three Keycloak operations:
+- JWKS key fetch (`/protocol/openid-connect/certs`)
+- OIDC discovery (`/.well-known/openid-configuration`)
+- Token introspection (if used)
+
+When tripped (e.g., 5 consecutive failures in 60s), the circuit breaker returns cached JWKS keys and falls back to local-auth-only mode. This aligns with the spec's "Keycloak is OPTIONAL" principle.
 
 | Library | Version | Purpose | Why |
 |---------|---------|---------|-----|
-| `jose` | ^5.x (npm) | JWT decode/verify in Edge Runtime | The only JWT library compatible with Next.js Edge Runtime; uses Web Crypto APIs; already recommended by official Next.js docs; `jwtVerify()` works for both HS256 (local tokens) and RS256 (Keycloak tokens) |
-| `server-only` | latest (npm) | Mark session utilities as server-only | Prevents session code from leaking to client bundle; zero-cost guard |
+| `tenacity` | >=9.1.4 (already installed) | Retry with backoff for Keycloak HTTP calls | Already in stack; provides `retry`, `wait_exponential`, `stop_after_attempt`; composable with custom circuit breaker state |
+
+**Implementation pattern (custom circuit breaker):**
+```python
+import time
+from enum import Enum
+from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
+
+class CircuitState(Enum):
+    CLOSED = "closed"
+    OPEN = "open"
+    HALF_OPEN = "half_open"
+
+class CircuitBreaker:
+    def __init__(self, failure_threshold: int = 5, recovery_timeout: int = 60):
+        self.state = CircuitState.CLOSED
+        self.failure_count = 0
+        self.failure_threshold = failure_threshold
+        self.recovery_timeout = recovery_timeout
+        self.last_failure_time: float = 0
+
+    def record_failure(self) -> None:
+        self.failure_count += 1
+        self.last_failure_time = time.monotonic()
+        if self.failure_count >= self.failure_threshold:
+            self.state = CircuitState.OPEN
+
+    def record_success(self) -> None:
+        self.failure_count = 0
+        self.state = CircuitState.CLOSED
+
+    def can_execute(self) -> bool:
+        if self.state == CircuitState.CLOSED:
+            return True
+        if self.state == CircuitState.OPEN:
+            if time.monotonic() - self.last_failure_time > self.recovery_timeout:
+                self.state = CircuitState.HALF_OPEN
+                return True
+            return False
+        return True  # HALF_OPEN: allow one attempt
+
+# Usage in jwt.py:
+keycloak_breaker = CircuitBreaker(failure_threshold=5, recovery_timeout=60)
+
+@retry(wait=wait_exponential(min=1, max=10), stop=stop_after_attempt(3),
+       retry=retry_if_exception_type(httpx.HTTPError))
+async def fetch_jwks_with_breaker(url: str) -> dict:
+    if not keycloak_breaker.can_execute():
+        raise KeycloakUnavailableError("Circuit open - using cached JWKS")
+    try:
+        result = await _fetch_jwks(url)
+        keycloak_breaker.record_success()
+        return result
+    except Exception as e:
+        keycloak_breaker.record_failure()
+        raise
+```
 
 **What NOT to add:**
-- `jsonwebtoken` — cannot run in Edge Runtime (Node.js only)
-- Auth.js middleware wrapper (`export { auth as middleware }`) — conflicts with the existing custom dual-issuer JWT dispatch; adds complexity without benefit
-- Iron-session — stateful server sessions contradict the existing stateless JWT strategy
+- `pybreaker` -- adds a dependency for a pattern used in exactly one place; custom implementation is simpler and more testable
+- `circuitbreaker` (PyPI) -- same reasoning; the pattern is trivial to implement in-house
+- `resilience4j` patterns -- Java ecosystem; Python equivalents are overkill at this scale
 
-**Implementation pattern (middleware.ts):**
-```typescript
-// middleware.ts — cookie-only optimistic check, not full DB validation
-import { jwtVerify } from 'jose'
-import { NextRequest, NextResponse } from 'next/server'
-
-const PUBLIC_ROUTES = ['/login', '/api/auth', '/_next', '/favicon.ico']
-
-export async function middleware(req: NextRequest) {
-  const isPublic = PUBLIC_ROUTES.some(p => req.nextUrl.pathname.startsWith(p))
-  if (isPublic) return NextResponse.next()
-
-  const token = req.cookies.get('next-auth.session-token')?.value
-    ?? req.cookies.get('__Secure-next-auth.session-token')?.value
-  if (!token) return NextResponse.redirect(new URL('/login', req.url))
-
-  try {
-    // Optimistic check only — DAL verifySession() does full validation
-    const secret = new TextEncoder().encode(process.env.NEXTAUTH_SECRET)
-    await jwtVerify(token, secret)
-    return NextResponse.next()
-  } catch {
-    return NextResponse.redirect(new URL('/login', req.url))
-  }
-}
-
-export const config = {
-  matcher: ['/((?!api/auth|_next/static|_next/image|favicon.ico).*)'],
-}
-```
-
-**Cookie security defaults (must be enforced):**
-- `httpOnly: true` — blocks XSS access
-- `secure: true` — HTTPS only in production
-- `sameSite: 'lax'` — CSRF protection for same-site navigations
-- `path: '/'` — available across entire app
-- `maxAge` — 7 days (configurable, not indefinite)
-
-**Installation:**
-```bash
-pnpm add jose server-only
-```
-
-**Source confidence:** HIGH — jose is the official Next.js authentication guide recommendation (nextjs.org/docs/app/guides/authentication, verified 2026-02-27). CVE-2025-29927 confirmed from Vercel postmortem (nextjs.org/blog/cve-2025-29927).
+**Source confidence:** HIGH -- tenacity already in stack and verified; circuit breaker pattern is well-documented (Martin Fowler, Michael Nygard); pybreaker/circuitbreaker reviewed on PyPI and rejected for YAGNI.
 
 ---
 
-### 2. Embedding Sidecar Service
+### 2. Charting Library for Unified Dashboard (#08 + #14)
 
-**Decision:** Deploy a separate FastAPI service using `infinity-emb` for configurable embedding model serving, accessible at `http://embedding:8003` from within Docker Compose.
+**Decision:** Use `recharts` (direct dependency) + custom chart wrapper components styled with Tailwind -- do NOT add `@tremor/react`.
 
-**Rationale:** Currently, bge-m3 embedding runs inside Celery workers via FlagEmbedding. This couples the embedding model to the worker image, prevents model swapping without redeployment, and blocks CPU/GPU resource isolation. A dedicated sidecar service:
-1. Allows changing the embedding model via env var (`INFINITY_MODEL_ID`) without code changes
-2. Isolates memory pressure from Celery workers
-3. Provides OpenAI-compatible `/v1/embeddings` endpoint — the backend switches from FlagEmbedding calls to HTTP calls, enabling future model changes (e.g., bge-m3 → bge-large-en) without touching Celery worker code
+**Rationale:** Both Tremor and shadcn/ui charts are built on Recharts underneath. Since the project already uses Tailwind CSS v4 and shadcn/ui design system, adding Tremor introduces 200KB+ gzipped bundle bloat and a parallel component library that conflicts with the existing design system. Using Recharts directly (~50KB) gives full control over chart styling via Tailwind, matches the existing shadcn/ui aesthetic, and avoids Tremor's opinionated color palette.
 
-**Note:** bge-m3 `BAAI/bge-m3` is explicitly listed as a validated model in infinity-emb documentation.
+The dashboard needs 5 chart types: AreaChart (trends), BarChart (comparisons), LineChart (time series), PieChart (distribution), and ComposedChart (mixed). Recharts provides all of these out of the box.
 
-| Library/Image | Version | Purpose | Why |
+| Library | Version | Purpose | Why |
 |---------|---------|---------|-----|
-| `infinity-emb` (Docker image) | 0.0.77 (latest stable as of Aug 2025) | Embedding inference server | OpenAI-compatible REST API; supports bge-m3 natively; model selection via `INFINITY_MODEL_ID` env var; CPU/ONNX/GPU Docker variants; MIT license |
-| `httpx` (Python) | already in stack | Backend calls to embedding sidecar | Already used for Keycloak JWKS; same pattern for embedding HTTP calls |
+| `recharts` | ^2.15.x | Chart rendering for dashboard | Built on D3+React; 3700+ npm dependents; actively maintained (v3.8.0 available but v2.x is stable); AreaChart, BarChart, LineChart, PieChart, ComposedChart; responsive containers; animation support; ~50KB gzipped |
+
+**Chart components needed:**
+
+| Dashboard Section | Chart Type | Recharts Component |
+|-------------------|------------|-------------------|
+| Usage Analytics | Area chart (DAU/MAU trend) | `<AreaChart>` |
+| Performance Metrics | Line chart (API latency P50/P95/P99) | `<LineChart>` |
+| Cost Analytics | Bar chart (LLM spend per model) | `<BarChart>` |
+| Agent Effectiveness | Pie chart (success/failure ratio) | `<PieChart>` |
+| System Overview | Composed (multiple metrics) | `<ComposedChart>` |
+| Activity Heatmap | Custom grid | Custom component (no Recharts) |
+
+**Integration pattern:**
+```tsx
+// components/dashboard/charts/area-chart.tsx
+"use client"
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+
+interface MetricChartProps {
+  data: Array<{ date: string; value: number }>
+  color?: string
+}
+
+export function MetricAreaChart({ data, color = "hsl(var(--primary))" }: MetricChartProps) {
+  return (
+    <ResponsiveContainer width="100%" height={300}>
+      <AreaChart data={data}>
+        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+        <XAxis dataKey="date" className="text-muted-foreground" />
+        <YAxis className="text-muted-foreground" />
+        <Tooltip />
+        <Area type="monotone" dataKey="value" stroke={color} fill={color} fillOpacity={0.1} />
+      </AreaChart>
+    </ResponsiveContainer>
+  )
+}
+```
+
+**What NOT to add:**
+- `@tremor/react` -- 200KB+ bundle; parallel design system conflicts with shadcn/ui; acquired by Vercel but last npm publish was Jan 2025 (maintenance uncertain)
+- `visx` (@visx/visx) -- low-level D3 wrapper; requires writing much more code for the same charts
+- `chart.js` / `react-chartjs-2` -- Canvas-based (not SVG); harder to theme with Tailwind; less React-native API
+- `nivo` (@nivo/core) -- heavy bundle; designed for standalone dashboards, not embedded in existing apps
+- `d3` directly -- too low-level; Recharts abstracts D3 with React components
+
+**Source confidence:** MEDIUM-HIGH -- Recharts npm verified (v3.8.0 latest, v2.15.x stable line). Tremor bundle size comparison from shadcn/ui GitHub discussion #4133. Recharts used by shadcn/ui charts component internally.
+
+---
+
+### 3. WebSocket for Real-Time Dashboard Feeds (#14)
+
+**Decision:** Use FastAPI's built-in WebSocket support (`fastapi.WebSocket`) + Redis pub/sub for cross-worker fan-out -- no additional library needed.
+
+**Rationale:** FastAPI is built on ASGI (Starlette) and has native WebSocket support. The project already has Redis 7+ running as Celery broker. Using Redis pub/sub for WebSocket fan-out is the standard pattern for multi-worker deployments. No additional library is needed on the backend.
+
+On the frontend, the native browser `WebSocket` API wrapped in a custom React hook provides reconnection logic without adding `socket.io-client` or other libraries.
+
+| Library | Version | Purpose | Why |
+|---------|---------|---------|-----|
+| FastAPI WebSocket | built-in (0.115+) | WebSocket endpoint for dashboard | Native Starlette WebSocket; async handlers; already in stack |
+| Redis pub/sub | built-in (redis 5.2.1) | Cross-worker message fan-out | Already installed; `redis.asyncio.PubSub` for async subscribe; enables multiple backend workers to broadcast to all connected dashboards |
+
+**Backend pattern (WebSocket hub):**
+```python
+# api/routes/dashboard.py
+from fastapi import WebSocket, WebSocketDisconnect
+from redis.asyncio import Redis
+
+class DashboardHub:
+    """Manages WebSocket connections for real-time dashboard updates."""
+
+    def __init__(self):
+        self.connections: dict[str, set[WebSocket]] = {}  # user_id -> connections
+
+    async def connect(self, ws: WebSocket, user_id: str) -> None:
+        await ws.accept()
+        self.connections.setdefault(user_id, set()).add(ws)
+
+    async def disconnect(self, ws: WebSocket, user_id: str) -> None:
+        self.connections.get(user_id, set()).discard(ws)
+
+    async def broadcast(self, event: dict) -> None:
+        """Send event to all connected dashboards."""
+        for user_conns in self.connections.values():
+            for ws in user_conns:
+                try:
+                    await ws.send_json(event)
+                except Exception:
+                    pass  # cleanup handled by disconnect
+
+hub = DashboardHub()
+
+@router.websocket("/ws/dashboard")
+async def dashboard_ws(ws: WebSocket):
+    user = await authenticate_ws(ws)  # JWT from query param
+    await hub.connect(ws, str(user.user_id))
+    try:
+        # Subscribe to Redis pub/sub for cross-worker events
+        redis = Redis.from_url(settings.redis_url)
+        pubsub = redis.pubsub()
+        await pubsub.subscribe("dashboard:events")
+        async for message in pubsub.listen():
+            if message["type"] == "message":
+                await ws.send_text(message["data"])
+    except WebSocketDisconnect:
+        await hub.disconnect(ws, str(user.user_id))
+```
+
+**Frontend pattern (custom hook):**
+```typescript
+// hooks/use-dashboard-ws.ts
+"use client"
+import { useEffect, useRef, useState, useCallback } from 'react'
+
+export function useDashboardWs(token: string) {
+  const wsRef = useRef<WebSocket | null>(null)
+  const [events, setEvents] = useState<DashboardEvent[]>([])
+
+  const connect = useCallback(() => {
+    const ws = new WebSocket(`ws://localhost:8000/api/dashboard/ws?token=${token}`)
+    ws.onmessage = (e) => {
+      const event = JSON.parse(e.data) as DashboardEvent
+      setEvents(prev => [event, ...prev].slice(0, 100))
+    }
+    ws.onclose = () => setTimeout(connect, 3000) // reconnect
+    wsRef.current = ws
+  }, [token])
+
+  useEffect(() => { connect(); return () => wsRef.current?.close() }, [connect])
+  return events
+}
+```
+
+**What NOT to add:**
+- `socket.io` / `python-socketio` -- adds complexity over native WebSocket; Socket.IO protocol overhead not needed for server-push-only dashboard
+- `channels` (Django Channels) -- Django ecosystem; not applicable to FastAPI
+- `websockets` (PyPI) -- Starlette already provides WebSocket support; adding another library is redundant
+- Server-Sent Events (SSE) for dashboard -- WebSocket is bidirectional (needed for user actions like filter changes); SSE is read-only
+
+**Source confidence:** HIGH -- FastAPI WebSocket docs (official, fastapi.tiangolo.com/advanced/websockets/). Redis pub/sub pattern from multiple 2025 production references. Native browser WebSocket API is standard.
+
+---
+
+### 4. MinIO Object Storage for Storage Service (#19) + Avatar Upload (#13)
+
+**Decision:** Add MinIO Docker service + `minio` Python SDK for backend + presigned URL pattern for frontend uploads.
+
+**Rationale:** MinIO is the standard self-hosted S3-compatible object storage. It runs as a single Docker container, provides a web console at port 9001, and the Python SDK handles bucket creation, upload, download, and presigned URL generation. The same MinIO instance serves both the Storage Service (#19, file management) and User Experience Enhancement (#13, avatar uploads).
+
+| Library | Version | Purpose | Why |
+|---------|---------|---------|-----|
+| `minio` (PyPI) | >=7.2.20 | Python SDK for MinIO/S3 operations | Official MinIO SDK; supports async via `minio.Minio` + `asyncio`; presigned URL generation; bucket policy management; Python 3.9+ |
+| MinIO Server (Docker) | RELEASE.2025-09-06 (latest stable) | S3-compatible object storage | Single binary; Docker Compose native; web console at :9001; erasure coding optional; health endpoint for monitoring |
 
 **Docker Compose service:**
 ```yaml
-embedding:
-  image: michaelf34/infinity:latest-cpu   # CPU-only; swap to :latest for GPU
+minio:
+  image: minio/minio:RELEASE.2025-09-06T17-38-46Z
+  command: server /data --console-address ":9001"
   environment:
-    INFINITY_MODEL_ID: "BAAI/bge-m3"
-    INFINITY_PORT: "8003"
-    INFINITY_BATCH_SIZE: "32"
-    INFINITY_DEVICE: "cpu"               # or "cuda" for GPU host
+    MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+    MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
   volumes:
-    - embedding_cache:/app/.cache        # persist model weights
+    - minio_data:/data
   ports:
-    - "8003:8003"
+    - "9000:9000"   # S3 API
+    - "9001:9001"   # Web Console
+  healthcheck:
+    test: ["CMD", "mc", "ready", "local"]
+    interval: 30s
+    timeout: 10s
+    retries: 3
   restart: unless-stopped
+
+volumes:
+  minio_data:
 ```
 
-**Backend integration change:** Replace direct FlagEmbedding calls in Celery tasks with HTTP calls to the sidecar:
+**Backend integration:**
 ```python
-# Before (in-process FlagEmbedding):
-from FlagEmbedding import BGEM3FlagModel
-model = BGEM3FlagModel('BAAI/bge-m3', use_fp16=True)
-embeddings = model.encode(texts)['dense_vecs']
+# core/storage.py
+from minio import Minio
+from core.config import settings
 
-# After (HTTP sidecar):
-import httpx
-async with httpx.AsyncClient() as client:
-    resp = await client.post(
-        "http://embedding:8003/v1/embeddings",
-        json={"input": texts, "model": "BAAI/bge-m3"}
+def get_storage_client() -> Minio:
+    return Minio(
+        endpoint=settings.minio_endpoint,  # "minio:9000" inside Docker
+        access_key=settings.minio_access_key,
+        secret_key=settings.minio_secret_key,
+        secure=False,  # Internal Docker network; TLS not needed
     )
-    embeddings = [item["embedding"] for item in resp.json()["data"]]
+
+# Presigned upload URL (frontend uploads directly to MinIO)
+async def get_upload_url(bucket: str, object_name: str, expires: int = 3600) -> str:
+    client = get_storage_client()
+    return client.presigned_put_object(bucket, object_name, expires=timedelta(seconds=expires))
+
+# Presigned download URL
+async def get_download_url(bucket: str, object_name: str, expires: int = 3600) -> str:
+    client = get_storage_client()
+    return client.presigned_get_object(bucket, object_name, expires=timedelta(seconds=expires))
 ```
 
-**What NOT to add:**
-- A separate `sentence-transformers` HTTP server (reimplements what infinity-emb provides)
-- Triton Inference Server — significant ops overhead; overkill for 100 users
-- GPU requirement — infinity-emb CPU image works fine for 100 users; GPU is an optional upgrade
-
-**Environment variable configuration (model swapping without code change):**
-```bash
-# Switch model at runtime by changing env var and restarting service:
-INFINITY_MODEL_ID="BAAI/bge-large-en-v1.5"   # smaller, English-only
-INFINITY_MODEL_ID="BAAI/bge-m3"               # default, multilingual
+**Bucket structure:**
+```
+blitz-avatars/         # User avatar images (public-read policy)
+  {user_id}/avatar.{ext}
+blitz-files/           # User files (private, presigned URLs only)
+  {user_id}/{folder_path}/{filename}
+blitz-system/          # System files (email templates, exports)
+  templates/
+  exports/
 ```
 
-**Pitfall:** The embedding dimension in pgvector is locked at `vector(1024)` for bge-m3. Switching to a model with a different output dimension (e.g., bge-large at 1024, bge-base at 768) requires a full reindex. Validate output dimension before changing `INFINITY_MODEL_ID`.
-
-**Source confidence:** HIGH — infinity-emb PyPI page (pypi.org/project/infinity-emb/, v0.0.77 verified Aug 2025). bge-m3 support confirmed from official GitHub README. Docker deployment pattern from michaelfeil/infinity GitHub.
-
-**Installation:**
-```bash
-# No Python package install needed — infinity-emb runs as Docker service
-# Backend only needs httpx (already installed) to call the sidecar
-```
-
----
-
-### 3. PostgreSQL Full-Text Search (tsvector) for Skill Catalog
-
-**Decision:** Use native PostgreSQL `tsvector` with GIN index via raw Alembic migration SQL — no additional Python library needed.
-
-**Rationale:** The skill catalog needs full-text search over skill `name`, `description`, and `tags` fields. PostgreSQL's native FTS is sufficient for 100 users and requires no additional infrastructure. SQLAlchemy 2.0 provides `func.to_tsvector()` and `func.plainto_tsquery()` in its `func` namespace for query construction.
-
-**No new packages required.** The existing stack (SQLAlchemy 2.0, asyncpg, Alembic) handles this natively.
-
-**Known Alembic gotcha:** Alembic autogenerate incorrectly detects "changes" on expression-based GIN indexes (using `to_tsvector()`). This is a known bug in Alembic 1.13.1+ / SQLAlchemy 2.0.25+. **Mitigation:** Create the GIN index via a manual Alembic migration using `op.execute()` with raw SQL rather than `op.create_index()` with `sa.text()`. Mark the migration as non-autogenerate with `include_symbol` configuration.
-
-**Migration pattern (raw SQL, avoids Alembic false-positive drift detection):**
-```python
-# In Alembic migration file:
-def upgrade():
-    # Add tsvector computed column
-    op.execute("""
-        ALTER TABLE skills
-        ADD COLUMN fts_vector tsvector
-        GENERATED ALWAYS AS (
-            to_tsvector('english', coalesce(name,'') || ' ' ||
-                                   coalesce(description,'') || ' ' ||
-                                   coalesce(tags,''))
-        ) STORED
-    """)
-    # Create GIN index for fast FTS
-    op.execute("""
-        CREATE INDEX idx_skills_fts ON skills USING gin(fts_vector)
-    """)
-
-def downgrade():
-    op.execute("DROP INDEX IF EXISTS idx_skills_fts")
-    op.execute("ALTER TABLE skills DROP COLUMN IF EXISTS fts_vector")
-```
-
-**Query pattern (SQLAlchemy async):**
-```python
-from sqlalchemy import func, text
-
-async def search_skills(query: str, session: AsyncSession) -> list[Skill]:
-    result = await session.execute(
-        select(Skill)
-        .where(
-            Skill.fts_vector.op("@@")(func.plainto_tsquery("english", query))
-        )
-        .order_by(
-            func.ts_rank(Skill.fts_vector, func.plainto_tsquery("english", query)).desc()
-        )
-        .limit(50)
-    )
-    return result.scalars().all()
-```
-
-**What NOT to add:**
-- `sqlalchemy-searchable` — adds triggers and complexity; overkill for a single table search
-- Elasticsearch / OpenSearch — massively over-engineered for 100-user skill catalog
-- `sqlalchemy-pg-fts` — alpha-quality PyPI package; native SQLAlchemy `func` namespace is sufficient
-- Separate search microservice — YAGNI at this scale
-
-**Alembic drift detection fix (add to `env.py`):**
-```python
-# Prevent Alembic from autogenerating changes for GIN expression indexes
-def include_object(object, name, type_, reflected, compare_to):
-    if type_ == "index" and name in ("idx_skills_fts",):
-        return False  # Skip autogenerate for manually managed indexes
-    return True
-```
-
-**Source confidence:** MEDIUM — PostgreSQL tsvector docs (official, postgresql.org/docs/current). Alembic GIN index drift bug confirmed from GitHub Issue #1390. SQLAlchemy func namespace for FTS from official SQLAlchemy 2.0 PostgreSQL dialect docs. Async pattern inferred from existing codebase patterns (HIGH confidence for async itself).
-
----
-
-### 4. Agent Skills Standard (agentskills.io) Compliance
-
-**Decision:** Use `skills-ref` (Python CLI) for local validation only. No runtime dependency on any SDK. Skill compliance is enforced at export time via the existing skill export pipeline.
-
-**What the standard requires (verified from agentskills.io/specification):**
-
-A compliant skill is a directory with:
-```
-skill-name/
-├── SKILL.md          # Required: YAML frontmatter + Markdown body
-├── scripts/          # Optional: executable scripts
-├── references/       # Optional: REFERENCE.md, domain-specific docs
-└── assets/           # Optional: templates, images, data files
-```
-
-**Required SKILL.md frontmatter:**
-```yaml
----
-name: skill-name          # max 64 chars, lowercase + hyphens only, no leading/trailing hyphens
-description: |            # max 1024 chars, non-empty, explains what AND when to use
-  Extracts and summarizes email threads. Use when user asks for email digest
-  or wants to review unread messages.
----
-```
-
-**Optional fields:** `license`, `compatibility`, `metadata` (arbitrary key-value), `allowed-tools` (experimental).
-
-**Existing skill export (v1.2)** already produces a ZIP with `SKILL.md + procedure.json + schemas.json`. The v1.3 task is to ensure the existing `SKILL.md` format inside the ZIP is fully compliant with the agentskills.io specification (name constraints, description quality, optional fields populated).
-
-| Tool | Version | Purpose | Production? |
-|------|---------|---------|------------|
-| `skills-ref` (PyPI) | 0.1.1 (Jan 2026) | CLI validation: `agentskills validate`, `agentskills to-prompt` | Alpha — dev/CI only |
-
-**skills-ref provides three CLI commands:**
-- `agentskills validate ./my-skill` — checks SKILL.md frontmatter is valid
-- `agentskills read-properties ./my-skill` — outputs metadata as JSON
-- `agentskills to-prompt ./my-skills/` — generates `<available_skills>` XML for agent prompts
-
-**v1.3 compliance changes needed in existing code:**
-1. `backend/api/routes/skills.py` (export endpoint): ensure generated `SKILL.md` uses agentskills.io name constraints (lowercase, hyphens, ≤64 chars)
-2. Add `skills-ref validate` to CI pipeline for skill export tests
-3. Skill builder wizard in `/admin`: add `compatibility` and `metadata.author` fields to the creation form
-4. `agentskills to-prompt` output format can be used to populate the `<available_skills>` context in the master agent's system prompt — **this is the key new capability**, enabling the agent to discover and activate skills dynamically
-
-**What NOT to add:**
-- `agent-skills-sdk` (PyPI) — third-party package unrelated to the official agentskills/agentskills repo
-- Skills auto-publish to agentskills.io registry — explicitly out of scope for v1.3
-- `pydantic-ai-skills` — experimental third-party package, not part of the standard
-- Runtime dependency on `skills-ref` in the FastAPI backend — it's a dev/CI tool only
-
-**Industry adoption context (informs why this matters):** Agent Skills was open-sourced by Anthropic in Dec 2025 and adopted by Claude Code, GitHub Copilot, VS Code, Cursor, OpenAI Codex, Gemini CLI, and 20+ other platforms within 3 months. Blitz's compliance enables skills to be loaded by any of these tools.
-
-**Installation:**
-```bash
-# Dev dependency only — not in production backend
-uv add --dev skills-ref
-```
-
-**Source confidence:** HIGH — agentskills.io/specification (official spec, fetched directly). PyPI skills-ref 0.1.1 (Jan 2026). Industry adoption from unite.ai and agentskills.io reports.
-
----
-
-### 5. Navigation Rail Pattern in React/Next.js
-
-**Decision:** Use shadcn/ui `Sidebar` component with `SidebarRail` — specifically the `icon` collapse variant. No additional navigation library needed.
-
-**Rationale:** shadcn/ui is already in the project's design system (used in admin dashboard, wizard, and form components). The `Sidebar` component (added to shadcn/ui in late 2024) provides a composable navigation rail with collapse-to-icons behavior, keyboard shortcut (Ctrl+B / Cmd+B), and responsive mobile handling — all needed for the menu redesign.
-
-**Key shadcn/ui Sidebar sub-components:**
-
-| Component | Purpose |
-|-----------|---------|
-| `SidebarProvider` | Context: manages open/collapsed state (with localStorage persistence) |
-| `Sidebar` | Main container with `collapsible="icon"` variant for rail mode |
-| `SidebarRail` | Renders the persistent rail strip that toggles the sidebar |
-| `SidebarHeader` | Sticky top section (logo, workspace picker) |
-| `SidebarContent` | Scrollable middle area (nav items) |
-| `SidebarFooter` | Sticky bottom section (user profile, settings link) |
-| `SidebarMenu` / `SidebarMenuItem` | Nav item list structure |
-| `SidebarMenuButton` | Clickable nav item with icon + label |
-| `SidebarTrigger` | Toggle button (place in page header for accessibility) |
-
-**Collapse variant to use:** `collapsible="icon"` — collapses to icon-only rail (material design navigation rail pattern), not off-canvas. This is the correct pattern for a persistent desktop sidebar that can compact to icon-only mode.
-
-**Integration with Next.js App Router:**
+**Frontend upload pattern (presigned URL):**
 ```typescript
-// app/layout.tsx — wrap root layout with SidebarProvider
-import { SidebarProvider } from "@/components/ui/sidebar"
-import { AppSidebar } from "@/components/app-sidebar"
+// hooks/use-file-upload.ts
+async function uploadFile(file: File, uploadUrl: string) {
+  await fetch(uploadUrl, {
+    method: 'PUT',
+    body: file,
+    headers: { 'Content-Type': file.type },
+  })
+}
+```
 
+**What NOT to add:**
+- `boto3` -- AWS SDK; heavyweight; MinIO's native Python SDK is simpler and purpose-built
+- `aiobotocore` -- async S3 wrapper; unnecessary complexity when MinIO SDK handles presigned URLs
+- Standalone file upload library -- presigned URLs let the browser upload directly to MinIO (no backend proxy needed)
+- Azure Blob Storage / GCS SDK -- YAGNI; adapter pattern in code, but only MinIO implemented for MVP
+
+**Source confidence:** HIGH -- MinIO Python SDK verified on PyPI (v7.2.20, Nov 2025). Docker image tag confirmed from GitHub releases. Presigned URL pattern is standard S3/MinIO.
+
+---
+
+### 5. Email IMAP/SMTP Libraries for Email System (#18)
+
+**Decision:** Use `aiosmtplib` (SMTP) + `aioimaplib` (IMAP) for the email sidecar service, `google-auth-oauthlib` for Gmail OAuth, `msal` for Microsoft 365 OAuth.
+
+**Rationale:** The email sidecar runs as a separate Python service (consistent with Telegram/WhatsApp sidecar pattern). It needs async IMAP for receiving email (IMAP IDLE) and async SMTP for sending. OAuth libraries are needed for Gmail and Microsoft 365 authentication without storing user passwords.
+
+| Library | Version | Purpose | Why |
+|---------|---------|---------|-----|
+| `aiosmtplib` | >=5.1.0 | Async SMTP client for sending email | asyncio-native; Python 3.10+; supports STARTTLS, AUTH; connection pooling; well-maintained |
+| `aioimaplib` | >=2.0.1 | Async IMAP client for receiving email | asyncio-native; IMAP IDLE support (push notifications); 23/25 RFC 3501 commands implemented; XOAUTH2 authentication supported |
+| `google-auth-oauthlib` | >=1.3.0 | Gmail OAuth 2.0 flow | Official Google library; InstalledAppFlow for OAuth consent; scope management for Gmail API access |
+| `google-auth` | >=2.40.0 | Google credentials management | Required by google-auth-oauthlib; handles token refresh, caching |
+| `msal` | >=1.34.0 | Microsoft 365 OAuth 2.0 flow | Official Microsoft Authentication Library; ConfidentialClientApplication for server OAuth; handles token acquisition and refresh |
+| `jinja2` | >=3.1.0 | Email HTML templates | Standard Python templating; for system notification email templates; lightweight |
+
+**Email sidecar dependencies (separate pyproject.toml):**
+```toml
+[project]
+name = "email-sidecar"
+dependencies = [
+    "aiosmtplib>=5.1.0",
+    "aioimaplib>=2.0.1",
+    "google-auth-oauthlib>=1.3.0",
+    "msal>=1.34.0",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.34.0",
+    "httpx>=0.28.0",
+    "jinja2>=3.1.0",
+    "structlog>=25.1.0",
+]
+```
+
+**IMAP IDLE pattern (push-based email receiving):**
+```python
+# channel-gateways/email/imap_listener.py
+import aioimaplib
+
+async def listen_for_new_emails(host: str, user: str, oauth_token: str):
+    client = aioimaplib.IMAP4_SSL(host=host)
+    await client.wait_hello_from_server()
+    await client.xoauth2_login(user, oauth_token)
+    await client.select("INBOX")
+
+    while True:
+        idle = await client.idle_start(timeout=300)
+        msg = await client.idle_check(timeout=300)
+        if msg:
+            # Fetch new messages and forward to backend
+            await process_new_messages(client)
+        await client.idle_done()
+```
+
+**Notification service (backend -- no new deps):**
+The NotificationService in the backend uses existing `httpx` to call channel sidecar `/send` endpoints. No additional library needed in the backend for notification routing.
+
+**What NOT to add:**
+- `imaplib` (stdlib) -- synchronous; blocks event loop
+- `smtplib` (stdlib) -- synchronous; blocks event loop
+- `django-allauth` -- Django ecosystem; not applicable
+- `authlib` -- generic OAuth; google-auth-oauthlib and msal are the official libraries for their respective providers
+- `sendgrid` / `mailgun` SDK -- SaaS email services; on-premise requirement means direct SMTP
+
+**Source confidence:** HIGH -- aiosmtplib v5.1.0 verified on PyPI. aioimaplib v2.0.1 verified on PyPI. google-auth-oauthlib v1.3.0 and msal v1.34.0 verified on PyPI. All are official/well-maintained libraries.
+
+---
+
+### 6. Theme Management for User Experience Enhancement (#13)
+
+**Decision:** Use `next-themes` for theme switching + Tailwind CSS v4 custom properties -- no other library needed.
+
+**Rationale:** `next-themes` is the canonical dark mode solution for Next.js App Router. It provides system preference detection, zero-flash theme application (injects script before hydration), localStorage persistence, and works with Tailwind's `dark:` variant. The project already uses Tailwind CSS v4, so CSS custom properties for theme colors are native.
+
+| Library | Version | Purpose | Why |
+|---------|---------|---------|-----|
+| `next-themes` | ^0.4.x | Theme switching (light/dark/system) | 2 lines to set up; zero-flash; system preference detection; cookie persistence for SSR; works with Next.js 15 App Router; 5M+ weekly downloads |
+
+**Integration with existing stack:**
+```tsx
+// components/theme-provider.tsx
+"use client"
+import { ThemeProvider as NextThemesProvider } from "next-themes"
+
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  return (
+    <NextThemesProvider
+      attribute="class"       // Tailwind dark: variant
+      defaultTheme="system"   // Follow OS preference
+      enableSystem             // Detect OS dark mode
+      disableTransitionOnChange // Prevent flash during switch
+    >
+      {children}
+    </NextThemesProvider>
+  )
+}
+
+// app/layout.tsx
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body>
-        <SidebarProvider defaultOpen={true}>
-          <AppSidebar />
-          <main>{children}</main>
-        </SidebarProvider>
+        <ThemeProvider>
+          <SidebarProvider>{children}</SidebarProvider>
+        </ThemeProvider>
       </body>
     </html>
   )
 }
 ```
 
-**Installation (shadcn CLI — already available in project):**
-```bash
-# Add Sidebar component via shadcn CLI
-pnpx shadcn@latest add sidebar
+**CSS custom properties for multi-theme support (3 themes: light, dark, navy):**
+```css
+/* globals.css -- Tailwind v4 theming */
+:root {
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --primary: 222.2 47.4% 11.2%;
+  /* ... */
+}
 
-# This installs: sidebar, button, separator, sheet, skeleton, tooltip
-# (all peer dependencies of the Sidebar component)
+.dark {
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+  --primary: 210 40% 98%;
+}
+
+[data-theme="navy"] {
+  --background: 222 47% 11%;
+  --foreground: 210 40% 98%;
+  --primary: 217 91% 60%;
+}
 ```
 
 **What NOT to add:**
-- `react-pro-sidebar` — third-party library; duplicates what shadcn/ui Sidebar already provides; adds a dependency that conflicts with project's Tailwind/Radix design system
-- MUI Drawer/Navigation — MUI is not in the project stack; mixing component libraries creates style conflicts
-- Custom CSS navigation rail from scratch — shadcn/ui Sidebar covers the requirement with accessible Radix primitives
-- `zustand` for sidebar state — `SidebarProvider` handles open/collapsed state internally with cookie persistence
+- CSS-in-JS solutions (styled-components, emotion) -- Tailwind v4 handles theming natively
+- `theme-change` -- simple library superseded by next-themes
+- Custom theme context provider -- next-themes handles all the edge cases (SSR, flash prevention, system detection)
 
-**Shadcn/ui version note:** The `Sidebar` component requires shadcn/ui components to be installed (not a versioned npm package — shadcn/ui copies components into your project). The component was stable as of late 2024 and is the canonical sidebar solution documented at ui.shadcn.com/docs/components/radix/sidebar.
-
-**Source confidence:** MEDIUM-HIGH — shadcn/ui official docs (ui.shadcn.com/docs/components/radix/sidebar). SidebarRail sub-component confirmed from same docs. Next.js App Router integration verified from build.
+**Source confidence:** HIGH -- next-themes GitHub (pacocoursey/next-themes, verified). shadcn/ui official dark mode guide uses next-themes. Multiple 2025-2026 Next.js 15 + Tailwind v4 tutorials confirm compatibility.
 
 ---
 
-## Version Compatibility Matrix (v1.3 Additions)
+### 7. Cron Builder UI for Scheduler (#15)
+
+**Decision:** Build a custom cron builder component using shadcn/ui form primitives (Select, Input, Tabs) + `cronstrue` for human-readable descriptions -- do NOT add a third-party cron builder.
+
+**Rationale:** Existing React cron builder components are either outdated (`react-cron-builder`, 7 years old), Ant Design-dependent (`react-js-cron`), or too new/unproven (`@vpfaiz/cron-builder-ui`, <100 stars). A custom component built with the existing shadcn/ui design system (Select, RadioGroup, Tabs, Input) provides better UX consistency and avoids adding a component library with incompatible styles.
+
+The backend already has `croniter` (>=6.0.0) for cron expression validation and next-run calculation. Adding `cronstrue` on the frontend provides human-readable cron descriptions ("Every Monday at 9:00 AM").
+
+| Library | Version | Purpose | Why |
+|---------|---------|---------|-----|
+| `cronstrue` | ^2.x (npm) | Human-readable cron expression descriptions | Lightweight (no dependencies); "0 9 * * 1" -> "At 09:00, only on Monday"; i18n support; used by cron builder UIs to show preview text |
+
+**Frontend pattern:**
+```tsx
+// components/scheduler/cron-builder.tsx
+"use client"
+import cronstrue from 'cronstrue'
+
+function CronBuilder({ value, onChange }: { value: string; onChange: (cron: string) => void }) {
+  const [mode, setMode] = useState<'simple' | 'advanced'>('simple')
+
+  // Simple mode: dropdowns for common patterns
+  // Advanced mode: raw cron expression input
+
+  const description = useMemo(() => {
+    try { return cronstrue.toString(value) } catch { return 'Invalid expression' }
+  }, [value])
+
+  return (
+    <div>
+      <Tabs value={mode} onValueChange={v => setMode(v as 'simple' | 'advanced')}>
+        <TabsList>
+          <TabsTrigger value="simple">Simple</TabsTrigger>
+          <TabsTrigger value="advanced">Advanced</TabsTrigger>
+        </TabsList>
+        <TabsContent value="simple">
+          {/* Frequency selector: Every N minutes/hours/days/weeks/months */}
+          {/* Day-of-week checkboxes */}
+          {/* Time picker */}
+        </TabsContent>
+        <TabsContent value="advanced">
+          <Input value={value} onChange={e => onChange(e.target.value)} placeholder="* * * * *" />
+        </TabsContent>
+      </Tabs>
+      <p className="text-sm text-muted-foreground mt-2">{description}</p>
+    </div>
+  )
+}
+```
+
+**Backend validation (already in stack):**
+```python
+# croniter already installed (>=6.0.0)
+from croniter import croniter
+
+def validate_cron(expression: str) -> bool:
+    return croniter.is_valid(expression)
+
+def next_runs(expression: str, count: int = 5) -> list[datetime]:
+    cron = croniter(expression)
+    return [cron.get_next(datetime) for _ in range(count)]
+```
+
+**What NOT to add:**
+- `react-js-cron` -- depends on Ant Design; adds antd as peer dependency (massive bundle; style conflicts)
+- `react-cron-generator` -- last updated 2023; Quartz format focus (not needed for Celery/cron)
+- `@vpfaiz/cron-builder-ui` -- too new (<100 npm downloads); not production-proven
+- `react-cron-builder` -- 7 years old; unmaintained
+- `cron-parser` (npm) -- `cronstrue` is for display only; backend `croniter` handles parsing/validation
+
+**Source confidence:** MEDIUM -- cronstrue npm verified. Custom builder approach based on shadcn/ui form primitives is a design decision, not a library finding. croniter already in stack (verified from pyproject.toml).
+
+---
+
+### 8. No Additional Libraries Needed
+
+The following v1.4 features require NO new stack additions:
+
+**Admin Registry Edit UI (#06):**
+- Uses existing shadcn/ui form components (Input, Select, Dialog, Tabs)
+- MCP connection testing uses existing `httpx` to probe `/health` and `/sse` endpoints
+- No new libraries
+
+**Runtime Permission Approval HITL (#01):**
+- Permission request queue uses existing PostgreSQL tables + FastAPI endpoints
+- Temporal ACL uses existing `cachetools` for TTL-based permission caching
+- Auto-approve rules stored in existing `platform_config` table
+- UI uses existing shadcn/ui components
+- No new libraries
+
+**Multi-Agent Tab Architecture (#16):**
+- Multiple CopilotKit instances reuse existing `@copilotkit/react-core`
+- Tabbed UI uses existing shadcn/ui Tabs component
+- Builder agents are new LangGraph graphs but use existing `langgraph` package
+- No new libraries
+
+---
+
+## Version Compatibility Matrix (v1.4 Additions)
 
 | Package | Compatible With | Notes |
 |---------|-----------------|-------|
-| `jose` ^5.x | Next.js 15.2.3+ Edge Runtime | jose uses Web Crypto API — Edge-compatible; verify Next.js is 15.2.3+ (CVE-2025-29927 fix) |
-| `infinity-emb` 0.0.77 (Docker) | bge-m3 (`BAAI/bge-m3`) | bge-m3 supported but sparse vectors not available; dense-only mode works for pgvector |
-| `infinity-emb` (CPU image) | Docker Compose host (no GPU) | Use `michaelf34/infinity:latest-cpu`; model loads in ~30s on first start |
-| tsvector (PostgreSQL 16) | SQLAlchemy 2.0 + asyncpg | `func.to_tsvector()` works in async SQLAlchemy; GIN index created via raw SQL migration |
-| `skills-ref` 0.1.1 | Python 3.9+ | Dev/CI only; Alpha status — not for production backend |
-| shadcn/ui Sidebar | Next.js 15 App Router + Tailwind | Component copied into project (not npm); requires Tailwind CSS (already in stack) |
+| `recharts` ^2.15.x | React 19 + Next.js 15 | SSR-safe with `"use client"` directive; responsive containers |
+| `next-themes` ^0.4.x | Next.js 15 App Router + Tailwind v4 | Must wrap `<html>` with `suppressHydrationWarning` |
+| `cronstrue` ^2.x | Browser + Node.js | Pure JS; no framework dependency |
+| `minio` >=7.2.20 | Python 3.12 + FastAPI | Sync SDK; use in FastAPI route handlers or wrap in `asyncio.to_thread()` |
+| MinIO Server RELEASE.2025-09 | Docker Compose | Single container; S3-compatible API on :9000, console on :9001 |
+| `aiosmtplib` >=5.1.0 | Python 3.10+ asyncio | Async SMTP; TLS/STARTTLS support |
+| `aioimaplib` >=2.0.1 | Python 3.9+ asyncio | Async IMAP; IDLE + XOAUTH2 |
+| `google-auth-oauthlib` >=1.3.0 | Python 3.7+ | Gmail OAuth flow |
+| `msal` >=1.34.0 | Python 3.7+ | Microsoft 365 OAuth flow |
+| `tenacity` >=9.1.4 | Already installed | Circuit breaker pattern uses existing dependency |
+| `croniter` >=6.0.0 | Already installed | Backend cron validation |
 
 ---
 
-## Installation Summary (v1.3 New Additions Only)
+## Installation Summary (v1.4 New Additions Only)
 
 ### Frontend
 ```bash
-# Middleware JWT verification
-pnpm add jose server-only
+cd /home/tungmv/Projects/hox-agentos/frontend
 
-# Navigation rail component
-pnpx shadcn@latest add sidebar
-# installs: sidebar, button, separator, sheet, skeleton, tooltip into components/ui/
+# Dashboard charts
+pnpm add recharts
+
+# Theme management
+pnpm add next-themes
+
+# Cron expression display
+pnpm add cronstrue
+
+# Type definitions (if needed)
+pnpm add -D @types/recharts
 ```
 
-### Backend
+### Backend (main service)
 ```bash
-# Agent Skills validation (dev/CI only)
-uv add --dev skills-ref
+cd /home/tungmv/Projects/hox-agentos/backend
 
-# No new production backend packages — tsvector uses existing SQLAlchemy/asyncpg,
-# embedding sidecar is accessed via httpx (already installed)
+# MinIO SDK for storage service
+uv add minio
+
+# No other additions -- tenacity, croniter, httpx, cachetools already installed
+```
+
+### Email Sidecar (new service)
+```bash
+# New pyproject.toml in channel-gateways/email/
+uv add aiosmtplib aioimaplib google-auth-oauthlib msal fastapi uvicorn httpx jinja2 structlog
 ```
 
 ### Infrastructure (Docker Compose additions)
 ```yaml
-# New service: embedding sidecar
-embedding:
-  image: michaelf34/infinity:latest-cpu
+# MinIO object storage (for Storage Service + Avatar upload)
+minio:
+  image: minio/minio:RELEASE.2025-09-06T17-38-46Z
+  command: server /data --console-address ":9001"
   environment:
-    INFINITY_MODEL_ID: "BAAI/bge-m3"
-    INFINITY_PORT: "8003"
+    MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+    MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
   volumes:
-    - embedding_cache:/app/.cache
+    - minio_data:/data
+  ports:
+    - "9000:9000"
+    - "9001:9001"
+  healthcheck:
+    test: ["CMD", "mc", "ready", "local"]
+    interval: 30s
+    timeout: 10s
+    retries: 3
+  restart: unless-stopped
+
+# Email sidecar (for Email System)
+email-gateway:
+  build: ./channel-gateways/email
+  environment:
+    EMAIL_SIDECAR_PORT: "8003"
+    BACKEND_URL: "http://backend:8000"
   ports:
     - "8003:8003"
+  depends_on:
+    - backend
+  restart: unless-stopped
 
 volumes:
-  embedding_cache:  # persist downloaded model weights
+  minio_data:
 ```
 
 ---
 
-## What NOT to Add (v1.3 Additions)
+## What NOT to Add (v1.4 Additions)
 
 | Avoid | Why | Use Instead |
 |-------|-----|-------------|
-| `jsonwebtoken` in middleware.ts | Node.js only; fails in Edge Runtime | `jose` (Web Crypto compatible) |
-| Auth.js middleware wrapper for route protection | Conflicts with existing custom dual-issuer JWT; adds hidden complexity | Custom `middleware.ts` with `jose` |
-| `sqlalchemy-searchable` | Trigger-based abstraction; overkill for a single table | Native `func.to_tsvector()` + raw SQL migration |
-| `Elasticsearch` / `MeiliSearch` | Separate infrastructure; overkill for 100-user skill catalog | PostgreSQL tsvector + GIN index |
-| `react-pro-sidebar` or MUI Navigation | Adds dependency conflict with existing Tailwind/Radix design system | shadcn/ui `Sidebar` component |
-| `agent-skills-sdk` (PyPI) | Third-party; not the official agentskills/agentskills reference impl | `skills-ref` for validation, custom export logic |
-| `skills-ref` in production FastAPI | Alpha quality; not production-ready | Use only in CI pipeline and dev tooling |
-| Triton Inference Server for embeddings | Massive ops overhead; requires Kubernetes; overkill | `infinity-emb` Docker sidecar |
-| FlagEmbedding in production after sidecar ships | Tight coupling of model to worker; blocks model swapping | `infinity-emb` HTTP sidecar + `httpx` |
+| `@tremor/react` | 200KB+ bundle; parallel design system to shadcn/ui; uncertain maintenance since Vercel acquisition | `recharts` directly (~50KB) with Tailwind styling |
+| `pybreaker` / `circuitbreaker` | New dependency for a pattern used in 1 place; 60-line custom impl is simpler | Custom circuit breaker class + existing `tenacity` |
+| `socket.io` / `python-socketio` | Protocol overhead; Socket.IO features (rooms, namespaces) not needed for dashboard push | Native FastAPI WebSocket + Redis pub/sub |
+| `boto3` / `aiobotocore` | AWS SDK heavyweight; MinIO has its own lighter SDK | `minio` Python SDK |
+| `react-js-cron` | Ant Design dependency; style conflicts with shadcn/ui | Custom cron builder with shadcn/ui primitives + `cronstrue` |
+| `react-cron-generator` | Outdated (2023); Quartz format focus | Custom component |
+| `styled-components` / `emotion` | CSS-in-JS conflicts with Tailwind v4 theming | `next-themes` + CSS custom properties |
+| `imaplib` / `smtplib` (stdlib) | Synchronous; blocks asyncio event loop | `aioimaplib` + `aiosmtplib` |
+| `authlib` | Generic OAuth library; less maintained than official Google/Microsoft SDKs | `google-auth-oauthlib` + `msal` |
+| `chart.js` / `react-chartjs-2` | Canvas-based (not SVG); harder to theme with Tailwind | `recharts` (SVG, React-native) |
+| `zustand` for theme state | `next-themes` handles theme state internally | `next-themes` |
 
 ---
 
-## Existing Stack (v1.0–v1.2) — No Changes for v1.3
+## Existing Stack (v1.0-v1.3) -- No Changes for v1.4
 
-The following are confirmed unchanged and require no re-research for v1.3:
+The following remain unchanged and require no re-research:
 
-### Agent Orchestration
-
-| Technology | Version | Purpose | Why Recommended | Confidence |
-|------------|---------|---------|-----------------|------------|
-| LangGraph | 1.0.9 | Agent graph orchestration, multi-agent workflows | v1.0 GA (stable); graph-based design maps directly to visual canvas workflows; built-in persistence, HITL, and checkpointing; adopted by Uber, LinkedIn, Klarna; pre-built patterns for Supervisor/Swarm architectures | HIGH |
-| PydanticAI | 1.63.0 | Tool I/O validation, structured LLM output | Type-safe tool schemas with automatic LLM retry on validation failure; strict JSON schema enforcement for Anthropic/OpenAI; natural fit with FastAPI's Pydantic ecosystem | HIGH |
-| langgraph-prebuilt | latest | Pre-built agent patterns (Supervisor, Swarm) | Reduces boilerplate for common multi-agent architectures; official LangChain package | MEDIUM |
-
-### Frontend Framework
-
-| Technology | Version | Purpose | Why Recommended | Confidence |
-|------------|---------|---------|-----------------|------------|
-| Next.js | 15.5+ (consider 16.x) | Frontend framework (App Router) | Server Components by default reduces client bundle; Turbopack stable for dev/build; typed routes in 15.5+; React 19 support; dominant framework for React apps | HIGH |
-| CopilotKit | 1.51.x | AG-UI streaming, agent chat UI, CoAgents | The definitive AG-UI protocol implementation; adopted by Google, Microsoft, LangChain, AWS; real-time agent streaming with tool call visualization; `useCoAgent` for bidirectional state sync between frontend and backend StateGraph | HIGH |
-| React Flow (@xyflow/react) | 12.10.x | Visual workflow canvas | Only production-grade React node-based editor; SSR support; `definition_json` stored natively as React Flow format (nodes/edges); workflow editor template with auto-layout available; v12 is stable with active maintenance | HIGH |
-
-### Generative UI
-
-| Technology | Version | Purpose | Why Recommended | Confidence |
-|------------|---------|---------|-----------------|------------|
-| A2UI (Google) | 0.8.x (Public Preview) | Declarative agent-driven UI specification | Open standard by Google; declarative JSON (not executable code) — security-safe for enterprise; flat component list is LLM-friendly for incremental generation; CopilotKit has first-class A2UI support | MEDIUM |
-| CopilotKit Generative UI | 1.51.x | Runtime rendering of agent-generated components | Agents can render custom React components in chat; A2UI envelopes parsed in `A2UIMessageRenderer`; works with AG-UI protocol natively | HIGH |
-
-### Backend Framework
-
-| Technology | Version | Purpose | Why Recommended | Confidence |
-|------------|---------|---------|-----------------|------------|
-| FastAPI | 0.115.13+ | REST API, WebSocket, async HTTP server | Async-first; native Pydantic v2 integration; automatic OpenAPI docs; dependency injection for security gates; streaming response support for AG-UI | HIGH |
-| SQLAlchemy | 2.0.46 | Async ORM + raw SQL | Production-stable async support since 2.0; `async_session()` pattern; works with asyncpg for PostgreSQL | HIGH |
-| asyncpg | latest | PostgreSQL async driver | Fastest Python PostgreSQL driver; native connection pooling; required by SQLAlchemy async | HIGH |
-| Alembic | latest | Database migrations | Official SQLAlchemy migration tool; async support; required for schema evolution | HIGH |
-
-### Identity & SSO
-
-| Technology | Version | Purpose | Why Recommended | Confidence |
-|------------|---------|---------|-----------------|------------|
-| Keycloak | 26.5.x | Identity provider, SSO, RBAC | Existing infrastructure (already running); v26.5 adds JWT Authorization Grants, FAPI 2.0, Organizations (multi-tenancy), Passkey support; CNCF project; OpenTelemetry integration for observability; fine-grained admin permissions v2 | HIGH |
-
-### Database & Vector Search
-
-| Technology | Version | Purpose | Why Recommended | Confidence |
-|------------|---------|---------|-----------------|------------|
-| PostgreSQL | 16+ (pgvector/pgvector:pg16 image) | Primary database + vector search | Single database for relational + vector data; `WHERE user_id = $1` enforces memory isolation in the same query as vector search; eliminates sync complexity of a separate vector DB | HIGH |
-| pgvector | 0.8.x | Vector similarity search extension | v0.8 adds iterative index scans (prevents over-filtering), HNSW index improvements (9x faster queries reported on Aurora); `vector(1024)` for bge-m3 embeddings; supports cosine, L2, and inner product distance | HIGH |
-
-### Embedding Model
-
-| Technology | Version | Purpose | Why Recommended | Confidence |
-|------------|---------|---------|-----------------|------------|
-| bge-m3 (BAAI) | latest | Text embeddings (1024-dim) | Multilingual (100+ languages including Vietnamese); 8192 token input; dense + sparse + multi-vector retrieval; self-hosted via FlagEmbedding for on-premise compliance; top MTEB scores for multilingual | HIGH |
-| FlagEmbedding | 1.3.5 | Python library for bge-m3 inference | Official BAAI library; `BGEM3FlagModel` class with fp16 support; handles all three retrieval modes. **NOTE for v1.3:** Replaced by infinity-emb HTTP sidecar — FlagEmbedding removed from worker code | HIGH |
-
-### LLM Gateway
-
-| Technology | Version | Purpose | Why Recommended | Confidence |
-|------------|---------|---------|-----------------|------------|
-| LiteLLM Proxy | 1.81.x | Unified LLM gateway, routing, fallback | OpenAI-compatible API for 100+ providers; 8ms P95 latency at 1k RPS; cost tracking + guardrails + load balancing; model aliases (`blitz/master`, `blitz/fast`, etc.) route to different backends transparently; JWT auth built-in; Docker-deployable with `-stable` tag | HIGH |
-
-### MCP Integration
-
-| Technology | Version | Purpose | Why Recommended | Confidence |
-|------------|---------|---------|-----------------|------------|
-| MCP Python SDK | 1.26.x | MCP server/client implementation | Official Anthropic SDK; supports Streamable HTTP transport (recommended) and legacy SSE; FastMCP helper for rapid server creation | HIGH |
-
-### Task Queue & Scheduler
-
-| Technology | Version | Purpose | Why Recommended | Confidence |
-|------------|---------|---------|-----------------|------------|
-| Celery | 5.6.2 | Task queue, scheduled jobs, background workers | Battle-tested for Python async workloads; Redis as broker (already in stack); cron-style scheduling via Celery Beat; runs as job owner's UserContext (not service account); sufficient for 100-user scale | HIGH |
-| Redis | 7.x (or 8.x) | Cache, message broker, Celery backend | Fast, simple, proven as Celery broker; pub/sub for real-time notifications; session cache | HIGH |
-
-### Observability & Logging
-
-| Technology | Version | Purpose | Why Recommended | Confidence |
-|------------|---------|---------|-----------------|------------|
-| structlog | 25.5.0 | Structured JSON logging | Production-proven since 2013; JSON output is Loki-compatible; asyncio context variable support; type hints; audit logger pattern via `get_audit_logger()` | HIGH |
-| Grafana | latest | Dashboards, alerting | De facto standard for observability dashboards; Loki integration for log queries | HIGH |
-| Loki | latest | Log aggregation | Lightweight log aggregation that indexes labels (not full text); pairs with structlog JSON output; much simpler than ELK at 100-user scale | MEDIUM |
-| Alloy (Grafana) | latest | Telemetry collector | Replaces Promtail; collects logs, metrics, traces; ships to Loki/Prometheus | MEDIUM |
+- **Agent Orchestration:** LangGraph 1.0.9, PydanticAI 1.63.0
+- **Frontend:** Next.js 15.5+, CopilotKit 1.51.x, React Flow 12.10.x, jose ^5.x
+- **Backend:** FastAPI 0.115+, SQLAlchemy 2.0.36, asyncpg, Alembic, structlog 25.1.0
+- **Identity:** Keycloak 26+ (optional), dual-issuer JWT (local HS256 + Keycloak RS256)
+- **Database:** PostgreSQL 16 + pgvector 0.8+, tsvector FTS
+- **Infrastructure:** Docker Compose, Redis 7+, Celery 5+, LiteLLM Proxy
+- **Embedding:** infinity-emb sidecar (bge-m3)
+- **Observability:** Grafana + Loki + Alloy + Prometheus
+- **Navigation:** shadcn/ui Sidebar (collapsible="icon")
+- **MCP:** MCP Python SDK 1.26+
 
 ---
 
 ## Sources
 
-### v1.3 New Research (2026-03-05)
+### v1.4 New Research (2026-03-15)
 
-- Next.js authentication guide (official, fetched 2026-02-27): https://nextjs.org/docs/app/guides/authentication
-- CVE-2025-29927 Vercel postmortem: https://nextjs.org/blog/cve-2025-29927
-- Auth.js v5 protecting routes: https://authjs.dev/getting-started/session-management/protecting
-- jose npm: https://www.npmjs.com/package/jose
-- infinity-emb PyPI (v0.0.77, Aug 2025): https://pypi.org/project/infinity-emb/
-- michaelfeil/infinity GitHub (bge-m3 support confirmed): https://github.com/michaelfeil/infinity
-- agentskills.io specification (fetched directly): https://agentskills.io/specification
-- skills-ref PyPI (v0.1.1, Jan 2026): https://pypi.org/project/skills-ref/
-- shadcn/ui Sidebar docs: https://ui.shadcn.com/docs/components/radix/sidebar
-- Alembic GIN index drift bug: https://github.com/sqlalchemy/alembic/issues/1390
-- PostgreSQL tsvector docs: https://www.postgresql.org/docs/current/datatype-textsearch.html
-- SQLAlchemy 2.0 PostgreSQL dialect: https://docs.sqlalchemy.org/en/20/dialects/postgresql.html
+- Recharts npm (v3.8.0/v2.15.x): https://www.npmjs.com/package/recharts
+- Tremor vs shadcn/ui comparison: https://github.com/shadcn-ui/ui/discussions/4133
+- next-themes GitHub: https://github.com/pacocoursey/next-themes
+- shadcn/ui dark mode guide: https://ui.shadcn.com/docs/dark-mode/next
+- MinIO Python SDK (v7.2.20): https://pypi.org/project/minio/
+- MinIO Docker Compose: https://github.com/minio/minio/blob/master/docs/orchestration/docker-compose/docker-compose.yaml
+- aiosmtplib (v5.1.0): https://pypi.org/project/aiosmtplib/
+- aioimaplib (v2.0.1): https://pypi.org/project/aioimaplib/
+- google-auth-oauthlib (v1.3.0): https://pypi.org/project/google-auth-oauthlib/
+- MSAL Python (v1.34.0): https://pypi.org/project/msal/
+- cronstrue npm: https://www.npmjs.com/package/cronstrue
+- FastAPI WebSocket docs: https://fastapi.tiangolo.com/advanced/websockets/
+- pybreaker PyPI (evaluated, rejected): https://pypi.org/project/pybreaker/
+- tenacity PyPI (already installed): https://pypi.org/project/tenacity/
 
-### v1.0–v1.2 Research (2026-02-24 — see git history for full source list)
-
-- LangGraph 1.0 announcement: https://blog.langchain.com/langchain-langgraph-1dot0/
-- CopilotKit npm (v1.51.x): https://www.npmjs.com/package/@copilotkit/react-core
-- React Flow v12 release: https://xyflow.com/blog/react-flow-12-release
-- FastAPI release notes: https://fastapi.tiangolo.com/release-notes/
-- Keycloak 26.5 releases: https://www.keycloak.org/2026/02/keycloak-2653-released
-- pgvector 0.8.0 announcement: https://www.postgresql.org/about/news/pgvector-080-released-2952/
-- LiteLLM docs: https://docs.litellm.ai/
-- MCP spec transports (Streamable HTTP): https://modelcontextprotocol.io/specification/2025-03-26/basic/transports
+### Previous Research
+- v1.3 additions (2026-03-05): jose, infinity-emb, tsvector, skills-ref, shadcn/ui Sidebar
+- v1.0-v1.2 research (2026-02-24): LangGraph, CopilotKit, React Flow, FastAPI, Keycloak, pgvector, LiteLLM, MCP
 
 ---
-*Stack research for: Blitz AgentOS — Enterprise on-premise agentic operating system*
-*Original research: 2026-02-24 | v1.3 additions: 2026-03-05*
+*Stack research for: Blitz AgentOS -- Enterprise on-premise agentic operating system*
+*Original research: 2026-02-24 | v1.3 additions: 2026-03-05 | v1.4 additions: 2026-03-15*

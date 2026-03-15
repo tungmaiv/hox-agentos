@@ -1,19 +1,19 @@
 # Project Research Summary
 
-**Project:** Blitz AgentOS v1.3 — Production Readiness & Skill Platform
-**Domain:** Enterprise on-premise agentic operating system (~100 users, Docker Compose)
-**Researched:** 2026-03-05 (v1.3 additions layered on v1.0–v1.2 foundation)
+**Project:** Blitz AgentOS v1.4 — Platform Enhancement & Infrastructure
+**Domain:** Enterprise on-premise Agentic Operating System (platform hardening milestone)
+**Researched:** 2026-03-15
 **Confidence:** HIGH
 
 ---
 
 ## Executive Summary
 
-Blitz AgentOS v1.3 is a hardening and platform-maturity release layered on a fully functional v1.2 system. v1.2 shipped dual auth (Keycloak SSO + local bcrypt), 3-gate security (JWT/RBAC/Tool ACL), master agent + sub-agents with 3-tier memory, visual workflow canvas with HITL, multi-channel delivery (Telegram live, WhatsApp/Teams code-complete), admin dashboard with AI wizard, agentskills.io-compliant export, SecurityScanner quarantine, and Grafana/Loki/Alloy observability. v1.3 adds five feature clusters: (A) session and auth hardening via Next.js middleware, (B) navigation redesign and user preferences, (C) embedding sidecar extraction, (D) Keycloak runtime configuration, and (E) skill platform with catalog, discovery, and spec compliance. The core stack is unchanged — no new frameworks are introduced. New dependencies are minimal and well-motivated.
+Blitz AgentOS v1.4 is a platform hardening and enhancement milestone for an existing, shipped enterprise agentic OS. Unlike prior milestones that built core agent capabilities, v1.4 adds nine cross-cutting enhancements: SSO resilience, admin registry editing, runtime permission escalation, multi-agent tab UI, dark theme, unified dashboard, file storage, scheduler UI, and email integration. Research confirms the existing 5-layer architecture (Frontend, Security Runtime, Agent Orchestration, Tools/Memory, Infrastructure) accommodates all nine features without structural changes — only two new Docker services are required: MinIO for object storage and an email sidecar for IMAP/SMTP handling.
 
-The recommended build sequence is strictly dependency-driven. Auth hardening (Cluster A) ships first because profile, user preferences, and Keycloak admin config all require a reliable, secure session. Navigation (Cluster B) comes second to provide wayfinding to all new pages. Embedding sidecar (Cluster C) is architecturally independent and can run in parallel with Cluster B. Keycloak runtime config (Cluster D) comes after session is proven stable. The skill platform (Cluster E) is additive to v1.2 and comes last. The key constraint is that Next.js must be upgraded to 15.2.3+ before any `middleware.ts` is written — CVE-2025-29927 (CVSS 9.1, middleware bypass) affects all prior versions.
+The recommended build order is strictly dependency-driven. Keycloak SSO hardening and admin registry edit ship first as independent, low-risk improvements. Runtime permission approval follows because it modifies Gate 3 (the security core) and must stabilize before adding more agent types. Scheduler UI, multi-agent tab architecture, UX enhancement, and unified dashboard form a parallel middle tier. Storage service and email system are last because they carry the highest infrastructure complexity and the longest external dependencies (MinIO setup, Google/Microsoft OAuth app registration). The suggested six-phase structure matches the dependency graph from ARCHITECTURE.md and the priority tiers from FEATURES.md.
 
-The top four risks for v1.3 are: (1) shipping `middleware.ts` without upgrading Next.js to 15.2.3+ — a known-exploited critical CVE; (2) dual-load of bge-m3 during sidecar migration (model loads in uvicorn, Celery worker, and sidecar simultaneously, consuming ~4GB RAM silently unless extraction is atomic); (3) making Keycloak optional incompletely, breaking config.py startup validation or Celery scheduled workflows for local users; (4) agentskills.io name constraint violations in existing DB skills silently producing non-compliant exports. All four are fully preventable with the mitigations in PITFALLS.md.
+The biggest risks are cross-cutting rather than feature-specific: Alembic migration branch explosions from parallel feature development (the project has already hit this pattern twice), WebSocket authentication gaps that could expose real-time system metrics, CopilotKit multi-instance context bleeding between agent tabs, and OAuth email token refresh failures that silently break email integrations. Each has a concrete mitigation detailed in the pitfalls section below.
 
 ---
 
@@ -21,170 +21,167 @@ The top four risks for v1.3 are: (1) shipping `middleware.ts` without upgrading 
 
 ### Recommended Stack
 
-The v1.3 stack adds six targeted components to the locked v1.2 foundation. The most architecturally significant is the embedding sidecar: replacing in-process FlagEmbedding (currently loading 1.3+ GB into the uvicorn process with 10–15s cold-start latency) with an `infinity-emb` Docker service accessed via HTTP. This eliminates memory pressure on FastAPI, enables model hot-swap via env var (`INFINITY_MODEL_ID`), and keeps bge-m3 perpetually warm for sub-100ms query-time embedding. The `infinity-emb` CPU image supports bge-m3 natively and runs comfortably at 100-user scale without GPU. For Next.js route protection, `jose` is the only JWT library compatible with Next.js Edge Runtime — `jsonwebtoken` uses Node.js crypto APIs unavailable at the edge.
+The v1.4 stack additions are minimal by design. The primary frontend additions are `recharts` (dashboard charts, ~50KB gzipped — preferred over `@tremor/react`'s 200KB+ bundle given the existing shadcn/ui design system; Tremor is built on Recharts anyway), `next-themes` (dark mode without SSR flash via pre-hydration script injection), and `cronstrue` (human-readable cron expression display, pairs with the existing `croniter` backend library). The only new backend PyPI package for the main service is `minio` (Python SDK for the storage service). The email sidecar is a new Docker service with its own `pyproject.toml` using `aiosmtplib`, `aioimaplib`, `google-auth-oauthlib`, and `msal`. All other v1.4 features — WebSocket real-time feeds, circuit breaker, cron builder UI, permission approval — use libraries already in the stack (`tenacity`, native FastAPI WebSocket, shadcn/ui form primitives, existing PostgreSQL).
 
-**New technologies (v1.3 only):**
-- `jose` ^5.x (npm): JWT decode/verify in Edge Runtime for `middleware.ts` — only Edge-compatible JWT library; official Next.js recommendation
-- `server-only` (npm): Marks session utilities as server-only, prevents token leakage to client bundle; zero-cost guard
-- `infinity-emb` 0.0.77 (Docker, CPU image `michaelf34/infinity:latest-cpu`): bge-m3 sidecar with OpenAI-compatible `/v1/embeddings` — replaces FlagEmbedding in-process; model selected via `INFINITY_MODEL_ID` env var
-- `shadcn/ui Sidebar` (shadcn CLI, `collapsible="icon"` variant): Navigation rail — already in project design system via Tailwind/Radix; no new npm dependency
-- `skills-ref` 0.1.1 (PyPI, dev-only): CLI validator for agentskills.io spec compliance (`agentskills validate`) — CI use only, not in production backend
-- Native PostgreSQL tsvector with GIN index: Skill catalog full-text search — no new library; uses existing SQLAlchemy `func.to_tsvector()` and raw Alembic SQL migration
+**Core technology additions:**
+- `recharts` ^2.15.x: Dashboard charts — preferred over Tremor (lighter bundle, matches existing shadcn/ui design system, tree-shakeable)
+- `next-themes` ^0.4.x: Dark/light/system theme switching — zero-flash via pre-hydration blocking script injection; localStorage + cookie persistence
+- `cronstrue` ^2.x: Cron expression human-readable display — lightweight, no dependencies; pairs with existing `croniter` backend
+- `minio` >=7.2.20: Python SDK for MinIO object storage — official SDK, presigned URL pattern; wrap in `asyncio.to_thread()` for async contexts
+- MinIO Docker service (pin to dated release, NOT `:latest`): S3-compatible storage — single container; reassign console to port 9101 to avoid conflict with Telegram gateway at 9001
+- `aiosmtplib` >=5.1.0 + `aioimaplib` >=2.0.1: Async email sending/receiving for email sidecar
+- `google-auth-oauthlib` >=1.3.0 + `msal` >=1.34.0: Gmail and Microsoft 365 OAuth — mandatory since Google disabled basic auth March 2025
 
-**Unchanged (locked v1.2):** LangGraph 1.0.9, CopilotKit 1.51.x, Next.js 15.5+, FastAPI 0.115.x, SQLAlchemy 2.0, Keycloak 26.5.x, PostgreSQL 16 + pgvector 0.8.x, LiteLLM Proxy 1.81.x, Celery 5.6.x, Redis 7.x, structlog 25.5.x, MCP SDK 1.26.x.
+**What NOT to add:** `@tremor/react` (200KB+ bundle), `pybreaker`/`circuitbreaker` (new dep for a 60-line pattern), `socket.io`/`python-socketio` (native FastAPI WebSocket is sufficient), `boto3`/`aiobotocore` (MinIO has its own SDK), `react-js-cron` (Ant Design dependency), CSS-in-JS libraries, `imaplib`/`smtplib` (stdlib, synchronous, blocks event loop).
 
-**Critical version constraint:** Next.js must be confirmed at 15.2.3+ before any `middleware.ts` is written. CVE-2025-29927 (CVSS 9.1) allows complete middleware bypass via `x-middleware-subrequest` header in earlier versions.
+**Frontend install (v1.4 additions only):**
+```
+pnpm add recharts next-themes cronstrue
+```
+
+**Backend install (v1.4 additions only):**
+```
+uv add minio   # main service
+# email sidecar: uv add aiosmtplib aioimaplib google-auth-oauthlib msal fastapi uvicorn httpx jinja2 structlog
+```
 
 ### Expected Features
 
-**Must have (required for v1.3 to ship):**
-- Next.js `middleware.ts` route protection + HttpOnly session cookie — all `/chat`, `/admin`, `/canvas`, `/profile` routes gated; currently every page does its own auth check ad-hoc
-- Session silent refresh (`/api/auth/refresh`) + logout endpoint + UI button — enterprise users expect full-day sessions; logout is a security baseline requirement
-- Navigation rail (shadcn/ui Sidebar, icon-only, 4 destinations: Chat/Canvas/Admin/Profile) — without it, the multi-page app has no coherent wayfinding
-- Profile page (`/profile`) with name, email, role, logout button, credential management link
-- User preferences (thinking mode + response style) — DB table, API endpoints, UI in profile; injected into system prompt via PromptLoader
-- Embedding sidecar hot-model at `http://embedding:8003` — memory search is on the hot path for every agent invocation; current in-process embedding adds cold-start latency and consumes 1.3GB RAM in uvicorn
-- Keycloak-optional boot — local-auth users must not be blocked when Keycloak is unavailable; Keycloak cannot be a hard boot dependency
-- Agent Skills SKILL.md spec compliance with `skills-ref validate` in CI — exported skills must pass spec validation for ecosystem interoperability
-- Skill catalog UI at `/admin/skills/catalog` — skills exist in DB but are not browsable
-- Skill discovery from external registries — browse and one-click import from configured registry URLs
-- Skill dependency hardening — SecurityScanner blocks undeclared subprocess/socket usage in skill scripts
+**Must have (table stakes — block user workflows without them):**
+- Circuit breaker (CLOSED/OPEN/HALF-OPEN) with graceful Keycloak degradation to local auth — prevents cascading failure during SSO outages
+- Admin edit forms for all registry artifact types (agents, tools, MCP servers) — admins cannot iterate on registrations without edit capability
+- MCP server connection test button — "is this reachable?" is always the first post-registration question
+- Permission request queue with admin approval/deny UI — required for HITL security escalation
+- Temporal ACL with configurable expiry — "approve for 1 hour" is standard enterprise IAM; permanent-only grants are a security anti-pattern
+- Dark theme with system preference detection and zero SSR flash — table stakes for modern enterprise web apps
+- Avatar upload with backend validation — reject SVG (XSS risk), max 2MB, re-encode to WebP server-side
+- Scheduler global dashboard with execution history, enable/disable toggle, and "run now" — Celery backend exists, needs management UI
+- Visual cron expression builder with next-run preview — cron syntax is not human-readable; `0 9 * * 1` is not "every Monday at 9am" to most users
+- Mission Control: active agents, running workflows, pending approvals — core operational visibility question is "what is happening right now?"
+- S3-compatible object storage with presigned URLs and per-user file isolation
+- Email fetch/send/reply as real agent tools (replacing mock data) with OAuth 2.0 for Google and Microsoft
 
-**Should have (P2 — after core P1 is stable):**
-- Keycloak admin UI runtime config (URL/realm/client/CA cert stored in `platform_config` table, encrypted; test-connection button; no restart required)
-- `allowed-tools` enforcement at Gate 3 — intersect skill's declared tools with user ACL; first platform to enforce this experimental agentskills.io spec field
-- Performance instrumentation (7 critical paths: memory search, tool execution, LLM call, canvas compile, MCP call, channel delivery, workflow run) + Grafana panels for p50/p95
-- Internal "Promoted Skills" curation in skill catalog (admin badge)
+**Should have (differentiators):**
+- Auto-approve rules for low-risk tool+role combinations — reduces admin burden for routine permission requests
+- Agent-initiated permission escalation (agent detects deny, creates request, surfaces status to user)
+- Tabbed multi-agent wizard with isolated `tool_builder` and `mcp_builder` agents alongside existing `artifact_builder`
+- Real-time WebSocket activity feed on dashboard with Recharts analytics charts
+- Timezone-aware display on scheduler, audit logs, and execution history
+- Proactive OAuth token refresh (Celery task refreshing credentials 30 minutes before expiry)
+- `StorageAdapter` Protocol interface — enables future migration from MinIO to Garage/RustFS/AWS S3 without code changes
 
-**Defer (v1.4+):**
-- Auto-publish skills to agentskills.io public registry — violates on-premise data requirement; admin-controlled export is the correct approach
-- Skill ratings/reviews — statistically meaningless at 100 users; usage count is sufficient
-- Multi-model embedding — bge-m3 handles Vietnamese + English natively; multiple models would break `vector(1024)` constraint
-- Real-time skill install push notifications — operational noise for a curated internal catalog
-- Celery periodic registry auto-sync — manual sync is sufficient for v1.3
+**Defer to v1.5+:**
+- Full file manager UI (folder tree, drag-drop) — storage service is infrastructure; file manager is a Projects/Spaces product feature
+- Unlimited simultaneous agent tabs — cap at 5-8; beyond that is resource explosion at 100-user scale
+- IMAP IDLE push-based email — polling every 5 minutes is sufficient at 100 users; IDLE connections are fragile
+- Custom SMTP relay — send via provider API (Gmail API / Graph API) which handles DKIM/SPF deliverability
+- Calendar view of scheduled jobs — sortable table with next-run column is more practical; calendar becomes unreadable with overlapping jobs
+- Custom accent colors / full theme customization — light + dark covers 99% of enterprise needs
 
 ### Architecture Approach
 
-v1.3 makes no changes to the established five-layer architecture. The new components slot into existing layers without restructuring anything. The most significant structural change is the `app/(protected)/` Next.js route group — moving all authenticated pages under this group allows the navigation rail to apply only to authenticated routes without wrapping `/login` or API routes. The embedding sidecar adds a new Layer 5 infrastructure service and shifts the Layer 4b memory subsystem from in-process FlagEmbedding to HTTP calls. Keycloak runtime config shifts a static env-var-based config value into a DB-backed runtime record loaded by the security layer. All other changes are additive.
+All nine features extend the existing 5-layer architecture without introducing new patterns or layers. The security layer gains a `CircuitBreaker` class and `PermissionRequestService`. The agent orchestration layer gains two new LangGraph graphs (`tool_builder`, `mcp_builder`). The tools/memory layer gains a `StorageAdapter` (Protocol-based, matching the existing `ChannelAdapter` pattern). Infrastructure adds MinIO and an email sidecar Docker service. Storage routes integrate into the main backend under `/api/storage/*` — NOT a separate service (port 8001 is already occupied by MCP CRM).
 
-**Components and v1.3 changes:**
-1. `middleware.ts` (new): Optimistic cookie check at Edge Runtime; redirects unauthenticated users; `jose` for JWT verify; CVE-patched Next.js 15.2.3+ required
-2. `app/(protected)/layout.tsx` (new): Route group layout containing nav rail; root `app/layout.tsx` stays minimal (only providers that must wrap everything)
-3. `embedding/` Docker service (new): `infinity-emb` serving bge-m3 at `http://embedding:8003`; backend `memory/embeddings.py` calls sidecar first, Celery fallback if unreachable
-4. `platform_config` DB table (new migration 020): Stores Keycloak connection config (URL, realm, client ID, client secret, CA cert) encrypted; loaded by `security/jwt.py` at runtime
-5. `/admin/skills/catalog` (new route): PostgreSQL tsvector FTS with `'simple'` dictionary (handles Vietnamese); GIN index via raw Alembic `op.execute()` (not autogenerate)
-6. `normalize_skill_name()` + `skills-ref validate` in CI: Enforces agentskills.io name constraints at creation time; validates exported ZIP structure
+The current two active Alembic heads (`617b296e937a` + `83f730920f5a`) must be merged as migration `031` before any v1.4 schema work begins. This is the single most critical technical prerequisite.
+
+**Major new components and responsibilities:**
+1. `CircuitBreaker` — wraps JWKS fetch in `security/jwt.py`; state persisted to Redis for survival across backend restarts and workers
+2. `PermissionRequestService` + `AutoApproveEngine` — Gate 3 escalation path; creates `permission_requests` and evaluates `auto_approve_rules` tables; LangGraph interrupt on escalation
+3. `DashboardWebSocketManager` — FastAPI native WebSocket at `/ws/dashboard`; Redis Pub/Sub for cross-worker broadcast; dedicated `get_ws_current_user()` dependency (not the HTTP `Depends()` pattern)
+4. `StorageAdapter` Protocol + `MinIOStorageAdapter` — routes at `/api/storage/*` in main backend; 5 new tables (`files`, `folders`, `file_folder_links`, `file_shares`, `memory_file_links`)
+5. Email sidecar (Python, port 8003) — IMAP/SMTP with XOAUTH2, forwards incoming mail to backend via existing `POST /api/channels/incoming` pattern
+6. `ToolBuilderAgent` + `MCPBuilderAgent` — new LangGraph graphs; single CopilotKit provider with `key={tab.sessionId}` tab-switching (never multiple simultaneous providers)
+
+**New DB tables (7-8 total):** `permission_requests`, `auto_approve_rules`, `agent_dependencies`, `files`, `folders`, `file_folder_links`, `file_shares`, `memory_file_links`
+**Modified tables:** `tool_acl` (add `duration_type`, `expires_at`, `granted_at`, `granted_by`), `user_preferences` (add `theme`, `timezone`, `avatar_url`)
 
 ### Critical Pitfalls
 
-Research identified 15 pitfalls across the v1.0–v1.3 combined research. The highest-priority for v1.3:
+1. **Alembic migration branch explosion** — Nine features developed on parallel branches each create migrations from the same head. The project has already hit this twice. Prevention: assign migration number ranges per feature before development starts (e.g., 031-032 Keycloak/Security, 033 agent deps, 034 UX, 035 storage, 036 email); enforce "one feature holds the migration lock at a time"; run `alembic heads` in CI to fail builds with multiple heads.
 
-1. **CVE-2025-29927 — middleware auth bypass (CRITICAL)** — Adding `middleware.ts` to a Next.js version < 15.2.3 ships a known-exploited CVSS 9.1 vulnerability. Attackers skip auth entirely by sending `x-middleware-subrequest: middleware` header. Prevention: confirm Next.js version, upgrade to 15.2.3+ before writing any middleware; strip the header at reverse proxy; treat middleware as UX convenience only — backend 3-gate security is the real enforcement.
+2. **WebSocket authentication bypass and connection leak** — FastAPI `Depends()` does not work the same way for WebSocket; JWT in query parameters ends up in server and proxy logs; long-lived connections outlive JWT expiry without re-validation. Prevention: dedicated `get_ws_current_user()` dependency extracting JWT from query param at handshake only; 60-second heartbeat re-validates JWT; WebSocket ticket pattern (short-lived single-use ticket from REST endpoint); per-user connection limit enforced via Redis.
 
-2. **Middleware infinite redirect loop** — Redirect logic written as "where should this user go?" fires on every request including the destination, causing `ERR_TOO_MANY_REDIRECTS`. Prevention: authenticated users always get `NextResponse.next()`; matcher must explicitly exclude `/login`, `/_next`, `/api`; remove per-page auth redirect logic from existing pages after middleware is added.
+3. **CopilotKit multi-instance context bleeding** — Multiple `<CopilotKit>` providers on the same page cause message state leakage between agent tabs (documented GitHub issue #1159). Prevention: single CopilotKit provider with `key={tab.sessionId}` tab-switching; only mount the active tab's agent; never render multiple providers simultaneously; consider "one active builder at a time" UX constraint as simpler fallback.
 
-3. **Embedding sidecar dual-load** — Adding the sidecar without atomically removing in-process FlagEmbedding loads bge-m3 in three processes simultaneously (~4GB RAM, invisible without memory profiling). Prevention: sidecar addition and `BGE_M3Provider` import removal must be in one commit; add a test asserting `BGE_M3Provider` is not imported from `backend/agents/`; `depends_on: condition: service_healthy` in docker-compose.
+4. **OAuth email token refresh failure** — Google disabled basic auth March 2025; OAuth tokens expire (1 hour for Google); failed refresh silently breaks email integration with no user notification. Prevention: `last_refreshed_at` + `expires_at` on `user_credentials`; Celery periodic task refreshing tokens 30 minutes before expiry; structured error "Your email connection has expired, please re-authenticate" returned to agent instead of runtime crash.
 
-4. **Keycloak optional boot — partial fix breaks startup** — `config.py` declares `keycloak_url: str` as required; Celery workflow execution calls Keycloak Admin API for local users (returns 404). Prevention: change to `keycloak_url: str = ""` with pydantic-settings v2 conditional `@field_validator`; add `if not settings.keycloak_enabled:` guards to all Keycloak service calls; fix workflow execution path to use `owner_roles_json` snapshot for local users.
-
-5. **PostgreSQL tsvector language mismatch disables GIN index** — Index created with `to_tsvector('english', ...)` but query uses `to_tsvector(...)` (implicit language) causes silent sequential scan; `'english'` also fails to stem Vietnamese content. Prevention: always use `'simple'` explicitly in both GIN index definition AND query; verify with `EXPLAIN ANALYZE` before shipping — must show "Bitmap Index Scan", not "Seq Scan".
-
-6. **agentskills.io name constraints fail silently on existing skills** — Existing DB skills with names like `"Email Fetch v2"` (spaces, uppercase) produce non-compliant exports. Prevention: add `normalize_skill_name()` slugifier; validate at skill creation time in wizard, not only at export; run `skills-ref validate` in CI on exported ZIPs.
+5. **MinIO Docker image pin and credential initialization race** — `minio/minio:latest` is frozen at October 2025 with unpatched CVEs (CVE-2025-62506); fresh containers may ignore env credentials before initialization completes. Prevention: pin to a specific dated release (e.g., `quay.io/minio/minio:RELEASE.2025-01-10T21-58-47Z`); named Docker volume (not bind mount); init script gated on `service_healthy`; `depends_on: condition: service_healthy` in backend service definition.
 
 ---
 
 ## Implications for Roadmap
 
-Based on the dependency graph in FEATURES.md and the existing phase ordering from ARCHITECTURE.md, v1.3 decomposes into 5 phases:
+Based on research, six phases are recommended. Phases 3 and 4 have parallel tracks that can execute concurrently.
 
-### Phase 1: Session & Auth Hardening
+### Phase 1: Foundation Hardening
+**Rationale:** Two independent, low-risk, high-impact admin improvements that each have zero dependencies on other v1.4 features. Keycloak hardening stabilizes the auth layer before any feature that touches auth. Registry edit fills the most obvious gap in admin daily workflow. Both can run as parallel tracks within the phase.
+**Delivers:** Circuit-broken Keycloak with CLOSED/OPEN/HALF-OPEN health categorization visible in admin Identity tab; edit + connection-test forms for all registry artifact types (agents, tools, MCP servers)
+**Addresses:** Keycloak SSO Hardening (#07), Admin Registry Edit UI (#06)
+**Avoids:** Pitfall 7 (circuit breaker state lost on restart — store in Redis; read on startup), Pitfall 15 (MCP test timeout freezes UI — strict 5-second timeout; background task pattern returning `test_id`)
+**Research flag:** Standard patterns. Circuit breaker is a well-documented 60-line state machine. Registry edit is CRUD on existing tables. Skip phase research.
 
-**Rationale:** FEATURES.md explicitly states "Cluster A is prerequisite for everything else in v1.3." Every v1.3 feature — profile page, user preferences, Keycloak config, skill catalog admin access — requires a reliable, secure session. Writing `middleware.ts` on an unpatched Next.js ships CVE-2025-29927. Auth must be correct before building features on top of it.
+### Phase 2: Security Enhancement
+**Rationale:** Modifies Gate 3 — the security core. Must be stable and tested in isolation before adding new agent types (Phase 3 Track 2) that will trigger permission escalation checks. This is the only v1.4 feature that directly mutates the security pipeline.
+**Delivers:** Permission request queue with admin approval/reject UI; temporal ACL with expiry on `tool_acl`; `auto_approve_rules` for low-risk tool+role combinations; LangGraph interrupt on permission escalation; in-app notification of approval/denial outcome
+**Uses:** Existing 3-gate security layer; `tool_acl` table extension; new `permission_requests` + `auto_approve_rules` tables (migrations 032-033 after 031 merge)
+**Addresses:** Runtime Permission Approval HITL (#01)
+**Avoids:** Pitfall 8 (temporal ACL never expires — add `AND (expires_at IS NULL OR expires_at > NOW())` to `check_tool_acl()` query; hourly Celery cleanup task), Pitfall 14 (queue flooding from scheduled workflows — deduplicate pending requests per `user_id + tool_name`)
+**Research flag:** Standard patterns. LangGraph interrupt is an existing codebase pattern (existing HITL workflows use it). Skip phase research.
 
-**Delivers:** Next.js upgraded to 15.2.3+; `middleware.ts` with `jose` for Edge Runtime JWT verify; HttpOnly + Secure + SameSite=Lax session cookie; silent refresh via `/api/auth/refresh`; `POST /api/auth/logout` clears all cookies; Keycloak-optional boot (local users can log in when Keycloak is unavailable); Keycloak status shown in admin Health panel.
+### Phase 3: Core Features (Two Parallel Tracks)
+**Rationale:** Independent features with no overlap. Track 1 is purely UI on the existing Celery/workflow backend. Track 2 is agent architecture plus frontend tab refactoring. Neither blocks the other.
+**Track 1 delivers:** Scheduler global dashboard at `/admin/scheduler`, visual cron builder with `cronstrue` display, execution history with live status, enable/disable toggle per job, "run now" button, timezone-aware display
+**Track 2 delivers:** `tool_builder` and `mcp_builder` LangGraph agents; tabbed artifact wizard with single CopilotKit provider + `key={tab.sessionId}` tab-switching; `agent_dependencies` table for cross-tab artifact linking
+**Uses:** `cronstrue` (frontend); existing `croniter` (backend cron validation); existing `langgraph`; existing CopilotKit (single provider — never multiple simultaneous)
+**Addresses:** Scheduler UI (#15), Multi-Agent Tab Architecture (#16)
+**Avoids:** Pitfall 10 (build scheduler backend APIs before UI — reuse `POST /api/workflows/{id}/run` for run-now; run Celery inspect in `asyncio.to_thread()` to avoid event loop blocking), Pitfall 4 (single CopilotKit provider with tab-switching — never multiple providers)
+**Research flag:** Scheduler UI is standard patterns. Multi-Agent Tab needs a spike before planning: verify CopilotKit v1.50+ `useAgent` hook compatibility with existing `LangGraphAGUIAgent`, venv patches in `.venv/lib/python3.12/site-packages/copilotkit/__init__.py`, and runtime.py AG-UI dispatch. Have a fallback design ready: "one active builder at a time" UX constraint avoids the multi-instance problem entirely.
 
-**Addresses features:** Cluster A (session & auth hardening) entirely; Keycloak-optional boot prerequisite (part of Cluster D).
+### Phase 4: Experience and Visibility (Two Parallel Tracks)
+**Rationale:** Polish and operational visibility. Dashboard benefits from having scheduler data (Phase 3) and permission events (Phase 2) to display. UX enhancement is additive and independent. Both tracks can ship without each other.
+**Track 1 delivers:** Dark/light/system theme with zero SSR flash via `next-themes`; timezone picker stored in `user_preferences`; timezone-aware display on all timestamps; avatar upload (local filesystem initially — migrated to MinIO in Phase 5)
+**Track 2 delivers:** Mission Control dashboard at `/dashboard` with real-time WebSocket feed; Recharts analytics (AreaChart for trends, BarChart for LLM cost, LineChart for latency, PieChart for agent success rate); quick actions and deep-link to Grafana for technical metrics
+**Uses:** `next-themes` ^0.4.x; `recharts` ^2.15.x (with `next/dynamic` + `ssr: false` wrappers); native FastAPI WebSocket; Redis Pub/Sub for broadcast; `user_preferences` table additions
+**Addresses:** UX Enhancement (#13), Unified Dashboard (#08+#14)
+**Avoids:** Pitfall 6 (dark theme FOUC — `next-themes` blocking script injection before hydration), Pitfall 9 (Recharts breaks SSR — wrap all chart components in `next/dynamic` with `ssr: false`), Pitfall 2 (WebSocket auth bypass — dedicated `get_ws_current_user()`, 60s heartbeat re-validation, Redis per-user connection limit), Pitfall 12 (WebSocket blocks event loop — Redis Pub/Sub for broadcasting; `asyncio.create_task()` for all broadcast calls)
+**Research flag:** Dark theme with `next-themes` is the canonical Next.js 15 solution; skip research. WebSocket + Redis Pub/Sub is well-documented but new to this codebase — verify FastAPI WebSocket auth approach in an isolated spike before full dashboard build.
 
-**Avoids pitfalls:** CVE-2025-29927 (Pitfall 9 — Next.js upgrade before any middleware is written); infinite redirect loop (Pitfall 8 — authenticated users always NextResponse.next()); Keycloak partial-optional fix (Pitfall 10 — `config.py` validation and Celery workflow path for local users fixed here).
+### Phase 5: Infrastructure
+**Rationale:** Largest infrastructure addition (new Docker service, 5 new tables, storage adapter, file API). Separate phase contains blast radius. Avatar upload in Phase 4 starts with local filesystem and migrates storage path to MinIO when this phase ships.
+**Delivers:** MinIO Docker service (pinned image, named volume, init script, `service_healthy` healthcheck); `StorageAdapter` Protocol + `MinIOStorageAdapter`; file/folder CRUD under `/api/storage/*` in main backend; per-user isolation (`WHERE owner_id = $1`); presigned upload/download URLs; avatar path migration from local filesystem to MinIO
+**Uses:** `minio` >=7.2.20 Python SDK; new `files`/`folders`/`file_folder_links`/`file_shares`/`memory_file_links` tables (migration 035)
+**Addresses:** Storage Service (#19)
+**Avoids:** Pitfall 3 (pin MinIO to dated release, not `:latest`; named volume; `service_healthy` condition in backend `depends_on`), Pitfall 11 (MinIO console port 9001 conflicts with Telegram gateway — reassign MinIO console to port 9101; optionally do not expose console port to host at all since backend accesses MinIO via Docker network)
+**Research flag:** MinIO integration with presigned URLs is well-documented. `StorageAdapter` Protocol follows the existing `ChannelAdapter` pattern directly. Skip phase research.
 
-**Research flag:** Standard patterns — Next.js 15.2.3+ auth with `jose` is the official recommended pattern; CVE details are fully documented. Skip `/gsd:research-phase`. Validate Next.js version and `jose` Edge Runtime behavior during plan writing.
-
----
-
-### Phase 2: Navigation & User Experience
-
-**Rationale:** Navigation rail connects the new pages being built in Phases 3–5. Profile page hosts user preferences. Both require stable auth from Phase 1. Navigation restructure (`app/(protected)/`) must precede adding pages under the protected layout.
-
-**Delivers:** `app/(protected)/layout.tsx` route group containing navigation rail; shadcn/ui Sidebar with `collapsible="icon"` variant (Chat/Canvas/Admin/Profile icons); Profile page (`/profile`) with user info, role from JWT claims, logout button; `user_preferences` table (migration 021); API endpoints for preferences; thinking mode + response style UI in profile page; preferences injected into system prompt via PromptLoader.
-
-**Addresses features:** Cluster B (navigation rail, profile page, user preferences) entirely.
-
-**Avoids pitfalls:** Root layout wrapping login and API routes (Pitfall 14 — `app/(protected)/` route group is the correct containment; `app/layout.tsx` stays minimal); A2UI cards and channel message formatters must be audited for hardcoded route strings before restructure.
-
-**Research flag:** Standard patterns — shadcn/ui Sidebar `collapsible="icon"` and Next.js route groups are well-documented official patterns. Skip `/gsd:research-phase`.
-
----
-
-### Phase 3: Performance & Embedding Sidecar
-
-**Rationale:** Embedding sidecar is architecturally independent — no dependency on navigation or preferences. Can run in parallel with Phase 2 if capacity allows. Memory search is on the hot path for every agent invocation; current in-process embedding adds 10–15s cold-start latency and 1.3GB RAM pressure to uvicorn. Performance instrumentation (7 critical paths) is low-cost and ships in this phase to baseline current performance before any optimization.
-
-**Delivers:** `infinity-emb` Docker sidecar (`michaelf34/infinity:latest-cpu`) at port 8003 with `INFINITY_MODEL_ID=BAAI/bge-m3`; `embedding_cache` Docker volume for model weight persistence; backend `memory/embeddings.py` refactored to call sidecar via `httpx` with Celery fallback; in-process `BGE_M3Provider` removed from `agents/` and `memory/`; `duration_ms` structlog fields on all 7 critical paths; Grafana panels for p50/p95 per operation.
-
-**Addresses features:** Cluster C (embedding sidecar, performance instrumentation) entirely.
-
-**Avoids pitfalls:** Dual-load of bge-m3 (Pitfall 11 — sidecar add + FlagEmbedding removal is one atomic commit; add test asserting no `BGE_M3Provider` import from `agents/`); `transformers<5.0` pin maintained in sidecar image; `depends_on: condition: service_healthy` ensures backend waits for sidecar warm model.
-
-**Research flag:** Needs targeted research during planning — specifically `infinity-emb` Docker image startup configuration (model pre-download path, health endpoint format, startup time on cold model cache). The pattern is established but `michaelf34/infinity:latest-cpu` image-specific details should be validated against the live image before writing the plan.
-
----
-
-### Phase 4: Keycloak Runtime Configuration
-
-**Rationale:** Keycloak runtime config is built on the admin dashboard (v1.2) and must follow Phase 1's Keycloak-optional boot fix (the admin UI config stores Keycloak connection settings in DB — this is only coherent if the optional boot is working first). Must come after Phase 1 is confirmed stable to avoid auth regressions. Completes the Cluster D work started in Phase 1.
-
-**Delivers:** `platform_config` DB table (migration 022) with encrypted sensitive fields (client secret, CA cert); admin UI form for Keycloak URL/realm/client ID/client secret/CA cert path; `POST /api/admin/keycloak/test-connection` (attempts JWKS fetch, returns `{reachable: bool, error?: string}`); backend reloads JWKS from `platform_config` on save without restart; existing `.env` values remain as fallback defaults.
-
-**Addresses features:** Cluster D (Keycloak admin UI runtime config, Keycloak-optional boot completion) entirely.
-
-**Avoids pitfalls:** Keycloak JWKS key rotation (Integration Gotchas — JWKS cache with 5–10 minute TTL, fetch-fresh fallback on validation failure); Keycloak partial-optional fix completeness verification (Pitfall 10 — `KEYCLOAK_ENABLED=false` CI test with `KEYCLOAK_URL` unset asserts HTTP 200 on `/health`).
-
-**Research flag:** Needs targeted research during planning — pydantic-settings v2 `@field_validator` pattern for conditional required fields; Keycloak Admin REST API endpoint for connection testing (JWKS endpoint reachability vs. full admin credential validation). MEDIUM confidence on implementation specifics; confirm before writing plan.
-
----
-
-### Phase 5: Skill Platform
-
-**Rationale:** The skill platform (catalog, discovery, compliance, dependency hardening) layers additively on v1.2 skill import/export with no risk to existing functionality. Comes after navigation (Phase 2) because the catalog is in the admin desk, and after auth (Phase 1) because skill management is admin-gated. `allowed-tools` enforcement depends on spec compliance being verified first.
-
-**Delivers:** `normalize_skill_name()` slugifier + validation at wizard creation time; agentskills.io SKILL.md spec-compliant name/description/directory structure; `skills-ref validate` in CI for exported ZIPs; tsvector FTS GIN index (`'simple'` language, raw SQL migration) on `skills` table; `/admin/skills/catalog` with search/filter (category, status, author)/sort UI and skill detail view; external registry browse panel (paginated index from configured registry URLs, one-click import into existing SecurityScanner flow); skill dependency hardening (scanner blocks undeclared subprocess/socket/OS calls in `scripts/` directory); `allowed-tools` enforcement at Gate 3 (intersect skill declared tools with user ACL, log denials); internal "Promoted Skills" admin curation badge.
-
-**Addresses features:** Cluster E (skill platform) entirely.
-
-**Avoids pitfalls:** agentskills.io name constraints (Pitfall 15 — normalize at creation, not export; CI validates); tsvector language mismatch (Pitfall 12 — `'simple'` config in both index and query; `EXPLAIN ANALYZE` verification before ship); LangGraph HITL checkpoint topology (Pitfall 13 — drain `status='pending_hitl'` workflow runs before any graph changes related to skill execution nodes).
-
-**Research flag:** Needs targeted research during planning — external registry index format (how agentskills.io and GitHub-based registries structure their discoverable skill indexes; no formal protocol documented beyond the SKILL.md spec itself). HIGH confidence on the SKILL.md spec (official source); MEDIUM confidence on registry discovery protocols.
-
----
+### Phase 6: Email and Notifications
+**Rationale:** Requires external service registration (Google Cloud Console OAuth client, Azure AD app registration) that may take days to weeks for approval. Start registration immediately — do not wait until implementation begins. Also benefits from storage service (Phase 5 for future email attachments) and dashboard (Phase 4 for notification surfaces). Highest external dependency count of all nine features.
+**Delivers:** Email sidecar Docker service (Python, port 8003); Gmail OAuth 2.0 integration (XOAUTH2 IMAP/SMTP); Microsoft 365 OAuth 2.0 integration; real email fetch/send/reply replacing mock data in `email_tools.py`; notification routing with per-event-type channel preferences; proactive Celery token refresh task
+**Uses:** `aiosmtplib`, `aioimaplib`, `google-auth-oauthlib`, `msal`, `jinja2`; existing `ChannelAdapter` protocol; existing `user_credentials` AES-256 encrypted storage; existing `POST /api/channels/incoming` endpoint
+**Addresses:** Email System and Notifications (#18)
+**Avoids:** Pitfall 5 (proactive Celery refresh task at 30-minute-before-expiry; `expires_at` + `last_refreshed_at` on `user_credentials`; structured re-auth error to agent); IMAP IDLE anti-feature (5-minute polling is sufficient at 100 users — IDLE connections are fragile and resource-consuming)
+**Research flag:** Google Cloud Console OAuth client setup for Gmail (consent screen, required scopes, app verification vs. Workspace domain-wide delegation) and Azure AD app registration must be researched before Phase 6 planning — these are administrative processes with potential approval delays, not code questions. Determine the correct OAuth path for internal-only enterprise use (service account + domain delegation may bypass public app verification entirely).
 
 ### Phase Ordering Rationale
 
-- **Auth first:** Session hardening is the explicit prerequisite for all other v1.3 clusters per the FEATURES.md dependency graph. Shipping new features before auth is secure creates unprotected pages and an insecure foundation.
-- **Navigation second:** All new pages (profile, skill catalog, Keycloak config) are added to the admin desk or protected area. The route group restructure must precede adding pages under it.
-- **Sidecar independent:** No other phase depends on the embedding sidecar. Can run parallel to Phase 2 if developer capacity allows. Placed as Phase 3 to ensure auth foundation is proven before adding a new service dependency.
-- **Keycloak config after proven auth:** Admin UI for OIDC configuration touches the auth critical path. Building it before session hardening is verified risks an auth regression in a high-value admin feature.
-- **Skill platform last:** Fully additive to v1.2. All security gates (auth, RBAC, Tool ACL, SecurityScanner) must be stable before adding skill execution paths through them. `allowed-tools` enforcement requires spec compliance to be verified first.
+- **Phase 1 before Phase 2:** Auth resilience must be stable before modifying the security gate itself
+- **Phase 2 before Phase 3 Track 2:** Builder agents trigger permission checks — escalation path must exist before adding new agent types
+- **Phase 3 Track 1 (Scheduler) before Phase 4 Track 2 (Dashboard):** Dashboard surfaces scheduler data; building dashboard before scheduler data exists makes the dashboard story incomplete
+- **Phase 5 decoupled from Phase 4:** Avatar upload in Phase 4 degrades gracefully to local filesystem storage, enabling Phase 4 to ship without waiting for MinIO infrastructure
+- **Phase 6 last:** Longest external dependency lead time (OAuth registration); benefits from all preceding infrastructure; email attachments naturally use Phase 5 MinIO
+- **Migration 031 (Alembic head merge) is a zero-feature prerequisite** — must be committed and deployed before any Phase 1 schema work begins; without it, `alembic upgrade head` fails with "Multiple heads" error
 
 ### Research Flags
 
-**Phases needing targeted research during planning:**
-- **Phase 3 (Embedding Sidecar):** `infinity-emb` Docker image startup behavior — model pre-download path, health endpoint format, cold-start time on first run. The sidecar pattern is established but image-specific details need live validation.
-- **Phase 4 (Keycloak Runtime Config):** pydantic-settings v2 conditional validator pattern; Keycloak Admin REST API endpoint for OIDC connection verification. MEDIUM confidence on these specifics.
-- **Phase 5 (Skill Platform):** External registry discovery index format and protocol — agentskills.io registry API vs. self-hosted index format. Need to decide the format before building the browse panel.
+**Phases needing deeper research before planning:**
+- **Phase 3 (Multi-Agent Tab):** CopilotKit upgrade from v0.1.78 to v1.50+ (for `useAgent` hook). The existing codebase has a patched `copilotkit/__init__.py` in the venv. A major version upgrade may break `LangGraphAGUIAgent` import, AG-UI SSE streaming, and runtime.py dispatch. Run a compatibility spike on an isolated branch before committing to the upgrade path. If incompatible, implement with "one active builder at a time" constraint instead.
+- **Phase 6 (Email OAuth):** Determine the correct OAuth path for 100 internal users on a company Google Workspace account — service account + domain-wide delegation likely bypasses public app verification consent screen delays. Verify required scopes for Gmail (`gmail.readonly`, `gmail.send`) and Microsoft Graph (`Mail.Read`, `Mail.Send`) and whether they require verification or can run in development mode for internal enterprise use.
 
-**Phases with standard, well-documented patterns (skip research-phase):**
-- **Phase 1 (Session & Auth Hardening):** Next.js 15.2.3+ auth with `jose` + HttpOnly cookies is the official recommended pattern; CVE details are fully documented.
-- **Phase 2 (Navigation & UX):** shadcn/ui Sidebar `collapsible="icon"` variant and `app/(protected)/` route groups are official Next.js App Router patterns.
+**Phases with standard patterns (skip research-phase):**
+- **Phase 1:** Circuit breaker is a well-documented state machine; registry CRUD is standard FastAPI
+- **Phase 2:** LangGraph interrupt is an existing codebase pattern from current HITL workflow nodes
+- **Phase 4 (UX):** `next-themes` is the canonical Next.js dark mode solution with zero ambiguity
+- **Phase 5:** MinIO + StorageAdapter Protocol follows the existing ChannelAdapter pattern exactly
 
 ---
 
@@ -192,57 +189,58 @@ Based on the dependency graph in FEATURES.md and the existing phase ordering fro
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack (v1.3 additions) | HIGH | `jose`, `infinity-emb`, `skills-ref`, shadcn/ui Sidebar all verified from official/PyPI sources. CVE-2025-29927 confirmed from Vercel postmortem. `transformers<5.0` pin must propagate to sidecar image. |
-| Features | HIGH | Auth cluster from official Next.js docs (HIGH). agentskills.io spec from official source (HIGH). Embedding sidecar pattern from open-source reference (MEDIUM). Navigation rail from established HCI pattern (MEDIUM). Overall HIGH for the auth-critical features that matter most. |
-| Architecture | HIGH | Five-layer architecture is the confirmed existing design. v1.3 changes are additive and architecturally conservative. Route group and sidecar integration are official patterns. `app/(protected)/` restructure is the most structural change; risk is low. |
-| Pitfalls | HIGH | 15 pitfalls identified across v1.0–v1.3. Critical ones (CVE, dual-load, tsvector index mismatch, Keycloak partial-optional) are code-verified or documented in official sources. Phase assignments and prevention patterns are concrete. |
+| Stack | HIGH | Core additions verified on PyPI/npm with specific versions. Architecture decision (recharts over Tremor) backed by bundle size data and shadcn/ui compatibility evidence. Email library versions confirmed from PyPI. |
+| Features | HIGH | All 9 features are well-understood enterprise patterns with cited industry references (Microsoft, AWS, Permit.io, agentskills.io). Priority tiers and anti-features are well-reasoned. |
+| Architecture | HIGH | Derived from direct first-party codebase inspection, architecture.md, and enhancement specifications. Port conflict (MinIO 9001 vs Telegram gateway) identified and resolved. Alembic multi-head state documented and sequenced. |
+| Pitfalls | HIGH | 5 critical + 7 moderate + 5 minor pitfalls identified. Critical ones reference specific GitHub issues, CVE numbers, and verified code patterns from v1.0-v1.3 experience. Phase-specific warning table provided. |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **`infinity-emb` Docker image startup behavior:** Model pre-download path, cold start timing, and health endpoint format should be validated against the live `michaelf34/infinity:latest-cpu` image during Phase 3 plan writing. STACK.md notes ~30s cold start on first run when model cache is empty.
+- **CopilotKit v1.50+ upgrade compatibility:** Cannot be assessed from research alone. Needs a compatibility spike (isolated branch, upgrade venv, verify `LangGraphAGUIAgent` import path, `POST /api/copilotkit` dispatch, and AG-UI SSE streaming still work) before Phase 3 planning commits to the multi-agent tab architecture. If the upgrade breaks too much, the fallback "one active builder at a time" design is simpler and avoids the multi-instance problem entirely.
 
-- **Keycloak Admin REST API for connection testing:** The `POST /api/admin/keycloak/test-connection` feature may require calling the Keycloak JWKS endpoint with new config credentials. The exact API endpoint and auth pattern for this use case should be confirmed during Phase 4 planning. MEDIUM confidence on specifics.
+- **MinIO Community Edition maintenance trajectory:** MinIO CE entered maintenance mode (Dec 2025, no new features). The `StorageAdapter` Protocol is the hedge for future migration. Monitor Garage (Rust, CNCF sandbox) and RustFS (Apache 2.0) as S3-compatible drop-in alternatives — both are production-emerging candidates for the 100-user scale.
 
-- **External registry discovery protocol:** FEATURES.md specifies admin-configured registry URLs but the index format for self-hosted registries is not formally specified by agentskills.io. A decision needs to be made during Phase 5 planning — likely a simple JSON array at `/index.json` per registry URL. Evaluate what format the agentskills.io public registry uses if it exposes one.
+- **Avatar storage in Phase 4 before Phase 5 lands:** Phase 4 ships avatar upload; Phase 5 ships MinIO. Decision needed before Phase 4 planning: store avatars in local filesystem at `/data/avatars/{user_id}.webp` (Docker volume, migrate to MinIO path in Phase 5 with a one-time migration script) OR store as PostgreSQL `bytea` (simple but adds to DB size). Recommendation: local filesystem, consistent with Phase 5 MinIO migration path.
 
-- **`skills-ref` alpha status in CI:** `skills-ref` 0.1.1 is Alpha quality (STACK.md notes this explicitly). Evaluate its false-positive rate and spec version drift risk before committing it to CI. The fallback is a custom validator built from the official SKILL.md spec YAML schema.
-
-- **`operator_roles_json` snapshot for Keycloak-optional scheduled workflows:** PITFALLS.md (Pitfall 10) notes that Celery workflow execution calls Keycloak Admin API for local users. The fix — using `owner_roles_json` snapshot directly for local users — must be tested with a CI scenario of `KEYCLOAK_ENABLED=false` plus a running scheduled workflow owned by a local user.
+- **Google OAuth path for internal Workspace users:** For 100 internal employees on a company Google Workspace account, domain-wide delegation with a service account may bypass the public app verification process entirely. If this is the case, Phase 6 implementation is significantly simpler and faster. Confirm before Phase 6 planning.
 
 ---
 
 ## Sources
 
 ### Primary (HIGH confidence)
-
-- agentskills.io/specification (official spec, fetched directly 2026-03-05) — SKILL.md format, name/description constraints, `allowed-tools` field, directory structure
-- agentskills.io/integrate-skills (official) — Integration pattern for agent platforms, progressive disclosure model
-- nextjs.org/docs/app/guides/authentication (official Next.js auth guide) — `middleware.ts`, DAL pattern, HttpOnly cookie, `jose` recommendation
-- nextjs.org/blog/cve-2025-29927 (Vercel postmortem) — CVE-2025-29927 details, 15.2.3+ requirement, defense-in-depth guidance
-- pypi.org/project/infinity-emb/ (v0.0.77, PyPI) — bge-m3 sidecar, Docker image variants, model support
-- npmjs.com/package/jose — Edge Runtime JWT library, Web Crypto API compatibility
-- keycloak.org/server/all-config (official) — Build vs runtime config distinction
-- keycloak.org/docs-api/latest/rest-api (official) — Realm/client/IDP management endpoints
-- ui.shadcn.com/docs/components/radix/sidebar — Sidebar component, `collapsible="icon"` variant, SidebarProvider
-- postgresql.org/docs/current/datatype-textsearch.html (official) — tsvector, GIN index, language configuration
-- sqlalchemy/alembic issue #1390 (GitHub) — Alembic GIN expression index autogenerate false positives
+- `docs/architecture/architecture.md` — 5-layer architecture, component inventory (source of truth)
+- `docs/enhancement/topics/*/00-specification.md` — Feature specifications for all 9 v1.4 topics
+- `docs/enhancement/ANALYSIS-REPORT.md` — Cross-feature analysis and dependency graph
+- `docs/dev-context.md` — Existing service ports, DB tables, API endpoints, gotchas
+- `CLAUDE.md` Section 13 — Alembic migration state, test commands, critical gotchas from v1.0-v1.3
+- MinIO Python SDK (v7.2.20): https://pypi.org/project/minio/
+- aiosmtplib (v5.1.0): https://pypi.org/project/aiosmtplib/
+- aioimaplib (v2.0.1): https://pypi.org/project/aioimaplib/
+- google-auth-oauthlib (v1.3.0): https://pypi.org/project/google-auth-oauthlib/
+- MSAL Python (v1.34.0): https://pypi.org/project/msal/
+- FastAPI WebSocket docs: https://fastapi.tiangolo.com/advanced/websockets/
+- next-themes GitHub: https://github.com/pacocoursey/next-themes
+- shadcn/ui dark mode guide: https://ui.shadcn.com/docs/dark-mode/next
+- Google Basic Auth sunset (March 2025): https://support.google.com/a/answer/14114704
+- Circuit Breaker Pattern (Microsoft Azure): https://learn.microsoft.com/en-us/azure/architecture/patterns/circuit-breaker
+- HITL for AI Agents (Permit.io): https://www.permit.io/blog/human-in-the-loop-for-ai-agents-best-practices-frameworks-use-cases-and-demo
 
 ### Secondary (MEDIUM confidence)
+- Recharts npm (v2.15.x/v3.8.0): https://www.npmjs.com/package/recharts — bundle size vs Tremor comparison
+- cronstrue npm: https://www.npmjs.com/package/cronstrue — cron display library
+- CopilotKit v1.50 release: https://www.copilotkit.ai/blog/copilotkit-v1-50-release-announcement-whats-new-for-agentic-ui-builders — `useAgent` hook availability
+- FastAPI WebSocket JWT authentication: https://dev.to/hamurda/how-i-solved-websocket-authentication-in-fastapi-and-why-depends-wasnt-enough-1b68
+- CopilotKit useCopilotChat isolation issue: https://github.com/CopilotKit/CopilotKit/issues/1159 — multi-instance context bleeding
+- MinIO Docker Hub deprecation: https://github.com/minio/minio/issues/21502 — CE image freeze at October 2025
+- Alembic migration conflicts: https://github.com/sqlalchemy/alembic/discussions/1543
 
-- github.com/puppetm4st3r/baai_m3_simple_server — Reference implementation for bge-m3 FastAPI sidecar (asyncio batching, RequestProcessor pattern)
-- workos.com/blog/nextjs-app-router-authentication-guide-2026 — Next.js App Router auth patterns, middleware + DAL details
-- github.com/michaelfeil/infinity — `infinity-emb` Docker deployment pattern, bge-m3 support confirmation
-- arxiv.org/html/2603.02176 — Agent Skills ecosystem scale data, power-law distribution in skill discovery
-- pypi.org/project/skills-ref/ (0.1.1, Jan 2026) — CLI commands, alpha status disclosure
-- keycloak.org/docs-api and forum — Keycloak OIDC client config via Admin REST API
-
-### Tertiary (LOW confidence)
-
-- groovyweb.co/blog/ui-ux-design-trends-ai-apps-2026 — Navigation rail context for AI apps (marketing content, directionally useful)
-- smartscope.blog/skillsmp-marketplace-guide — Catalog UX patterns and discovery scale (extrapolated to enterprise use case)
+### Tertiary (LOW confidence — needs validation during implementation)
+- MinIO CE maintenance mode trajectory (Dec 2025): https://www.infoq.com/news/2025/12/minio-s3-api-alternatives/ — alternatives (Garage, RustFS) not yet production-proven in this stack
+- Google OAuth app verification timeline — estimated from general knowledge; Workspace domain-wide delegation path may bypass this entirely (needs confirmation before Phase 6 planning)
 
 ---
-*Research completed: 2026-03-05*
+*Research completed: 2026-03-15*
 *Ready for roadmap: yes*
