@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Platform Enhancement & Infrastructure
 status: unknown
-last_updated: "2026-03-15T18:36:45.313Z"
+last_updated: "2026-03-15T18:44:10.167Z"
 progress:
   total_phases: 14
   completed_phases: 12
   total_plans: 55
-  completed_plans: 54
+  completed_plans: 55
 ---
 
 # Project State
@@ -23,9 +23,9 @@ See: .planning/PROJECT.md (updated 2026-03-15)
 ## Current Position
 
 Phase: 28 of 35 (Storage Service)
-Plan: 2 of 4 in current phase
-Status: Phase 28 plan 2 complete -- Storage API routes, user notifications, embed_file_content task
-Last activity: 2026-03-16 -- Completed 28-02 (Storage API routes and memory embedding task)
+Plan: 3 of 4 in current phase
+Status: Phase 28 plan 3 complete -- File Manager UI at /files (folder tree, grid/list, upload tray, share dialog)
+Last activity: 2026-03-16 -- Completed 28-03 (File Manager UI)
 
 Progress: [██░░░░░░░░] 10%
 
@@ -50,6 +50,7 @@ Progress: [██░░░░░░░░] 10%
 | Phase 27 P03 | 5min | 2 tasks | 3 files |
 | Phase 28 P01 | 25 | 2 tasks | 11 files |
 | Phase 28 P02 | 21min | 2 tasks | 7 files |
+| Phase 28 P03 | 25min | 2 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -86,6 +87,9 @@ v1.4 roadmap decisions:
 - [Phase 28]: [28-02]: JSONResponse(status_code=200) used for dedup response — route decorator default is 201 and cannot be overridden otherwise
 - [Phase 28]: [28-02]: embed_file_content._embed_file_content_body exposed as __wrapped__ — Celery bound method can't be called with mock self; raw function needed for retry testing
 - [Phase 28]: [28-02]: action=replace matches by filename when hash differs — replace semantics allow updating file content while keeping same file record
+- [Phase 28]: [28-03]: FileManager imported via next/dynamic with ssr=false — uses browser APIs (dropzone, XHR)
+- [Phase 28]: [28-03]: pnpm run build blocked by Docker-owned .next directory; tsc --noEmit used for host-side TypeScript verification (0 errors)
+- [Phase 28]: [28-03]: shared-with-me treated as virtual folder ID string to avoid separate state boolean
 
 ### Pending Todos
 
@@ -100,5 +104,5 @@ None for v1.4 start. Design specs exist in `docs/enhancement/topics/` for all 9 
 ## Session Continuity
 
 Last session: 2026-03-16
-Stopped at: Completed 28-02-PLAN.md (Storage API routes, user notifications, embed_file_content task)
+Stopped at: Completed 28-03-PLAN.md (File Manager UI at /files)
 Resume file: None

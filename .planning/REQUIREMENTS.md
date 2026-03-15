@@ -89,7 +89,7 @@ Requirements for v1.4 Platform Enhancement & Infrastructure. Each maps to roadma
 - [x] **STOR-03**: File upload/download with presigned URLs, metadata storage, SHA-256 deduplication
 - [x] **STOR-04**: File sharing between users with READ/WRITE/ADMIN permissions
 - [x] **STOR-05**: Memory integration -- add files to long-term memory with auto re-embedding on update
-- [ ] **STOR-06**: File manager UI with grid/list view, folder tree, breadcrumb navigation, search
+- [x] **STOR-06**: File manager UI with grid/list view, folder tree, breadcrumb navigation, search
 
 ### Email System & Notifications
 
@@ -164,7 +164,7 @@ Requirements for v1.4 Platform Enhancement & Infrastructure. Each maps to roadma
 | STOR-03 | Phase 28 | Complete |
 | STOR-04 | Phase 28 | Complete |
 | STOR-05 | Phase 28 | Complete |
-| STOR-06 | Phase 28 | Pending |
+| STOR-06 | Phase 28 | Complete |
 | UX-01 | Phase 29 | Pending |
 | UX-02 | Phase 29 | Pending |
 | UX-03 | Phase 29 | Pending |
