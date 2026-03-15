@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Platform Enhancement & Infrastructure
 status: unknown
-last_updated: "2026-03-15T11:00:59.122Z"
+last_updated: "2026-03-15T13:02:29.193Z"
 progress:
-  total_phases: 12
-  completed_phases: 11
-  total_plans: 48
-  completed_plans: 49
+  total_phases: 13
+  completed_phases: 12
+  total_plans: 51
+  completed_plans: 52
 ---
 
 # Project State
@@ -23,9 +23,9 @@ See: .planning/PROJECT.md (updated 2026-03-15)
 ## Current Position
 
 Phase: 27 of 35 (Admin Registry Edit UI)
-Plan: 2 of 3 in current phase
-Status: Executing Phase 27 -- Plan 02 complete
-Last activity: 2026-03-15 -- Completed 27-02 (agent & tool detail pages)
+Plan: 3 of 3 in current phase
+Status: Phase 27 complete -- all 3 plans executed
+Last activity: 2026-03-15 -- Completed 27-03 (MCP server & skill detail pages)
 
 Progress: [██░░░░░░░░] 10%
 
@@ -47,6 +47,7 @@ Progress: [██░░░░░░░░] 10%
 | 26    | 02   | 15min    | 3     | 9     |
 | 27    | 01   | 12min    | 2     | 11    |
 | 27    | 02   | 4min     | 2     | 2     |
+| Phase 27 P03 | 5min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -75,6 +76,8 @@ v1.4 roadmap decisions:
 - [roadmap]: CARRY-02 (fill_form) grouped with TABS category -- both are builder concerns
 - [roadmap]: DASH before ANLYT -- Phase 34 provides dashboard infrastructure for Phase 35
 - [roadmap]: Phases 26-28 are independent foundations; 29+ have dependencies
+- [Phase 27]: [27-03]: Auth token field always empty on load -- never display encrypted value
+- [Phase 27]: [27-03]: Tools tab filters client-side from /api/registry?type=tool by mcp_server_id match
 
 ### Pending Todos
 
@@ -89,5 +92,5 @@ None for v1.4 start. Design specs exist in `docs/enhancement/topics/` for all 9 
 ## Session Continuity
 
 Last session: 2026-03-15
-Stopped at: Completed 27-02-PLAN.md (agent & tool detail pages)
+Stopped at: Completed 27-03-PLAN.md (MCP server & skill detail pages) -- Phase 27 complete
 Resume file: None

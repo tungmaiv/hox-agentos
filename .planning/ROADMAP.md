@@ -76,7 +76,7 @@ Full phase details: `.planning/milestones/v1.3-ROADMAP.md`
 **Milestone Goal:** Harden production resilience, add admin management UIs for existing backend capabilities, introduce file storage and email notification infrastructure, and unify operational visibility into a single dashboard.
 
 - [x] **Phase 26: Keycloak SSO Hardening** - Production-grade SSO resilience with circuit breaker, health diagnostics, and graceful degradation (completed 2026-03-15)
-- [ ] **Phase 27: Admin Registry Edit UI** - Form-based editing for all 4 registry types with MCP connection testing
+- [x] **Phase 27: Admin Registry Edit UI** - Form-based editing for all 4 registry types with MCP connection testing (completed 2026-03-15)
 - [ ] **Phase 28: Storage Service** - MinIO-backed file storage with per-user folders, sharing, and memory integration
 - [ ] **Phase 29: User Experience Enhancement** - Dark theme, avatar upload, timezone management, and notification preferences
 - [ ] **Phase 30: Scheduler Management** - Global scheduler dashboard with visual cron builder, execution history, and queue monitoring
@@ -289,7 +289,7 @@ Plans:
 | 24. Unified Registry & MCP Platform | v1.3 | 7/7 | Complete | 2026-03-12 |
 | 25. Skill Builder Tool Resolver | v1.3 | 6/6 | Complete | 2026-03-13 |
 | 26. Keycloak SSO Hardening | 2/2 | Complete    | 2026-03-15 | - |
-| 27. Admin Registry Edit UI | 2/3 | In Progress|  | - |
+| 27. Admin Registry Edit UI | 3/3 | Complete   | 2026-03-15 | - |
 | 28. Storage Service | v1.4 | 0/TBD | Not started | - |
 | 29. User Experience Enhancement | v1.4 | 0/TBD | Not started | - |
 | 30. Scheduler Management | v1.4 | 0/TBD | Not started | - |
