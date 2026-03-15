@@ -80,6 +80,7 @@ function fileIcon(mimeType: string): React.ReactNode {
 interface FileGridProps {
   files: StorageFile[];
   onAction: (action: string, file: StorageFile) => void;
+  currentUsername?: string;
 }
 
 interface MenuState {
@@ -88,6 +89,7 @@ interface MenuState {
   left: number;
 }
 
+// currentUsername accepted but not displayed in grid view (no owner column)
 export function FileGrid({ files, onAction }: FileGridProps) {
   const [menuState, setMenuState] = useState<MenuState | null>(null);
 

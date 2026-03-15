@@ -1,0 +1,4 @@
+[    8710ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ http://backend:8000/api/admin/storage/settings:0
+[    8711ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ http://backend:8000/api/registry?type=skill&status=pending_activation:0
+[    8711ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ http://backend:8000/api/admin/storage/settings:0
+[    8711ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ http://backend:8000/api/registry?type=skill&status=pending_activation:0

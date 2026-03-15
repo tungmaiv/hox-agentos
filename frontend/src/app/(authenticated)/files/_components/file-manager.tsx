@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useSession } from "next-auth/react";
 import { useDropzone } from "react-dropzone";
 import { toast } from "sonner";
 import type {
@@ -18,6 +19,8 @@ import { UploadTray } from "./upload-tray";
 import { ShareDialog } from "./share-dialog";
 
 export function FileManager() {
+  const { data: session } = useSession();
+  const currentUsername = session?.user?.name ?? undefined;
   const [folders, setFolders] = useState<StorageFolder[]>([]);
   const [files, setFiles] = useState<StorageFile[]>([]);
   const [sharedFiles, setSharedFiles] = useState<StorageFile[]>([]);
@@ -391,9 +394,9 @@ export function FileManager() {
               Loading files...
             </div>
           ) : viewMode === "grid" ? (
-            <FileGrid files={displayedFiles} onAction={handleFileAction} />
+            <FileGrid files={displayedFiles} onAction={handleFileAction} currentUsername={currentUsername} />
           ) : (
-            <FileList files={displayedFiles} onAction={handleFileAction} />
+            <FileList files={displayedFiles} onAction={handleFileAction} currentUsername={currentUsername} />
           )}
         </div>
       </div>

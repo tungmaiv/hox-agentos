@@ -82,6 +82,7 @@ function fileIcon(mimeType: string): React.ReactNode {
 interface FileListProps {
   files: StorageFile[];
   onAction: (action: string, file: StorageFile) => void;
+  currentUsername?: string;
 }
 
 interface MenuState {
@@ -90,7 +91,7 @@ interface MenuState {
   right: number;
 }
 
-export function FileList({ files, onAction }: FileListProps) {
+export function FileList({ files, onAction, currentUsername }: FileListProps) {
   const [menuState, setMenuState] = useState<MenuState | null>(null);
 
   if (files.length === 0) {
@@ -154,7 +155,7 @@ export function FileList({ files, onAction }: FileListProps) {
               </td>
               {/* Owner */}
               <td className="px-4 py-2 text-gray-500 truncate max-w-[8rem]">
-                {file.owner_username ?? file.owner_user_id.slice(0, 8) + "…"}
+                {file.owner_username ?? currentUsername ?? file.owner_user_id.slice(0, 8) + "…"}
               </td>
               {/* Actions */}
               <td className="px-4 py-2">

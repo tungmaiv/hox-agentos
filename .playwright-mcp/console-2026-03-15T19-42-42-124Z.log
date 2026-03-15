@@ -1,0 +1,312 @@
+[   10757ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ http://backend:8000/api/storage/notifications:0
+[   10757ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ http://backend:8000/api/storage/notifications:0
+[   14678ms] [WARNING] Lit is in dev mode. Not recommended for production! See https://lit.dev/msg/dev-mode for more information. @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/@lit+reactive-element@2.1.2/node_modules/@lit/reactive-element/development/reactive-element.js:62
+[   26447ms] [ERROR] ./src/app/(authenticated)/files/page.tsx
+Error:   x `ssr: false` is not allowed with `next/dynamic` in Server Components. Please move it into a Client Component.
+    ,-[/app/src/app/(authenticated)/files/page.tsx:11:1]
+  8 |       title: "Files | Blitz AgentOS",
+  9 |     };
+ 10 |     
+ 11 | ,-> const FileManager = dynamic(
+ 12 | |     () =>
+ 13 | |       import("./_components/file-manager").then((m) => ({
+ 14 | |         default: m.FileManager,
+ 15 | |       })),
+ 16 | |     { ssr: false }
+ 17 | `-> );
+ 18 |     
+ 19 |     export default function FilesPage() {
+ 20 |       return (
+    `----
+
+Import trace for requested module:
+./src/app/(authenticated)/files/page.tsx @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@15.5.12_@opentelemetry+api@1.9.0_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   28868ms] [ERROR] ./src/app/(authenticated)/files/page.tsx
+Error:   x `ssr: false` is not allowed with `next/dynamic` in Server Components. Please move it into a Client Component.
+    ,-[/app/src/app/(authenticated)/files/page.tsx:11:1]
+  8 |       title: "Files | Blitz AgentOS",
+  9 |     };
+ 10 |     
+ 11 | ,-> const FileManager = dynamic(
+ 12 | |     () =>
+ 13 | |       import("./_components/file-manager").then((m) => ({
+ 14 | |         default: m.FileManager,
+ 15 | |       })),
+ 16 | |     { ssr: false }
+ 17 | `-> );
+ 18 |     
+ 19 |     export default function FilesPage() {
+ 20 |       return (
+    `----
+
+Import trace for requested module:
+./src/app/(authenticated)/files/page.tsx @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@15.5.12_@opentelemetry+api@1.9.0_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   34630ms] [ERROR] ./src/app/(authenticated)/files/page.tsx
+Error:   x `ssr: false` is not allowed with `next/dynamic` in Server Components. Please move it into a Client Component.
+    ,-[/app/src/app/(authenticated)/files/page.tsx:11:1]
+  8 |       title: "Files | Blitz AgentOS",
+  9 |     };
+ 10 |     
+ 11 | ,-> const FileManager = dynamic(
+ 12 | |     () =>
+ 13 | |       import("./_components/file-manager").then((m) => ({
+ 14 | |         default: m.FileManager,
+ 15 | |       })),
+ 16 | |     { ssr: false }
+ 17 | `-> );
+ 18 |     
+ 19 |     export default function FilesPage() {
+ 20 |       return (
+    `----
+
+Import trace for requested module:
+./src/app/(authenticated)/files/page.tsx @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@15.5.12_@opentelemetry+api@1.9.0_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   34824ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/files?_rsc=qlk40:0
+[   34885ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/files?_rsc=kh345:0
+[   34931ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/files?_rsc=kh345:0
+[   34983ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/files:0
+[   35348ms] ModuleBuildError: Module build failed (from ./node_modules/.pnpm/next@15.5.12_@opentelemetry+api@1.9.0_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/build/webpack/loaders/next-swc-loader.js):
+Error:   x `ssr: false` is not allowed with `next/dynamic` in Server Components. Please move it into a Client Component.
+    ,-[/app/src/app/(authenticated)/files/page.tsx:11:1]
+  8 |       title: "Files | Blitz AgentOS",
+  9 |     };
+ 10 |     
+ 11 | ,-> const FileManager = dynamic(
+ 12 | |     () =>
+ 13 | |       import("./_components/file-manager").then((m) => ({
+ 14 | |         default: m.FileManager,
+ 15 | |       })),
+ 16 | |     { ssr: false }
+ 17 | `-> );
+ 18 |     
+ 19 |     export default function FilesPage() {
+ 20 |       return (
+    `----
+
+    at processResult (file:///app/node_modules/.pnpm/next@15.5.12_@opentelemetry+api@1.9.0_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/compiled/webpack/bundle5.js:29:407086)
+    at <unknown> (file:///app/node_modules/.pnpm/next@15.5.12_@opentelemetry+api@1.9.0_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/compiled/webpack/bundle5.js:29:408881)
+    at <unknown> (file:///app/node_modules/.pnpm/next@15.5.12_@opentelemetry+api@1.9.0_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/compiled/loader-runner/LoaderRunner.js:1:8645)
+    at <unknown> (file:///app/node_modules/.pnpm/next@15.5.12_@opentelemetry+api@1.9.0_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/compiled/loader-runner/LoaderRunner.js:1:5019)
+    at r.callback (file:///app/node_modules/.pnpm/next@15.5.12_@opentelemetry+api@1.9.0_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/compiled/loader-runner/LoaderRunner.js:1:4039)
+[   35349ms] [ERROR] ./src/app/(authenticated)/files/page.tsx
+Error:   x `ssr: false` is not allowed with `next/dynamic` in Server Components. Please move it into a Client Component.
+    ,-[/app/src/app/(authenticated)/files/page.tsx:11:1]
+  8 |       title: "Files | Blitz AgentOS",
+  9 |     };
+ 10 |     
+ 11 | ,-> const FileManager = dynamic(
+ 12 | |     () =>
+ 13 | |       import("./_components/file-manager").then((m) => ({
+ 14 | |         default: m.FileManager,
+ 15 | |       })),
+ 16 | |     { ssr: false }
+ 17 | `-> );
+ 18 |     
+ 19 |     export default function FilesPage() {
+ 20 |       return (
+    `---- @ webpack-internal:///(pages-dir-browser)/./node_modules/.pnpm/next@15.5.12_@opentelemetry+api@1.9.0_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/next-devtools/userspace/pages/pages-dev-overlay-setup.js:76
+[   52389ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/files:0
+[   52562ms] ModuleBuildError: Module build failed (from ./node_modules/.pnpm/next@15.5.12_@opentelemetry+api@1.9.0_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/build/webpack/loaders/next-swc-loader.js):
+Error:   x `ssr: false` is not allowed with `next/dynamic` in Server Components. Please move it into a Client Component.
+    ,-[/app/src/app/(authenticated)/files/page.tsx:11:1]
+  8 |       title: "Files | Blitz AgentOS",
+  9 |     };
+ 10 |     
+ 11 | ,-> const FileManager = dynamic(
+ 12 | |     () =>
+ 13 | |       import("./_components/file-manager").then((m) => ({
+ 14 | |         default: m.FileManager,
+ 15 | |       })),
+ 16 | |     { ssr: false }
+ 17 | `-> );
+ 18 |     
+ 19 |     export default function FilesPage() {
+ 20 |       return (
+    `----
+
+    at processResult (file:///app/node_modules/.pnpm/next@15.5.12_@opentelemetry+api@1.9.0_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/compiled/webpack/bundle5.js:29:407086)
+    at <unknown> (file:///app/node_modules/.pnpm/next@15.5.12_@opentelemetry+api@1.9.0_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/compiled/webpack/bundle5.js:29:408881)
+    at <unknown> (file:///app/node_modules/.pnpm/next@15.5.12_@opentelemetry+api@1.9.0_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/compiled/loader-runner/LoaderRunner.js:1:8645)
+    at <unknown> (file:///app/node_modules/.pnpm/next@15.5.12_@opentelemetry+api@1.9.0_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/compiled/loader-runner/LoaderRunner.js:1:5019)
+    at r.callback (file:///app/node_modules/.pnpm/next@15.5.12_@opentelemetry+api@1.9.0_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/compiled/loader-runner/LoaderRunner.js:1:4039)
+[   52564ms] [ERROR] ./src/app/(authenticated)/files/page.tsx
+Error:   x `ssr: false` is not allowed with `next/dynamic` in Server Components. Please move it into a Client Component.
+    ,-[/app/src/app/(authenticated)/files/page.tsx:11:1]
+  8 |       title: "Files | Blitz AgentOS",
+  9 |     };
+ 10 |     
+ 11 | ,-> const FileManager = dynamic(
+ 12 | |     () =>
+ 13 | |       import("./_components/file-manager").then((m) => ({
+ 14 | |         default: m.FileManager,
+ 15 | |       })),
+ 16 | |     { ssr: false }
+ 17 | `-> );
+ 18 |     
+ 19 |     export default function FilesPage() {
+ 20 |       return (
+    `---- @ webpack-internal:///(pages-dir-browser)/./node_modules/.pnpm/next@15.5.12_@opentelemetry+api@1.9.0_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/next-devtools/userspace/pages/pages-dev-overlay-setup.js:76
+[   52585ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/_next/static/webpack/6470ee2dd6417911.webpack.hot-update.json:0
+[   52585ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(pages-dir-browser)/./node_modules/.pnpm/next@15.5.12_@opentelemetry+api@1.9.0_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/client/dev/hot-reloader/pages/hot-reloader-pages.js:347
+[   53678ms] [ERROR] ./src/app/(authenticated)/files/page.tsx
+Error:   x `ssr: false` is not allowed with `next/dynamic` in Server Components. Please move it into a Client Component.
+    ,-[/app/src/app/(authenticated)/files/page.tsx:11:1]
+  8 |       title: "Files | Blitz AgentOS",
+  9 |     };
+ 10 |     
+ 11 | ,-> const FileManager = dynamic(
+ 12 | |     () =>
+ 13 | |       import("./_components/file-manager").then((m) => ({
+ 14 | |         default: m.FileManager,
+ 15 | |       })),
+ 16 | |     { ssr: false }
+ 17 | `-> );
+ 18 |     
+ 19 |     export default function FilesPage() {
+ 20 |       return (
+    `----
+
+Import trace for requested module:
+./src/app/(authenticated)/files/page.tsx @ webpack-internal:///(pages-dir-browser)/./node_modules/.pnpm/next@15.5.12_@opentelemetry+api@1.9.0_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/next-devtools/userspace/pages/pages-dev-overlay-setup.js:76
+[   54710ms] [ERROR] ./src/app/(authenticated)/files/page.tsx
+Error:   x `ssr: false` is not allowed with `next/dynamic` in Server Components. Please move it into a Client Component.
+    ,-[/app/src/app/(authenticated)/files/page.tsx:11:1]
+  8 |       title: "Files | Blitz AgentOS",
+  9 |     };
+ 10 |     
+ 11 | ,-> const FileManager = dynamic(
+ 12 | |     () =>
+ 13 | |       import("./_components/file-manager").then((m) => ({
+ 14 | |         default: m.FileManager,
+ 15 | |       })),
+ 16 | |     { ssr: false }
+ 17 | `-> );
+ 18 |     
+ 19 |     export default function FilesPage() {
+ 20 |       return (
+    `----
+
+Import trace for requested module:
+./src/app/(authenticated)/files/page.tsx @ webpack-internal:///(pages-dir-browser)/./node_modules/.pnpm/next@15.5.12_@opentelemetry+api@1.9.0_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/next-devtools/userspace/pages/pages-dev-overlay-setup.js:76
+[   54734ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/favicon.ico:0
+[   54751ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/files:0
+[   54938ms] ModuleBuildError: Module build failed (from ./node_modules/.pnpm/next@15.5.12_@opentelemetry+api@1.9.0_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/build/webpack/loaders/next-swc-loader.js):
+Error:   x `ssr: false` is not allowed with `next/dynamic` in Server Components. Please move it into a Client Component.
+    ,-[/app/src/app/(authenticated)/files/page.tsx:11:1]
+  8 |       title: "Files | Blitz AgentOS",
+  9 |     };
+ 10 |     
+ 11 | ,-> const FileManager = dynamic(
+ 12 | |     () =>
+ 13 | |       import("./_components/file-manager").then((m) => ({
+ 14 | |         default: m.FileManager,
+ 15 | |       })),
+ 16 | |     { ssr: false }
+ 17 | `-> );
+ 18 |     
+ 19 |     export default function FilesPage() {
+ 20 |       return (
+    `----
+
+    at processResult (file:///app/node_modules/.pnpm/next@15.5.12_@opentelemetry+api@1.9.0_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/compiled/webpack/bundle5.js:29:407086)
+    at <unknown> (file:///app/node_modules/.pnpm/next@15.5.12_@opentelemetry+api@1.9.0_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/compiled/webpack/bundle5.js:29:408881)
+    at <unknown> (file:///app/node_modules/.pnpm/next@15.5.12_@opentelemetry+api@1.9.0_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/compiled/loader-runner/LoaderRunner.js:1:8645)
+    at <unknown> (file:///app/node_modules/.pnpm/next@15.5.12_@opentelemetry+api@1.9.0_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/compiled/loader-runner/LoaderRunner.js:1:5019)
+    at r.callback (file:///app/node_modules/.pnpm/next@15.5.12_@opentelemetry+api@1.9.0_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/compiled/loader-runner/LoaderRunner.js:1:4039)
+[   54939ms] [ERROR] ./src/app/(authenticated)/files/page.tsx
+Error:   x `ssr: false` is not allowed with `next/dynamic` in Server Components. Please move it into a Client Component.
+    ,-[/app/src/app/(authenticated)/files/page.tsx:11:1]
+  8 |       title: "Files | Blitz AgentOS",
+  9 |     };
+ 10 |     
+ 11 | ,-> const FileManager = dynamic(
+ 12 | |     () =>
+ 13 | |       import("./_components/file-manager").then((m) => ({
+ 14 | |         default: m.FileManager,
+ 15 | |       })),
+ 16 | |     { ssr: false }
+ 17 | `-> );
+ 18 |     
+ 19 |     export default function FilesPage() {
+ 20 |       return (
+    `---- @ webpack-internal:///(pages-dir-browser)/./node_modules/.pnpm/next@15.5.12_@opentelemetry+api@1.9.0_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/next-devtools/userspace/pages/pages-dev-overlay-setup.js:76
+[   55051ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/_next/static/webpack/6470ee2dd6417911.webpack.hot-update.json:0
+[   55051ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(pages-dir-browser)/./node_modules/.pnpm/next@15.5.12_@opentelemetry+api@1.9.0_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/client/dev/hot-reloader/pages/hot-reloader-pages.js:347
+[   56381ms] [ERROR] ./src/app/(authenticated)/files/_components/file-manager.tsx:4:1
+Module not found: Can't resolve 'react-dropzone'
+  2 |
+  3 | import { useState, useEffect, useRef, useCallback } from "react";
+> 4 | import { useDropzone } from "react-dropzone";
+    | ^
+  5 | import { toast } from "sonner";
+  6 | import type {
+  7 |   StorageFile,
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./src/app/(authenticated)/files/_components/file-manager-loader.tsx @ webpack-internal:///(pages-dir-browser)/./node_modules/.pnpm/next@15.5.12_@opentelemetry+api@1.9.0_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/next-devtools/userspace/pages/pages-dev-overlay-setup.js:76
+[   56431ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/_next/static/webpack/6470ee2dd6417911.webpack.hot-update.json:0
+[   56432ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(pages-dir-browser)/./node_modules/.pnpm/next@15.5.12_@opentelemetry+api@1.9.0_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/client/dev/hot-reloader/pages/hot-reloader-pages.js:347
+[   57313ms] [ERROR] ./src/app/(authenticated)/files/_components/file-manager.tsx:4:1
+Module not found: Can't resolve 'react-dropzone'
+  2 |
+  3 | import { useState, useEffect, useRef, useCallback } from "react";
+> 4 | import { useDropzone } from "react-dropzone";
+    | ^
+  5 | import { toast } from "sonner";
+  6 | import type {
+  7 |   StorageFile,
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./src/app/(authenticated)/files/_components/file-manager-loader.tsx @ webpack-internal:///(pages-dir-browser)/./node_modules/.pnpm/next@15.5.12_@opentelemetry+api@1.9.0_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/next-devtools/userspace/pages/pages-dev-overlay-setup.js:76
+[   58253ms] [ERROR] ./src/app/(authenticated)/files/_components/file-manager.tsx:4:1
+Module not found: Can't resolve 'react-dropzone'
+  2 |
+  3 | import { useState, useEffect, useRef, useCallback } from "react";
+> 4 | import { useDropzone } from "react-dropzone";
+    | ^
+  5 | import { toast } from "sonner";
+  6 | import type {
+  7 |   StorageFile,
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./src/app/(authenticated)/files/_components/file-manager-loader.tsx @ webpack-internal:///(pages-dir-browser)/./node_modules/.pnpm/next@15.5.12_@opentelemetry+api@1.9.0_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/next-devtools/userspace/pages/pages-dev-overlay-setup.js:76
+[   58310ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/files:0
+[   58485ms] Error: Module not found: Can't resolve 'react-dropzone'
+  2 |
+  3 | import { useState, useEffect, useRef, useCallback } from "react";
+> 4 | import { useDropzone } from "react-dropzone";
+    | ^
+  5 | import { toast } from "sonner";
+  6 | import type {
+  7 |   StorageFile,
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./src/app/(authenticated)/files/_components/file-manager-loader.tsx
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at getNotFoundError (file:///app/node_modules/.pnpm/next@15.5.12_@opentelemetry+api@1.9.0_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/build/webpack/plugins/wellknown-errors-plugin/parseNotFoundError.js:140:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async getModuleBuildError (file:///app/node_modules/.pnpm/next@15.5.12_@opentelemetry+api@1.9.0_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/build/webpack/plugins/wellknown-errors-plugin/webpackModuleError.js:103:27)
+    at async (file:///app/node_modules/.pnpm/next@15.5.12_@opentelemetry+api@1.9.0_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/build/webpack/plugins/wellknown-errors-plugin/index.js:29:49)
+    at async (file:///app/node_modules/.pnpm/next@15.5.12_@opentelemetry+api@1.9.0_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/build/webpack/plugins/wellknown-errors-plugin/index.js:27:21)
+[   58486ms] [ERROR] ./src/app/(authenticated)/files/_components/file-manager.tsx:4:1
+Module not found: Can't resolve 'react-dropzone'
+  2 |
+  3 | import { useState, useEffect, useRef, useCallback } from "react";
+> 4 | import { useDropzone } from "react-dropzone";
+    | ^
+  5 | import { toast } from "sonner";
+  6 | import type {
+  7 |   StorageFile,
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./src/app/(authenticated)/files/_components/file-manager-loader.tsx @ webpack-internal:///(pages-dir-browser)/./node_modules/.pnpm/next@15.5.12_@opentelemetry+api@1.9.0_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/next-devtools/userspace/pages/pages-dev-overlay-setup.js:76
