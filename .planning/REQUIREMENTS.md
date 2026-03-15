@@ -11,9 +11,9 @@ Requirements for v1.4 Platform Enhancement & Infrastructure. Each maps to roadma
 
 - [x] **KC-01**: Admin can view SSO health status with categorized diagnostics (certificate/config/unreachable/timeout)
 - [x] **KC-02**: Admin can test Keycloak configuration before saving (DNS, TLS, OIDC discovery, client auth)
-- [ ] **KC-03**: Login page shows friendly error messages instead of "Server error -- Configuration"
-- [ ] **KC-04**: SSO failures gracefully fall back to local auth with helpful message
-- [ ] **KC-05**: SSO button hides dynamically when Keycloak is unhealthy
+- [x] **KC-03**: Login page shows friendly error messages instead of "Server error -- Configuration"
+- [x] **KC-04**: SSO failures gracefully fall back to local auth with helpful message
+- [x] **KC-05**: SSO button hides dynamically when Keycloak is unhealthy
 - [x] **KC-06**: Circuit breaker prevents cascade of failed SSO auth attempts (5 failures -> open -> 60s half-open)
 - [x] **KC-07**: Admin receives in-app notification when SSO goes down
 
@@ -148,9 +148,9 @@ Requirements for v1.4 Platform Enhancement & Infrastructure. Each maps to roadma
 |-------------|-------|--------|
 | KC-01 | Phase 26 | Complete |
 | KC-02 | Phase 26 | Complete |
-| KC-03 | Phase 26 | Pending |
-| KC-04 | Phase 26 | Pending |
-| KC-05 | Phase 26 | Pending |
+| KC-03 | Phase 26 | Complete |
+| KC-04 | Phase 26 | Complete |
+| KC-05 | Phase 26 | Complete |
 | KC-06 | Phase 26 | Complete |
 | KC-07 | Phase 26 | Complete |
 | REG-01 | Phase 27 | Pending |
