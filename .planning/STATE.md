@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Platform Enhancement & Infrastructure
 status: unknown
-last_updated: "2026-03-15T13:06:58.010Z"
+last_updated: "2026-03-15T18:11:49.015Z"
 progress:
-  total_phases: 13
+  total_phases: 14
   completed_phases: 12
-  total_plans: 51
-  completed_plans: 52
+  total_plans: 55
+  completed_plans: 53
 ---
 
 # Project State
@@ -18,14 +18,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-15)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates their daily work routines and lets them build custom automations without writing code -- all within an enterprise-secure, on-premise environment where data never leaves the company.
-**Current focus:** v1.4 Phase 26 -- Keycloak SSO Hardening (complete)
+**Current focus:** v1.4 Phase 28 -- Storage Service (in progress)
 
 ## Current Position
 
-Phase: 27 of 35 (Admin Registry Edit UI)
-Plan: 3 of 3 in current phase
-Status: Phase 27 complete -- all 3 plans executed
-Last activity: 2026-03-15 -- Completed 27-03 (MCP server & skill detail pages)
+Phase: 28 of 35 (Storage Service)
+Plan: 1 of 4 in current phase
+Status: Phase 28 plan 1 complete -- MinIO infrastructure and storage foundation
+Last activity: 2026-03-16 -- Completed 28-01 (MinIO infrastructure and storage foundation)
 
 Progress: [██░░░░░░░░] 10%
 
@@ -48,6 +48,7 @@ Progress: [██░░░░░░░░] 10%
 | 27    | 01   | 12min    | 2     | 11    |
 | 27    | 02   | 4min     | 2     | 2     |
 | Phase 27 P03 | 5min | 2 tasks | 3 files |
+| Phase 28 P01 | 25 | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -78,6 +79,9 @@ v1.4 roadmap decisions:
 - [roadmap]: Phases 26-28 are independent foundations; 29+ have dependencies
 - [Phase 27]: [27-03]: Auth token field always empty on load -- never display encrypted value
 - [Phase 27]: [27-03]: Tools tab filters client-side from /api/registry?type=tool by mcp_server_id match
+- [Phase 28]: [28-01]: S3 client created per-operation with async context manager — aioboto3 clients are not thread-safe
+- [Phase 28]: [28-01]: minio_internal_url for upload presigned URLs, minio_public_url for download presigned URLs — browser fetches directly
+- [Phase 28]: [28-01]: EXTRACTABLE_MIME_TYPES is frozenset; pdfminer and docx imports are lazy inside functions
 
 ### Pending Todos
 
@@ -91,6 +95,6 @@ None for v1.4 start. Design specs exist in `docs/enhancement/topics/` for all 9 
 
 ## Session Continuity
 
-Last session: 2026-03-15
-Stopped at: Completed 27-03-PLAN.md (MCP server & skill detail pages) -- Phase 27 complete
+Last session: 2026-03-16
+Stopped at: Completed 28-01-PLAN.md (MinIO infrastructure and storage foundation)
 Resume file: None
