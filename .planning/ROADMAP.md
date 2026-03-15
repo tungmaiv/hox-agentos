@@ -113,11 +113,12 @@ Plans:
   2. Type-specific config fields are editable (agent system prompt, tool handler, MCP URL/auth, skill instructions)
   3. Admin can test MCP server connection from the detail page and see success/failure result
   4. All list pages have dual pagination (top + bottom) and form validation shows inline Zod errors
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 27-01: TBD
-- [ ] 27-02: TBD
+- [ ] 27-01-PLAN.md — Shared components (layout, pagination, save bar), Zod schemas, MCP test endpoint
+- [ ] 27-02-PLAN.md — Agent and Tool detail pages with form editing
+- [ ] 27-03-PLAN.md — MCP Server detail page with connection testing, Skill detail page enhancement
 
 ### Phase 28: Storage Service
 **Goal**: Users have personal file storage with upload, download, sharing, and memory integration
@@ -288,7 +289,7 @@ Plans:
 | 24. Unified Registry & MCP Platform | v1.3 | 7/7 | Complete | 2026-03-12 |
 | 25. Skill Builder Tool Resolver | v1.3 | 6/6 | Complete | 2026-03-13 |
 | 26. Keycloak SSO Hardening | 2/2 | Complete    | 2026-03-15 | - |
-| 27. Admin Registry Edit UI | v1.4 | 0/TBD | Not started | - |
+| 27. Admin Registry Edit UI | v1.4 | 0/3 | Not started | - |
 | 28. Storage Service | v1.4 | 0/TBD | Not started | - |
 | 29. User Experience Enhancement | v1.4 | 0/TBD | Not started | - |
 | 30. Scheduler Management | v1.4 | 0/TBD | Not started | - |
