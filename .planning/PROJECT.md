@@ -77,8 +77,24 @@ Every Blitz employee gets an intelligent, context-aware assistant that automates
 - ✓ pgvector similarity search over external skill repo index (HNSW cosine) + Fork capability — v1.3
 - ✓ SecurityScanner gate on every builder save; SecurityReportCard A2UI + admin approval flow — v1.3
 
-### Active
+### Active (v1.4 — Platform Enhancement & Infrastructure)
 
+**Foundation:**
+- [ ] Keycloak SSO Hardening (#07) — circuit breaker, health categorization, error diagnostics
+- [ ] Admin Registry Edit UI (#06) — edit forms for existing entries, MCP connection testing
+- [ ] Scheduler UI & Management APIs (#15) — global dashboard, visual cron builder, execution history
+- [ ] Runtime Permission Approval HITL (#01) — permission request queue, temporal ACL, auto-approve rules
+- [ ] Multi-Agent Tab Architecture (#16) — tool_builder + mcp_builder agents, tabbed builder UI
+
+**Enhancement:**
+- [ ] User Experience Enhancement (#13) — dark theme, avatar upload, timezone management
+- [ ] Unified Dashboard (#08+#14) — Mission Control + Analytics tabs, WebSocket feeds, metrics
+
+**Infrastructure:**
+- [ ] Storage Service (#19) — MinIO deployment, file/folder models, provider adapter pattern
+- [ ] Email System & Notifications (#18) — email sidecar, OAuth, notification routing
+
+**Carried forward:**
 - [ ] Real OAuth email/calendar integration (replace mock sub-agents with live Google/Microsoft OAuth)
 - [ ] WhatsApp Business live end-to-end (pending Meta Business API verification)
 - [ ] MS Teams live end-to-end (pending Azure Bot Service registration)
@@ -98,6 +114,21 @@ Every Blitz employee gets an intelligent, context-aware assistant that automates
 
 ## Context
 
+## Current Milestone: v1.4 Platform Enhancement & Infrastructure
+
+**Goal:** Harden production resilience, add admin management UIs for existing backend capabilities, introduce file storage and email notification infrastructure, and unify operational visibility into a single dashboard.
+
+**Target features:**
+- Production-grade Keycloak resilience (circuit breaker, health monitoring)
+- Admin UIs for scheduler management, registry editing, permission approval
+- Multi-agent artifact builder with specialized agents per artifact type
+- Dark theme, avatar upload, timezone management
+- Unified Mission Control + Analytics dashboard
+- MinIO-backed file storage service
+- Email channel with OAuth + notification routing
+
+## Context
+
 **Current state (v1.3 shipped 2026-03-11):**
 - Production-hardened agentic OS with secure sessions, standards-compliant skill ecosystem live on Docker Compose
 - 860 backend tests passing (pytest), 1 skipped; TypeScript strict 0 errors
@@ -111,7 +142,7 @@ Every Blitz employee gets an intelligent, context-aware assistant that automates
 
 **What shipped in v1.3:** Session hardening (middleware, refresh, logout); navigation rail + profile page + LLM preferences; embedding sidecar; 7-path perf instrumentation; Keycloak runtime config; agentskills.io standards compliance; skill catalog with FTS + external registry browse; SecurityScanner enhanced with dependency+data_flow risk; allowed-tools enforcement; daily update checker; promoted skills + ZIP export + sharing; LLM-generated skill content in builder; pgvector similarity search + Fork; SecurityScanner gate on all builder saves.
 
-**What's next:** Run `/gsd:new-milestone` to define v1.4. Priority candidates: real OAuth email/calendar integration, builder metadata fields fix, WhatsApp/Teams live credentials.
+**What's next:** v1.4 milestone defined (2026-03-15). 9 topics across Foundation/Enhancement/Infrastructure. Design specs in `docs/enhancement/topics/`. Verified implementation status in `docs/enhancement/ANALYSIS-REPORT.md`.
 
 **Known tech debt (accumulated):**
 - `MemoryFact` isolation pen test permanently skipped in SQLite (must run against live PostgreSQL)
@@ -168,4 +199,4 @@ Every Blitz employee gets an intelligent, context-aware assistant that automates
 | SecurityScanner as central trust gate (v1.3) | All skill acquisition paths (import, builder, registry) go through one scanner | ✓ Good — same SecurityScanner used in ZIP import, one-click registry import, and builder-save; Phase 21 enhancements apply everywhere |
 
 ---
-*Last updated: 2026-03-11 after v1.3 milestone*
+*Last updated: 2026-03-15 after v1.4 milestone definition*

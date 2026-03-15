@@ -1,33 +1,33 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.3
-milestone_name: Production Readiness & Skill Platform
-status: complete
-last_updated: "2026-03-14T00:00:00.000Z"
+milestone: v1.4
+milestone_name: Platform Enhancement & Infrastructure
+status: defining_requirements
+last_updated: "2026-03-15T07:01:00.000Z"
 progress:
-  total_phases: 25
-  completed_phases: 25
-  total_plans: 80
-  completed_plans: 80
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-11)
+See: .planning/PROJECT.md (updated 2026-03-15)
 
 **Core value:** Every Blitz employee gets an intelligent, context-aware assistant that automates their daily work routines and lets them build custom automations without writing code — all within an enterprise-secure, on-premise environment where data never leaves the company.
-**Current focus:** v1.3 SHIPPED 2026-03-11 — milestone archived. Run /gsd:new-milestone for v1.4.
+**Current focus:** v1.4 — Defining requirements. 9 topics with complete design specs.
 
 ## Current Position
 
-Phase: 25 (Skill Builder Tool Resolver)
-Plan: 06 of 06 complete — Phase 25 COMPLETE
-Status: v1.3 fully complete — all 25 phases done. Run /gsd:new-milestone for v1.4.
-Last activity: 2026-03-14 - Phase 25 gap closure plans complete (25-04 through 25-06)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements for v1.4
+Last activity: 2026-03-15 — Milestone v1.4 started
 
-Progress: [##########] 100%
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
