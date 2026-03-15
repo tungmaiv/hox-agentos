@@ -10,7 +10,7 @@
  *
  * Uses RegistryDetailLayout for consistent shell with save bar.
  */
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useParams } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import { mapSnakeToCamel } from "@/lib/admin-types";
@@ -70,11 +70,15 @@ export default function AdminSkillDetailPage() {
   );
   const initialFormRef = useRef<SkillFormValues | null>(null);
   const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveMessage, setSaveMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
 
   // Comma-separated string helpers for tags / allowedTools
   const [tagsStr, setTagsStr] = useState("");
   const [allowedToolsStr, setAllowedToolsStr] = useState("");
+  const initialAllowedToolsRef = useRef("");
 
   // Markdown preview toggle
   const [previewMd, setPreviewMd] = useState(false);
@@ -82,10 +86,37 @@ export default function AdminSkillDetailPage() {
   // Advanced raw JSON toggle + text
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [procedureJsonStr, setProcedureJsonStr] = useState("");
+  const initialProcedureJsonRef = useRef("");
 
   // ---------------------------------------------------------------------------
   // Data loading
   // ---------------------------------------------------------------------------
+
+  const initFormFromEntry = useCallback((e: RegistryEntry) => {
+    const cfg = e.config;
+    const initial: SkillFormValues = {
+      displayName: e.displayName ?? null,
+      description: e.description ?? null,
+      skillType:
+        (cfg.skill_type as SkillFormValues["skillType"]) ?? "instructional",
+      instructionMarkdown: (cfg.instruction_markdown as string) ?? null,
+      slashCommand: (cfg.slash_command as string) ?? null,
+      category: (cfg.category as string) ?? null,
+      tags: (cfg.tags as string[]) ?? null,
+      status: e.status as SkillFormValues["status"],
+    };
+    setFormData(initial);
+    initialFormRef.current = initial;
+    setTagsStr((cfg.tags as string[] | null)?.join(", ") ?? "");
+    const initAllowedTools = (cfg.allowed_tools as string[] | null)?.join(", ") ?? "";
+    setAllowedToolsStr(initAllowedTools);
+    initialAllowedToolsRef.current = initAllowedTools;
+    const initProcedureJson = cfg.procedure_json
+      ? JSON.stringify(cfg.procedure_json, null, 2)
+      : "";
+    setProcedureJsonStr(initProcedureJson);
+    initialProcedureJsonRef.current = initProcedureJson;
+  }, []);
 
   useEffect(() => {
     if (!id) return;
@@ -105,40 +136,19 @@ export default function AdminSkillDetailPage() {
         setError(err instanceof Error ? err.message : "Failed to load skill");
       })
       .finally(() => setLoading(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [id, initFormFromEntry]);
 
-  const initFormFromEntry = useCallback((e: RegistryEntry) => {
-    const cfg = e.config;
-    const initial: SkillFormValues = {
-      displayName: e.displayName ?? null,
-      description: e.description ?? null,
-      skillType:
-        (cfg.skill_type as SkillFormValues["skillType"]) ?? "instructional",
-      instructionMarkdown: (cfg.instruction_markdown as string) ?? null,
-      slashCommand: (cfg.slash_command as string) ?? null,
-      category: (cfg.category as string) ?? null,
-      tags: (cfg.tags as string[]) ?? null,
-      status: e.status as SkillFormValues["status"],
-    };
-    setFormData(initial);
-    initialFormRef.current = initial;
-    setTagsStr((cfg.tags as string[] | null)?.join(", ") ?? "");
-    setAllowedToolsStr(
-      (cfg.allowed_tools as string[] | null)?.join(", ") ?? ""
-    );
-    setProcedureJsonStr(
-      cfg.procedure_json
-        ? JSON.stringify(cfg.procedure_json, null, 2)
-        : ""
-    );
-  }, []);
+  useEffect(() => {
+    if (!saveMessage) return;
+    const t = setTimeout(() => setSaveMessage(null), 3000);
+    return () => clearTimeout(t);
+  }, [saveMessage]);
 
   // ---------------------------------------------------------------------------
   // Change tracking
   // ---------------------------------------------------------------------------
 
-  const hasChanges = (() => {
+  const hasChanges = useMemo(() => {
     if (!initialFormRef.current) return false;
     const init = initialFormRef.current;
     return (
@@ -149,9 +159,11 @@ export default function AdminSkillDetailPage() {
       formData.slashCommand !== init.slashCommand ||
       formData.category !== init.category ||
       formData.status !== init.status ||
-      JSON.stringify(formData.tags) !== JSON.stringify(init.tags)
+      JSON.stringify(formData.tags) !== JSON.stringify(init.tags) ||
+      allowedToolsStr !== initialAllowedToolsRef.current ||
+      procedureJsonStr !== initialProcedureJsonRef.current
     );
-  })();
+  }, [formData, allowedToolsStr, procedureJsonStr]);
 
   // ---------------------------------------------------------------------------
   // Field update + validation
@@ -160,7 +172,7 @@ export default function AdminSkillDetailPage() {
   const updateField = useCallback(
     (field: keyof SkillFormValues, value: unknown) => {
       setFormData((prev) => ({ ...prev, [field]: value }));
-      setSaveError(null);
+      setSaveMessage(null);
     },
     []
   );
@@ -195,7 +207,7 @@ export default function AdminSkillDetailPage() {
     }
 
     setSaving(true);
-    setSaveError(null);
+    setSaveMessage(null);
 
     // Build config update — merge with existing config
     const configUpdate: Record<string, unknown> = {
@@ -258,8 +270,12 @@ export default function AdminSkillDetailPage() {
       setEntry(updated);
       initFormFromEntry(updated);
       setFieldErrors({});
+      setSaveMessage({ type: "success", text: "Changes saved successfully." });
     } catch (err: unknown) {
-      setSaveError(err instanceof Error ? err.message : "Save failed");
+      setSaveMessage({
+        type: "error",
+        text: err instanceof Error ? err.message : "Save failed",
+      });
     } finally {
       setSaving(false);
     }
@@ -273,7 +289,7 @@ export default function AdminSkillDetailPage() {
     if (entry) {
       initFormFromEntry(entry);
       setFieldErrors({});
-      setSaveError(null);
+      setSaveMessage(null);
       setPreviewMd(false);
     }
   }, [entry, initFormFromEntry]);
@@ -329,9 +345,15 @@ export default function AdminSkillDetailPage() {
       onSave={handleSave}
       onDiscard={handleDiscard}
     >
-      {saveError && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">
-          {saveError}
+      {saveMessage && (
+        <div
+          className={`mb-4 p-3 rounded text-sm ${
+            saveMessage.type === "success"
+              ? "bg-green-50 border border-green-200 text-green-700"
+              : "bg-red-50 border border-red-200 text-red-700"
+          }`}
+        >
+          {saveMessage.text}
         </div>
       )}
 

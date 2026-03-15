@@ -166,6 +166,8 @@ async def test_mcp_connection(
     """Test connectivity to an MCP server by attempting SSE connection and tools/list."""
     import httpx
 
+    logger.info("mcp_test_connection", url=body.url, user_id=str(user["user_id"]))
+
     start = time.monotonic()
     headers: dict[str, str] = {}
     if body.auth_token:

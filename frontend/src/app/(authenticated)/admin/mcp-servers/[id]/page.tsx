@@ -9,7 +9,7 @@
  *
  * Uses RegistryDetailLayout for consistent shell with save bar.
  */
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { mapSnakeToCamel, mapArraySnakeToCamel } from "@/lib/admin-types";
 import type { RegistryEntry } from "@/lib/admin-types";
@@ -76,7 +76,10 @@ export default function AdminMcpServerDetailPage() {
   );
   const initialFormRef = useRef<McpServerFormValues | null>(null);
   const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveMessage, setSaveMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
 
   // Connection test state
   const [testing, setTesting] = useState(false);
@@ -126,11 +129,17 @@ export default function AdminMcpServerDetailPage() {
       .finally(() => setLoading(false));
   }, [id]);
 
+  useEffect(() => {
+    if (!saveMessage) return;
+    const t = setTimeout(() => setSaveMessage(null), 3000);
+    return () => clearTimeout(t);
+  }, [saveMessage]);
+
   // ---------------------------------------------------------------------------
   // Change tracking
   // ---------------------------------------------------------------------------
 
-  const hasChanges = (() => {
+  const hasChanges = useMemo(() => {
     if (!initialFormRef.current) return false;
     const init = initialFormRef.current;
     return (
@@ -140,7 +149,7 @@ export default function AdminMcpServerDetailPage() {
       (formData.authToken != null && formData.authToken !== "") ||
       formData.status !== init.status
     );
-  })();
+  }, [formData]);
 
   // ---------------------------------------------------------------------------
   // Field update + validation
@@ -149,7 +158,7 @@ export default function AdminMcpServerDetailPage() {
   const updateField = useCallback(
     (field: keyof McpServerFormValues, value: unknown) => {
       setFormData((prev) => ({ ...prev, [field]: value }));
-      setSaveError(null);
+      setSaveMessage(null);
     },
     []
   );
@@ -184,7 +193,7 @@ export default function AdminMcpServerDetailPage() {
     }
 
     setSaving(true);
-    setSaveError(null);
+    setSaveMessage(null);
 
     // Build config update — merge with existing config
     const configUpdate: Record<string, unknown> = {
@@ -236,8 +245,12 @@ export default function AdminMcpServerDetailPage() {
       setFormData(newInitial);
       initialFormRef.current = newInitial;
       setFieldErrors({});
+      setSaveMessage({ type: "success", text: "Changes saved successfully." });
     } catch (err: unknown) {
-      setSaveError(err instanceof Error ? err.message : "Save failed");
+      setSaveMessage({
+        type: "error",
+        text: err instanceof Error ? err.message : "Save failed",
+      });
     } finally {
       setSaving(false);
     }
@@ -251,7 +264,7 @@ export default function AdminMcpServerDetailPage() {
     if (initialFormRef.current) {
       setFormData(initialFormRef.current);
       setFieldErrors({});
-      setSaveError(null);
+      setSaveMessage(null);
     }
   }, []);
 
@@ -378,9 +391,15 @@ export default function AdminMcpServerDetailPage() {
       onSave={handleSave}
       onDiscard={handleDiscard}
     >
-      {saveError && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">
-          {saveError}
+      {saveMessage && (
+        <div
+          className={`mb-4 p-3 rounded text-sm ${
+            saveMessage.type === "success"
+              ? "bg-green-50 border border-green-200 text-green-700"
+              : "bg-red-50 border border-red-200 text-red-700"
+          }`}
+        >
+          {saveMessage.text}
         </div>
       )}
 

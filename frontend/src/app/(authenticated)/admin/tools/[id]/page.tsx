@@ -458,7 +458,7 @@ export default function ToolDetailPage() {
                 handleFieldChange("handlerType", e.target.value);
                 // Auto-set sandbox_required when switching to sandbox
                 if (e.target.value === "sandbox") {
-                  handleFieldChange("sandboxRequired", true as unknown as string);
+                  handleFieldChange("sandboxRequired", true);
                 }
               }}
               onBlur={(e) => handleFieldBlur("handlerType", e.target.value)}
@@ -576,7 +576,7 @@ export default function ToolDetailPage() {
               id="sandboxRequired"
               checked={formData.sandboxRequired}
               onChange={(e) =>
-                handleFieldChange("sandboxRequired", e.target.checked as unknown as string)
+                handleFieldChange("sandboxRequired", e.target.checked)
               }
               className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
             />
