@@ -192,13 +192,15 @@ v1.5 Foundation: #20 Projects/Spaces, #09 Multi-Agent Orchestration
 v1.5 Enhancement: #12 User & Group Mgmt, #05 Skill Import, #04 LLM Config
 v1.6 Architecture: #21 Universal Integration, #22 MCP Creator, #23 Templates, #24 Apps UI
 
-**Pre-existing items:**
-- [ ] Start WhatsApp Business API verification process (takes 1-4 weeks, needed for future live testing)
-- [ ] Add CREDENTIAL_ENCRYPTION_KEY to production .env before OAuth flows (deferred to v1.4)
-- [ ] [POST-MVP] HashiCorp Vault for secret management
-- [ ] [TECH-DEBT] Fix frontend `pnpm build` failure — SWR hooks in Server Components cause prerender crash on `/settings/integrations` and `/settings/memory` pages. Root cause: `useSWR()` destructuring (`const { data } = useSWR(...)`) runs during static export where SWR context is undefined. Fix: add `"use client"` directive to affected pages, or move SWR calls into client sub-components.
-- [ ] [LLM] Switch back to qwen3.5:cloud when weekly Ollama limit resets (currently qwen2.5:7b local)
-- [ ] [TECH-DEBT] Keycloak SSO login returns "Server error — Configuration" (`/api/auth/error?error=Configuration`). next-auth Keycloak provider fails during OIDC discovery or token exchange.
+**Pre-existing items (2 remaining):**
+- [ ] Investigate slow page load and signin performance (auth — debugging task, complements #07)
+- [ ] Stack initialization wizard for multi-platform deployment (tooling — post-MVP)
+
+**Resolved/moved to done (2026-03-15):**
+- ~~LLM model and provider configurable in admin console~~ → superseded by Topic #04
+- ~~Add skill to assess app API endpoints and auto-generate MCP server~~ → superseded by Topic #22
+- ~~Replace ngrok with Cloudflare Tunnel~~ → already implemented
+- ~~Brainstorm secrets/Vault~~ → covered by Future Topic #03 in enhancement index
 
 ### Blockers/Concerns
 
