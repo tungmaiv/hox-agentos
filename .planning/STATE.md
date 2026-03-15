@@ -182,15 +182,23 @@ v1.3 roadmap decisions:
 
 ### Pending Todos
 
-- [ ] [SKILL-BUILDER] Feature 2 — Runtime permission approval/escalation (HITL): when a skill/agent tries to use a tool the user lacks permission for, pause execution, notify admin via UI, allow one-click approval, then resume. Significant HITL feature — own phase required. Design: intercept at Gate 3 ACL check, emit pending_permission event to frontend, admin approves in real-time, Gate 3 re-checks.
+**Enhancement Topics (18 todos — created 2026-03-15 from verified analysis):**
+See `.planning/todos/pending/2026-03-15-implement-*.md` for full details.
+
+v1.4 Foundation: #07 Keycloak SSO, #06 Registry Edit UI, #15 Scheduler UI, #01 HITL Permissions, #16 Multi-Agent Tabs
+v1.4 Enhancement: #13 User Experience, #08+#14 Unified Dashboard
+v1.4 Infrastructure: #19 Storage Service, #18 Email System
+v1.5 Foundation: #20 Projects/Spaces, #09 Multi-Agent Orchestration
+v1.5 Enhancement: #12 User & Group Mgmt, #05 Skill Import, #04 LLM Config
+v1.6 Architecture: #21 Universal Integration, #22 MCP Creator, #23 Templates, #24 Apps UI
+
+**Pre-existing items:**
 - [ ] Start WhatsApp Business API verification process (takes 1-4 weeks, needed for future live testing)
 - [ ] Add CREDENTIAL_ENCRYPTION_KEY to production .env before OAuth flows (deferred to v1.4)
 - [ ] [POST-MVP] HashiCorp Vault for secret management
 - [ ] [TECH-DEBT] Fix frontend `pnpm build` failure — SWR hooks in Server Components cause prerender crash on `/settings/integrations` and `/settings/memory` pages. Root cause: `useSWR()` destructuring (`const { data } = useSWR(...)`) runs during static export where SWR context is undefined. Fix: add `"use client"` directive to affected pages, or move SWR calls into client sub-components.
 - [ ] [LLM] Switch back to qwen3.5:cloud when weekly Ollama limit resets (currently qwen2.5:7b local)
-- [ ] [UI] LLM model and provider configurable in admin console — see .planning/todos/pending/2026-03-08-llm-model-and-provider-configurable-in-admin-console.md — currently using qwen2.5:7b (local) as fallback. Update infra/litellm/config.yaml model entries.
-- [ ] [SKILL-PLATFORM] Support GitHub repositories as skill sources in Skill Store — currently only agentskills-index.json protocol supported. Add GitHub adapter: fetch repo file tree, detect skill files (YAML/JSON frontmatter), build index on-the-fly. Allow entering a GitHub repo URL (e.g., github.com/user/repo) in Add Repository dialog alongside agentskills-index.json URLs.
-- [ ] [TECH-DEBT] Keycloak SSO login returns "Server error — Configuration" (`/api/auth/error?error=Configuration`). next-auth Keycloak provider fails during OIDC discovery or token exchange. Likely causes: (1) `KEYCLOAK_ISSUER` URL unreachable from Next.js server (self-signed cert / DNS), (2) `KEYCLOAK_CLIENT_ID` or `KEYCLOAK_CLIENT_SECRET` mismatch with Keycloak realm config, (3) Keycloak service not running or realm not configured. Investigate in Phase 18 (Identity Configuration) or fix earlier if blocking dev workflows.
+- [ ] [TECH-DEBT] Keycloak SSO login returns "Server error — Configuration" (`/api/auth/error?error=Configuration`). next-auth Keycloak provider fails during OIDC discovery or token exchange.
 
 ### Blockers/Concerns
 
