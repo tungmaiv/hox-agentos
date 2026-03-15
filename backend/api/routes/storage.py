@@ -291,9 +291,10 @@ async def upload_file(
             return JSONResponse(
                 status_code=200,
                 content={
-                    "duplicate": True,
+                    "action": "duplicate_detected",
                     "existing_file_id": str(existing_file.id),
                     "existing_file_name": existing_file.name,
+                    "content_hash": existing_file.content_hash,
                 },
             )
 

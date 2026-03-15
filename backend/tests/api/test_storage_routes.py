@@ -193,7 +193,7 @@ def test_upload_duplicate_returns_dedup_info(user_client: TestClient) -> None:
     )
     assert response.status_code == 200
     body = response.json()
-    assert body.get("duplicate") is True
+    assert body.get("action") == "duplicate_detected"
     assert "existing_file_id" in body
     assert "existing_file_name" in body
 
