@@ -183,9 +183,9 @@ All topics are documented and ready for detailed design discussions. User can go
 ## Quick Stats
 
 - **Total Topics:** 24
-- **✅ Completed:** 17 topics (with full design documents)
+- **✅ Completed:** 18 topics (with full design documents)
 - **🔵 In-Progress:** 1 topic (design partial, needs completion)
-- **🟡 Pending:** 1 topic (ready for brainstorming)
+- **🟡 Pending:** 0 topics (ready for brainstorming)
 - **🟡 Future:** 3 topics (deferred to v1.6+)
 
 ---
@@ -211,6 +211,7 @@ All topics are documented and ready for detailed design discussions. User can go
 | 21 | Universal Integration | [specification](./topics/21-universal-integration/00-specification.md) | v1.7+ | ✅ Complete |
 | 22 | MCP Server Creation Skill | [specification](./topics/22-mcp-server-creation-skill/00-specification.md) | v1.7+ | ✅ Complete |
 | 23 | Plugin Templates | [specification](./topics/23-plugin-templates/00-specification.md) | v1.7+ | ✅ Complete |
+| 24 | Third-Party Apps UI | [specification](./topics/24-third-party-apps-ui/00-specification.md) | v1.7+ | ✅ Complete |
 
 ---
 
@@ -224,9 +225,7 @@ All topics are documented and ready for detailed design discussions. User can go
 
 ## Pending Topics (Ready for Brainstorming)
 
-| # | Topic | Priority | Target | Description |
-|---|-------|----------|---------|-------------|
-| 24 | Third-Party Apps UI | Medium | v1.7+ | Dynamic UI generation using CopilotKit/AG-UI/A2UI |
+*No pending topics - all topics have been designed or scheduled for future milestones.*
 
 ---
 
@@ -248,14 +247,14 @@ All topics are documented and ready for detailed design discussions. User can go
 ### v1.5 Topics (1 in-progress)
 - 09: Runtime Multi-Agent Orchestration (LangGraph Extension) - Architecture decision made, needs detailed design
 
-### v1.7+ Topics (6 completed, 1 pending)
+### v1.7+ Topics (7 completed, 0 pending)
 - 18: Email System & Channel Notifications ✅ Complete
 - 19: Storage Service ✅ Complete
 - 20: Projects/Spaces ✅ Complete
 - 21: Universal Integration ✅ Complete
 - 22: MCP Server Creation Skill ✅ Complete
 - 23: Plugin Templates ✅ Complete
-- 24: Third-Party Apps UI
+- 24: Third-Party Apps UI ✅ Complete
 
 ### v1.6+ Topics (0 completed, 3 pending)
 - 02: WhatsApp Business API Integration
@@ -284,6 +283,26 @@ All topics are documented and ready for detailed design discussions. User can go
   - AI-powered semantic enrichment with LLM
   - Interactive UI for tool selection and refinement
   - Dual output: downloadable code package + immediate runtime adapter
+
+### Session 12 (2026-03-15): Third-Party Apps UI ✅
+- **Topic #24:** Third-Party Apps UI
+- **Status:** ✅ Completed
+- **Design Doc:** [00-specification.md](./topics/24-third-party-apps-ui/00-specification.md)
+- **Key Decisions:**
+  - Approach C: Auto-generate with A2UI + Chat-based customization
+  - Leverage existing CopilotKit A2UI infrastructure (A2UIMessageRenderer)
+  - Hybrid A2UI + useHumanInTheLoop for interactive form customization
+  - Form persistence in app_form table (JSONB A2UI spec)
+  - Real-time preview as users chat with AI
+  - Integration with Topic #21 Universal Integration for execution
+- **Features:**
+  - Auto-generated default forms when integrations connect
+  - "Chat with Apps" interface in left navigation
+  - A2UI-based form rendering (tables, charts, inputs, etc.)
+  - Interactive customization via natural language chat
+  - Save customized forms for reuse
+  - Form execution via MCP/REST/CLI adapters
+  - 10-week implementation plan (6 phases)
 
 ### Session 11 (2026-03-15): Plugin Templates ✅
 - **Topic #23:** Plugin Templates
