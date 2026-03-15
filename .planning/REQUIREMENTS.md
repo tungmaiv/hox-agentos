@@ -19,9 +19,9 @@ Requirements for v1.4 Platform Enhancement & Infrastructure. Each maps to roadma
 
 ### Admin Registry Edit UI
 
-- [ ] **REG-01**: All 4 registry types (agents, tools, MCP servers, skills) have detail pages with consistent layout
-- [ ] **REG-02**: All detail pages support form-based editing (not just JSON)
-- [ ] **REG-03**: Type-specific config fields editable (agent: system prompt/tools; tool: handler/permissions; MCP: URL/auth; skill: instructions/procedure)
+- [x] **REG-01**: All 4 registry types (agents, tools, MCP servers, skills) have detail pages with consistent layout
+- [x] **REG-02**: All detail pages support form-based editing (not just JSON)
+- [x] **REG-03**: Type-specific config fields editable (agent: system prompt/tools; tool: handler/permissions; MCP: URL/auth; skill: instructions/procedure)
 - [x] **REG-04**: MCP servers have connection test functionality
 - [x] **REG-05**: All list pages have dual pagination (top + bottom)
 - [x] **REG-06**: Form validation shows inline errors with Zod schemas
@@ -153,9 +153,9 @@ Requirements for v1.4 Platform Enhancement & Infrastructure. Each maps to roadma
 | KC-05 | Phase 26 | Complete |
 | KC-06 | Phase 26 | Complete |
 | KC-07 | Phase 26 | Complete |
-| REG-01 | Phase 27 | Pending |
-| REG-02 | Phase 27 | Pending |
-| REG-03 | Phase 27 | Pending |
+| REG-01 | Phase 27 | Complete |
+| REG-02 | Phase 27 | Complete |
+| REG-03 | Phase 27 | Complete |
 | REG-04 | Phase 27 | Complete |
 | REG-05 | Phase 27 | Complete |
 | REG-06 | Phase 27 | Complete |

@@ -289,7 +289,7 @@ Plans:
 | 24. Unified Registry & MCP Platform | v1.3 | 7/7 | Complete | 2026-03-12 |
 | 25. Skill Builder Tool Resolver | v1.3 | 6/6 | Complete | 2026-03-13 |
 | 26. Keycloak SSO Hardening | 2/2 | Complete    | 2026-03-15 | - |
-| 27. Admin Registry Edit UI | 1/3 | In Progress|  | - |
+| 27. Admin Registry Edit UI | 2/3 | In Progress|  | - |
 | 28. Storage Service | v1.4 | 0/TBD | Not started | - |
 | 29. User Experience Enhancement | v1.4 | 0/TBD | Not started | - |
 | 30. Scheduler Management | v1.4 | 0/TBD | Not started | - |
