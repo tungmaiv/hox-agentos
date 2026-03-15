@@ -22,9 +22,9 @@ Requirements for v1.4 Platform Enhancement & Infrastructure. Each maps to roadma
 - [ ] **REG-01**: All 4 registry types (agents, tools, MCP servers, skills) have detail pages with consistent layout
 - [ ] **REG-02**: All detail pages support form-based editing (not just JSON)
 - [ ] **REG-03**: Type-specific config fields editable (agent: system prompt/tools; tool: handler/permissions; MCP: URL/auth; skill: instructions/procedure)
-- [ ] **REG-04**: MCP servers have connection test functionality
-- [ ] **REG-05**: All list pages have dual pagination (top + bottom)
-- [ ] **REG-06**: Form validation shows inline errors with Zod schemas
+- [x] **REG-04**: MCP servers have connection test functionality
+- [x] **REG-05**: All list pages have dual pagination (top + bottom)
+- [x] **REG-06**: Form validation shows inline errors with Zod schemas
 
 ### Scheduler UI & Management
 
@@ -156,9 +156,9 @@ Requirements for v1.4 Platform Enhancement & Infrastructure. Each maps to roadma
 | REG-01 | Phase 27 | Pending |
 | REG-02 | Phase 27 | Pending |
 | REG-03 | Phase 27 | Pending |
-| REG-04 | Phase 27 | Pending |
-| REG-05 | Phase 27 | Pending |
-| REG-06 | Phase 27 | Pending |
+| REG-04 | Phase 27 | Complete |
+| REG-05 | Phase 27 | Complete |
+| REG-06 | Phase 27 | Complete |
 | STOR-01 | Phase 28 | Pending |
 | STOR-02 | Phase 28 | Pending |
 | STOR-03 | Phase 28 | Pending |
