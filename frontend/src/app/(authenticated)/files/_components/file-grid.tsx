@@ -5,67 +5,70 @@ import { FileText, Image as ImageIcon, File, Brain, MoreHorizontal } from "lucid
 import type { StorageFile } from "../types";
 import { EXTRACTABLE_MIME_TYPES } from "../types";
 
+const MENU_HEIGHT = 160;
+const MENU_WIDTH = 176; // w-44
+
 interface FileActionMenuProps {
   file: StorageFile;
   onAction: (action: string, file: StorageFile) => void;
   onClose: () => void;
-  style?: React.CSSProperties;
+  style: React.CSSProperties;
 }
 
 function FileActionMenu({ file, onAction, onClose, style }: FileActionMenuProps) {
   const canAddToMemory = EXTRACTABLE_MIME_TYPES.has(file.mime_type);
 
   return (
-    <div
-      style={style}
-      className="absolute z-30 bg-white border border-gray-200 rounded-lg shadow-xl py-1 w-44"
-      onMouseLeave={onClose}
-    >
-      <button
-        type="button"
-        className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 transition-colors"
-        onClick={() => { onAction("download", file); onClose(); }}
+    <>
+      <div className="fixed inset-0 z-[39]" onClick={onClose} />
+      <div
+        style={style}
+        className="fixed z-40 bg-white border border-gray-200 rounded-lg shadow-xl py-1 w-44"
       >
-        Download
-      </button>
-      <button
-        type="button"
-        className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 transition-colors"
-        onClick={() => { onAction("share", file); onClose(); }}
-      >
-        Share
-      </button>
-      <button
-        type="button"
-        disabled={!canAddToMemory}
-        title={!canAddToMemory ? "File type not supported for memory indexing" : undefined}
-        className={`w-full text-left px-3 py-1.5 text-sm transition-colors ${
-          canAddToMemory
-            ? "hover:bg-gray-50"
-            : "text-gray-400 cursor-not-allowed"
-        }`}
-        onClick={() => {
-          if (canAddToMemory) { onAction("add-to-memory", file); onClose(); }
-        }}
-      >
-        Add to Memory
-      </button>
-      <div className="border-t border-gray-100 my-1" />
-      <button
-        type="button"
-        className="w-full text-left px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
-        onClick={() => { onAction("delete", file); onClose(); }}
-      >
-        Delete
-      </button>
-    </div>
+        <button
+          type="button"
+          className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 transition-colors"
+          onClick={() => { onAction("download", file); onClose(); }}
+        >
+          Download
+        </button>
+        <button
+          type="button"
+          className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 transition-colors"
+          onClick={() => { onAction("share", file); onClose(); }}
+        >
+          Share
+        </button>
+        <button
+          type="button"
+          disabled={!canAddToMemory}
+          title={!canAddToMemory ? "File type not supported for memory indexing" : undefined}
+          className={`w-full text-left px-3 py-1.5 text-sm transition-colors ${
+            canAddToMemory
+              ? "hover:bg-gray-50"
+              : "text-gray-400 cursor-not-allowed"
+          }`}
+          onClick={() => {
+            if (canAddToMemory) { onAction("add-to-memory", file); onClose(); }
+          }}
+        >
+          Add to Memory
+        </button>
+        <div className="border-t border-gray-100 my-1" />
+        <button
+          type="button"
+          className="w-full text-left px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+          onClick={() => { onAction("delete", file); onClose(); }}
+        >
+          Delete
+        </button>
+      </div>
+    </>
   );
 }
 
 function fileIcon(mimeType: string): React.ReactNode {
-  if (
-    mimeType.startsWith("image/")
-  ) return <ImageIcon size={36} className="text-green-500" />;
+  if (mimeType.startsWith("image/")) return <ImageIcon size={36} className="text-green-500" />;
   if (
     mimeType === "application/pdf" ||
     mimeType.includes("wordprocessingml") ||
@@ -79,22 +82,31 @@ interface FileGridProps {
   onAction: (action: string, file: StorageFile) => void;
 }
 
+interface MenuState {
+  id: string;
+  top: number;
+  left: number;
+}
+
 export function FileGrid({ files, onAction }: FileGridProps) {
-  const [menuFile, setMenuFile] = useState<{ id: string; upward: boolean } | null>(null);
-  const [contextMenu, setContextMenu] = useState<{
-    fileId: string;
-    x: number;
-    y: number;
-  } | null>(null);
+  const [menuState, setMenuState] = useState<MenuState | null>(null);
+
+  function openMenu(e: React.MouseEvent<HTMLButtonElement>, file: StorageFile) {
+    e.stopPropagation();
+    if (menuState?.id === file.id) { setMenuState(null); return; }
+    const rect = e.currentTarget.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const top = spaceBelow >= MENU_HEIGHT ? rect.bottom + 4 : rect.top - MENU_HEIGHT - 4;
+    const left = Math.min(rect.left, window.innerWidth - MENU_WIDTH - 4);
+    setMenuState({ id: file.id, top, left });
+  }
 
   function handleContextMenu(e: React.MouseEvent, file: StorageFile) {
     e.preventDefault();
-    // Flip upward if less than 160px below click point
-    const menuHeight = 160;
-    const y = window.innerHeight - e.clientY < menuHeight
-      ? e.clientY - menuHeight
-      : e.clientY;
-    setContextMenu({ fileId: file.id, x: e.clientX, y });
+    const spaceBelow = window.innerHeight - e.clientY;
+    const top = spaceBelow >= MENU_HEIGHT ? e.clientY : e.clientY - MENU_HEIGHT;
+    const left = Math.min(e.clientX, window.innerWidth - MENU_WIDTH - 4);
+    setMenuState({ id: file.id, top, left });
   }
 
   if (files.length === 0) {
@@ -137,50 +149,22 @@ export function FileGrid({ files, onAction }: FileGridProps) {
             <button
               type="button"
               title="More actions"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (menuFile?.id === file.id) { setMenuFile(null); setContextMenu(null); return; }
-                const rect = e.currentTarget.getBoundingClientRect();
-                const upward = window.innerHeight - rect.bottom < 160;
-                setMenuFile({ id: file.id, upward });
-                setContextMenu(null);
-              }}
+              onClick={(e) => openMenu(e, file)}
               className="absolute top-1 right-1 p-0.5 opacity-0 group-hover:opacity-100 text-gray-500 hover:text-gray-900 transition-opacity rounded"
             >
               <MoreHorizontal size={15} />
             </button>
-
-            {/* Dropdown menu (... button) */}
-            {menuFile?.id === file.id && (
-              <FileActionMenu
-                file={file}
-                onAction={onAction}
-                onClose={() => setMenuFile(null)}
-                style={{ bottom: menuFile.upward ? "2rem" : undefined, top: menuFile.upward ? undefined : "2rem", right: 0 }}
-              />
-            )}
           </div>
         ))}
       </div>
 
-      {/* Context menu (right-click) */}
-      {contextMenu && (
-        <>
-          <div
-            className="fixed inset-0 z-20"
-            onClick={() => setContextMenu(null)}
-          />
-          <FileActionMenu
-            file={files.find((f) => f.id === contextMenu.fileId)!}
-            onAction={onAction}
-            onClose={() => setContextMenu(null)}
-            style={{
-              position: "fixed",
-              top: contextMenu.y,
-              left: contextMenu.x,
-            }}
-          />
-        </>
+      {menuState && (
+        <FileActionMenu
+          file={files.find((f) => f.id === menuState.id)!}
+          onAction={onAction}
+          onClose={() => setMenuState(null)}
+          style={{ top: menuState.top, left: menuState.left }}
+        />
       )}
     </>
   );

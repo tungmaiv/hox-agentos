@@ -5,56 +5,67 @@ import { FileText, Image as ImageIcon, File, Brain, MoreHorizontal } from "lucid
 import type { StorageFile } from "../types";
 import { EXTRACTABLE_MIME_TYPES, formatFileSize, formatRelativeTime } from "../types";
 
+// Menu height estimate: 4 items × 32px + divider 9px + padding 8px ≈ 153px
+const MENU_HEIGHT = 160;
+const MENU_WIDTH = 176; // w-44
+
 interface FileActionMenuProps {
   file: StorageFile;
   onAction: (action: string, file: StorageFile) => void;
   onClose: () => void;
-  openUpward?: boolean;
+  style: React.CSSProperties;
 }
 
-function FileActionMenu({ file, onAction, onClose, openUpward }: FileActionMenuProps) {
+function FileActionMenu({ file, onAction, onClose, style }: FileActionMenuProps) {
   const canAddToMemory = EXTRACTABLE_MIME_TYPES.has(file.mime_type);
 
   return (
-    <div className={`absolute right-0 z-30 bg-white border border-gray-200 rounded-lg shadow-xl py-1 w-44 ${openUpward ? "bottom-8" : "top-8"}`}>
-      <button
-        type="button"
-        className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 transition-colors"
-        onClick={() => { onAction("download", file); onClose(); }}
+    <>
+      {/* Invisible backdrop to close on outside click */}
+      <div className="fixed inset-0 z-[39]" onClick={onClose} />
+      <div
+        style={style}
+        className="fixed z-40 bg-white border border-gray-200 rounded-lg shadow-xl py-1 w-44"
       >
-        Download
-      </button>
-      <button
-        type="button"
-        className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 transition-colors"
-        onClick={() => { onAction("share", file); onClose(); }}
-      >
-        Share
-      </button>
-      <button
-        type="button"
-        disabled={!canAddToMemory}
-        title={!canAddToMemory ? "File type not supported for memory indexing" : undefined}
-        className={`w-full text-left px-3 py-1.5 text-sm transition-colors ${
-          canAddToMemory
-            ? "hover:bg-gray-50"
-            : "text-gray-400 cursor-not-allowed"
-        }`}
-        onClick={() => {
-          if (canAddToMemory) { onAction("add-to-memory", file); onClose(); }
-        }}
-      >
-        Add to Memory
-      </button>
-      <div className="border-t border-gray-100 my-1" />
-      <button
-        type="button"
-        className="w-full text-left px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
-        onClick={() => { onAction("delete", file); onClose(); }}
-      >
-        Delete
-      </button>
-    </div>
+        <button
+          type="button"
+          className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 transition-colors"
+          onClick={() => { onAction("download", file); onClose(); }}
+        >
+          Download
+        </button>
+        <button
+          type="button"
+          className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 transition-colors"
+          onClick={() => { onAction("share", file); onClose(); }}
+        >
+          Share
+        </button>
+        <button
+          type="button"
+          disabled={!canAddToMemory}
+          title={!canAddToMemory ? "File type not supported for memory indexing" : undefined}
+          className={`w-full text-left px-3 py-1.5 text-sm transition-colors ${
+            canAddToMemory
+              ? "hover:bg-gray-50"
+              : "text-gray-400 cursor-not-allowed"
+          }`}
+          onClick={() => {
+            if (canAddToMemory) { onAction("add-to-memory", file); onClose(); }
+          }}
+        >
+          Add to Memory
+        </button>
+        <div className="border-t border-gray-100 my-1" />
+        <button
+          type="button"
+          className="w-full text-left px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+          onClick={() => { onAction("delete", file); onClose(); }}
+        >
+          Delete
+        </button>
+      </div>
+    </>
   );
 }
 
@@ -73,8 +84,14 @@ interface FileListProps {
   onAction: (action: string, file: StorageFile) => void;
 }
 
+interface MenuState {
+  id: string;
+  top: number;
+  right: number;
+}
+
 export function FileList({ files, onAction }: FileListProps) {
-  const [menuFile, setMenuFile] = useState<{ id: string; upward: boolean } | null>(null);
+  const [menuState, setMenuState] = useState<MenuState | null>(null);
 
   if (files.length === 0) {
     return (
@@ -85,75 +102,84 @@ export function FileList({ files, onAction }: FileListProps) {
     );
   }
 
+  function openMenu(e: React.MouseEvent<HTMLButtonElement>, fileId: string) {
+    e.stopPropagation();
+    if (menuState?.id === fileId) { setMenuState(null); return; }
+    const rect = e.currentTarget.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const top = spaceBelow >= MENU_HEIGHT
+      ? rect.bottom + 4
+      : rect.top - MENU_HEIGHT - 4;
+    const right = window.innerWidth - rect.right + rect.width / 2 - MENU_WIDTH / 2;
+    setMenuState({ id: fileId, top, right: Math.max(4, right) });
+  }
+
   return (
-    <table className="w-full text-sm">
-      <thead>
-        <tr className="border-b border-gray-200 text-left text-xs text-gray-500 uppercase tracking-wide">
-          <th className="px-4 py-2 font-medium">Name</th>
-          <th className="px-4 py-2 font-medium">Size</th>
-          <th className="px-4 py-2 font-medium">Modified</th>
-          <th className="px-4 py-2 font-medium">Owner</th>
-          <th className="px-4 py-2 w-8" />
-        </tr>
-      </thead>
-      <tbody>
-        {files.map((file) => (
-          <tr
-            key={file.id}
-            className="border-b border-gray-100 hover:bg-gray-50 transition-colors group"
-          >
-            {/* Name */}
-            <td className="px-4 py-2">
-              <div className="flex items-center gap-2">
-                {fileIcon(file.mime_type)}
-                <span className="truncate max-w-xs">{file.name}</span>
-                {file.in_memory && (
-                  <span title="In your long-term memory" className="text-purple-500 shrink-0">
-                    <Brain size={13} />
-                  </span>
-                )}
-              </div>
-            </td>
-            {/* Size */}
-            <td className="px-4 py-2 text-gray-500 whitespace-nowrap">
-              {formatFileSize(file.size_bytes)}
-            </td>
-            {/* Modified */}
-            <td className="px-4 py-2 text-gray-500 whitespace-nowrap">
-              {formatRelativeTime(file.updated_at)}
-            </td>
-            {/* Owner */}
-            <td className="px-4 py-2 text-gray-500 truncate max-w-[8rem]">
-              {file.owner_user_id}
-            </td>
-            {/* Actions */}
-            <td className="px-4 py-2 relative">
-              <button
-                type="button"
-                title="More actions"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (menuFile?.id === file.id) { setMenuFile(null); return; }
-                  const rect = e.currentTarget.getBoundingClientRect();
-                  const upward = window.innerHeight - rect.bottom < 160;
-                  setMenuFile({ id: file.id, upward });
-                }}
-                className="opacity-0 group-hover:opacity-100 p-0.5 text-gray-400 hover:text-gray-700 rounded transition-opacity"
-              >
-                <MoreHorizontal size={15} />
-              </button>
-              {menuFile?.id === file.id && (
-                <FileActionMenu
-                  file={file}
-                  onAction={onAction}
-                  onClose={() => setMenuFile(null)}
-                  openUpward={menuFile.upward}
-                />
-              )}
-            </td>
+    <>
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-gray-200 text-left text-xs text-gray-500 uppercase tracking-wide">
+            <th className="px-4 py-2 font-medium">Name</th>
+            <th className="px-4 py-2 font-medium">Size</th>
+            <th className="px-4 py-2 font-medium">Modified</th>
+            <th className="px-4 py-2 font-medium">Owner</th>
+            <th className="px-4 py-2 w-8" />
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {files.map((file) => (
+            <tr
+              key={file.id}
+              className="border-b border-gray-100 hover:bg-gray-50 transition-colors group"
+            >
+              {/* Name */}
+              <td className="px-4 py-2">
+                <div className="flex items-center gap-2">
+                  {fileIcon(file.mime_type)}
+                  <span className="truncate max-w-xs">{file.name}</span>
+                  {file.in_memory && (
+                    <span title="In your long-term memory" className="text-purple-500 shrink-0">
+                      <Brain size={13} />
+                    </span>
+                  )}
+                </div>
+              </td>
+              {/* Size */}
+              <td className="px-4 py-2 text-gray-500 whitespace-nowrap">
+                {formatFileSize(file.size_bytes)}
+              </td>
+              {/* Modified */}
+              <td className="px-4 py-2 text-gray-500 whitespace-nowrap">
+                {formatRelativeTime(file.updated_at)}
+              </td>
+              {/* Owner */}
+              <td className="px-4 py-2 text-gray-500 truncate max-w-[8rem]">
+                {file.owner_user_id}
+              </td>
+              {/* Actions */}
+              <td className="px-4 py-2">
+                <button
+                  type="button"
+                  title="More actions"
+                  onClick={(e) => openMenu(e, file.id)}
+                  className="opacity-0 group-hover:opacity-100 p-0.5 text-gray-400 hover:text-gray-700 rounded transition-opacity"
+                >
+                  <MoreHorizontal size={15} />
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {menuState && (
+        <FileActionMenu
+          file={files.find((f) => f.id === menuState.id)!}
+          onAction={onAction}
+          onClose={() => setMenuState(null)}
+          style={{ top: menuState.top, right: menuState.right }}
+        />
+      )}
+    </>
   );
 }
