@@ -32,6 +32,7 @@ from api.routes import (
     user_tools,
 )
 from api.routes.registry import router as registry_router
+from api.routes.storage import router as storage_router
 from api.routes.admin_keycloak import router as admin_keycloak_router
 from api.routes.admin_skill_sharing import router as admin_skill_sharing_router
 from api.routes.admin_local_users import router as admin_local_users_router
@@ -323,6 +324,10 @@ def create_app() -> FastAPI:
 
     # Unified registry CRUD — /api/registry/* (replaces old scattered admin routes)
     app.include_router(registry_router)
+
+    # Storage service — /api/storage/* (file/folder/share management + memory indexing)
+    # Note: router already includes /api/storage prefix in its definition
+    app.include_router(storage_router)
 
     return app
 

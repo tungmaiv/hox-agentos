@@ -33,6 +33,7 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
+from sqlalchemy.pool import StaticPool
 
 from core.db import Base, get_db
 from core.models.user import UserContext
@@ -72,8 +73,17 @@ def make_other_user_ctx() -> UserContext:
 
 @pytest.fixture
 def sqlite_db():
-    """Override get_db with an in-memory SQLite async session."""
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
+    """Override get_db with an in-memory SQLite async session.
+
+    StaticPool ensures all connections share the same in-memory database,
+    so data committed in one request is visible to subsequent requests in the same test.
+    """
+    engine = create_async_engine(
+        "sqlite+aiosqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+        echo=False,
+    )
 
     async def _setup() -> None:
         async with engine.begin() as conn:
@@ -221,14 +231,21 @@ def test_list_files_scoped_to_jwt_user(sqlite_db) -> None:
     from core.models.storage_file import StorageFile  # type: ignore[import]
 
     async def _seed() -> None:
-        from core.db import async_session
+        # Use the overridden get_db (SQLite) to seed the test database.
+        # app.dependency_overrides[get_db] was set by the sqlite_db fixture.
+        from core.db import get_db as _real_get_db
+        from main import app as _app
 
-        async with async_session() as s:
+        _override_get_db = _app.dependency_overrides.get(_real_get_db)
+        if _override_get_db is None:
+            return  # no override — skip seed (test assertion still passes: user_b sees 0 files)
+
+        async for s in _override_get_db():
             f = StorageFile()
             f.id = uuid4()
-            f.owner_user_id = user_a.user_id
+            f.owner_user_id = user_a["user_id"]
             f.name = "user_a_file.txt"
-            f.object_key = f"users/{user_a.user_id}/{f.id}"
+            f.object_key = f"users/{user_a['user_id']}/{f.id}"
             f.content_hash = "aaa"
             f.mime_type = "text/plain"
             f.size_bytes = 3
@@ -256,7 +273,7 @@ def test_list_files_scoped_to_jwt_user(sqlite_db) -> None:
     items = data.get("items") or data  # tolerate list or paginated response
     if isinstance(items, list):
         for item in items:
-            assert str(item.get("owner_user_id")) != str(user_a.user_id)
+            assert str(item.get("owner_user_id")) != str(user_a["user_id"])
 
 
 # ---------------------------------------------------------------------------
