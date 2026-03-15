@@ -32,7 +32,9 @@ export const CircuitBreakerStateSchema = z.object({
   state: z.string(),
   failure_count: z.number(),
   last_failure_time: z.string().nullable(),
-  thresholds: CircuitBreakerThresholdsSchema,
+  failure_threshold: z.number(),
+  recovery_timeout_seconds: z.number(),
+  half_open_max_calls: z.number(),
 });
 
 export type CircuitBreakerState = z.infer<typeof CircuitBreakerStateSchema>;

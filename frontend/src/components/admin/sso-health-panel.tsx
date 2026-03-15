@@ -308,7 +308,11 @@ export default function SSOHealthPanel() {
 
       {/* Threshold configuration */}
       <ThresholdConfig
-        initialThresholds={health.circuit_breaker.thresholds}
+        initialThresholds={{
+          failure_threshold: health.circuit_breaker.failure_threshold,
+          recovery_timeout_seconds: health.circuit_breaker.recovery_timeout_seconds,
+          half_open_max_calls: health.circuit_breaker.half_open_max_calls,
+        }}
         cbState={cbState}
         onSave={updateThresholds}
         onReset={resetCircuitBreaker}
