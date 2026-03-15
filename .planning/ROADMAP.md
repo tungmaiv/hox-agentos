@@ -98,12 +98,11 @@ Full phase details: `.planning/milestones/v1.3-ROADMAP.md`
   3. When Keycloak is down, users see a friendly error and the SSO button hides; login falls back to local auth seamlessly
   4. Circuit breaker stops cascading SSO failures after 5 consecutive errors and auto-recovers after 60s
   5. Admin receives in-app notification when SSO transitions to unhealthy
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 26-01: TBD
-- [ ] 26-02: TBD
-- [ ] 26-03: TBD
+- [ ] 26-01-PLAN.md — Backend: circuit breaker, SSO health checker, admin notifications, API endpoints
+- [ ] 26-02-PLAN.md — Frontend: health panel, login degradation, notification bell
 
 ### Phase 27: Admin Registry Edit UI
 **Goal**: Admins can edit any registered artifact (agent, tool, MCP server, skill) through structured forms instead of raw JSON
@@ -288,7 +287,7 @@ Plans:
 | 23. Skill Platform E - Builder | v1.3 | 4/4 | Complete | 2026-03-10 |
 | 24. Unified Registry & MCP Platform | v1.3 | 7/7 | Complete | 2026-03-12 |
 | 25. Skill Builder Tool Resolver | v1.3 | 6/6 | Complete | 2026-03-13 |
-| 26. Keycloak SSO Hardening | v1.4 | 0/TBD | Not started | - |
+| 26. Keycloak SSO Hardening | v1.4 | 0/2 | Planned | - |
 | 27. Admin Registry Edit UI | v1.4 | 0/TBD | Not started | - |
 | 28. Storage Service | v1.4 | 0/TBD | Not started | - |
 | 29. User Experience Enhancement | v1.4 | 0/TBD | Not started | - |
