@@ -1,25 +1,17 @@
 /**
  * /files — File Manager page shell.
- * Server Component — FileManager is dynamically imported (client-only).
+ * Server Component — FileManager is loaded via client wrapper to allow ssr: false.
  */
-import dynamic from "next/dynamic";
+import { FileManagerLoader } from "./_components/file-manager-loader";
 
 export const metadata = {
   title: "Files | Blitz AgentOS",
 };
 
-const FileManager = dynamic(
-  () =>
-    import("./_components/file-manager").then((m) => ({
-      default: m.FileManager,
-    })),
-  { ssr: false }
-);
-
 export default function FilesPage() {
   return (
     <main className="h-full">
-      <FileManager />
+      <FileManagerLoader />
     </main>
   );
 }

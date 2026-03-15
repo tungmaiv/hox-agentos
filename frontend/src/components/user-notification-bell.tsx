@@ -54,7 +54,7 @@ export default function UserNotificationBell() {
       if (!token) return;
 
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL ?? ""}/api/storage/notifications`,
+        `/api/storage/notifications`,
         {
           headers: { Authorization: `Bearer ${token}` },
           cache: "no-store",
@@ -94,7 +94,7 @@ export default function UserNotificationBell() {
       if (!token) return;
 
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL ?? ""}/api/storage/notifications/${notificationId}/read`,
+        `/api/storage/notifications/${notificationId}/read`,
         {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
@@ -116,7 +116,7 @@ export default function UserNotificationBell() {
       if (!token) return;
 
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL ?? ""}/api/storage/notifications/read-all`,
+        `/api/storage/notifications/read-all`,
         {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },

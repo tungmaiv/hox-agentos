@@ -39,7 +39,7 @@ export default function AdminStoragePage() {
       if (!token) return;
 
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL ?? ""}/api/admin/storage/settings`,
+        `/api/admin/storage/settings`,
         {
           headers: { Authorization: `Bearer ${token}` },
           cache: "no-store",
@@ -82,7 +82,7 @@ export default function AdminStoragePage() {
         .filter((s) => s.length > 0);
 
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL ?? ""}/api/admin/storage/settings`,
+        `/api/admin/storage/settings`,
         {
           method: "PUT",
           headers: {
