@@ -8,7 +8,7 @@ Single-row invariant: always upsert id=1. No multi-row support in v1.2.
 """
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, String, Text, func
+from sqlalchemy import Boolean, DateTime, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from core.db import Base
@@ -42,4 +42,15 @@ class PlatformConfig(Base):
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    # Circuit breaker thresholds (Phase 26 — SSO hardening)
+    cb_failure_threshold: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=5, server_default="5"
+    )
+    cb_recovery_timeout: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=60, server_default="60"
+    )
+    cb_half_open_max_calls: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=1, server_default="1"
     )
