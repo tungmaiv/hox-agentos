@@ -799,7 +799,8 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install LiteLLM CLI
-RUN pip install litellm[proxy]
+# NOTE: Module sidecar uses LiteLLM CLI directly — not get_llm() (sidecar is outside main backend)
+RUN uv pip install litellm[proxy]
 
 # Copy module code
 COPY requirements.txt .

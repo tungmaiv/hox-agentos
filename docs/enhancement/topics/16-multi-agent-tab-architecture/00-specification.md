@@ -166,6 +166,12 @@ User returns to Skill tab, sees "✅ email-fetch ready", continues
 | Decision | Rationale |
 |----------|-----------|
 | **Separate CopilotKit instances per tab** | True context isolation; no state leakage |
+
+> **Implementation Note (from v1.4 pitfalls research):** CopilotKit v0.1.78 does NOT support
+> multiple simultaneous provider instances on one page — `useCopilotChat` shares context through
+> a single provider. Implementation must use **tab-switching with a single CopilotKit provider**
+> (mount only the active tab's agent), not multiple parallel providers. See GitHub issue #1159.
+
 | **Database-backed dependency tracking** | Survives page refresh; audit trail; cross-session recovery |
 | **Explicit context passing** | Parent skill intent preserved when spawning child agents |
 | **Tab-based UI** | Familiar UX (browser tabs); easy navigation; visual status |
@@ -373,8 +379,8 @@ Options:
 def update_tool_form(
     name: str | None = None,
     handler_code: str | None = None,
-    input_schema: dict | None = None,
-    output_schema: dict | None = None,
+    input_schema: dict[str, Any] | None = None,
+    output_schema: dict[str, Any] | None = None,
     required_permissions: list[str] | None = None,
 ) -> str:
     """Update tool creation form fields."""

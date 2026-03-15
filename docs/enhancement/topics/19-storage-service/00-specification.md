@@ -152,7 +152,8 @@ Build a **scalable storage service** for AgentOS with:
 ┌─────────▼─────────────────────────────────────────────┐
 │  Storage Service (NEW - Dedicated Microservice)              │
 │  ┌──────────────────────────────────────────────────────────┐  │
-│  │  FastAPI app (port 8001)                          │  │
+│  │  FastAPI app (port 8003)                          │  │
+│  │  # Port 8003 — port 8001 is reserved for MCP CRM Server, port 8002 for MCP Docs Server
 │  │                                                      │  │
 │  │  /api/storage/files/* Routes:                         │  │
 │  │  - POST /upload (upload file)                           │  │
@@ -404,7 +405,7 @@ class StorageAdapter(Protocol):
         object_key: str,
         content: BytesIO,
         content_type: str = "application/octet-stream",
-        metadata: Optional[Dict[str, str]] = None,
+        metadata: dict[str, str] | None = None,
     ) -> str:
         """Upload file and return URL"""
         ...
@@ -425,7 +426,7 @@ class StorageAdapter(Protocol):
         """Get presigned or public URL"""
         ...
 
-    async def get_metadata(self, object_key: str) -> Dict[str, str]:
+    async def get_metadata(self, object_key: str) -> dict[str, str]:
         """Get file metadata (size, etag, last_modified)"""
         ...
 
@@ -468,7 +469,7 @@ class MinIOStorageAdapter:
         object_key: str,
         content: BytesIO,
         content_type: str = "application/octet-stream",
-        metadata: Optional[Dict[str, str]] = None,
+        metadata: dict[str, str] | None = None,
     ) -> str:
         """Upload file to MinIO"""
         try:
@@ -512,12 +513,12 @@ class S3StorageAdapter:
 ### Adapter Factory
 
 ```python
-_STORAGE_ADAPTERS: Dict[str, Type[StorageAdapter]] = {
+_STORAGE_ADAPTERS: dict[str, Type[StorageAdapter]] = {
     "minio": MinIOStorageAdapter,
     "s3": S3StorageAdapter,
 }
 
-def get_storage_adapter(name: str, config: Dict[str, str]) -> StorageAdapter:
+def get_storage_adapter(name: str, config: dict[str, str]) -> StorageAdapter:
     """Get storage adapter instance by name"""
     if name not in _STORAGE_ADAPTERS:
         raise ValueError(f"Unknown storage adapter: {name}")
@@ -714,7 +715,7 @@ def log_file_operation(
     user_id: UUID,
     success: bool,
     error: Optional[str] = None,
-    metadata: Optional[Dict[str, Any]] = None,
+    metadata: dict[str, Any] | None = None,
 ):
     """Log file operation to audit trail"""
 
@@ -850,7 +851,7 @@ def log_file_operation(
 - [ ] Add `/health` endpoint for monitoring
 
 **Success Criteria:**
-- ✅ Storage service starts on port 8001
+- ✅ Storage service starts on port 8003
 - ✅ All tables created in PostgreSQL
 - ✅ `/health` endpoint returns 200
 - ✅ No database connection errors

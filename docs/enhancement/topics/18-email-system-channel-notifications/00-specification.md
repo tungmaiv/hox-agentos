@@ -241,7 +241,7 @@ class NotificationService:
         notification_type: NotificationType,
         user_id: UUID,
         message: str,
-        metadata: dict | None = None
+        metadata: dict[str, str] | None = None
     ) -> None:
         """
         Send notification to user's preferred channels.

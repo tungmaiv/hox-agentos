@@ -277,6 +277,7 @@ def should_use_supervisor(
     children_count: int,
     config: MultiAgentConfig,
 ) -> bool:
+    # Pure computation — sync is intentional (no I/O)
     """Determine if supervisor is needed."""
     
     # Pattern-first logic
@@ -1464,6 +1465,7 @@ def calculate_backoff_delay(
     base_ms: int,
     strategy: str,
 ) -> int:
+    # Pure computation — sync is intentional (no I/O)
     """Calculate delay before retry."""
     
     if strategy == 'fixed':
@@ -1500,20 +1502,21 @@ class CircuitBreaker:
         self.state = 'CLOSED'  # CLOSED, OPEN, HALF_OPEN
         self.last_failure_time = None
     
+    # In-memory state management — sync is intentional (no I/O, no await needed)
     def record_success(self):
         """Record successful call."""
         if self.state == 'HALF_OPEN':
             self.state = 'CLOSED'
             self.failure_count = 0
-    
+
     def record_failure(self):
         """Record failed call."""
         self.failure_count += 1
         self.last_failure_time = time.time()
-        
+
         if self.failure_count >= self.threshold:
             self.state = 'OPEN'
-    
+
     def can_execute(self) -> bool:
         """Check if call should proceed."""
         if self.state == 'CLOSED':
@@ -1562,7 +1565,7 @@ import { useEventPolling } from './use-event-polling';
 interface UseMultiAgentSpawnOptions {
   parentSessionId: string;
   onChildSpawned?: (childSessionId: string) => void;
-  onChildCompleted?: (childSessionId: string, result: any) => void;
+  onChildCompleted?: (childSessionId: string, result: unknown) => void;
 }
 
 export function useMultiAgentSpawn(options: UseMultiAgentSpawnOptions) {

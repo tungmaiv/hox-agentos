@@ -99,8 +99,8 @@ from dataclasses import dataclass
 class DiscoveryResult:
     """Result from discovering skills in a source"""
     skill_count: int
-    source_metadata: dict
-    skills: List[dict]  # Minimal metadata for listing
+    source_metadata: dict[str, Any]  # TODO: use TypedDict for complex structures in implementation
+    skills: list[dict[str, Any]]  # Minimal metadata for listing
 
 @dataclass
 class FetchResult:
@@ -165,9 +165,9 @@ class ToolBundle:
     visibility: ToolVisibility
     sandbox_required: bool  # ENFORCED: True for private tools
     tool_type: ToolType
-    metadata: dict  # Parsed from tool.json
+    metadata: dict[str, Any]  # Parsed from tool.json; TODO: use TypedDict for complex structures in implementation
     handler_code: str  # Implementation code
-    schema: dict  # Input/output schema
+    schema: dict[str, Any]  # Input/output schema
     parent_skill_id: Optional[str] = None
 
 @dataclass
@@ -215,7 +215,7 @@ class RawSkillBundle:
     output_format: Optional[OutputFormat]  # Output specification
     source_url: str
     source_hash: str  # For caching/updates
-    raw_files: Dict[str, bytes]  # Additional asset files
+    raw_files: dict[str, bytes]  # Additional asset files
 ```
 
 ### 3. Skill Import Orchestrator
