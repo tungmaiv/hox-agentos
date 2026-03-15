@@ -291,7 +291,7 @@ Plans:
 | 25. Skill Builder Tool Resolver | v1.3 | 6/6 | Complete | 2026-03-13 |
 | 26. Keycloak SSO Hardening | 2/2 | Complete    | 2026-03-15 | - |
 | 27. Admin Registry Edit UI | 3/3 | Complete    | 2026-03-15 | - |
-| 28. Storage Service | 1/4 | In Progress|  | - |
+| 28. Storage Service | 2/4 | In Progress|  | - |
 | 29. User Experience Enhancement | v1.4 | 0/TBD | Not started | - |
 | 30. Scheduler Management | v1.4 | 0/TBD | Not started | - |
 | 31. Permission Approval HITL | v1.4 | 0/TBD | Not started | - |

@@ -84,11 +84,11 @@ Requirements for v1.4 Platform Enhancement & Infrastructure. Each maps to roadma
 
 ### Storage Service
 
-- [ ] **STOR-01**: MinIO deployed as Docker Compose service with S3-compatible API
-- [ ] **STOR-02**: Per-user personal storage with virtual folder hierarchy (database-backed)
-- [ ] **STOR-03**: File upload/download with presigned URLs, metadata storage, SHA-256 deduplication
-- [ ] **STOR-04**: File sharing between users with READ/WRITE/ADMIN permissions
-- [ ] **STOR-05**: Memory integration -- add files to long-term memory with auto re-embedding on update
+- [x] **STOR-01**: MinIO deployed as Docker Compose service with S3-compatible API
+- [x] **STOR-02**: Per-user personal storage with virtual folder hierarchy (database-backed)
+- [x] **STOR-03**: File upload/download with presigned URLs, metadata storage, SHA-256 deduplication
+- [x] **STOR-04**: File sharing between users with READ/WRITE/ADMIN permissions
+- [x] **STOR-05**: Memory integration -- add files to long-term memory with auto re-embedding on update
 - [ ] **STOR-06**: File manager UI with grid/list view, folder tree, breadcrumb navigation, search
 
 ### Email System & Notifications
@@ -159,11 +159,11 @@ Requirements for v1.4 Platform Enhancement & Infrastructure. Each maps to roadma
 | REG-04 | Phase 27 | Complete |
 | REG-05 | Phase 27 | Complete |
 | REG-06 | Phase 27 | Complete |
-| STOR-01 | Phase 28 | Pending |
-| STOR-02 | Phase 28 | Pending |
-| STOR-03 | Phase 28 | Pending |
-| STOR-04 | Phase 28 | Pending |
-| STOR-05 | Phase 28 | Pending |
+| STOR-01 | Phase 28 | Complete |
+| STOR-02 | Phase 28 | Complete |
+| STOR-03 | Phase 28 | Complete |
+| STOR-04 | Phase 28 | Complete |
+| STOR-05 | Phase 28 | Complete |
 | STOR-06 | Phase 28 | Pending |
 | UX-01 | Phase 29 | Pending |
 | UX-02 | Phase 29 | Pending |

@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Platform Enhancement & Infrastructure
 status: unknown
-last_updated: "2026-03-15T18:11:49.015Z"
+last_updated: "2026-03-15T18:36:45.313Z"
 progress:
   total_phases: 14
   completed_phases: 12
   total_plans: 55
-  completed_plans: 53
+  completed_plans: 54
 ---
 
 # Project State
@@ -23,9 +23,9 @@ See: .planning/PROJECT.md (updated 2026-03-15)
 ## Current Position
 
 Phase: 28 of 35 (Storage Service)
-Plan: 1 of 4 in current phase
-Status: Phase 28 plan 1 complete -- MinIO infrastructure and storage foundation
-Last activity: 2026-03-16 -- Completed 28-01 (MinIO infrastructure and storage foundation)
+Plan: 2 of 4 in current phase
+Status: Phase 28 plan 2 complete -- Storage API routes, user notifications, embed_file_content task
+Last activity: 2026-03-16 -- Completed 28-02 (Storage API routes and memory embedding task)
 
 Progress: [██░░░░░░░░] 10%
 
@@ -49,6 +49,7 @@ Progress: [██░░░░░░░░] 10%
 | 27    | 02   | 4min     | 2     | 2     |
 | Phase 27 P03 | 5min | 2 tasks | 3 files |
 | Phase 28 P01 | 25 | 2 tasks | 11 files |
+| Phase 28 P02 | 21min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -82,6 +83,9 @@ v1.4 roadmap decisions:
 - [Phase 28]: [28-01]: S3 client created per-operation with async context manager — aioboto3 clients are not thread-safe
 - [Phase 28]: [28-01]: minio_internal_url for upload presigned URLs, minio_public_url for download presigned URLs — browser fetches directly
 - [Phase 28]: [28-01]: EXTRACTABLE_MIME_TYPES is frozenset; pdfminer and docx imports are lazy inside functions
+- [Phase 28]: [28-02]: JSONResponse(status_code=200) used for dedup response — route decorator default is 201 and cannot be overridden otherwise
+- [Phase 28]: [28-02]: embed_file_content._embed_file_content_body exposed as __wrapped__ — Celery bound method can't be called with mock self; raw function needed for retry testing
+- [Phase 28]: [28-02]: action=replace matches by filename when hash differs — replace semantics allow updating file content while keeping same file record
 
 ### Pending Todos
 
@@ -96,5 +100,5 @@ None for v1.4 start. Design specs exist in `docs/enhancement/topics/` for all 9 
 ## Session Continuity
 
 Last session: 2026-03-16
-Stopped at: Completed 28-01-PLAN.md (MinIO infrastructure and storage foundation)
+Stopped at: Completed 28-02-PLAN.md (Storage API routes, user notifications, embed_file_content task)
 Resume file: None
