@@ -17,6 +17,7 @@ dist/
 # Node.js
 node_modules/
 .next/
+.next.old/
 .pnpm-store/
 *.tsbuildinfo
 
