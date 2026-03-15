@@ -3,13 +3,16 @@
  * Admin Tools page — list + card view, search, handler/status filters, pagination.
  */
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import type { RegistryEntry, RegistryEntryCreate } from "@/lib/admin-types";
 import { mapArraySnakeToCamel } from "@/lib/admin-types";
+import { DualPagination } from "@/components/admin/dual-pagination";
 
 type ViewMode = "list" | "card";
 const PAGE_SIZE_OPTIONS = [10, 25, 50];
 
 export default function AdminToolsPage() {
+  const router = useRouter();
   const [items, setItems] = useState<RegistryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -217,6 +220,9 @@ export default function AdminToolsPage() {
         </div>
       )}
 
+      {/* Top pagination */}
+      <DualPagination page={page} pageSize={pageSize} total={filtered.length} onPageChange={setPage} onPageSizeChange={setPageSize} />
+
       {/* Content */}
       {filtered.length === 0 ? (
         <div className="text-gray-400 text-sm py-6 text-center">
@@ -234,13 +240,13 @@ export default function AdminToolsPage() {
           </thead>
           <tbody>
             {paginated.map((item) => (
-              <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50">
+              <tr key={item.id} onClick={() => router.push(`/admin/tools/${item.id}`)} className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer">
                 <td className="py-2 pr-4 font-mono text-gray-900">{item.name}</td>
                 <td className="py-2 pr-4">
                   <span className="text-xs text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded">{(item.config.handler_type as string) ?? "backend"}</span>
                 </td>
                 <td className="py-2 pr-4"><StatusBadge status={item.status} /></td>
-                <td className="py-2"><RowActions item={item} /></td>
+                <td className="py-2" onClick={(e) => e.stopPropagation()}><RowActions item={item} /></td>
               </tr>
             ))}
           </tbody>
@@ -248,7 +254,7 @@ export default function AdminToolsPage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {paginated.map((item) => (
-            <div key={item.id} className="bg-white border border-gray-200 rounded-lg p-4 flex flex-col gap-3 hover:shadow-sm transition-shadow">
+            <div key={item.id} onClick={() => router.push(`/admin/tools/${item.id}`)} className="bg-white border border-gray-200 rounded-lg p-4 flex flex-col gap-3 hover:shadow-sm transition-shadow cursor-pointer">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="font-mono text-sm font-medium text-gray-900 truncate">{item.name}</p>
@@ -257,7 +263,7 @@ export default function AdminToolsPage() {
                 <StatusBadge status={item.status} />
               </div>
               {item.description && <p className="text-xs text-gray-500 line-clamp-2">{item.description}</p>}
-              <div className="flex items-center justify-between mt-auto pt-2 border-t border-gray-100">
+              <div className="flex items-center justify-between mt-auto pt-2 border-t border-gray-100" onClick={(e) => e.stopPropagation()}>
                 <span className="text-xs text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded">{(item.config.handler_type as string) ?? "backend"}</span>
                 <RowActions item={item} />
               </div>
@@ -266,30 +272,8 @@ export default function AdminToolsPage() {
         </div>
       )}
 
-      {/* Pagination */}
-      {filtered.length > 0 && (
-        <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-200">
-          <span className="text-xs text-gray-500">
-            Showing {Math.min((page - 1) * pageSize + 1, filtered.length)}–{Math.min(page * pageSize, filtered.length)} of {filtered.length}
-          </span>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500">Rows:</span>
-            <select value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))}
-              className="text-xs border border-gray-300 rounded px-1.5 py-1 bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500">
-              {PAGE_SIZE_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
-            <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
-              className="px-2 py-1 text-xs border border-gray-300 rounded bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
-              ‹ Prev
-            </button>
-            <span className="text-xs text-gray-600 min-w-[60px] text-center">{page} / {totalPages}</span>
-            <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-              className="px-2 py-1 text-xs border border-gray-300 rounded bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
-              Next ›
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Bottom pagination */}
+      <DualPagination page={page} pageSize={pageSize} total={filtered.length} onPageChange={setPage} onPageSizeChange={setPageSize} />
     </div>
   );
 }
