@@ -18,6 +18,7 @@
 
 import { useEffect, useState } from "react";
 import { z } from "zod";
+import SSOHealthPanel from "@/components/admin/sso-health-panel";
 
 // ---------------------------------------------------------------------------
 // Schemas
@@ -255,6 +256,9 @@ export default function AdminIdentityPage() {
 
   return (
     <div className="max-w-2xl space-y-8">
+      {/* SSO Health Monitor */}
+      <SSOHealthPanel />
+
       {/* Status badge */}
       <div className="flex items-center gap-3">
         <h2 className="text-lg font-semibold text-gray-900">

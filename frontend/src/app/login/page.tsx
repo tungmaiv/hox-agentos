@@ -38,9 +38,12 @@ function LoginForm() {
 
   // SSO state — null = loading (hidden), false = local-only (hidden), true = show SSO button
   const [ssoEnabled, setSsoEnabled] = useState<boolean | null>(null);
+  // ssoAvailable: true when SSO is enabled AND circuit breaker is not open
+  const [ssoAvailable, setSsoAvailable] = useState<boolean | null>(null);
 
   const sessionExpired =
     urlError === "SessionExpired" || urlError === "RefreshAccessTokenError";
+  const ssoUnavailable = urlError === "SSOUnavailable";
 
   // Auto-dismiss the signed-out success banner after 3 seconds
   useEffect(() => {
@@ -51,18 +54,26 @@ function LoginForm() {
   }, [showSignedOut]);
 
   // Fetch auth config to determine whether SSO button should be shown (IDCFG-03)
+  // Also checks sso_available (false when circuit breaker is open)
   useEffect(() => {
     void (async () => {
       try {
         const res = await fetch("/api/auth/config");
         if (res.ok) {
-          const data = (await res.json()) as { sso_enabled?: boolean };
+          const data = (await res.json()) as {
+            sso_enabled?: boolean;
+            sso_available?: boolean;
+          };
           setSsoEnabled(data.sso_enabled === true);
+          // sso_available defaults to sso_enabled when not present (backward compat)
+          setSsoAvailable(data.sso_available ?? data.sso_enabled === true);
         } else {
           setSsoEnabled(false);
+          setSsoAvailable(false);
         }
       } catch {
         setSsoEnabled(false);
+        setSsoAvailable(false);
       }
     })();
   }, []);
@@ -127,8 +138,22 @@ function LoginForm() {
           </div>
         )}
 
-        {/* Keycloak SSO button — shown only when ssoEnabled=true; hidden during loading (null) */}
-        {ssoEnabled === true && (
+        {/* SSO mid-flow error — Keycloak was down during redirect */}
+        {ssoUnavailable && (
+          <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            SSO sign-in failed. Please try again or use your username and password.
+          </div>
+        )}
+
+        {/* SSO temporarily unavailable — circuit breaker open */}
+        {ssoEnabled === true && ssoAvailable === false && !ssoUnavailable && (
+          <div className="mb-4 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+            SSO is temporarily unavailable. Please sign in with your username and password.
+          </div>
+        )}
+
+        {/* Keycloak SSO button — shown only when ssoAvailable=true; hidden during loading (null) or when circuit breaker is open */}
+        {ssoAvailable === true && (
           <button
             type="button"
             onClick={handleSSOSignIn}
@@ -149,7 +174,7 @@ function LoginForm() {
         )}
 
         {/* Divider — only shown when SSO is available */}
-        {ssoEnabled === true && (
+        {ssoAvailable === true && (
           <div className="relative mb-6">
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t border-gray-200" />
