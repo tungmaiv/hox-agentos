@@ -80,7 +80,7 @@ interface FileGridProps {
 }
 
 export function FileGrid({ files, onAction }: FileGridProps) {
-  const [menuFile, setMenuFile] = useState<string | null>(null);
+  const [menuFile, setMenuFile] = useState<{ id: string; upward: boolean } | null>(null);
   const [contextMenu, setContextMenu] = useState<{
     fileId: string;
     x: number;
@@ -89,7 +89,12 @@ export function FileGrid({ files, onAction }: FileGridProps) {
 
   function handleContextMenu(e: React.MouseEvent, file: StorageFile) {
     e.preventDefault();
-    setContextMenu({ fileId: file.id, x: e.clientX, y: e.clientY });
+    // Flip upward if less than 160px below click point
+    const menuHeight = 160;
+    const y = window.innerHeight - e.clientY < menuHeight
+      ? e.clientY - menuHeight
+      : e.clientY;
+    setContextMenu({ fileId: file.id, x: e.clientX, y });
   }
 
   if (files.length === 0) {
@@ -134,7 +139,10 @@ export function FileGrid({ files, onAction }: FileGridProps) {
               title="More actions"
               onClick={(e) => {
                 e.stopPropagation();
-                setMenuFile(menuFile === file.id ? null : file.id);
+                if (menuFile?.id === file.id) { setMenuFile(null); setContextMenu(null); return; }
+                const rect = e.currentTarget.getBoundingClientRect();
+                const upward = window.innerHeight - rect.bottom < 160;
+                setMenuFile({ id: file.id, upward });
                 setContextMenu(null);
               }}
               className="absolute top-1 right-1 p-0.5 opacity-0 group-hover:opacity-100 text-gray-500 hover:text-gray-900 transition-opacity rounded"
@@ -143,12 +151,12 @@ export function FileGrid({ files, onAction }: FileGridProps) {
             </button>
 
             {/* Dropdown menu (... button) */}
-            {menuFile === file.id && (
+            {menuFile?.id === file.id && (
               <FileActionMenu
                 file={file}
                 onAction={onAction}
                 onClose={() => setMenuFile(null)}
-                style={{ top: "2rem", right: 0 }}
+                style={{ bottom: menuFile.upward ? "2rem" : undefined, top: menuFile.upward ? undefined : "2rem", right: 0 }}
               />
             )}
           </div>

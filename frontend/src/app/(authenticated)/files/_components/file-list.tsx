@@ -9,13 +9,14 @@ interface FileActionMenuProps {
   file: StorageFile;
   onAction: (action: string, file: StorageFile) => void;
   onClose: () => void;
+  openUpward?: boolean;
 }
 
-function FileActionMenu({ file, onAction, onClose }: FileActionMenuProps) {
+function FileActionMenu({ file, onAction, onClose, openUpward }: FileActionMenuProps) {
   const canAddToMemory = EXTRACTABLE_MIME_TYPES.has(file.mime_type);
 
   return (
-    <div className="absolute right-0 top-8 z-30 bg-white border border-gray-200 rounded-lg shadow-xl py-1 w-44">
+    <div className={`absolute right-0 z-30 bg-white border border-gray-200 rounded-lg shadow-xl py-1 w-44 ${openUpward ? "bottom-8" : "top-8"}`}>
       <button
         type="button"
         className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 transition-colors"
@@ -73,7 +74,7 @@ interface FileListProps {
 }
 
 export function FileList({ files, onAction }: FileListProps) {
-  const [menuFile, setMenuFile] = useState<string | null>(null);
+  const [menuFile, setMenuFile] = useState<{ id: string; upward: boolean } | null>(null);
 
   if (files.length === 0) {
     return (
@@ -132,17 +133,21 @@ export function FileList({ files, onAction }: FileListProps) {
                 title="More actions"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setMenuFile(menuFile === file.id ? null : file.id);
+                  if (menuFile?.id === file.id) { setMenuFile(null); return; }
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const upward = window.innerHeight - rect.bottom < 160;
+                  setMenuFile({ id: file.id, upward });
                 }}
                 className="opacity-0 group-hover:opacity-100 p-0.5 text-gray-400 hover:text-gray-700 rounded transition-opacity"
               >
                 <MoreHorizontal size={15} />
               </button>
-              {menuFile === file.id && (
+              {menuFile?.id === file.id && (
                 <FileActionMenu
                   file={file}
                   onAction={onAction}
                   onClose={() => setMenuFile(null)}
+                  openUpward={menuFile.upward}
                 />
               )}
             </td>
