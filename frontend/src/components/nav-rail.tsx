@@ -17,6 +17,7 @@ import {
   MessageSquare,
   GitBranch,
   Zap,
+  HardDrive,
   Shield,
   Settings,
 } from "lucide-react";
@@ -123,6 +124,12 @@ export function NavRail() {
           icon={<Zap size={20} />}
           label="Skills"
           active={isActive("/skills")}
+        />
+        <NavItem
+          href="/files"
+          icon={<HardDrive size={20} />}
+          label="Files"
+          active={isActive("/files")}
         />
       </div>
 
