@@ -22,6 +22,12 @@ from sqlalchemy.pool import StaticPool
 
 from core.db import Base
 
+# Import storage models at module level so Base.metadata.create_all in the fixture
+# registers all storage tables before SQLite schema creation runs.
+import core.models.storage_file  # noqa: F401
+import core.models.storage_folder  # noqa: F401
+import core.models.storage_share  # noqa: F401
+
 
 @pytest_asyncio.fixture
 async def db_session() -> AsyncSession:  # type: ignore[misc]
