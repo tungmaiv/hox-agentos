@@ -27,10 +27,9 @@ Routes:
 from __future__ import annotations
 
 import hashlib
-import logging
 import uuid
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID, uuid4
 
 import structlog
@@ -45,6 +44,7 @@ from core.db import get_db
 from core.models.storage_file import StorageFile
 from core.models.storage_folder import StorageFolder
 from core.models.storage_share import StorageShare
+from core.models.system_config import SystemConfig
 from core.models.user_notification import UserNotification
 from security.deps import get_current_user
 from storage.service import StorageService
@@ -100,7 +100,7 @@ class ShareCreate(BaseModel):
     resource_type: str  # "file" | "folder"
     resource_id: str
     shared_with_user_id: str
-    permission: str  # "READ" | "WRITE" | "ADMIN"
+    permission: Literal["READ", "WRITE", "ADMIN"]
 
 
 class ShareResponse(BaseModel):
@@ -114,7 +114,7 @@ class ShareResponse(BaseModel):
 
 
 class ShareUpdateRequest(BaseModel):
-    permission: str
+    permission: Literal["READ", "WRITE", "ADMIN"]
 
 
 class UserSearchResult(BaseModel):
@@ -128,12 +128,33 @@ class UserSearchResult(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+async def _get_upload_limits(session: AsyncSession) -> tuple[int, list[str] | None]:
+    """Read upload limits from system_config. Falls back to env settings.
+
+    Returns (max_size_bytes, allowed_mime_types).
+    allowed_mime_types is None when no admin restriction is configured (allow all).
+    """
+    max_result = await session.execute(
+        select(SystemConfig).where(SystemConfig.key == "storage.max_file_size_mb")
+    )
+    max_row = max_result.scalar_one_or_none()
+    max_mb = int(max_row.value) if max_row is not None else settings.storage_max_file_size_mb
+
+    mime_result = await session.execute(
+        select(SystemConfig).where(SystemConfig.key == "storage.allowed_mime_types")
+    )
+    mime_row = mime_result.scalar_one_or_none()
+    allowed_mimes: list[str] | None = list(mime_row.value) if mime_row is not None else None
+
+    return max_mb * 1024 * 1024, allowed_mimes
+
+
 async def check_file_access(
     session: AsyncSession,
     file_id: UUID,
     user_id: UUID,
-) -> bool:
-    """Return True if user_id can access file_id.
+) -> StorageFile | None:
+    """Return the file record if user_id can access it, or None if access is denied.
 
     Access is granted when:
       1. user_id is the file owner
@@ -141,6 +162,7 @@ async def check_file_access(
       3. An ancestor folder share exists for user_id (file.folder_id share)
 
     This prevents Pitfall 4: folder shares not propagating to contained files.
+    Returns None for both "not found" and "forbidden" — callers raise 403.
     """
     # Check 1: ownership
     file_result = await session.execute(
@@ -148,9 +170,9 @@ async def check_file_access(
     )
     file_record = file_result.scalar_one_or_none()
     if file_record is None:
-        return False
+        return None
     if file_record.owner_user_id == user_id:
-        return True
+        return file_record
 
     # Check 2: direct file share
     direct_share_result = await session.execute(
@@ -160,7 +182,7 @@ async def check_file_access(
         )
     )
     if direct_share_result.scalar_one_or_none() is not None:
-        return True
+        return file_record
 
     # Check 3: ancestor folder share
     if file_record.folder_id is not None:
@@ -171,9 +193,9 @@ async def check_file_access(
             )
         )
         if folder_share_result.scalar_one_or_none() is not None:
-            return True
+            return file_record
 
-    return False
+    return None
 
 
 def _file_to_response(
@@ -255,16 +277,21 @@ async def upload_file(
     # Read content in streaming chunks and compute SHA-256 incrementally
     content = await file.read()
     size_bytes = len(content)
-
-    # Validate file size
-    max_bytes = settings.storage_max_file_size_mb * 1024 * 1024
-    if size_bytes > max_bytes:
-        raise HTTPException(status_code=413, detail="File size exceeds the maximum allowed size")
-
-    content_hash = hashlib.sha256(content).hexdigest()
     mime_type = file.content_type or "application/octet-stream"
     filename = file.filename or "unnamed"
     user_id: UUID = current_user["user_id"]
+
+    # Validate file size and MIME type against admin-configured limits
+    max_bytes, allowed_mimes = await _get_upload_limits(session)
+    if size_bytes > max_bytes:
+        raise HTTPException(status_code=413, detail="File size exceeds the maximum allowed size")
+    if allowed_mimes is not None and mime_type not in allowed_mimes:
+        raise HTTPException(
+            status_code=415,
+            detail=f"File type '{mime_type}' is not permitted by storage policy",
+        )
+
+    content_hash = hashlib.sha256(content).hexdigest()
 
     # Check for duplicate (same user, same SHA-256 OR same filename with replace action)
     existing_result = await session.execute(
@@ -345,6 +372,15 @@ async def upload_file(
             folder_uuid = UUID(folder_id)
         except ValueError:
             raise HTTPException(status_code=422, detail="Invalid folder_id format")
+        # Verify folder exists and belongs to this user
+        folder_result = await session.execute(
+            select(StorageFolder).where(StorageFolder.id == folder_uuid)
+        )
+        folder_record = folder_result.scalar_one_or_none()
+        if folder_record is None:
+            raise HTTPException(status_code=404, detail="Folder not found")
+        if folder_record.owner_user_id != user_id:
+            raise HTTPException(status_code=403, detail="Cannot upload to a folder you do not own")
 
     await service.upload_bytes(object_key, content, mime_type)
 
@@ -440,14 +476,9 @@ async def get_file(
 ) -> Any:
     """Return file metadata + presigned download URL. Checks ownership or share access."""
     user_id: UUID = current_user["user_id"]
-    has_access = await check_file_access(session, file_id, user_id)
-    if not has_access:
-        raise HTTPException(status_code=403, detail="Access denied")
-
-    result = await session.execute(select(StorageFile).where(StorageFile.id == file_id))
-    file_record = result.scalar_one_or_none()
+    file_record = await check_file_access(session, file_id, user_id)
     if file_record is None:
-        raise HTTPException(status_code=404, detail="File not found")
+        raise HTTPException(status_code=403, detail="Access denied")
 
     service = StorageService()
     download_url = await service.generate_download_url(file_record.object_key)
@@ -532,6 +563,15 @@ async def create_folder(
             parent_uuid = UUID(body.parent_folder_id)
         except ValueError:
             raise HTTPException(status_code=422, detail="Invalid parent_folder_id format")
+        # Verify parent folder belongs to this user
+        parent_result = await session.execute(
+            select(StorageFolder).where(StorageFolder.id == parent_uuid)
+        )
+        parent_record = parent_result.scalar_one_or_none()
+        if parent_record is None:
+            raise HTTPException(status_code=404, detail="Parent folder not found")
+        if parent_record.owner_user_id != user_id:
+            raise HTTPException(status_code=403, detail="Cannot create subfolder in a folder you do not own")
 
     folder = StorageFolder()
     folder.id = uuid4()
@@ -731,13 +771,39 @@ async def shared_with_me(
     current_user: Any = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> Any:
-    """List all files and folders shared with the calling user."""
+    """List all files and folders shared with the calling user.
+
+    Returns {files: [...], folders: [...]} with resolved file/folder objects,
+    not raw share records.
+    """
     user_id: UUID = current_user["user_id"]
     result = await session.execute(
         select(StorageShare).where(StorageShare.shared_with_user_id == user_id)
     )
     shares = result.scalars().all()
-    return [_share_to_response(s) for s in shares]
+
+    file_ids = [s.file_id for s in shares if s.file_id is not None]
+    folder_ids = [s.folder_id for s in shares if s.folder_id is not None]
+
+    service = StorageService()
+    files: list[StorageFileResponse] = []
+    if file_ids:
+        files_result = await session.execute(
+            select(StorageFile).where(StorageFile.id.in_(file_ids))
+        )
+        for f in files_result.scalars().all():
+            download_url = await service.generate_download_url(f.object_key)
+            files.append(_file_to_response(f, download_url))
+
+    folders: list[StorageFolderResponse] = []
+    if folder_ids:
+        folders_result = await session.execute(
+            select(StorageFolder).where(StorageFolder.id.in_(folder_ids))
+        )
+        for folder in folders_result.scalars().all():
+            folders.append(_folder_to_response(folder))
+
+    return {"files": files, "folders": folders}
 
 
 # ---------------------------------------------------------------------------

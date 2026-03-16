@@ -1,14 +1,12 @@
 """
 TDD tests for storage share model and check_file_access helper — Phase 28 (STOR-04).
 
-RED phase: tests fail until StorageShare model and check_file_access are implemented.
-
 Behaviors:
   - StorageShare allows file_id=None with folder_id set (folder-only share)
   - StorageShare allows folder_id=None with file_id set (file-only share)
-  - check_file_access returns True when user is the file owner
-  - check_file_access returns True when a direct file_id share exists for the user
-  - check_file_access returns False for a user with no ownership or share record
+  - check_file_access returns the file record when user is the file owner
+  - check_file_access returns the file record when a direct file_id share exists for the user
+  - check_file_access returns None for a user with no ownership or share record
 """
 from __future__ import annotations
 
@@ -81,7 +79,7 @@ def test_storage_share_allows_folder_id_only() -> None:
 
 @pytest.mark.asyncio
 async def test_check_file_access_owner_returns_true(db_session: AsyncSession) -> None:
-    """check_file_access returns True when the user is the file owner."""
+    """check_file_access returns the file record when the user is the file owner."""
     from core.models.storage_file import StorageFile  # type: ignore[import]
     from api.routes.storage import check_file_access  # type: ignore[import]
 
@@ -101,12 +99,13 @@ async def test_check_file_access_owner_returns_true(db_session: AsyncSession) ->
     await db_session.commit()
 
     result = await check_file_access(db_session, file_id, user_id)
-    assert result is True
+    assert result is not None
+    assert result.id == file_id
 
 
 @pytest.mark.asyncio
 async def test_check_file_access_shared_returns_true(db_session: AsyncSession) -> None:
-    """check_file_access returns True when a direct file_id share exists for the user."""
+    """check_file_access returns the file record when a direct file_id share exists."""
     from core.models.storage_file import StorageFile  # type: ignore[import]
     from core.models.storage_share import StorageShare  # type: ignore[import]
     from api.routes.storage import check_file_access  # type: ignore[import]
@@ -138,14 +137,15 @@ async def test_check_file_access_shared_returns_true(db_session: AsyncSession) -
     await db_session.commit()
 
     result = await check_file_access(db_session, file_id, viewer_id)
-    assert result is True
+    assert result is not None
+    assert result.id == file_id
 
 
 @pytest.mark.asyncio
 async def test_check_file_access_no_access_returns_false(
     db_session: AsyncSession,
 ) -> None:
-    """check_file_access returns False for user with no ownership or share record."""
+    """check_file_access returns None for user with no ownership or share record."""
     from core.models.storage_file import StorageFile  # type: ignore[import]
     from api.routes.storage import check_file_access  # type: ignore[import]
 
@@ -167,4 +167,4 @@ async def test_check_file_access_no_access_returns_false(
     await db_session.commit()
 
     result = await check_file_access(db_session, file_id, stranger_id)
-    assert result is False
+    assert result is None

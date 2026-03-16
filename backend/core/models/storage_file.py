@@ -2,6 +2,8 @@
 import datetime
 import uuid
 
+from datetime import timezone as _tz
+
 from sqlalchemy import BigInteger, Boolean, Column, DateTime, ForeignKey, String
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 
@@ -41,12 +43,12 @@ class StorageFile(Base):
     in_memory: bool = Column(Boolean, nullable=False, default=False)
     created_at: datetime.datetime = Column(
         DateTime(timezone=True),
-        default=datetime.datetime.utcnow,
+        default=lambda: datetime.datetime.now(_tz.utc),
         nullable=False,
     )
     updated_at: datetime.datetime = Column(
         DateTime(timezone=True),
-        default=datetime.datetime.utcnow,
-        onupdate=datetime.datetime.utcnow,
+        default=lambda: datetime.datetime.now(_tz.utc),
+        onupdate=lambda: datetime.datetime.now(_tz.utc),
         nullable=False,
     )

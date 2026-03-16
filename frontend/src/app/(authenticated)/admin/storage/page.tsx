@@ -10,7 +10,6 @@
  * Saves via PUT /api/admin/storage/settings
  */
 import { useState, useEffect, useCallback } from "react";
-import { useSession } from "next-auth/react";
 
 interface StorageSettings {
   max_file_size_mb: number;
@@ -18,7 +17,6 @@ interface StorageSettings {
 }
 
 export default function AdminStoragePage() {
-  const { data: session } = useSession();
   const [settings, setSettings] = useState<StorageSettings | null>(null);
   const [maxFileSize, setMaxFileSize] = useState<number>(100);
   const [mimeTypesText, setMimeTypesText] = useState<string>("");
@@ -33,18 +31,10 @@ export default function AdminStoragePage() {
 
   const fetchSettings = useCallback(async () => {
     try {
-      const token = (session as unknown as Record<string, unknown>)?.accessToken as
-        | string
-        | undefined;
-      if (!token) return;
-
-      const res = await fetch(
-        `/api/admin/storage/settings`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          cache: "no-store",
-        }
-      );
+      const res = await fetch(`/api/admin/storage/settings`, {
+        credentials: "include",
+        cache: "no-store",
+      });
       if (!res.ok) {
         showToast("error", `Failed to load settings (${res.status})`);
         return;
@@ -58,7 +48,7 @@ export default function AdminStoragePage() {
     } finally {
       setLoading(false);
     }
-  }, [session]);
+  }, []);
 
   useEffect(() => {
     void fetchSettings();
@@ -67,34 +57,21 @@ export default function AdminStoragePage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const token = (session as unknown as Record<string, unknown>)?.accessToken as
-        | string
-        | undefined;
-      if (!token) {
-        showToast("error", "Not authenticated");
-        return;
-      }
-
       // Parse MIME types from comma-separated text
       const allowedMimeTypes = mimeTypesText
         .split(",")
         .map((s) => s.trim())
         .filter((s) => s.length > 0);
 
-      const res = await fetch(
-        `/api/admin/storage/settings`,
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            max_file_size_mb: maxFileSize,
-            allowed_mime_types: allowedMimeTypes,
-          }),
-        }
-      );
+      const res = await fetch(`/api/admin/storage/settings`, {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          max_file_size_mb: maxFileSize,
+          allowed_mime_types: allowedMimeTypes,
+        }),
+      });
 
       if (!res.ok) {
         const errorData = (await res.json().catch(() => ({}))) as { detail?: string };

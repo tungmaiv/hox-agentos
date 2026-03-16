@@ -37,6 +37,7 @@ export interface StorageShare {
 }
 
 export interface UploadProgress {
+  id: string; // stable identifier generated at batch creation to avoid same-name collisions
   file: File;
   progress: number; // 0-100
   status: "uploading" | "done" | "duplicate" | "error";
@@ -63,10 +64,8 @@ export interface ShareUser {
 export const EXTRACTABLE_MIME_TYPES: Set<string> = new Set([
   "application/pdf",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "application/msword",
   "text/plain",
   "text/markdown",
-  "text/x-markdown",
 ]);
 
 /**

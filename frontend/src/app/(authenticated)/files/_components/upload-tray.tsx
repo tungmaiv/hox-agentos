@@ -6,9 +6,9 @@ import type { UploadProgress } from "../types";
 
 interface UploadTrayProps {
   uploads: UploadProgress[];
-  onDismiss: (fileName: string) => void;
+  onDismiss: (uploadId: string) => void;
   onDedupChoice: (
-    fileName: string,
+    uploadId: string,
     choice: "keep_both" | "replace" | "skip"
   ) => void;
   onDismissAll: () => void;
@@ -68,7 +68,7 @@ export function UploadTray({
       {!collapsed && (
         <div className="max-h-72 overflow-y-auto divide-y divide-gray-100">
           {uploads.map((upload) => (
-            <div key={upload.file.name} className="px-3 py-2">
+            <div key={upload.id} className="px-3 py-2">
               <div className="flex items-center gap-2">
                 {/* Status icon */}
                 <span className="shrink-0">
@@ -93,7 +93,7 @@ export function UploadTray({
                 {(upload.status === "done" || upload.status === "error") && (
                   <button
                     type="button"
-                    onClick={() => onDismiss(upload.file.name)}
+                    onClick={() => onDismiss(upload.id)}
                     className="shrink-0 p-0.5 text-gray-300 hover:text-gray-600 transition-colors"
                   >
                     <X size={12} />
@@ -121,7 +121,7 @@ export function UploadTray({
                     <button
                       type="button"
                       onClick={() =>
-                        onDedupChoice(upload.file.name, "keep_both")
+                        onDedupChoice(upload.id, "keep_both")
                       }
                       className="flex-1 text-xs py-1 px-1.5 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
                     >
@@ -129,14 +129,14 @@ export function UploadTray({
                     </button>
                     <button
                       type="button"
-                      onClick={() => onDedupChoice(upload.file.name, "replace")}
+                      onClick={() => onDedupChoice(upload.id, "replace")}
                       className="flex-1 text-xs py-1 px-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded transition-colors"
                     >
                       Replace
                     </button>
                     <button
                       type="button"
-                      onClick={() => onDedupChoice(upload.file.name, "skip")}
+                      onClick={() => onDedupChoice(upload.id, "skip")}
                       className="flex-1 text-xs py-1 px-1.5 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
                     >
                       Skip

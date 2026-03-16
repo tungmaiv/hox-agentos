@@ -38,3 +38,9 @@ Thumbs.db
 
 # Git worktrees
 .worktrees/
+
+# Playwright MCP debug artifacts
+.playwright-mcp/
+
+# Test files
+test-upload.txt

@@ -13,7 +13,6 @@
  */
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Bell } from "lucide-react";
-import { useSession } from "next-auth/react";
 
 interface UserNotification {
   id: string;
@@ -38,35 +37,24 @@ function formatRelativeTime(isoString: string): string {
 }
 
 export default function UserNotificationBell() {
-  const { data: session } = useSession();
   const [notifications, setNotifications] = useState<UserNotification[]>([]);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [markingAll, setMarkingAll] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const getToken = useCallback((): string | undefined => {
-    return (session as unknown as Record<string, unknown>)?.accessToken as string | undefined;
-  }, [session]);
-
   const fetchNotifications = useCallback(async () => {
     try {
-      const token = getToken();
-      if (!token) return;
-
-      const res = await fetch(
-        `/api/storage/notifications`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          cache: "no-store",
-        }
-      );
+      const res = await fetch(`/api/storage/notifications`, {
+        credentials: "include",
+        cache: "no-store",
+      });
       if (!res.ok) return;
       const data = (await res.json()) as UserNotification[];
       setNotifications(data);
     } catch {
       // Bell is non-critical — swallow errors
     }
-  }, [getToken]);
+  }, []);
 
   // Initial fetch + polling every 30s
   useEffect(() => {
@@ -90,15 +78,9 @@ export default function UserNotificationBell() {
 
   const handleMarkRead = async (notificationId: string) => {
     try {
-      const token = getToken();
-      if (!token) return;
-
       const res = await fetch(
         `/api/storage/notifications/${notificationId}/read`,
-        {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { method: "POST", credentials: "include" }
       );
       if (res.ok) {
         // Optimistically remove from unread list
@@ -112,16 +94,10 @@ export default function UserNotificationBell() {
   const handleMarkAllRead = async () => {
     setMarkingAll(true);
     try {
-      const token = getToken();
-      if (!token) return;
-
-      const res = await fetch(
-        `/api/storage/notifications/read-all`,
-        {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const res = await fetch(`/api/storage/notifications/read-all`, {
+        method: "POST",
+        credentials: "include",
+      });
       if (res.ok) {
         setNotifications([]);
         setDropdownOpen(false);

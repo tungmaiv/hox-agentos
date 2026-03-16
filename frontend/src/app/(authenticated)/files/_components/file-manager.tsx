@@ -70,6 +70,12 @@ export function FileManager() {
       .then((r) => (r.ok ? r.json() : { files: [], folders: [] }))
       .then((data: { files: StorageFile[]; folders: StorageFolder[] }) => {
         setSharedFiles(data.files ?? []);
+        setFolders((prev) => {
+          const newFolders = (data.folders ?? []).filter(
+            (sf) => !prev.some((f) => f.id === sf.id)
+          );
+          return newFolders.length > 0 ? [...prev, ...newFolders] : prev;
+        });
       });
   }, [currentFolderId]);
 
@@ -124,13 +130,15 @@ export function FileManager() {
   const handleUpload = useCallback(
     async (acceptedFiles: File[]) => {
       const newUploads: UploadProgress[] = acceptedFiles.map((file) => ({
+        id: crypto.randomUUID(),
         file,
         progress: 0,
         status: "uploading" as const,
       }));
       setUploads((prev) => [...prev, ...newUploads]);
 
-      for (const file of acceptedFiles) {
+      for (const upload of newUploads) {
+        const { id: uploadId, file } = upload;
         const formData = new FormData();
         formData.append("file", file);
         if (currentFolderId && currentFolderId !== "shared-with-me") {
@@ -140,9 +148,7 @@ export function FileManager() {
         try {
           // Simulate progress with XHR (fetch doesn't expose upload progress)
           setUploads((prev) =>
-            prev.map((u) =>
-              u.file.name === file.name ? { ...u, progress: 30 } : u
-            )
+            prev.map((u) => (u.id === uploadId ? { ...u, progress: 30 } : u))
           );
 
           const res = await fetch("/api/storage/files/upload", {
@@ -152,30 +158,24 @@ export function FileManager() {
           });
 
           setUploads((prev) =>
-            prev.map((u) =>
-              u.file.name === file.name ? { ...u, progress: 90 } : u
-            )
+            prev.map((u) => (u.id === uploadId ? { ...u, progress: 90 } : u))
           );
 
           if (!res.ok) {
             setUploads((prev) =>
               prev.map((u) =>
-                u.file.name === file.name
-                  ? { ...u, status: "error", progress: 0 }
-                  : u
+                u.id === uploadId ? { ...u, status: "error", progress: 0 } : u
               )
             );
             continue;
           }
 
-          const data = (await res.json()) as
-            | StorageFile
-            | DedupResponse;
+          const data = (await res.json()) as StorageFile | DedupResponse;
 
           if ("action" in data && data.action === "duplicate_detected") {
             setUploads((prev) =>
               prev.map((u) =>
-                u.file.name === file.name
+                u.id === uploadId
                   ? {
                       ...u,
                       status: "duplicate",
@@ -190,9 +190,7 @@ export function FileManager() {
           } else {
             setUploads((prev) =>
               prev.map((u) =>
-                u.file.name === file.name
-                  ? { ...u, status: "done", progress: 100 }
-                  : u
+                u.id === uploadId ? { ...u, status: "done", progress: 100 } : u
               )
             );
             // Append new file to list
@@ -201,9 +199,7 @@ export function FileManager() {
         } catch {
           setUploads((prev) =>
             prev.map((u) =>
-              u.file.name === file.name
-                ? { ...u, status: "error", progress: 0 }
-                : u
+              u.id === uploadId ? { ...u, status: "error", progress: 0 } : u
             )
           );
         }
@@ -214,14 +210,14 @@ export function FileManager() {
 
   // ── Dedup choice handler ──────────────────────────────────────────────
   async function handleDedupChoice(
-    fileName: string,
+    uploadId: string,
     choice: "keep_both" | "replace" | "skip"
   ) {
     if (choice === "skip") {
-      setUploads((prev) => prev.filter((u) => u.file.name !== fileName));
+      setUploads((prev) => prev.filter((u) => u.id !== uploadId));
       return;
     }
-    const upload = uploads.find((u) => u.file.name === fileName);
+    const upload = uploads.find((u) => u.id === uploadId);
     if (!upload) return;
 
     const formData = new FormData();
@@ -233,9 +229,7 @@ export function FileManager() {
 
     setUploads((prev) =>
       prev.map((u) =>
-        u.file.name === fileName
-          ? { ...u, status: "uploading", progress: 50 }
-          : u
+        u.id === uploadId ? { ...u, status: "uploading", progress: 50 } : u
       )
     );
 
@@ -250,25 +244,21 @@ export function FileManager() {
         setFiles((prev) => {
           if (choice === "replace") {
             return prev.map((f) =>
-              f.name === fileName ? (data as StorageFile) : f
+              f.name === upload.file.name ? (data as StorageFile) : f
             );
           }
           return [...prev, data as StorageFile];
         });
         setUploads((prev) =>
           prev.map((u) =>
-            u.file.name === fileName
-              ? { ...u, status: "done", progress: 100 }
-              : u
+            u.id === uploadId ? { ...u, status: "done", progress: 100 } : u
           )
         );
       }
     } catch {
       setUploads((prev) =>
         prev.map((u) =>
-          u.file.name === fileName
-            ? { ...u, status: "error", progress: 0 }
-            : u
+          u.id === uploadId ? { ...u, status: "error", progress: 0 } : u
         )
       );
     }
@@ -404,8 +394,8 @@ export function FileManager() {
       {/* Upload tray */}
       <UploadTray
         uploads={uploads}
-        onDismiss={(name) =>
-          setUploads((prev) => prev.filter((u) => u.file.name !== name))
+        onDismiss={(uploadId) =>
+          setUploads((prev) => prev.filter((u) => u.id !== uploadId))
         }
         onDedupChoice={handleDedupChoice}
         onDismissAll={() => setUploads([])}
